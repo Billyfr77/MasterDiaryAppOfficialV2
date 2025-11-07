@@ -74,3 +74,84 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Dark Mode Styles */
+.light {
+  background-color: #ffffff;
+  color: #213547;
+}
+
+.light a {
+  color: #646cff;
+}
+
+.light button {
+  background-color: #f9f9f9;
+  color: #213547;
+}
+
+.dark {
+  background-color: #242424;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.dark a {
+  color: #add8e6;
+}
+
+.dark button {
+  background-color: #555;
+  color: #fff;
+}
+
+.dark button:hover {
+  background-color: #777;
+}
+
+/* Error and Loading Styles */
+.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  border: 1px solid #f5c6cb;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dark .error {
+  background-color: #721c24;
+  color: #f8d7da;
+  border-color: #721c24;
+}
+
+.error button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
