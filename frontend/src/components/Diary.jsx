@@ -34,6 +34,9 @@ const Diary = () => {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [formErrors, setFormErrors] = useState({})
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const fetchData = async () => {
     setLoading(true)
@@ -82,6 +85,22 @@ const Diary = () => {
   useEffect(() => {
     applyFiltersAndSort()
   }, [diaries, filters, sortConfig])
+
+  useEffect(() => {
+    setCurrentPage(1) // Reset to first page when filters change
+  }, [filters, sortConfig])
+
+  const validateForm = () => {
+    const errors = {}
+    if (!form.date) errors.date = 'Date is required'
+    if (!form.projectId) errors.projectId = 'Project is required'
+    if (!form.workerId) errors.workerId = 'Worker is required'
+    if (!form.start) errors.start = 'Start time is required'
+    if (!form.finish) errors.finish = 'Finish time is required'
+    if (form.start && form.finish && form.start >= form.finish) errors.finish = 'Finish time must be after start time'
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
   const calculatePreview = () => {
     if (!form.start || !form.finish || !selectedStaff) return
@@ -207,6 +226,7 @@ const Diary = () => {
     })
     setIsEditing(true)
     setEditingId(diary.id)
+    setFormErrors({})
   }
 
   const handleDelete = async (id) => {
@@ -223,10 +243,7 @@ const Diary = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.start || !form.finish) {
-      setError('Please select start and finish times.')
-      return
-    }
+    if (!validateForm()) return
     setLoading(true)
     setError('')
     try {
@@ -261,12 +278,23 @@ const Diary = () => {
       setPreview({ totalHours: 0, costs: 0, equipmentCosts: 0, totalCosts: 0, revenues: 0, marginPct: 0 })
       setIsEditing(false)
       setEditingId(null)
+      setFormErrors({})
       fetchData() // Refresh the list
     } catch (err) {
       setError('Error: ' + (err.response?.data?.error || err.message))
     } finally {
       setLoading(false)
     }
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(filteredDiaries.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentItems = filteredDiaries.slice(startIndex, endIndex)
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
   }
 
   if (loading) {
@@ -288,39 +316,43 @@ const Diary = () => {
       )}
       <h2>{isEditing ? 'Edit Diary Entry' : 'Add New Diary Entry'}</h2>
       <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-          <div>
-            <label>Date:</label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--spacing-lg)' }}>
+          <div className="form-group">
+            <label className="form-label">Date</label>
             <DatePicker
               selected={form.date}
               onChange={(date) => setForm({ ...form, date })}
               dateFormat="yyyy-MM-dd"
+              className={`input ${formErrors.date ? 'error' : ''}`}
               required
             />
+            {formErrors.date && <small style={{ color: 'var(--danger-color)' }}>{formErrors.date}</small>}
           </div>
-          <div>
-            <label>Project:</label>
-            <select value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })} required>
+          <div className="form-group">
+            <label className="form-label">Project</label>
+            <select value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })} className={`input ${formErrors.projectId ? 'error' : ''}`} required>
               <option value="">Select Project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
+            {formErrors.projectId && <small style={{ color: 'var(--danger-color)' }}>{formErrors.projectId}</small>}
           </div>
-          <div>
-            <label>Worker:</label>
-            <select value={form.workerId} onChange={(e) => setForm({ ...form, workerId: e.target.value })} required>
+          <div className="form-group">
+            <label className="form-label">Worker</label>
+            <select value={form.workerId} onChange={(e) => setForm({ ...form, workerId: e.target.value })} className={`input ${formErrors.workerId ? 'error' : ''}`} required>
               <option value="">Select Worker</option>
               {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
+            {formErrors.workerId && <small style={{ color: 'var(--danger-color)' }}>{formErrors.workerId}</small>}
           </div>
-          <div>
-            <label>Equipment (optional):</label>
-            <select value={form.equipmentId} onChange={(e) => setForm({ ...form, equipmentId: e.target.value })}>
+          <div className="form-group">
+            <label className="form-label">Equipment (optional)</label>
+            <select value={form.equipmentId} onChange={(e) => setForm({ ...form, equipmentId: e.target.value })} className="input">
               <option value="">Select Equipment</option>
               {equipment.map(eq => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
             </select>
           </div>
-          <div>
-            <label>Start Time:</label>
+          <div className="form-group">
+            <label className="form-label">Start Time</label>
             <DatePicker
               selected={form.start}
               onChange={(time) => setForm({ ...form, start: time })}
@@ -330,11 +362,13 @@ const Diary = () => {
               timeCaption="Time"
               dateFormat="HH:mm"
               placeholderText="Select start time"
+              className={`input ${formErrors.start ? 'error' : ''}`}
               required
             />
+            {formErrors.start && <small style={{ color: 'var(--danger-color)' }}>{formErrors.start}</small>}
           </div>
-          <div>
-            <label>Finish Time:</label>
+          <div className="form-group">
+            <label className="form-label">Finish Time</label>
             <DatePicker
               selected={form.finish}
               onChange={(time) => setForm({ ...form, finish: time })}
@@ -344,173 +378,182 @@ const Diary = () => {
               timeCaption="Time"
               dateFormat="HH:mm"
               placeholderText="Select finish time"
+              className={`input ${formErrors.finish ? 'error' : ''}`}
               required
             />
+            {formErrors.finish && <small style={{ color: 'var(--danger-color)' }}>{formErrors.finish}</small>}
           </div>
-          <div>
-            <label title="Break minutes to subtract from total hours">Break Mins:</label>
+          <div className="form-group">
+            <label className="form-label">Break Minutes</label>
             <input
               type="number"
               value={form.breakMins}
               onChange={(e) => setForm({ ...form, breakMins: e.target.value })}
               placeholder="e.g., 30"
+              className="input"
             />
           </div>
-          <div>
-            <label title="Optional: Override calculated revenues">Revenues (optional):</label>
+          <div className="form-group">
+            <label className="form-label">Revenues (optional)</label>
             <input
               type="number"
               step="0.01"
               value={form.revenues}
               onChange={(e) => setForm({ ...form, revenues: e.target.value })}
+              className="input"
             />
           </div>
         </div>
-        <button type="submit" style={{ marginTop: '15px', padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}>
+        <button type="submit" className="btn btn-primary" style={{ marginTop: 'var(--spacing-lg)' }}>
           {isEditing ? 'Update Diary Entry' : 'Add Diary Entry'}
         </button>
       </form>
 
       <h3>Preview</h3>
-      <div style={{ border: '1px solid #ccc', padding: '10px', marginTop: '20px' }}>
-        <p>Total Hours: {preview.totalHours}</p>
-        <p>Staff Costs: ${preview.costs}</p>
-        <p>Equipment Costs: ${preview.equipmentCosts}</p>
-        <p>Total Costs: ${preview.totalCosts}</p>
-        <p>Revenues: ${preview.revenues}</p>
-        <p>Margin %: {preview.marginPct}%</p>
+      <div className="card" style={{ marginTop: 'var(--spacing-lg)' }}>
+        <div className="card-body">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--spacing-md)' }}>
+            <div><strong>Total Hours:</strong> {preview.totalHours}</div>
+            <div><strong>Staff Costs:</strong> ${preview.costs}</div>
+            <div><strong>Equipment Costs:</strong> ${preview.equipmentCosts}</div>
+            <div><strong>Total Costs:</strong> ${preview.totalCosts}</div>
+            <div><strong>Revenues:</strong> ${preview.revenues}</div>
+            <div><strong>Margin %:</strong> {preview.marginPct}%</div>
+          </div>
+        </div>
       </div>
 
-      <h3>Recent Diary Entries</h3>
+      <h3>Diary Entries ({filteredDiaries.length} total)</h3>
 
       {/* Filters */}
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ marginBottom: 'var(--spacing-lg)', display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap', alignItems: 'end' }}>
         <div>
-          <label>Search:</label>
+          <label className="form-label">Search</label>
           <input
             type="text"
             placeholder="Project, Worker, or Equipment"
             value={filters.search}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            style={{ padding: '8px', width: '200px' }}
+            className="input"
+            style={{ width: '200px' }}
           />
         </div>
         <div>
-          <label>Min Margin %:</label>
+          <label className="form-label">Min Margin %</label>
           <input
             type="number"
             value={filters.minMargin}
             onChange={(e) => setFilters({ ...filters, minMargin: e.target.value })}
-            style={{ padding: '8px', width: '100px' }}
+            className="input"
+            style={{ width: '100px' }}
           />
         </div>
         <div>
-          <label>Max Margin %:</label>
+          <label className="form-label">Max Margin %</label>
           <input
             type="number"
             value={filters.maxMargin}
             onChange={(e) => setFilters({ ...filters, maxMargin: e.target.value })}
-            style={{ padding: '8px', width: '100px' }}
+            className="input"
+            style={{ width: '100px' }}
           />
         </div>
         <div>
-          <label>Filter by Worker:</label>
-          <select value={filters.workerFilter} onChange={(e) => setFilters({ ...filters, workerFilter: e.target.value })}>
+          <label className="form-label">Filter by Worker</label>
+          <select value={filters.workerFilter} onChange={(e) => setFilters({ ...filters, workerFilter: e.target.value })} className="input">
             <option value="">All Workers</option>
             {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>
-          <label>Filter by Project:</label>
-          <select value={filters.projectFilter} onChange={(e) => setFilters({ ...filters, projectFilter: e.target.value })}>
+          <label className="form-label">Filter by Project</label>
+          <select value={filters.projectFilter} onChange={(e) => setFilters({ ...filters, projectFilter: e.target.value })} className="input">
             <option value="">All Projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid #ccc' }}>
-            <th style={{ padding: '8px', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('date')}>
-              Date {sortConfig.key === 'date' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th style={{ padding: '8px', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('Project')}>
-              Project {sortConfig.key === 'Project' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th style={{ padding: '8px', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('Staff')}>
-              Worker {sortConfig.key === 'Staff' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th style={{ padding: '8px', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('Equipment')}>
-              Equipment {sortConfig.key === 'Equipment' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th style={{ padding: '8px', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('totalHours')}>
-              Hours {sortConfig.key === 'totalHours' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th style={{ padding: '8px', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('costs')}>
-              Total Costs {sortConfig.key === 'costs' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th style={{ padding: '8px', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('revenues')}>
-              Revenues {sortConfig.key === 'revenues' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th style={{ padding: '8px', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('marginPct')}>
-              Margin % {sortConfig.key === 'marginPct' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredDiaries.slice(0, 20).map(d => (
-            <tr key={d.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '8px' }}>{d.date}</td>
-              <td style={{ padding: '8px' }}>{d.Project?.name}</td>
-              <td style={{ padding: '8px' }}>{d.Staff?.name}</td>
-              <td style={{ padding: '8px' }}>{d.Equipment?.name || '-'}</td>
-              <td style={{ padding: '8px' }}>{d.totalHours}</td>
-              <td style={{ padding: '8px' }}>${d.costs}</td>
-              <td style={{ padding: '8px' }}>${d.revenues}</td>
-              <td style={{ padding: '8px' }}>{d.marginPct}%</td>
-              <td style={{ padding: '8px' }}>
-                <button onClick={() => handleEdit(d)}>Edit</button>
-                <button onClick={() => handleDelete(d.id)}>Delete</button>
-              </td>
+      <div className="table-responsive">
+        <table className="table">
+          <thead>
+            <tr>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('date')}>
+                Date {sortConfig.key === 'date' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('Project')}>
+                Project {sortConfig.key === 'Project' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('Staff')}>
+                Worker {sortConfig.key === 'Staff' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('Equipment')}>
+                Equipment {sortConfig.key === 'Equipment' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('totalHours')}>
+                Hours {sortConfig.key === 'totalHours' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('costs')}>
+                Total Costs {sortConfig.key === 'costs' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('revenues')}>
+                Revenues {sortConfig.key === 'revenues' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('marginPct')}>
+                Margin % {sortConfig.key === 'marginPct' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {currentItems.map(d => (
+              <tr key={d.id}>
+                <td>{d.date}</td>
+                <td>{d.Project?.name}</td>
+                <td>{d.Staff?.name}</td>
+                <td>{d.Equipment?.name || '-'}</td>
+                <td>{d.totalHours}</td>
+                <td>${d.costs}</td>
+                <td>${d.revenues}</td>
+                <td>{d.marginPct}%</td>
+                <td>
+                  <button onClick={() => handleEdit(d)} className="btn btn-outline btn-sm">Edit</button>
+                  <button onClick={() => handleDelete(d.id)} className="btn btn-danger btn-sm" style={{ marginLeft: 'var(--spacing-xs)' }}>Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      <style jsx>{`
-        div {
-          margin-bottom: 15px;
-        }
-        label {
-          display: block;
-          margin-bottom: 5px;
-        }
-        input, select {
-          width: 100%;
-          padding: 8px;
-          box-sizing: border-box;
-        }
-        button {
-          padding: 5px 10px;
-          background-color: #007bff;
-          color: white;
-          border: none;
-          cursor: pointer;
-        }
-        button:hover {
-          background-color: #0056b3;
-        }
-        @media (max-width: 600px) {
-          table {
-            font-size: 12px;
-          }
-          div[style*="display: grid"] {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ marginTop: 'var(--spacing-lg)', display: 'flex', justifyContent: 'center', gap: 'var(--spacing-sm)' }}>
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="btn btn-outline"
+          >
+            Previous
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button
+              key={page}
+              onClick={() => handlePageChange(page)}
+              className={`btn ${page === currentPage ? 'btn-primary' : 'btn-outline'}`}
+            >
+              {page}
+            </button>
+          ))}
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="btn btn-outline"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   )
 }

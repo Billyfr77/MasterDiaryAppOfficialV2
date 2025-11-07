@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, Link, Navigate } from 'react-router-dom'
+import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut } from 'lucide-react'
 import Login from './components/Login'
+import Landing from './components/Landing'
 import Dashboard from './components/Dashboard'
 import Projects from './components/Projects'
 import Staff from './components/Staff'
@@ -12,7 +14,22 @@ import './App.css'
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
-  const [darkMode, setDarkMode] = useState(localStorage.getItem('darkMode') === 'true')
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode')
+    if (saved !== null) return saved === 'true'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleChange = (e) => {
+      if (localStorage.getItem('darkMode') === null) {
+        setDarkMode(e.matches)
+      }
+    }
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
 
   useEffect(() => {
     document.body.className = darkMode ? 'dark' : 'light'
@@ -35,24 +52,27 @@ function App() {
 
   return (
     <div className="App">
-      <header>
-        <h1>MasterDiaryAppOfficial</h1>
-        <nav>
-          <Link to="/dashboard">Dashboard</Link> |
-          <Link to="/projects">Projects</Link> |
-          <Link to="/staff">Staff</Link> |
-          <Link to="/diary">Diary</Link> |
-          <Link to="/settings">Settings</Link> |
-          <Link to="/equipment">Equipment</Link> |
-          <Link to="/reports">Reports</Link> |
-          <button onClick={() => setDarkMode(!darkMode)} style={{ marginLeft: '10px', padding: '5px 10px', backgroundColor: darkMode ? '#fff' : '#333', color: darkMode ? '#333' : '#fff', border: 'none', cursor: 'pointer' }}>
-            {darkMode ? 'Light Mode' : 'Dark Mode'}
-          </button> |
-          <button onClick={handleLogout}>Logout</button>
-        </nav>
+      <header style={{ padding: 'var(--spacing-lg)', backgroundColor: 'var(--gray-100)', borderBottom: '1px solid var(--gray-200)' }}>
+        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1 style={{ margin: 0, fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--primary-color)' }}>MasterDiaryApp</h1>
+          <nav className="nav">
+            <Link to="/dashboard" className="nav-link"><Home size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Dashboard</Link>
+            <Link to="/projects" className="nav-link"><Folder size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Projects</Link>
+            <Link to="/staff" className="nav-link"><Users size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Staff</Link>
+            <Link to="/diary" className="nav-link"><Calendar size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Diary</Link>
+            <Link to="/settings" className="nav-link"><SettingsIcon size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Settings</Link>
+            <Link to="/equipment" className="nav-link"><Wrench size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Equipment</Link>
+            <Link to="/reports" className="nav-link"><FileText size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Reports</Link>
+            <button onClick={() => setDarkMode(!darkMode)} className="btn btn-outline" style={{ marginLeft: 'var(--spacing-md)' }}>
+              {darkMode ? '☀️ Light' : '🌙 Dark'}
+            </button>
+            <button onClick={handleLogout} className="btn btn-danger"><LogOut size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Logout</button>
+          </nav>
+        </div>
       </header>
-      <main>
+      <main className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-xl)' }}>
         <Routes>
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
@@ -61,7 +81,6 @@ function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/equipment" element={<Equipment />} />
           <Route path="/reports" element={<Reports />} />
-          <Route path="/" element={<Navigate to="/dashboard" />} />
         </Routes>
       </main>
     </div>
