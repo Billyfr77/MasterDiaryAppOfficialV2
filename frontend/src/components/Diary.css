@@ -1,0 +1,75 @@
+.diary-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.diary-form div {
+  margin-bottom: 15px;
+}
+
+.diary-form label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.diary-form input,
+.diary-form select {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.diary-form button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.diary-form button:hover {
+  background-color: #0056b3;
+}
+
+.preview {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-top: 20px;
+}
+
+.diary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.diary-table th,
+.diary-table td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.diary-table th {
+  border-bottom: 1px solid #ccc;
+}
+
+@media (max-width: 600px) {
+  .diary-container {
+    padding: 10px;
+  }
+  .diary-form div {
+    margin-bottom: 10px;
+  }
+  .diary-form input,
+  .diary-form select {
+    padding: 6px;
+  }
+  .diary-form button {
+    padding: 8px 16px;
+  }
+  .diary-table {
+    font-size: 12px;
+  }
+}

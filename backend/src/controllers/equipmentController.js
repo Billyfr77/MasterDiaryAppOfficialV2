@@ -1,0 +1,99 @@
+const { Equipment } = require('../models');
+const Joi = require('joi');
+
+const equipmentSchema = Joi.object({
+  name: Joi.string().min(1).required(),
+  category: Joi.string().min(1).required(),
+  ownership: Joi.string().min(1).required(),
+  costRateBase: Joi.number().positive().required(),
+  costRateOT1: Joi.number().positive().optional(),
+  costRateOT2: Joi.number().positive().optional()
+});
+
+const getAllEquipment = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Equipment.findAndCountAll({
+      limit,
+      offset
+    });
+
+    res.json({
+      data: rows,
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit)
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getEquipmentById = async (req, res) => {
+  try {
+    const equipmentItem = await Equipment.findByPk(req.params.id);
+    if (equipmentItem) {
+      res.json(equipmentItem);
+    } else {
+      res.status(404).json({ error: 'Equipment not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const createEquipment = async (req, res) => {
+  try {
+    const { error } = equipmentSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+    const equipmentItem = await Equipment.create(req.body);
+    res.status(201).json(equipmentItem);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const updateEquipment = async (req, res) => {
+  try {
+    const { error } = equipmentSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+    const [updated] = await Equipment.update(req.body, { where: { id: req.params.id } });
+    if (updated) {
+      const updatedEquipment = await Equipment.findByPk(req.params.id);
+      res.json(updatedEquipment);
+    } else {
+      res.status(404).json({ error: 'Equipment not found' });
+    }
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const deleteEquipment = async (req, res) => {
+  try {
+    const deleted = await Equipment.destroy({ where: { id: req.params.id } });
+    if (deleted) {
+      res.json({ message: 'Equipment deleted' });
+    } else {
+      res.status(404).json({ error: 'Equipment not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+module.exports = {
+  getAllEquipment,
+  getEquipmentById,
+  createEquipment,
+  updateEquipment,
+  deleteEquipment
+};
