@@ -4,7 +4,8 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
 import jsPDF from 'jspdf'
-import { FileText, Eye, Edit, Download, Trash2, Plus, Sparkles, Palette, Zap, Package } from 'lucide-react'
+import { FileText, Eye, Edit, Download, Trash2, Plus, Sparkles, Palette, Zap, Package, User } from
+    'lucide-react'
 
 const Quotes = () => {
   const [quotes, setQuotes] = useState([])
@@ -858,7 +859,7 @@ const Quotes = () => {
                   fontWeight: '700',
                   fontFamily: "'Poppins', sans-serif"
                 }}>
-                  📋 Quote Details: {selectedQuote.name}
+                  Quote Details: {selectedQuote.name}
                 </h2>
                 <button
                   onClick={() => setSelectedQuote(null)}
