@@ -2,13 +2,15 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class Equipment extends Model {
+  class Project extends Model {
     static associate(models) {
       // define association here
+      Project.hasMany(models.Diary, { foreignKey: 'projectId' });
+      Project.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
     }
   }
 
-  Equipment.init({
+  Project.init({
     id: {
       type: DataTypes.UUID,
       primaryKey: true,
@@ -18,11 +20,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
-    category: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    ownership: {
+    site: {
       type: DataTypes.STRING,
       allowNull: false
     },
@@ -33,25 +31,12 @@ module.exports = (sequelize, DataTypes) => {
         model: 'Users',
         key: 'id'
       }
-    },
-    costRateBase: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
-    },
-    costRateOT1: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: true
-    },
-    costRateOT2: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: true
     }
   }, {
     sequelize,
-    modelName: 'Equipment',
-    tableName: 'Equipment',
+    modelName: 'Project',
     timestamps: true
   });
 
-  return Equipment;
+  return Project;
 };

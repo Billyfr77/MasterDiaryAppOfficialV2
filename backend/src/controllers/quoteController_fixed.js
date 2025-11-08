@@ -1,4 +1,4 @@
-const { Quote, Node, Project, Staff, Equipment } = require('../models');
+const { Quote, Node, Project } = require('../models');
 const Joi = require('joi');
 
 const quoteSchema = Joi.object({
@@ -8,24 +8,15 @@ const quoteSchema = Joi.object({
   nodes: Joi.array().items(Joi.object({
     nodeId: Joi.string().uuid().required(),
     quantity: Joi.number().positive().required()
-  })).default([]),
-  staff: Joi.array().items(Joi.object({
-    staffId: Joi.string().uuid().required(),
-    hours: Joi.number().positive().required()
-  })).default([]),
-  equipment: Joi.array().items(Joi.object({
-    equipmentId: Joi.string().uuid().required(),
-    hours: Joi.number().positive().required()
-  })).default([])
-}).or('nodes', 'staff', 'equipment').messages({
-  'object.missing': 'Please add at least one material, staff member, or equipment to your quote'
+  })).min(1).required().messages({
+    'array.min': 'Please add at least one material to your quote',
+    'any.required': 'Materials are required for creating a quote'
+  })
 });
 
-const calculateTotals = async (nodes, staff, equipment, userId) => {
+const calculateTotals = async (nodes, userId) => {
   let totalCost = 0;
-
-  // Calculate materials cost
-  for (const item of nodes || []) {
+  for (const item of nodes) {
     const node = await Node.findOne({
       where: { id: item.nodeId, userId: userId }
     });
@@ -34,31 +25,6 @@ const calculateTotals = async (nodes, staff, equipment, userId) => {
     }
     totalCost += parseFloat(node.pricePerUnit) * item.quantity;
   }
-
-  // Calculate staff cost
-  for (const item of staff || []) {
-    const staffMember = await Staff.findOne({
-      where: { id: item.staffId, userId: userId }
-    });
-    if (!staffMember) {
-      throw new Error(`Staff member ${item.staffId} not found or not accessible`);
-    }
-    // Use charge rates for quotes (what customers pay)
-    const chargeRate = staffMember.chargeRates?.base || staffMember.payRates?.base || 0;
-    totalCost += parseFloat(chargeRate) * item.hours;
-  }
-
-  // Calculate equipment cost
-  for (const item of equipment || []) {
-    const equipmentItem = await Equipment.findOne({
-      where: { id: item.equipmentId, userId: userId }
-    });
-    if (!equipmentItem) {
-      throw new Error(`Equipment ${item.equipmentId} not found or not accessible`);
-    }
-    totalCost += parseFloat(equipmentItem.costRates?.base || 0) * item.hours;
-  }
-
   return totalCost;
 };
 
@@ -123,7 +89,7 @@ const createQuote = async (req, res) => {
     }
 
     // Calculate totals
-    const totalCost = await calculateTotals(value.nodes, value.staff, value.equipment, req.user.id);
+    const totalCost = await calculateTotals(value.nodes, req.user.id);
     const totalRevenue = totalCost * (1 + value.marginPct / 100);
 
     // Create quote
@@ -132,9 +98,7 @@ const createQuote = async (req, res) => {
       projectId: value.projectId,
       userId: req.user.id,
       marginPct: value.marginPct,
-      nodes: value.nodes || [],
-      staff: value.staff || [],
-      equipment: value.equipment || [],
+      nodes: value.nodes,
       totalCost: totalCost.toFixed(2),
       totalRevenue: totalRevenue.toFixed(2)
     });
@@ -179,7 +143,7 @@ const updateQuote = async (req, res) => {
     }
 
     // Calculate totals
-    const totalCost = await calculateTotals(value.nodes, value.staff, value.equipment, req.user.id);
+    const totalCost = await calculateTotals(value.nodes, req.user.id);
     const totalRevenue = totalCost * (1 + value.marginPct / 100);
 
     // Update quote
@@ -187,9 +151,7 @@ const updateQuote = async (req, res) => {
       name: value.name,
       projectId: value.projectId,
       marginPct: value.marginPct,
-      nodes: value.nodes || [],
-      staff: value.staff || [],
-      equipment: value.equipment || [],
+      nodes: value.nodes,
       totalCost: totalCost.toFixed(2),
       totalRevenue: totalRevenue.toFixed(2)
     }, {
