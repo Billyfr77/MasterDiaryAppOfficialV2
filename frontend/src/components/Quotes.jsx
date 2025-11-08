@@ -1,167 +1,664 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
+import jsPDF from 'jspdf'
 
 const Quotes = () => {
   const [quotes, setQuotes] = useState([])
   const [projects, setProjects] = useState([])
-  const [nodes, setNodes] = useState([])
-  const [form, setForm] = useState({ name: '', projectId: '', marginPct: '', nodes: [] })
-  const [currentNode, setCurrentNode] = useState({ nodeId: '', quantity: '' })
-  const [editing, setEditing] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedQuote, setSelectedQuote] = useState(null)
+  const [editingQuote, setEditingQuote] = useState(null)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const projectId = searchParams.get('projectId')
 
-  const fetchQuotes = async () => {
-    try {
-      const response = await api.get('/quotes')
-      setQuotes(response.data.data || response.data)
-    } catch (err) {
-      alert('Error fetching quotes: ' + (err.response?.data?.error || err.message))
-    }
-  }
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    projectId: projectId || '',
+    marginPct: 20,
+    nodes: [],
+    staff: [],
+    equipment: []
+  })
 
-  const fetchProjects = async () => {
-    try {
-      const response = await api.get('/projects')
-      setProjects(response.data.data || response.data)
-    } catch (err) {
-      console.error('Error fetching projects:', err)
-    }
-  }
-
-  const fetchNodes = async () => {
-    try {
-      const response = await api.get('/nodes')
-      setNodes(response.data.data || response.data)
-    } catch (err) {
-      console.error('Error fetching nodes:', err)
-    }
-  }
+  // Available items for selection
+  const [availableNodes, setAvailableNodes] = useState([])
+  const [availableStaff, setAvailableStaff] = useState([])
+  const [availableEquipment, setAvailableEquipment] = useState([])
 
   useEffect(() => {
-    fetchQuotes()
-    fetchProjects()
-    fetchNodes()
-  }, [])
+    fetchData()
+    if (projectId) {
+      setFormData(prev => ({ ...prev, projectId }))
+    }
+  }, [projectId])
 
-  const addNodeToQuote = () => {
-    const node = nodes.find(n => n.id === currentNode.nodeId)
-    if (node && currentNode.quantity > 0) {
-      setForm({
-        ...form,
-        nodes: [...form.nodes, { ...currentNode, nodeName: node.name, unit: node.unit, pricePerUnit: node.pricePerUnit }]
-      })
-      setCurrentNode({ nodeId: '', quantity: '' })
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [quotesRes, projectsRes, nodesRes, staffRes, equipmentRes] = await Promise.all([
+        api.get('/quotes'),
+        api.get('/projects'),
+        api.get('/nodes'),
+        api.get('/staff'),
+        api.get('/equipment')
+      ])
+
+      setQuotes(quotesRes.data.data || quotesRes.data)
+      setProjects(projectsRes.data.data || projectsRes.data)
+      setAvailableNodes(nodesRes.data.data || nodesRes.data)
+      setAvailableStaff(staffRes.data.data || staffRes.data)
+      setAvailableEquipment(equipmentRes.data.data || equipmentRes.data)
+    } catch (err) {
+      console.error('Error fetching data:', err)
+      alert('Error loading data: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setLoading(false)
     }
   }
 
-  const removeNodeFromQuote = (index) => {
-    setForm({
-      ...form,
-      nodes: form.nodes.filter((_, i) => i !== index)
+  const handleViewQuote = (quote) => {
+    setSelectedQuote(quote)
+  }
+
+  const handleEditQuote = (quote) => {
+    setEditingQuote(quote)
+    setFormData({
+      name: quote.name,
+      projectId: quote.projectId,
+      marginPct: quote.marginPct,
+      nodes: quote.nodes || [],
+      staff: quote.staff || [],
+      equipment: quote.equipment || []
     })
+    setShowCreateForm(true)
   }
 
-  const calculateSubtotal = (node) => {
-    return (parseFloat(node.pricePerUnit) * parseFloat(node.quantity)).toFixed(2)
-  }
+  const handleDeleteQuote = async (quoteId) => {
+    if (!confirm('Are you sure you want to delete this quote?')) return
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
     try {
-      const dataToSend = {
-        name: form.name,
-        projectId: form.projectId,
-        marginPct: parseFloat(form.marginPct),
-        nodes: form.nodes.map(n => ({ nodeId: n.nodeId, quantity: parseFloat(n.quantity) }))
+      await api.delete(`/quotes/${quoteId}`)
+      setQuotes(quotes.filter(q => q.id !== quoteId))
+      alert('Quote deleted successfully')
+    } catch (err) {
+      alert('Error deleting quote: ' + (err.response?.data?.error || err.message))
+    }
+  }
+
+  const handleCreateQuote = () => {
+    setEditingQuote(null)
+    setFormData({
+      name: '',
+      projectId: projectId || '',
+      marginPct: 20,
+      nodes: [],
+      staff: [],
+      equipment: []
+    })
+    setShowCreateForm(true)
+  }
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault()
+
+    try {
+      const quoteData = {
+        name: formData.name,
+        projectId: formData.projectId,
+        marginPct: parseFloat(formData.marginPct),
+        nodes: formData.nodes.filter(item => item.nodeId && item.quantity > 0),
+        staff: formData.staff.filter(item => item.staffId && item.hours > 0),
+        equipment: formData.equipment.filter(item => item.equipmentId && item.hours > 0)
       }
-      if (editing) {
-        await api.put(`/quotes/${editing}`, dataToSend)
-        setEditing(null)
+
+      if (editingQuote) {
+        const response = await api.put(`/quotes/${editingQuote.id}`, quoteData)
+        setQuotes(quotes.map(q => q.id === editingQuote.id ? response.data : q))
+        alert('Quote updated successfully')
       } else {
-        await api.post('/quotes', dataToSend)
+        const response = await api.post('/quotes', quoteData)
+        setQuotes([response.data, ...quotes])
+        alert('Quote created successfully')
       }
-      setForm({ name: '', projectId: '', marginPct: '', nodes: [] })
-      fetchQuotes()
+
+      setShowCreateForm(false)
+      setEditingQuote(null)
     } catch (err) {
       alert('Error saving quote: ' + (err.response?.data?.error || err.message))
     }
   }
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this quote?')) {
-      try {
-        await api.delete(`/quotes/${id}`)
-        fetchQuotes()
-      } catch (err) {
-        alert('Error deleting quote: ' + (err.response?.data?.error || err.message))
-      }
+  const addItem = (type, itemId) => {
+    const itemKey = `${type}Id`
+    const arrayName = type + 's'
+    const existingItem = formData[arrayName].find(item => item[itemKey] === itemId)
+
+    if (!existingItem) {
+      setFormData(prev => ({
+        ...prev,
+        [arrayName]: [...prev[arrayName], {
+          [itemKey]: itemId,
+          [type === 'node' ? 'quantity' : 'hours']: 1
+        }]
+      }))
     }
   }
 
-   return (
-          <div>
-            <Link to="/quotes/new" className="btn btn-primary" style={{ marginBottom: 'var(--spacing-md)' }}>Build Quote Visually</Link>
-            <h2>Quotes</h2>
-<Link to="/quotes/library"
-    className="btn btn-primary" style={{ marginBottom: 'var(--spacing-md)' }}>Manage Materials Library</Link>
-      <h2>Quotes</h2>
-      <form onSubmit={handleSubmit} style={{ marginBottom: 'var(--spacing-lg)' }}>
-        <input placeholder="Quote Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-        <select value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })} required>
-          <option value="">Select Project</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <input type="number" step="0.01" placeholder="Margin %" value={form.marginPct} onChange={(e) => setForm({ ...form, marginPct: e.target.value })} required />
+  const updateItemQuantity = (type, itemId, value) => {
+    const itemKey = `${type}Id`
+    const arrayName = type + 's'
 
-        <h3>Add Materials</h3>
-        <select value={currentNode.nodeId} onChange={(e) => setCurrentNode({ ...currentNode, nodeId: e.target.value })}>
-          <option value="">Select Material</option>
-          {nodes.map(n => <option key={n.id} value={n.id}>{n.name} (${n.pricePerUnit}/{n.unit})</option>)}
-        </select>
-        <input type="number" step="0.01" placeholder="Quantity" value={currentNode.quantity} onChange={(e) => setCurrentNode({ ...currentNode, quantity: e.target.value })} />
-        <button type="button" onClick={addNodeToQuote}>Add Material</button>
+    setFormData(prev => ({
+      ...prev,
+      [arrayName]: prev[arrayName].map(item =>
+        item[itemKey] === itemId
+          ? { ...item, [type === 'node' ? 'quantity' : 'hours']: parseFloat(value) || 0 }
+          : item
+      )
+    }))
+  }
 
-        <table style={{ width: '100%', marginTop: 'var(--spacing-md)' }}>
+  const removeItem = (type, itemId) => {
+    const itemKey = `${type}Id`
+    const arrayName = type + 's'
+
+    setFormData(prev => ({
+      ...prev,
+      [arrayName]: prev[arrayName].filter(item => item[itemKey] !== itemId)
+    }))
+  }
+
+  const calculateItemCost = (type, itemId, quantity) => {
+    let item
+    switch (type) {
+      case 'node':
+        item = availableNodes.find(n => n.id === itemId)
+        return item ? (parseFloat(item.pricePerUnit) * quantity) : 0
+      case 'staff':
+        item = availableStaff.find(s => s.id === itemId)
+        return item ? (parseFloat(item.chargeOutBase || item.payRateBase) * quantity) : 0
+      case 'equipment':
+        item = availableEquipment.find(e => e.id === itemId)
+        return item ? (parseFloat(item.costRateBase) * quantity) : 0
+      default:
+        return 0
+    }
+  }
+
+  const calculateTotalCost = () => {
+    let total = 0
+    formData.nodes.forEach(item => {
+      total += calculateItemCost('node', item.nodeId, item.quantity || 0)
+    })
+    formData.staff.forEach(item => {
+      total += calculateItemCost('staff', item.staffId, item.hours || 0)
+    })
+    formData.equipment.forEach(item => {
+      total += calculateItemCost('equipment', item.equipmentId, item.hours || 0)
+    })
+    return total
+  }
+
+  const calculateTotalRevenue = () => {
+    const cost = calculateTotalCost()
+    return cost * (1 + (parseFloat(formData.marginPct) / 100))
+  }
+
+  const exportToPDF = (quote) => {
+    const doc = new jsPDF()
+    doc.text(`Quote: ${quote.name}`, 14, 20)
+    doc.text(`Project: ${quote.project?.name || 'N/A'}`, 14, 30)
+    doc.text(`Margin: ${quote.marginPct}%`, 14, 40)
+
+    let y = 50
+
+    if (quote.nodes && quote.nodes.length > 0) {
+      doc.text('Materials:', 14, y)
+      y += 10
+      quote.nodes.forEach(item => {
+        const node = availableNodes.find(n => n.id === item.nodeId)
+        if (node) {
+          doc.text(`${node.name}: ${item.quantity} ${node.unit} @ $${node.pricePerUnit} = $${(node.pricePerUnit * item.quantity).toFixed(2)}`, 14, y)
+          y += 8
+        }
+      })
+    }
+
+    if (quote.staff && quote.staff.length > 0) {
+      doc.text('Staff:', 14, y)
+      y += 10
+      quote.staff.forEach(item => {
+        const staff = availableStaff.find(s => s.id === item.staffId)
+        if (staff) {
+          const rate = staff.chargeOutBase || staff.payRateBase
+          doc.text(`${staff.name}: ${item.hours} hours @ $${rate} = $${(rate * item.hours).toFixed(2)}`, 14, y)
+          y += 8
+        }
+      })
+    }
+
+    if (quote.equipment && quote.equipment.length > 0) {
+      doc.text('Equipment:', 14, y)
+      y += 10
+      quote.equipment.forEach(item => {
+        const equipment = availableEquipment.find(e => e.id === item.equipmentId)
+        if (equipment) {
+          doc.text(`${equipment.name}: ${item.hours} hours @ $${equipment.costRateBase} = $${(equipment.costRateBase * item.hours).toFixed(2)}`, 14, y)
+          y += 8
+        }
+      })
+    }
+
+    doc.text(`Total Cost: $${quote.totalCost}`, 14, y + 10)
+    doc.text(`Total Revenue: $${quote.totalRevenue}`, 14, y + 20)
+
+    doc.save(`quote_${quote.name.replace(/\s+/g, '_')}.pdf`)
+  }
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: '50px' }}>Loading quotes...</div>
+  }
+
+  return (
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>Quotes {projectId && `(Filtered by Project)`}</h2>
+        <button
+          onClick={handleCreateQuote}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Create New Quote
+        </button>
+      </div>
+
+      {/* Quotes Table */}
+      <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
           <thead>
-            <tr>
-              <th>Material</th>
-              <th>Unit</th>
-              <th>Price/Unit</th>
-              <th>Quantity</th>
-              <th>Subtotal</th>
-              <th>Actions</th>
+            <tr style={{ backgroundColor: '#f5f5f5' }}>
+              <th style={{ padding: '12px', textAlign: 'left', border: '1px solid #ddd' }}>Name</th>
+              <th style={{ padding: '12px', textAlign: 'left', border: '1px solid #ddd' }}>Project</th>
+              <th style={{ padding: '12px', textAlign: 'right', border: '1px solid #ddd' }}>Total Cost</th>
+              <th style={{ padding: '12px', textAlign: 'right', border: '1px solid #ddd' }}>Total Revenue</th>
+              <th style={{ padding: '12px', textAlign: 'center', border: '1px solid #ddd' }}>Margin %</th>
+              <th style={{ padding: '12px', textAlign: 'center', border: '1px solid #ddd' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {form.nodes.map((node, index) => (
-              <tr key={index}>
-                <td>{node.nodeName}</td>
-                <td>{node.unit}</td>
-                <td>${node.pricePerUnit}</td>
-                <td>{node.quantity}</td>
-                <td>${calculateSubtotal(node)}</td>
-                <td><button type="button" onClick={() => removeNodeFromQuote(index)}>Remove</button></td>
+            {quotes.map(quote => (
+              <tr key={quote.id} style={{ border: '1px solid #ddd' }}>
+                <td style={{ padding: '12px', border: '1px solid #ddd' }}>{quote.name}</td>
+                <td style={{ padding: '12px', border: '1px solid #ddd' }}>{quote.project?.name}</td>
+                <td style={{ padding: '12px', textAlign: 'right', border: '1px solid #ddd' }}>${quote.totalCost}</td>
+                <td style={{ padding: '12px', textAlign: 'right', border: '1px solid #ddd' }}>${quote.totalRevenue}</td>
+                <td style={{ padding: '12px', textAlign: 'center', border: '1px solid #ddd' }}>{quote.marginPct}%</td>
+                <td style={{ padding: '12px', textAlign: 'center', border: '1px solid #ddd' }}>
+                  <button
+                    onClick={() => handleViewQuote(quote)}
+                    style={{ marginRight: '5px', padding: '5px 10px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                  >
+                    View
+                  </button>
+                  <button
+                    onClick={() => handleEditQuote(quote)}
+                    style={{ marginRight: '5px', padding: '5px 10px', backgroundColor: '#ffc107', color: 'black', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => exportToPDF(quote)}
+                    style={{ marginRight: '5px', padding: '5px 10px', backgroundColor: '#6f42c1', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                  >
+                    PDF
+                  </button>
+                  <button
+                    onClick={() => handleDeleteQuote(quote.id)}
+                    style={{ padding: '5px 10px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-
-        <button type="submit">{editing ? 'Update' : 'Create'} Quote</button>
-        {editing && <button type="button" onClick={() => { setForm({ name: '', projectId: '', marginPct: '', nodes: [] }); setEditing(null) }}>Cancel</button>}
-      </form>
-
-      <div>
-        {quotes.map(quote => (
-          <div key={quote.id} style={{ border: '1px solid var(--gray-200)', padding: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)', borderRadius: 'var(--border-radius)' }}>
-            <h3>{quote.name}</h3>
-            <p>Project: {quote.project?.name}</p>
-            <p>Total Cost: ${quote.totalCost}</p>
-            <p>Total Revenue: ${quote.totalRevenue}</p>
-            <p>Margin: {quote.marginPct}%</p>
-            <button onClick={() => handleDelete(quote.id)}>Delete</button>
-          </div>
-        ))}
       </div>
+
+      {/* View Quote Modal */}
+      {selectedQuote && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            width: '90%'
+          }}>
+            <h3>Quote Details: {selectedQuote.name}</h3>
+            <p><strong>Project:</strong> {selectedQuote.project?.name}</p>
+            <p><strong>Margin:</strong> {selectedQuote.marginPct}%</p>
+
+            {selectedQuote.nodes && selectedQuote.nodes.length > 0 && (
+              <div>
+                <h4>Materials:</h4>
+                <ul>
+                  {selectedQuote.nodes.map((item, index) => {
+                    const node = availableNodes.find(n => n.id === item.nodeId)
+                    return (
+                      <li key={index}>
+                        {node?.name}: {item.quantity} {node?.unit} @ ${node?.pricePerUnit} = ${(node?.pricePerUnit * item.quantity).toFixed(2)}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {selectedQuote.staff && selectedQuote.staff.length > 0 && (
+              <div>
+                <h4>Staff:</h4>
+                <ul>
+                  {selectedQuote.staff.map((item, index) => {
+                    const staff = availableStaff.find(s => s.id === item.staffId)
+                    const rate = staff?.chargeOutBase || staff?.payRateBase
+                    return (
+                      <li key={index}>
+                        {staff?.name}: {item.hours} hours @ ${rate} = ${(rate * item.hours).toFixed(2)}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {selectedQuote.equipment && selectedQuote.equipment.length > 0 && (
+              <div>
+                <h4>Equipment:</h4>
+                <ul>
+                  {selectedQuote.equipment.map((item, index) => {
+                    const equipment = availableEquipment.find(e => e.id === item.equipmentId)
+                    return (
+                      <li key={index}>
+                        {equipment?.name}: {item.hours} hours @ ${equipment?.costRateBase} = ${(equipment?.costRateBase * item.hours).toFixed(2)}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
+
+            <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
+              <p><strong>Total Cost:</strong> ${selectedQuote.totalCost}</p>
+              <p><strong>Total Revenue:</strong> ${selectedQuote.totalRevenue}</p>
+              <p><strong>Margin:</strong> ${(selectedQuote.totalRevenue - selectedQuote.totalCost).toFixed(2)}</p>
+            </div>
+
+            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+              <button
+                onClick={() => exportToPDF(selectedQuote)}
+                style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#6f42c1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Export PDF
+              </button>
+              <button
+                onClick={() => setSelectedQuote(null)}
+                style={{ padding: '8px 16px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Quote Form */}
+      {showCreateForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            maxWidth: '800px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            width: '95%'
+          }}>
+            <h3>{editingQuote ? 'Edit Quote' : 'Create New Quote'}</h3>
+
+            <form onSubmit={handleFormSubmit}>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px' }}>Quote Name:</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px' }}>Project:</label>
+                <select
+                  value={formData.projectId}
+                  onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                >
+                  <option value="">Select Project</option>
+                  {projects.map(project => (
+                    <option key={project.id} value={project.id}>{project.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px' }}>Margin Percentage:</label>
+                <input
+                  type="number"
+                  value={formData.marginPct}
+                  onChange={(e) => setFormData({ ...formData, marginPct: e.target.value })}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  required
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+
+              {/* Materials Section */}
+              <div style={{ marginBottom: '20px' }}>
+                <h4>Materials:</h4>
+                <div style={{ marginBottom: '10px' }}>
+                  <select
+                    onChange={(e) => { if (e.target.value) addItem('node', e.target.value); e.target.value = '' }}
+                    style={{ marginRight: '10px', padding: '5px' }}
+                  >
+                    <option value="">Add Material</option>
+                    {availableNodes.filter(node => !formData.nodes.some(item => item.nodeId === node.id)).map(node => (
+                      <option key={node.id} value={node.id}>{node.name} (${node.pricePerUnit}/{node.unit})</option>
+                    ))}
+                  </select>
+                </div>
+                {formData.nodes.map((item, index) => {
+                  const node = availableNodes.find(n => n.id === item.nodeId)
+                  return (
+                    <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', padding: '5px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                      <span style={{ flex: 1 }}>{node?.name}</span>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => updateItemQuantity('node', item.nodeId, e.target.value)}
+                        min="0"
+                        step="0.01"
+                        style={{ width: '80px', marginRight: '10px', padding: '3px' }}
+                      />
+                      <span>{node?.unit}</span>
+                      <span style={{ marginLeft: '10px', marginRight: '10px' }}>
+                        = ${(node?.pricePerUnit * item.quantity).toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeItem('node', item.nodeId)}
+                        style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', padding: '3px 8px', cursor: 'pointer' }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Staff Section */}
+              <div style={{ marginBottom: '20px' }}>
+                <h4>Staff:</h4>
+                <div style={{ marginBottom: '10px' }}>
+                  <select
+                    onChange={(e) => { if (e.target.value) addItem('staff', e.target.value); e.target.value = '' }}
+                    style={{ marginRight: '10px', padding: '5px' }}
+                  >
+                    <option value="">Add Staff</option>
+                    {availableStaff.filter(staff => !formData.staff.some(item => item.staffId === staff.id)).map(staff => (
+                      <option key={staff.id} value={staff.id}>{staff.name} (${staff.chargeOutBase || staff.payRateBase}/hr)</option>
+                    ))}
+                  </select>
+                </div>
+                {formData.staff.map((item, index) => {
+                  const staff = availableStaff.find(s => s.id === item.staffId)
+                  const rate = staff?.chargeOutBase || staff?.payRateBase
+                  return (
+                    <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', padding: '5px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                      <span style={{ flex: 1 }}>{staff?.name}</span>
+                      <input
+                        type="number"
+                        value={item.hours}
+                        onChange={(e) => updateItemQuantity('staff', item.staffId, e.target.value)}
+                        min="0"
+                        step="0.01"
+                        style={{ width: '80px', marginRight: '10px', padding: '3px' }}
+                      />
+                      <span>hours</span>
+                      <span style={{ marginLeft: '10px', marginRight: '10px' }}>
+                        = ${(rate * item.hours).toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeItem('staff', item.staffId)}
+                        style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', padding: '3px 8px', cursor: 'pointer' }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Equipment Section */}
+              <div style={{ marginBottom: '20px' }}>
+                <h4>Equipment:</h4>
+                <div style={{ marginBottom: '10px' }}>
+                  <select
+                    onChange={(e) => { if (e.target.value) addItem('equipment', e.target.value); e.target.value = '' }}
+                    style={{ marginRight: '10px', padding: '5px' }}
+                  >
+                    <option value="">Add Equipment</option>
+                    {availableEquipment.filter(equipment => !formData.equipment.some(item => item.equipmentId === equipment.id)).map(equipment => (
+                      <option key={equipment.id} value={equipment.id}>{equipment.name} (${equipment.costRateBase}/hr)</option>
+                    ))}
+                  </select>
+                </div>
+                {formData.equipment.map((item, index) => {
+                  const equipment = availableEquipment.find(e => e.id === item.equipmentId)
+                  return (
+                    <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', padding: '5px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                      <span style={{ flex: 1 }}>{equipment?.name}</span>
+                      <input
+                        type="number"
+                        value={item.hours}
+                        onChange={(e) => updateItemQuantity('equipment', item.equipmentId, e.target.value)}
+                        min="0"
+                        step="0.01"
+                        style={{ width: '80px', marginRight: '10px', padding: '3px' }}
+                      />
+                      <span>hours</span>
+                      <span style={{ marginLeft: '10px', marginRight: '10px' }}>
+                        = ${(equipment?.costRateBase * item.hours).toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeItem('equipment', item.equipmentId)}
+                        style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', padding: '3px 8px', cursor: 'pointer' }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Summary */}
+              <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e9ecef', borderRadius: '5px' }}>
+                <h4>Quote Summary:</h4>
+                <p><strong>Total Cost:</strong> ${calculateTotalCost().toFixed(2)}</p>
+                <p><strong>Total Revenue:</strong> ${calculateTotalRevenue().toFixed(2)}</p>
+                <p><strong>Margin:</strong> ${(calculateTotalRevenue() - calculateTotalCost()).toFixed(2)}</p>
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowCreateForm(false); setEditingQuote(null) }}
+                  style={{ marginRight: '10px', padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  {editingQuote ? 'Update Quote' : 'Create Quote'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
