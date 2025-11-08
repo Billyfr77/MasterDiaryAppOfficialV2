@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
@@ -268,19 +268,92 @@ const Quotes = () => {
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>Quotes {projectId && `(Filtered by Project)`}</h2>
-        <button
-          onClick={handleCreateQuote}
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {/* VISUAL QUOTE BUILDER LINK - PROMINENT AND CLEAR */}
+          <Link
+            to="/quotes/new"
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#28a745',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+              border: '2px solid #28a745',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = '#218838'
+              e.target.style.transform = 'translateY(-2px)'
+              e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)'
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = '#28a745'
+              e.target.style.transform = 'translateY(0)'
+              e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)'
+            }}
+          >
+            🎨 VISUAL QUOTE BUILDER
+          </Link>
+          <button
+            onClick={handleCreateQuote}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Create Quote (Form)
+          </button>
+        </div>
+      </div>
+
+      {/* VISUAL BUILDER PROMO BANNER */}
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        padding: '20px',
+        borderRadius: '10px',
+        marginBottom: '20px',
+        textAlign: 'center',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+      }}>
+        <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>🎨 Experience Visual Quote Building!</h3>
+        <p style={{ margin: '0 0 15px 0', fontSize: '16px' }}>
+          Drag & drop materials, staff, and equipment onto an interactive canvas with real-time cost calculations,
+          particle effects, and professional animations!
+        </p>
+        <Link
+          to="/quotes/new"
           style={{
-            padding: '10px 20px',
-            backgroundColor: '#28a745',
+            display: 'inline-block',
+            padding: '12px 30px',
+            backgroundColor: 'rgba(255,255,255,0.2)',
             color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer'
+            textDecoration: 'none',
+            borderRadius: '25px',
+            fontWeight: 'bold',
+            fontSize: '18px',
+            border: '2px solid rgba(255,255,255,0.5)',
+            backdropFilter: 'blur(10px)',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.backgroundColor = 'rgba(255,255,255,0.3)'
+            e.target.style.transform = 'scale(1.05)'
+          }}
+          onMouseOut={(e) => {
+            e.target.style.backgroundColor = 'rgba(255,255,255,0.2)'
+            e.target.style.transform = 'scale(1)'
           }}
         >
-          Create New Quote
-        </button>
+          🚀 Launch Visual Builder
+        </Link>
       </div>
 
       {/* Quotes Table */}
@@ -436,7 +509,7 @@ const Quotes = () => {
         </div>
       )}
 
-      {/* Create/Edit Quote Form */}
+      {/* Create/Edit Quote Form - Simplified */}
       {showCreateForm && (
         <div style={{
           position: 'fixed',
@@ -454,12 +527,32 @@ const Quotes = () => {
             backgroundColor: 'white',
             padding: '20px',
             borderRadius: '8px',
-            maxWidth: '800px',
-            maxHeight: '90vh',
+            maxWidth: '600px',
+            maxHeight: '80vh',
             overflow: 'auto',
             width: '95%'
           }}>
-            <h3>{editingQuote ? 'Edit Quote' : 'Create New Quote'}</h3>
+            <div style={{ textAlign: 'center', marginBottom: '20px', padding: '15px', backgroundColor: '#e9ecef', borderRadius: '5px' }}>
+              <h4>💡 For Visual Quote Building:</h4>
+              <p>Use the <strong>"VISUAL QUOTE BUILDER"</strong> button above for drag-and-drop interface!</p>
+              <Link
+                to="/quotes/new"
+                style={{
+                  display: 'inline-block',
+                  marginTop: '10px',
+                  padding: '10px 20px',
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  textDecoration: 'none',
+                  borderRadius: '5px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Go to Visual Builder →
+              </Link>
+            </div>
+
+            <h3>{editingQuote ? 'Edit Quote (Basic Form)' : 'Create Quote (Basic Form)'}</h3>
 
             <form onSubmit={handleFormSubmit}>
               <div style={{ marginBottom: '15px' }}>
@@ -502,145 +595,7 @@ const Quotes = () => {
                 />
               </div>
 
-              {/* Materials Section */}
-              <div style={{ marginBottom: '20px' }}>
-                <h4>Materials:</h4>
-                <div style={{ marginBottom: '10px' }}>
-                  <select
-                    onChange={(e) => { if (e.target.value) addItem('node', e.target.value); e.target.value = '' }}
-                    style={{ marginRight: '10px', padding: '5px' }}
-                  >
-                    <option value="">Add Material</option>
-                    {availableNodes.filter(node => !formData.nodes.some(item => item.nodeId === node.id)).map(node => (
-                      <option key={node.id} value={node.id}>{node.name} (${node.pricePerUnit}/{node.unit})</option>
-                    ))}
-                  </select>
-                </div>
-                {formData.nodes.map((item, index) => {
-                  const node = availableNodes.find(n => n.id === item.nodeId)
-                  return (
-                    <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', padding: '5px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                      <span style={{ flex: 1 }}>{node?.name}</span>
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateItemQuantity('node', item.nodeId, e.target.value)}
-                        min="0"
-                        step="0.01"
-                        style={{ width: '80px', marginRight: '10px', padding: '3px' }}
-                      />
-                      <span>{node?.unit}</span>
-                      <span style={{ marginLeft: '10px', marginRight: '10px' }}>
-                        = ${(node?.pricePerUnit * item.quantity).toFixed(2)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeItem('node', item.nodeId)}
-                        style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', padding: '3px 8px', cursor: 'pointer' }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Staff Section */}
-              <div style={{ marginBottom: '20px' }}>
-                <h4>Staff:</h4>
-                <div style={{ marginBottom: '10px' }}>
-                  <select
-                    onChange={(e) => { if (e.target.value) addItem('staff', e.target.value); e.target.value = '' }}
-                    style={{ marginRight: '10px', padding: '5px' }}
-                  >
-                    <option value="">Add Staff</option>
-                    {availableStaff.filter(staff => !formData.staff.some(item => item.staffId === staff.id)).map(staff => (
-                      <option key={staff.id} value={staff.id}>{staff.name} (${staff.chargeOutBase || staff.payRateBase}/hr)</option>
-                    ))}
-                  </select>
-                </div>
-                {formData.staff.map((item, index) => {
-                  const staff = availableStaff.find(s => s.id === item.staffId)
-                  const rate = staff?.chargeOutBase || staff?.payRateBase
-                  return (
-                    <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', padding: '5px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                      <span style={{ flex: 1 }}>{staff?.name}</span>
-                      <input
-                        type="number"
-                        value={item.hours}
-                        onChange={(e) => updateItemQuantity('staff', item.staffId, e.target.value)}
-                        min="0"
-                        step="0.01"
-                        style={{ width: '80px', marginRight: '10px', padding: '3px' }}
-                      />
-                      <span>hours</span>
-                      <span style={{ marginLeft: '10px', marginRight: '10px' }}>
-                        = ${(rate * item.hours).toFixed(2)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeItem('staff', item.staffId)}
-                        style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', padding: '3px 8px', cursor: 'pointer' }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Equipment Section */}
-              <div style={{ marginBottom: '20px' }}>
-                <h4>Equipment:</h4>
-                <div style={{ marginBottom: '10px' }}>
-                  <select
-                    onChange={(e) => { if (e.target.value) addItem('equipment', e.target.value); e.target.value = '' }}
-                    style={{ marginRight: '10px', padding: '5px' }}
-                  >
-                    <option value="">Add Equipment</option>
-                    {availableEquipment.filter(equipment => !formData.equipment.some(item => item.equipmentId === equipment.id)).map(equipment => (
-                      <option key={equipment.id} value={equipment.id}>{equipment.name} (${equipment.costRateBase}/hr)</option>
-                    ))}
-                  </select>
-                </div>
-                {formData.equipment.map((item, index) => {
-                  const equipment = availableEquipment.find(e => e.id === item.equipmentId)
-                  return (
-                    <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', padding: '5px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                      <span style={{ flex: 1 }}>{equipment?.name}</span>
-                      <input
-                        type="number"
-                        value={item.hours}
-                        onChange={(e) => updateItemQuantity('equipment', item.equipmentId, e.target.value)}
-                        min="0"
-                        step="0.01"
-                        style={{ width: '80px', marginRight: '10px', padding: '3px' }}
-                      />
-                      <span>hours</span>
-                      <span style={{ marginLeft: '10px', marginRight: '10px' }}>
-                        = ${(equipment?.costRateBase * item.hours).toFixed(2)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeItem('equipment', item.equipmentId)}
-                        style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', padding: '3px 8px', cursor: 'pointer' }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Summary */}
-              <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e9ecef', borderRadius: '5px' }}>
-                <h4>Quote Summary:</h4>
-                <p><strong>Total Cost:</strong> ${calculateTotalCost().toFixed(2)}</p>
-                <p><strong>Total Revenue:</strong> ${calculateTotalRevenue().toFixed(2)}</p>
-                <p><strong>Margin:</strong> ${(calculateTotalRevenue() - calculateTotalCost()).toFixed(2)}</p>
-              </div>
-
-              <div style={{ textAlign: 'right' }}>
+              <div style={{ textAlign: 'right', marginTop: '20px' }}>
                 <button
                   type="button"
                   onClick={() => { setShowCreateForm(false); setEditingQuote(null) }}
