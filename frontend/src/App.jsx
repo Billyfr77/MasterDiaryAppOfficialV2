@@ -12,6 +12,7 @@ import Equipment from './components/Equipment'
 import Reports from './components/Reports'
 import Nodes from './components/Nodes'
 import Quotes from './components/Quotes'
+import NodesLibrary from './components/NodesLibrary'
 import './App.css'
 
 function App() {
@@ -57,21 +58,41 @@ function App() {
       <header style={{ padding: 'var(--spacing-lg)', backgroundColor: 'var(--gray-100)', borderBottom: '1px solid var(--gray-200)' }}>
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: 0, fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--primary-color)' }}>MasterDiaryApp</h1>
-          <nav className="nav">
-            <Link to="/dashboard" className="nav-link"><Home size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Dashboard</Link>
-            <Link to="/projects" className="nav-link"><Folder size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Projects</Link>
-            <Link to="/staff" className="nav-link"><Users size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Staff</Link>
-            <Link to="/diary" className="nav-link"><Calendar size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Diary</Link>
-            <Link to="/settings" className="nav-link"><SettingsIcon size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Settings</Link>
-            <Link to="/equipment" className="nav-link"><Wrench size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Equipment</Link>
-            <Link to="/nodes" className="nav-link"><Package size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Materials</Link>
-            <Link to="/quotes" className="nav-link"><DollarSign size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Quotes</Link>
-            <Link to="/reports" className="nav-link"><FileText size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Reports</Link>
-            <button onClick={() => setDarkMode(!darkMode)} className="btn btn-outline" style={{ marginLeft: 'var(--spacing-md)' }}>
-              {darkMode ? '☀️ Light' : '🌙 Dark'}
-            </button>
-            <button onClick={handleLogout} className="btn btn-danger"><LogOut size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Logout</button>
-          </nav>
+          <nav className="nav" style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center', flexWrap: 'wrap' }}>
+  <Link to="/dashboard" className="nav-link" title="Dashboard">
+    <Home size={20} />
+  </Link>
+  <Link to="/projects" className="nav-link" title="Projects">
+    <Folder size={20} />
+  </Link>
+  <Link to="/staff" className="nav-link" title="Staff">
+    <Users size={20} />
+  </Link>
+  <Link to="/diary" className="nav-link" title="Diary">
+    <Calendar size={20} />
+  </Link>
+  <Link to="/settings" className="nav-link" title="Settings">
+    <SettingsIcon size={20} />
+  </Link>
+  <Link to="/equipment" className="nav-link" title="Equipment">
+    <Wrench size={20} />
+  </Link>
+  <Link to="/nodes" className="nav-link" title="Materials">
+    <Package size={20} />
+  </Link>
+  <Link to="/quotes" className="nav-link" title="Quotes">
+    <DollarSign size={20} />
+  </Link>
+  <Link to="/reports" className="nav-link" title="Reports">
+    <FileText size={20} />
+  </Link>
+  <button onClick={() => setDarkMode(!darkMode)} className="btn btn-outline" title={darkMode ? 'Light Mode' : 'Dark Mode'} style={{ marginLeft: 'var(--spacing-lg)' }}>
+    {darkMode ? '☀️' : '🌙'}
+  </button>
+  <button onClick={handleLogout} className="btn btn-danger" title="Logout">
+    <LogOut size={20} />
+  </button>
+</nav>
         </div>
       </header>
       <main className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-xl)' }}>
@@ -87,6 +108,7 @@ function App() {
           <Route path="/nodes" element={<Nodes />} />
           <Route path="/quotes" element={<Quotes />} />
           <Route path="/reports" element={<Reports />} />
+<Route path="/quotes/library" element={<NodesLibrary />} />
         </Routes>
       </main>
     </div>

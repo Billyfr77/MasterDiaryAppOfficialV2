@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../utils/api'
 
 const Quotes = () => {
@@ -99,6 +100,8 @@ const Quotes = () => {
 
   return (
     <div>
+<Link to="/quotes/library"
+    className="btn btn-primary" style={{ marginBottom: 'var(--spacing-md)' }}>Manage Materials Library</Link>
       <h2>Quotes</h2>
       <form onSubmit={handleSubmit} style={{ marginBottom: 'var(--spacing-lg)' }}>
         <input placeholder="Quote Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
