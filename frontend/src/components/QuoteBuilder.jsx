@@ -254,6 +254,16 @@ const DragPreview = () => {
   }
 
   const material = item.material
+  const getPreviewText = () => {
+    if (material.type === 'staff') {
+      return `Charge: $${material.chargeRate}/${material.unit || 'hr'}`
+    }
+    if (material.type === 'equipment') {
+      return `$${material.costRate}/${material.unit || 'day'}`
+    }
+    return `$${material.pricePerUnit}/${material.unit}`
+  }
+
   return (
     <div style={layerStyles}>
       <div style={getItemStyles(initialOffset, currentOffset)}>
@@ -274,7 +284,7 @@ const DragPreview = () => {
           <div>
             <strong>{material.name}</strong>
             <br />
-            <small>${material.pricePerUnit || material.payRate || material.costRate}/${material.unit || 'hr' || 'day'}</small>
+            <small>{getPreviewText()}</small>
           </div>
         </div>
       </div>
@@ -293,7 +303,7 @@ const ItemCard = ({ item }) => {
 
   const getDisplayInfo = () => {
     if (item.type === 'staff') {
-      return { label: item.name, sub: `$${item.payRate}/hr`, icon: <User size={16} /> }
+      return { label: item.name, sub: `Charge: $${item.chargeRate}/hr`, icon: <User size={16} /> }
     }
     if (item.type === 'equipment') {
       return { label: item.name, sub: `$${item.costRate}/day`, icon: <Wrench size={16} /> }
@@ -408,7 +418,8 @@ const QuoteBuilder = () => {
       const staffData = response.data.data || response.data
       setStaff(staffData.map(s => ({
         ...s,
-        payRate: s.pay_rates?.base || s.payRate || 0
+        payRate: parseFloat((s.pay_rates?.base || s.pay || s.payRate || '').replace(/.*\$/, '')) || 0,
+        chargeRate: parseFloat((s.charge_rates?.base || s.charge || s.chargeRate || '').replace(/.*\$/, '')) || 0
       })))
     } catch (err) {
       console.error('Error fetching staff:', err)
@@ -533,18 +544,29 @@ const QuoteBuilder = () => {
   }, [particleTrail.show])
 
   const calculateTotals = () => {
-    const totalCost = quoteItems.reduce((sum, item) => {
+    let totalCost = 0
+    let totalRevenue = 0
+
+    quoteItems.forEach(item => {
       let cost = 0
+      let revenue = 0
+
       if (item.type === 'staff') {
-        cost = item.material.payRate * item.quantity // Assuming quantity is hours
+        cost = item.material.payRate * item.quantity
+        revenue = item.material.chargeRate * item.quantity
       } else if (item.type === 'equipment') {
-        cost = item.material.costRate * item.quantity // Assuming quantity is days
+        cost = item.material.costRate * item.quantity
+        revenue = cost * (1 + marginPct / 100)
       } else {
+        // materials
         cost = item.material.pricePerUnit * item.quantity
+        revenue = cost * (1 + marginPct / 100)
       }
-      return sum + cost
-    }, 0)
-    const totalRevenue = totalCost * (1 + marginPct / 100)
+
+      totalCost += cost
+      totalRevenue += revenue
+    })
+
     const margin = totalRevenue - totalCost
     return { totalCost, totalRevenue, margin }
   }
