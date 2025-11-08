@@ -170,7 +170,7 @@ const Landing = () => {
         </div>
       </footer>
 
-      <style jsx>{`
+      <style>{`
         .landing {
           min-height: 100vh;
         }
