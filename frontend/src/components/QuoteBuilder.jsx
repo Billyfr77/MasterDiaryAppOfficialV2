@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useDrag, useDrop, useDragLayer } from 'react-dnd'
-import { Shovel, User, Wrench, Package, Zap, Plus, Save, Sparkles } from 'lucide-react'
+import { HTML5Backend } from 'react-dnd-html5-backend'
+import { Shovel, User, Wrench, Package, Zap, Plus, Save, Sparkles, Search, Volume2, VolumeX } from 'lucide-react'
 import { api } from '../utils/api'
 
 const initialNodes = []
@@ -14,6 +15,12 @@ const getMaterialIcon = (category) => {
   if (cat.includes('labor') || cat.includes('worker')) return <User size={16} />
   if (cat.includes('equipment') || cat.includes('tool')) return <Wrench size={16} />
   return <Package size={16} />
+}
+
+const getItemIcon = (item) => {
+  if (item.type === 'staff') return <User size={16} />
+  if (item.type === 'equipment') return <Wrench size={16} />
+  return getMaterialIcon(item.category || '')
 }
 
 const layerStyles = {
@@ -83,6 +90,156 @@ const Particles = ({ show }) => {
   return <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>{particles}</div>
 }
 
+const RippleEffect = ({ show, x, y }) => {
+  if (!show) return null
+
+  return (
+    <div style={{
+      position: 'absolute',
+      left: x - 50,
+      top: y - 50,
+      width: '100px',
+      height: '100px',
+      border: '2px solid #667eea',
+      borderRadius: '50%',
+      animation: 'ripple 0.6s ease-out forwards',
+      zIndex: 50,
+      pointerEvents: 'none'
+    }} />
+  )
+}
+
+const ParticleTrail = ({ show, x, y }) => {
+  if (!show) return null
+
+  const trailParticles = Array.from({ length: 10 }, (_, i) => (
+    <div
+      key={i}
+      style={{
+        position: 'absolute',
+        left: x + Math.random() * 20 - 10,
+        top: y + Math.random() * 20 - 10,
+        width: '3px',
+        height: '3px',
+        backgroundColor: '#764ba2',
+        borderRadius: '50%',
+        animation: `trailParticle 0.5s ease-out forwards`,
+        zIndex: 40,
+        opacity: 0.8
+      }}
+    />
+  ))
+
+  return <div>{trailParticles}</div>
+}
+
+const Tooltip = ({ children, content }) => {
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <div
+      style={{ position: 'relative', display: 'inline-block' }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      {children}
+      {visible && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.8)',
+          color: 'white',
+          padding: '8px 12px',
+          borderRadius: '6px',
+          fontSize: '0.9em',
+          whiteSpace: 'nowrap',
+          zIndex: 1000,
+          marginBottom: '8px',
+          fontFamily: "'Inter', sans-serif"
+        }}>
+          {content}
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            border: '5px solid transparent',
+            borderTopColor: 'rgba(0,0,0,0.8)'
+          }}></div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const HUDGauge = ({ label, value, max, color }) => {
+  const percentage = Math.min((value / max) * 100, 100)
+  const strokeDasharray = 283 // Circumference of circle with r=45
+  const strokeDashoffset = strokeDasharray - (strokeDasharray * percentage) / 100
+
+  return (
+    <div style={{ textAlign: 'center', margin: '0 var(--spacing-md)' }}>
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle
+          cx="50"
+          cy="50"
+          r="45"
+          fill="none"
+          stroke="#333"
+          strokeWidth="8"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r="45"
+          fill="none"
+          stroke={color}
+          strokeWidth="8"
+          strokeDasharray={strokeDasharray}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          transform="rotate(-90 50 50)"
+          style={{ transition: 'stroke-dashoffset 1s ease-out' }}
+        />
+        <text x="50" y="45" textAnchor="middle" fill="white" fontSize="12" fontFamily="'Poppins', sans-serif">
+          {label}
+        </text>
+        <text x="50" y="60" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="'Inter', sans-serif">
+          ${value.toFixed(0)}
+        </text>
+      </svg>
+    </div>
+  )
+}
+
+const SoundToggle = ({ enabled, onToggle }) => (
+  <button
+    onClick={onToggle}
+    style={{
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      background: 'rgba(255,255,255,0.1)',
+      border: '1px solid rgba(255,255,255,0.3)',
+      borderRadius: '50%',
+      width: '40px',
+      height: '40px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      zIndex: 1000,
+      backdropFilter: 'blur(10px)',
+      transition: 'all 0.3s ease'
+    }}
+    aria-label={enabled ? 'Disable sound' : 'Enable sound'}
+  >
+    {enabled ? <Volume2 size={20} color="white" /> : <VolumeX size={20} color="white" />}
+  </button>
+)
+
 const DragPreview = () => {
   const { itemType, isDragging, item, initialOffset, currentOffset } = useDragLayer((monitor) => ({
     item: monitor.getItem(),
@@ -113,11 +270,11 @@ const DragPreview = () => {
           backdropFilter: 'blur(10px)',
           animation: 'pulse 2s infinite, glow 1s ease-in-out infinite alternate'
         }}>
-          {getMaterialIcon(material.category)}
+          {getItemIcon(material)}
           <div>
             <strong>{material.name}</strong>
             <br />
-            <small>${material.pricePerUnit}/{material.unit}</small>
+            <small>${material.pricePerUnit || material.payRate || material.costRate}/${material.unit || 'hr' || 'day'}</small>
           </div>
         </div>
       </div>
@@ -125,14 +282,26 @@ const DragPreview = () => {
   )
 }
 
-const MaterialItem = ({ material }) => {
+const ItemCard = ({ item }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'material',
-    item: { material },
+    item: { material: { ...item, type: item.type || 'material' } },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
   }))
+
+  const getDisplayInfo = () => {
+    if (item.type === 'staff') {
+      return { label: item.name, sub: `$${item.payRate}/hr`, icon: <User size={16} /> }
+    }
+    if (item.type === 'equipment') {
+      return { label: item.name, sub: `$${item.costRate}/day`, icon: <Wrench size={16} /> }
+    }
+    return { label: item.name, sub: `$${item.pricePerUnit}/${item.unit}`, icon: getMaterialIcon(item.category) }
+  }
+
+  const { label, sub, icon } = getDisplayInfo()
 
   return (
     <div
@@ -168,23 +337,26 @@ const MaterialItem = ({ material }) => {
           console.log('Keyboard drag not fully implemented')
         }
       }}
-      aria-label={`Drag ${material.name} costing $${material.pricePerUnit} per ${material.unit}`}
+      aria-label={`Drag ${label} costing ${sub}`}
+      role="button"
     >
-      <div style={{
-        color: '#667eea',
-        background: 'rgba(102, 126, 234, 0.1)',
-        borderRadius: '50%',
-        padding: '8px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        animation: 'spin 3s linear infinite'
-      }}>
-        {getMaterialIcon(material.category)}
-      </div>
+      <Tooltip content={`${label}: ${item.category || item.role || 'Material'} - ${sub}`}>
+        <div style={{
+          color: '#667eea',
+          background: 'rgba(102, 126, 234, 0.1)',
+          borderRadius: '50%',
+          padding: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation: 'spin 3s linear infinite'
+        }}>
+          {icon}
+        </div>
+      </Tooltip>
       <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 'bold', color: '#333', fontFamily: "'Poppins', sans-serif" }}>{material.name}</div>
-        <div style={{ fontSize: '0.9em', color: '#666', fontFamily: "'Inter', sans-serif" }}>${material.pricePerUnit}/{material.unit}</div>
+        <div style={{ fontWeight: 'bold', color: '#333', fontFamily: "'Poppins', sans-serif" }}>{label}</div>
+        <div style={{ fontSize: '0.9em', color: '#666', fontFamily: "'Inter', sans-serif" }}>{sub}</div>
       </div>
       <div style={{
         position: 'absolute',
@@ -206,12 +378,20 @@ const QuoteBuilder = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [materials, setMaterials] = useState([])
+  const [staff, setStaff] = useState([])
+  const [equipment, setEquipment] = useState([])
   const [projects, setProjects] = useState([])
   const [quoteItems, setQuoteItems] = useState([])
   const [selectedProject, setSelectedProject] = useState('')
   const [marginPct, setMarginPct] = useState(20)
   const [showConfetti, setShowConfetti] = useState(false)
   const [showParticles, setShowParticles] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [rippleEffect, setRippleEffect] = useState({ show: false, x: 0, y: 0 })
+  const [particleTrail, setParticleTrail] = useState({ show: false, x: 0, y: 0 })
+  const [soundEnabled, setSoundEnabled] = useState(false)
+  const canvasRef = useRef(null)
 
   const fetchMaterials = async () => {
     try {
@@ -219,6 +399,32 @@ const QuoteBuilder = () => {
       setMaterials(response.data.data || response.data)
     } catch (err) {
       console.error('Error fetching materials:', err)
+    }
+  }
+
+  const fetchStaff = async () => {
+    try {
+      const response = await api.get('/staff')
+      const staffData = response.data.data || response.data
+      setStaff(staffData.map(s => ({
+        ...s,
+        payRate: s.pay_rates?.base || s.payRate || 0
+      })))
+    } catch (err) {
+      console.error('Error fetching staff:', err)
+    }
+  }
+
+  const fetchEquipment = async () => {
+    try {
+      const response = await api.get('/equipment')
+      const equipmentData = response.data.data || response.data
+      setEquipment(equipmentData.map(e => ({
+        ...e,
+        costRate: e.cost_rates?.base || e.costRate || 0
+      })))
+    } catch (err) {
+      console.error('Error fetching equipment:', err)
     }
   }
 
@@ -233,8 +439,42 @@ const QuoteBuilder = () => {
 
   useEffect(() => {
     fetchMaterials()
+    fetchStaff()
+    fetchEquipment()
     fetchProjects()
   }, [])
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  const filteredMaterials = useMemo(() => {
+    if (!debouncedSearchTerm) return materials
+    return materials.filter(material =>
+      material.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      material.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    )
+  }, [materials, debouncedSearchTerm])
+
+  const filteredStaff = useMemo(() => {
+    if (!debouncedSearchTerm) return staff
+    return staff.filter(s =>
+      s.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      s.role.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    )
+  }, [staff, debouncedSearchTerm])
+
+  const filteredEquipment = useMemo(() => {
+    if (!debouncedSearchTerm) return equipment
+    return equipment.filter(e =>
+      e.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      e.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    )
+  }, [equipment, debouncedSearchTerm])
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -246,13 +486,14 @@ const QuoteBuilder = () => {
     drop: (item, monitor) => {
       const offset = monitor.getClientOffset()
       const material = item.material
-      const quantity = prompt(`Enter quantity for ${material.name}:`, '1')
+      const quantity = prompt(`Enter quantity for ${material.name}:`, material.type === 'staff' ? '8' : material.type === 'equipment' ? '1' : '1')
       if (quantity) {
+        const nodeType = material.type === 'staff' ? 'Staff' : material.type === 'equipment' ? 'Equipment' : 'Material'
         const newNode = {
-          id: `${material.id}-${Date.now()}`,
+          id: `${material.type}-${material.id}-${Date.now()}`,
           type: 'default',
           position: { x: offset.x - 200, y: offset.y - 100 },
-          data: { label: `${material.name} - Qty: ${quantity} ${material.unit}` },
+          data: { label: `${nodeType}: ${material.name} - Qty: ${quantity}` },
           style: {
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white',
@@ -260,13 +501,19 @@ const QuoteBuilder = () => {
             borderRadius: '12px',
             boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
             padding: '10px',
-            animation: 'nodeAppear 0.5s ease-out'
+            animation: 'nodeAppear 0.5s ease-out, bounce 0.6s ease-out'
           }
         }
         setNodes((nds) => nds.concat(newNode))
-        setQuoteItems(prev => [...prev, { nodeId: material.id, quantity: parseFloat(quantity), material }])
+        setQuoteItems(prev => [...prev, { nodeId: material.id, quantity: parseFloat(quantity), material, type: material.type }])
         setShowParticles(true)
+        setRippleEffect({ show: true, x: offset.x, y: offset.y })
         setTimeout(() => setShowParticles(false), 1000)
+        setTimeout(() => setRippleEffect({ show: false, x: 0, y: 0 }), 600)
+        if (soundEnabled) {
+          // Play drop sound (placeholder)
+          console.log('Drop sound played')
+        }
       }
     },
     collect: (monitor) => ({
@@ -274,8 +521,29 @@ const QuoteBuilder = () => {
     }),
   }))
 
+  // Track mouse for particle trail
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (particleTrail.show) {
+        setParticleTrail({ show: true, x: e.clientX, y: e.clientY })
+      }
+    }
+    document.addEventListener('mousemove', handleMouseMove)
+    return () => document.removeEventListener('mousemove', handleMouseMove)
+  }, [particleTrail.show])
+
   const calculateTotals = () => {
-    const totalCost = quoteItems.reduce((sum, item) => sum + (item.material.pricePerUnit * item.quantity), 0)
+    const totalCost = quoteItems.reduce((sum, item) => {
+      let cost = 0
+      if (item.type === 'staff') {
+        cost = item.material.payRate * item.quantity // Assuming quantity is hours
+      } else if (item.type === 'equipment') {
+        cost = item.material.costRate * item.quantity // Assuming quantity is days
+      } else {
+        cost = item.material.pricePerUnit * item.quantity
+      }
+      return sum + cost
+    }, 0)
     const totalRevenue = totalCost * (1 + marginPct / 100)
     const margin = totalRevenue - totalCost
     return { totalCost, totalRevenue, margin }
@@ -285,7 +553,7 @@ const QuoteBuilder = () => {
 
   const saveQuote = async () => {
     if (!selectedProject || quoteItems.length === 0) {
-      alert('Select a project and add materials.')
+      alert('Select a project and add items.')
       return
     }
     try {
@@ -293,7 +561,9 @@ const QuoteBuilder = () => {
         name: `Quote ${Date.now()}`,
         projectId: selectedProject,
         marginPct,
-        nodes: quoteItems.map(item => ({ nodeId: item.nodeId, quantity: item.quantity }))
+        nodes: quoteItems.filter(item => !item.type || item.type === 'material').map(item => ({ nodeId: item.nodeId, quantity: item.quantity })),
+        staff: quoteItems.filter(item => item.type === 'staff').map(item => ({ staffId: item.nodeId, hours: item.quantity })),
+        equipment: quoteItems.filter(item => item.type === 'equipment').map(item => ({ equipmentId: item.nodeId, days: item.quantity }))
       }
       await api.post('/quotes', data)
       setShowConfetti(true)
@@ -302,6 +572,10 @@ const QuoteBuilder = () => {
       setNodes([])
       setEdges([])
       setQuoteItems([])
+      if (soundEnabled) {
+        // Play save sound (placeholder)
+        console.log('Save sound played')
+      }
     } catch (err) {
       alert('Error saving quote: ' + (err.response?.data?.error || err.message))
     }
@@ -311,9 +585,11 @@ const QuoteBuilder = () => {
     <div style={{
       height: '100vh',
       display: 'flex',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
       position: 'relative',
-      fontFamily: "'Inter', sans-serif"
+      fontFamily: "'Inter', sans-serif",
+      flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+      overflow: 'hidden'
     }}>
       <style>{`
         @keyframes confetti {
@@ -341,7 +617,37 @@ const QuoteBuilder = () => {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.05); }
         }
+        @keyframes bounce {
+          0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
+          40%, 43% { transform: translate3d(0, -30px, 0); }
+          70% { transform: translate3d(0, -15px, 0); }
+          90% { transform: translate3d(0, -4px, 0); }
+        }
+        @keyframes ripple {
+          0% { transform: scale(0); opacity: 1; }
+          100% { transform: scale(2); opacity: 0; }
+        }
+        @keyframes trailParticle {
+          0% { transform: scale(1); opacity: 0.8; }
+          100% { transform: scale(0); opacity: 0; }
+        }
+        @media (max-width: 768px) {
+          .quote-builder {
+            flex-direction: column !important;
+          }
+          .sidebar {
+            width: 100% !important;
+            height: auto !important;
+            position: relative !important;
+            border-radius: 0 0 20px 20px !important;
+          }
+          .canvas {
+            margin: var(--spacing-sm) !important;
+            height: 60vh !important;
+          }
+        }
       `}</style>
+      {/* Parallax Layers */}
       <div style={{
         position: 'absolute',
         top: 0,
@@ -350,22 +656,39 @@ const QuoteBuilder = () => {
         bottom: 0,
         background: 'url(https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80) no-repeat center center',
         backgroundSize: 'cover',
-        opacity: 0.1,
-        zIndex: -1
+        opacity: 0.05,
+        zIndex: -2,
+        transform: 'translateZ(-1px) scale(1.1)',
+        animation: 'parallax 20s ease-in-out infinite alternate'
       }}></div>
-      {/* Sidebar */}
       <div style={{
-        width: '320px',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%)',
+        zIndex: -1,
+        animation: 'lighting 10s ease-in-out infinite alternate'
+      }}></div>
+
+      <SoundToggle enabled={soundEnabled} onToggle={() => setSoundEnabled(!soundEnabled)} />
+
+      {/* Sidebar */}
+      <div className="sidebar" style={{
+        width: '340px',
         padding: 'var(--spacing-lg)',
-        borderRight: '1px solid rgba(255,255,255,0.2)',
+        borderRight: '2px solid rgba(102, 126, 234, 0.5)',
         overflowY: 'auto',
         position: 'sticky',
         top: 0,
         height: '100vh',
-        background: 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-        borderRadius: '0 20px 20px 0'
+        background: 'rgba(26, 26, 46, 0.95)',
+        backdropFilter: 'blur(20px)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(102, 126, 234, 0.2)',
+        borderRadius: '0 25px 25px 0',
+        border: '1px solid rgba(102, 126, 234, 0.3)',
+        borderLeft: 'none'
       }}>
         <div style={{
           display: 'flex',
@@ -373,22 +696,58 @@ const QuoteBuilder = () => {
           gap: 'var(--spacing-sm)',
           marginBottom: 'var(--spacing-lg)',
           paddingBottom: 'var(--spacing-md)',
-          borderBottom: '2px solid #667eea'
+          borderBottom: '2px solid #667eea',
+          position: 'relative'
         }}>
-          <Sparkles size={24} color="#667eea" />
-          <h3 style={{ margin: 0, color: '#333', fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}>Materials Library</h3>
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '2px',
+            background: 'linear-gradient(90deg, #667eea, #764ba2, #f093fb)',
+            animation: 'glow 2s ease-in-out infinite alternate'
+          }}></div>
+          <Sparkles size={28} color="#667eea" style={{ filter: 'drop-shadow(0 0 10px #667eea)' }} />
+          <h3 style={{ margin: 0, color: '#ffffff', fontFamily: "'Poppins', sans-serif", fontWeight: 700, textShadow: '0 0 20px rgba(102, 126, 234, 0.5)' }}>Strategic Builder</h3>
+        </div>
+        {/* Search Input */}
+        <div style={{
+          position: 'relative',
+          marginBottom: 'var(--spacing-md)'
+        }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#667eea' }} />
+          <input
+            type="text"
+            placeholder="Search items..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: 'var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) 36px',
+              border: '1px solid rgba(102, 126, 234, 0.3)',
+              borderRadius: '8px',
+              background: 'rgba(255,255,255,0.1)',
+              color: 'white',
+              fontFamily: "'Inter', sans-serif",
+              backdropFilter: 'blur(10px)'
+            }}
+            aria-label="Search items"
+          />
         </div>
         <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} style={{
           width: '100%',
           marginBottom: 'var(--spacing-md)',
           padding: 'var(--spacing-sm)',
-          border: '1px solid var(--gray-300)',
+          border: '1px solid rgba(102, 126, 234, 0.3)',
           borderRadius: '8px',
-          background: 'white',
-          fontFamily: "'Inter', sans-serif"
+          background: 'rgba(255,255,255,0.1)',
+          color: 'white',
+          fontFamily: "'Inter', sans-serif",
+          backdropFilter: 'blur(10px)'
         }}>
-          <option value="">Select Project</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          <option value="" style={{ background: '#1a1a2e', color: 'white' }}>Select Project</option>
+          {projects.map(p => <option key={p.id} value={p.id} style={{ background: '#1a1a2e', color: 'white' }}>{p.name}</option>)}
         </select>
         <div style={{
           marginBottom: 'var(--spacing-md)',
@@ -396,19 +755,37 @@ const QuoteBuilder = () => {
           alignItems: 'center',
           gap: 'var(--spacing-sm)'
         }}>
-          <label style={{ color: '#333', fontFamily: "'Inter', sans-serif" }}>Margin %:</label>
+          <label style={{ color: '#ffffff', fontFamily: "'Inter', sans-serif" }}>Margin %:</label>
           <input type="number" placeholder="Margin %" value={marginPct} onChange={(e) => setMarginPct(parseFloat(e.target.value))} style={{
             flex: 1,
             padding: 'var(--spacing-sm)',
-            border: '1px solid var(--gray-300)',
+            border: '1px solid rgba(102, 126, 234, 0.3)',
             borderRadius: '8px',
-            background: 'white',
-            fontFamily: "'Inter', sans-serif"
+            background: 'rgba(255,255,255,0.1)',
+            color: 'white',
+            fontFamily: "'Inter', sans-serif",
+            backdropFilter: 'blur(10px)'
           }} />
         </div>
+        {/* Materials */}
         <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-          {materials.map(material => (
-            <MaterialItem key={material.id} material={material} />
+          <h4 style={{ color: '#ffffff', fontFamily: "'Poppins', sans-serif", marginBottom: 'var(--spacing-sm)' }}>Materials</h4>
+          {filteredMaterials.map(material => (
+            <ItemCard key={`material-${material.id}`} item={{ ...material, type: 'material' }} />
+          ))}
+        </div>
+        {/* Staff */}
+        <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+          <h4 style={{ color: '#ffffff', fontFamily: "'Poppins', sans-serif", marginBottom: 'var(--spacing-sm)' }}>Staff</h4>
+          {filteredStaff.map(s => (
+            <ItemCard key={`staff-${s.id}`} item={{ ...s, type: 'staff' }} />
+          ))}
+        </div>
+        {/* Equipment */}
+        <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+          <h4 style={{ color: '#ffffff', fontFamily: "'Poppins', sans-serif", marginBottom: 'var(--spacing-sm)' }}>Equipment</h4>
+          {filteredEquipment.map(e => (
+            <ItemCard key={`equipment-${e.id}`} item={{ ...e, type: 'equipment' }} />
           ))}
         </div>
         <button onClick={saveQuote} style={{
@@ -426,7 +803,8 @@ const QuoteBuilder = () => {
           fontWeight: 'bold',
           transition: 'all 0.3s ease',
           boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-          fontFamily: "'Poppins', sans-serif"
+          fontFamily: "'Poppins', sans-serif",
+          textShadow: '0 0 10px rgba(255,255,255,0.5)'
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px)'
@@ -437,7 +815,7 @@ const QuoteBuilder = () => {
           e.currentTarget.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.3)'
         }}>
           <Save size={16} />
-          Save Quote
+          Deploy Quote
         </button>
         <div style={{
           marginTop: 'var(--spacing-lg)',
@@ -460,33 +838,24 @@ const QuoteBuilder = () => {
 
       {/* Canvas */}
       <div
-        ref={drop}
+        className="canvas"
+        ref={(el) => { canvasRef.current = el; drop(el); }}
         style={{
           flex: 1,
           transition: 'all 0.5s ease',
-          backgroundColor: isOver ? 'rgba(102, 126, 234, 0.2)' : 'rgba(255,255,255,0.1)',
-          border: isOver ? '3px dashed #667eea' : '3px dashed transparent',
-          borderRadius: '20px',
+          backgroundColor: isOver ? 'rgba(102, 126, 234, 0.3)' : 'rgba(26, 26, 46, 0.8)',
+          border: isOver ? '3px dashed #667eea' : '3px dashed rgba(102, 126, 234, 0.5)',
+          borderRadius: '25px',
           margin: 'var(--spacing-lg)',
-          boxShadow: isOver ? '0 0 30px rgba(102, 126, 234, 0.5)' : '0 8px 32px rgba(0,0,0,0.1)',
-          backdropFilter: 'blur(10px)',
-          position: 'relative'
+          boxShadow: isOver ? '0 0 50px rgba(102, 126, 234, 0.8), inset 0 0 50px rgba(102, 126, 234, 0.2)' : '0 8px 32px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(102, 126, 234, 0.2)',
+          backdropFilter: 'blur(20px)',
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
         <Particles show={showParticles} />
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: 'rgba(255,255,255,0.7)',
-          fontSize: '1.2em',
-          textAlign: 'center',
-          zIndex: 1,
-          fontFamily: "'Poppins', sans-serif"
-        }}>
-          {isOver ? '🎉 Drop materials here!' : '✨ Drag materials from the sidebar to build your quote'}
-        </div>
+        <RippleEffect show={rippleEffect.show} x={rippleEffect.x} y={rippleEffect.y} />
+        <ParticleTrail show={particleTrail.show} x={particleTrail.x} y={particleTrail.y} />
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -494,12 +863,43 @@ const QuoteBuilder = () => {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           fitView
-          style={{ borderRadius: '17px' }}
+          style={{ borderRadius: '22px' }}
         >
-          <MiniMap style={{ background: 'rgba(255,255,255,0.8)', borderRadius: '8px' }} />
-          <Controls style={{ background: 'rgba(255,255,255,0.8)', borderRadius: '8px' }} />
-          <Background color="#aaa" gap={16} />
+          <MiniMap style={{ background: 'rgba(26, 26, 46, 0.9)', borderRadius: '8px', border: '1px solid rgba(102, 126, 234, 0.3)' }} />
+          <Controls style={{ background: 'rgba(26, 26, 46, 0.9)', borderRadius: '8px', border: '1px solid rgba(102, 126, 234, 0.3)' }} />
+          <Background color="#667eea" gap={20} />
         </ReactFlow>
+      </div>
+
+      {/* HUD */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        display: 'flex',
+        alignItems: 'center',
+        background: 'rgba(26, 26, 46, 0.95)',
+        borderRadius: '20px',
+        padding: 'var(--spacing-md)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(102, 126, 234, 0.3)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(102, 126, 234, 0.5)',
+        zIndex: 100,
+        animation: 'hudFloat 3s ease-in-out infinite'
+      }}>
+        <HUDGauge label="Cost" value={totalCost} max={50000} color="#ff6b6b" />
+        <HUDGauge label="Revenue" value={totalRevenue} max={75000} color="#4ecdc4" />
+        <HUDGauge label="Margin" value={margin} max={25000} color="#ffd93d" />
+        <div style={{
+          marginLeft: 'var(--spacing-md)',
+          color: 'white',
+          fontFamily: "'Poppins', sans-serif",
+          fontSize: '1.2em',
+          textShadow: '0 0 10px rgba(102, 126, 234, 0.5)'
+        }}>
+          Strategic Overview
+        </div>
       </div>
 
       <DragPreview />
