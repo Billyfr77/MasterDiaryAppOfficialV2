@@ -620,7 +620,7 @@ const Quotes = () => {
             Experience Next-Level Quote Building
           </h3>
           <p style={{
-            margin: '0 0 20px 0',
+            
             color: 'rgba(255,255,255,0.9)',
             fontSize: '1.1rem',
             fontFamily: "'Inter', sans-serif",
@@ -633,7 +633,7 @@ const Quotes = () => {
           <Link
             to="/quotes/new"
             style={{
-              display: 'inline-block',
+              
               padding: '14px 32px',
               background: 'rgba(255,255,255,0.2)',
               color: 'white',
@@ -1094,7 +1094,7 @@ const Quotes = () => {
                 <Link
                   to="/quotes/new"
                   style={{
-                    display: 'inline-block',
+                    
                     marginTop: '8px',
                     padding: '12px 24px',
                     backgroundColor: '#28a745',
