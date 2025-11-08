@@ -98,8 +98,10 @@ const Quotes = () => {
     }
   }
 
-  return (
-    <div>
+   return (
+          <div>
+            <Link to="/quotes/new" className="btn btn-primary" style={{ marginBottom: 'var(--spacing-md)' }}>Build Quote Visually</Link>
+            <h2>Quotes</h2>
 <Link to="/quotes/library"
     className="btn btn-primary" style={{ marginBottom: 'var(--spacing-md)' }}>Manage Materials Library</Link>
       <h2>Quotes</h2>

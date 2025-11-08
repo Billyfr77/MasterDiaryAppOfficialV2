@@ -12,6 +12,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@reduxjs/toolkit": "^2.10.1",
+    "@xyflow/react": "^12.9.2",
     "axios": "^1.13.2",
     "billy": "file:../..",
     "chart.js": "^4.5.1",

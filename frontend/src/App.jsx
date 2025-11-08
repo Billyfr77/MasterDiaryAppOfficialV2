@@ -13,6 +13,7 @@ import Reports from './components/Reports'
 import Nodes from './components/Nodes'
 import Quotes from './components/Quotes'
 import NodesLibrary from './components/NodesLibrary'
+import QuoteBuilder from './components/QuoteBuilder'
 import './App.css'
 
 function App() {
@@ -97,19 +98,20 @@ function App() {
       </header>
       <main className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-xl)' }}>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/staff" element={<Staff />} />
-          <Route path="/diary" element={<Diary />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/equipment" element={<Equipment />} />
-          <Route path="/nodes" element={<Nodes />} />
-          <Route path="/quotes" element={<Quotes />} />
-          <Route path="/reports" element={<Reports />} />
-<Route path="/quotes/library" element={<NodesLibrary />} />
-        </Routes>
+  <Route path="/" element={<Landing />} />
+  <Route path="/login" element={<Login onLogin={handleLogin} />} />
+  <Route path="/dashboard" element={<Dashboard />} />
+  <Route path="/projects" element={<Projects />} />
+  <Route path="/staff" element={<Staff />} />
+  <Route path="/diary" element={<Diary />} />
+  <Route path="/settings" element={<Settings />} />
+  <Route path="/equipment" element={<Equipment />} />
+  <Route path="/nodes" element={<Nodes />} />
+  <Route path="/quotes" element={<Quotes />} />
+  <Route path="/quotes/library" element={<NodesLibrary />} />
+  <Route path="/quotes/new" element={<QuoteBuilder />} />
+  <Route path="/reports" element={<Reports />} />
+</Routes>
       </main>
     </div>
   )
