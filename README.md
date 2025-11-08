@@ -1,17 +1,19 @@
 # MasterDiaryAppOfficial
 
-A stunning, production-ready SaaS application for construction management, focused on real-time diary tracking, cost calculations, and analytics. Built with a beautiful, accessible UI and powerful features for efficient project oversight.
+A stunning, production-ready SaaS application for construction management, focused on real-time diary tracking, cost calculations, analytics, materials management, and quoting. Built with a beautiful, accessible UI and powerful features for efficient project oversight.
 
 ## 🚀 Overview
 
 MasterDiaryAppOfficial revolutionizes construction project management by providing:
 - **Real-time calculations** for hours, costs, revenues, and margins
+- **Materials management** with customizable nodes (materials) and pricing
+- **Quoting system** for project estimates with auto-calculated totals
 - **Beautiful, responsive UI** with dark mode, animations, and accessibility
 - **Advanced data management** with filtering, sorting, pagination, and PDF reports
 - **Team collaboration** through project assignments and user management
 - **Comprehensive analytics** via dashboards and charts
 
-Perfect for construction companies to track work hours, manage staff/equipment, and generate insights—all with a modern, polished interface.
+Perfect for construction companies to track work hours, manage staff/equipment/materials, generate quotes, and gain insights—all with a modern, polished interface.
 
 ## ✨ Key Features
 
@@ -20,6 +22,8 @@ Perfect for construction companies to track work hours, manage staff/equipment, 
 - **Auto-Calculations**: Instant computation of ordinary/OT hours, staff costs, equipment costs, revenues, and margins
 - **Project Management**: Create, edit, delete projects; assign users for access control
 - **Staff & Equipment**: Manage rates, categories, and assignments
+- **Materials (Nodes)**: Define materials with name, category, unit, and price per unit
+- **Quoting**: Build quotes with selected materials, quantities, margins; auto-calculate costs and revenues
 - **Real-Time Preview**: See calculations before saving entries
 
 ### Advanced Features
@@ -101,13 +105,17 @@ Visit `http://localhost:5173` for the landing page, or login to access the app.
 3. **Dashboard**: View metrics, charts, and recent activity
 4. **Projects**: Manage projects and assign users
 5. **Staff/Equipment**: Set up workers and tools with rates
-6. **Diary**: Log work entries with real-time calculations
-7. **Reports**: Filter data and export PDFs
-8. **Settings**: Configure app parameters
+6. **Materials**: Define materials (nodes) with pricing
+7. **Quotes**: Create quotes for projects with materials and margins
+8. **Diary**: Log work entries with real-time calculations
+9. **Reports**: Filter data and export PDFs
+10. **Settings**: Configure app parameters
 
 ### Example Workflow
 - Add staff with pay/charge rates
 - Create projects and assign users
+- Define materials in Materials section
+- Build quotes with materials, quantities, and margins
 - Log diary entries (auto-calculates costs/margins)
 - View dashboard for insights
 - Generate reports for stakeholders
@@ -140,6 +148,20 @@ Visit `http://localhost:5173` for the landing page, or login to access the app.
 - `GET /api/equipment` - List equipment
 - `POST /api/equipment` - Create equipment
 
+### Nodes (Materials)
+- `GET /api/nodes` - List nodes (paginated)
+- `GET /api/nodes/:id` - Get node
+- `POST /api/nodes` - Create node
+- `PUT /api/nodes/:id` - Update node
+- `DELETE /api/nodes/:id` - Delete node
+
+### Quotes
+- `GET /api/quotes` - List quotes (paginated)
+- `GET /api/quotes/:id` - Get quote
+- `POST /api/quotes` - Create quote (auto-calculates totals)
+- `PUT /api/quotes/:id` - Update quote (re-calculates totals)
+- `DELETE /api/quotes/:id` - Delete quote
+
 ### Diaries
 - `GET /api/diaries` - List diaries (with filters)
 - `POST /api/diaries` - Create diary entry
@@ -159,12 +181,16 @@ Visit `http://localhost:5173` for the landing page, or login to access the app.
 - **Projects**: id, name, site
 - **Staff**: id, name, role, pay rates (base/OT1/OT2), charge rates
 - **Equipment**: id, name, category, cost rates
+- **Nodes**: id, name, category, unit, pricePerUnit, userId
+- **Quotes**: id, name, projectId, userId, nodes (JSON), totalCost, totalRevenue, marginPct
 - **Diaries**: id, date, projectId, workerId, equipmentId, times, calculations
 - **Settings**: id, parameter, value, notes
 - **ProjectUsers**: Junction for many-to-many projects-users
 
 ### Relationships
 - Diary belongs to Project, Staff, Equipment
+- Quote belongs to Project, User
+- Node belongs to User
 - Project belongs to many Users (via ProjectUsers)
 
 ## 🎨 Design System
@@ -223,6 +249,8 @@ PORT=5000
 All planned features implemented:
 - ✅ Edit/Delete diary entries
 - ✅ Equipment integration
+- ✅ Materials (Nodes) management
+- ✅ Quoting system with auto-calculations
 - ✅ PDF reports
 - ✅ Advanced filtering/sorting
 - ✅ Multi-user projects
