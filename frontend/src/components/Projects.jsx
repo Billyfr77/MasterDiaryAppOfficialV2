@@ -21,10 +21,11 @@ const Projects = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get('/auth/users') // Assuming a route to get all users, or adjust
+      const response = await api.get('/auth/users')
       setUsers(response.data)
     } catch (err) {
       console.error('Error fetching users:', err)
+      // User assignment feature not fully implemented yet
     }
   }
 
@@ -71,6 +72,7 @@ const Projects = () => {
       setAssignedUsers(prev => ({ ...prev, [projectId]: response.data }))
     } catch (err) {
       console.error('Error fetching assigned users:', err)
+      // User assignment not implemented yet
     }
   }
 
@@ -80,6 +82,7 @@ const Projects = () => {
       fetchAssignedUsers(projectId)
     } catch (err) {
       alert('Error assigning user: ' + (err.response?.data?.error || err.message))
+      // User assignment not implemented yet
     }
   }
 
@@ -89,6 +92,7 @@ const Projects = () => {
       fetchAssignedUsers(projectId)
     } catch (err) {
       alert('Error removing user: ' + (err.response?.data?.error || err.message))
+      // User assignment not implemented yet
     }
   }
 
@@ -136,12 +140,14 @@ const Projects = () => {
               <div>
                 <button onClick={() => handleEdit(project)} style={{ marginRight: '5px', padding: '5px 10px', backgroundColor: '#ffc107', border: 'none', cursor: 'pointer' }}>Edit</button>
                 <button onClick={() => handleDelete(project.id)} style={{ marginRight: '5px', padding: '5px 10px', backgroundColor: '#dc3545', color: 'white', border: 'none', cursor: 'pointer' }}>Delete</button>
-                <button onClick={() => toggleExpand(project.id)} style={{ padding: '5px 10px', backgroundColor: '#17a2b8', color: 'white', border: 'none', cursor: 'pointer' }}>
+                {/* User assignment feature temporarily disabled - backend not implemented */}
+                {/* <button onClick={() => toggleExpand(project.id)} style={{ padding: '5px 10px', backgroundColor: '#17a2b8', color: 'white', border: 'none', cursor: 'pointer' }}>
                   {expandedProject === project.id ? 'Hide Users' : 'Manage Users'}
-                </button>
+                </button> */}
               </div>
             </div>
-            {expandedProject === project.id && (
+            {/* User assignment UI temporarily hidden */}
+            {/* {expandedProject === project.id && (
               <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
                 <h4>Assigned Users</h4>
                 <ul style={{ listStyle: 'none', padding: 0, marginBottom: '10px' }}>
@@ -162,7 +168,7 @@ const Projects = () => {
                   </select>
                 </div>
               </div>
-            )}
+            )} */}
           </li>
         ))}
       </ul>

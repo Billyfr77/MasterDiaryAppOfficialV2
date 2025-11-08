@@ -6,6 +6,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       Project.hasMany(models.Diary, { foreignKey: 'projectId' });
+      Project.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
     }
   }
 
@@ -22,6 +23,14 @@ module.exports = (sequelize, DataTypes) => {
     site: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'Users',
+        key: 'id'
+      }
     }
   }, {
     sequelize,

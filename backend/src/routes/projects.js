@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { authenticateToken } = require('../middleware/auth');
 const {
   getAllProjects,
   getProjectById,
@@ -7,6 +8,8 @@ const {
   updateProject,
   deleteProject
 } = require('../controllers/projectController');
+
+router.use(authenticateToken);
 
 router.get('/', getAllProjects);
 router.get('/:id', getProjectById);

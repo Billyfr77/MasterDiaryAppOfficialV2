@@ -100,15 +100,62 @@ const Reports = () => {
     doc.save('diary_report.pdf')
   }
 
+  const formStyle = {
+    marginBottom: '15px'
+  }
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '5px'
+  }
+
+  const inputStyle = {
+    width: '100%',
+    padding: '8px',
+    boxSizing: 'border-box'
+  }
+
+  const selectStyle = {
+    width: '100%',
+    padding: '8px',
+    boxSizing: 'border-box'
+  }
+
+  const buttonStyle = {
+    padding: '10px 20px',
+    backgroundColor: '#28a745',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    marginBottom: '20px'
+  }
+
+  const tableStyle = {
+    width: '100%',
+    borderCollapse: 'collapse',
+    marginTop: '20px'
+  }
+
+  const thStyle = {
+    padding: '8px',
+    textAlign: 'left',
+    borderBottom: '1px solid #ccc'
+  }
+
+  const tdStyle = {
+    padding: '8px',
+    borderBottom: '1px solid #eee'
+  }
+
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
       <h2>Reports</h2>
 
-      <div style={{ marginBottom: '20px' }}>
+      <div style={formStyle}>
         <h3>Filters</h3>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <div>
-            <label>Start Date:</label>
+            <label style={labelStyle}>Start Date:</label>
             <DatePicker
               selected={filters.startDate}
               onChange={(date) => setFilters({ ...filters, startDate: date })}
@@ -118,7 +165,7 @@ const Reports = () => {
             />
           </div>
           <div>
-            <label>End Date:</label>
+            <label style={labelStyle}>End Date:</label>
             <DatePicker
               selected={filters.endDate}
               onChange={(date) => setFilters({ ...filters, endDate: date })}
@@ -128,8 +175,12 @@ const Reports = () => {
             />
           </div>
           <div>
-            <label>Project:</label>
-            <select value={filters.projectId} onChange={(e) => setFilters({ ...filters, projectId: e.target.value })}>
+            <label style={labelStyle}>Project:</label>
+            <select
+              value={filters.projectId}
+              onChange={(e) => setFilters({ ...filters, projectId: e.target.value })}
+              style={selectStyle}
+            >
               <option value="">All Projects</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
@@ -137,7 +188,7 @@ const Reports = () => {
         </div>
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
+      <div style={formStyle}>
         <h3>Summary</h3>
         <p>Total Hours: {summary.totalHours}</p>
         <p>Total Costs: ${summary.totalCosts}</p>
@@ -146,62 +197,44 @@ const Reports = () => {
         <p>Average Margin %: {summary.avgMarginPct}%</p>
       </div>
 
-      <button onClick={exportToPDF} style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', cursor: 'pointer', marginBottom: '20px' }}>
+      <button
+        onClick={exportToPDF}
+        style={buttonStyle}
+        onMouseOver={(e) => e.target.style.opacity = '0.8'}
+        onMouseOut={(e) => e.target.style.opacity = '1'}
+      >
         Export to PDF
       </button>
 
       <h3>Diary Entries ({filteredDiaries.length})</h3>
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+      <table style={tableStyle}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #ccc' }}>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Date</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Project</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Worker</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Equipment</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Hours</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Costs</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Revenues</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Margin %</th>
+          <tr>
+            <th style={thStyle}>Date</th>
+            <th style={thStyle}>Project</th>
+            <th style={thStyle}>Worker</th>
+            <th style={thStyle}>Equipment</th>
+            <th style={thStyle}>Hours</th>
+            <th style={thStyle}>Costs</th>
+            <th style={thStyle}>Revenues</th>
+            <th style={thStyle}>Margin %</th>
           </tr>
         </thead>
         <tbody>
           {filteredDiaries.map(d => (
-            <tr key={d.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '8px' }}>{d.date}</td>
-              <td style={{ padding: '8px' }}>{d.Project?.name}</td>
-              <td style={{ padding: '8px' }}>{d.Staff?.name}</td>
-              <td style={{ padding: '8px' }}>{d.Equipment?.name || '-'}</td>
-              <td style={{ padding: '8px' }}>{d.totalHours}</td>
-              <td style={{ padding: '8px' }}>${d.costs}</td>
-              <td style={{ padding: '8px' }}>${d.revenues}</td>
-              <td style={{ padding: '8px' }}>{d.marginPct}%</td>
+            <tr key={d.id}>
+              <td style={tdStyle}>{d.date}</td>
+              <td style={tdStyle}>{d.Project?.name}</td>
+              <td style={tdStyle}>{d.Staff?.name}</td>
+              <td style={tdStyle}>{d.Equipment?.name || '-'}</td>
+              <td style={tdStyle}>{d.totalHours}</td>
+              <td style={tdStyle}>${d.costs}</td>
+              <td style={tdStyle}>${d.revenues}</td>
+              <td style={tdStyle}>{d.marginPct}%</td>
             </tr>
           ))}
         </tbody>
       </table>
-
-      <style jsx>{`
-        div {
-          margin-bottom: 15px;
-        }
-        label {
-          display: block;
-          margin-bottom: 5px;
-        }
-        input, select {
-          width: 100%;
-          padding: 8px;
-          box-sizing: border-box;
-        }
-        button:hover {
-          opacity: 0.8;
-        }
-        @media (max-width: 600px) {
-          table {
-            font-size: 12px;
-          }
-        }
-      `}</style>
     </div>
   )
 }

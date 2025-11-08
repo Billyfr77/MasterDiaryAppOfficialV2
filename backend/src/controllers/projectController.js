@@ -13,6 +13,7 @@ const getAllProjects = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Project.findAndCountAll({
+      where: { userId: req.user.id },
       limit,
       offset
     });
@@ -31,7 +32,9 @@ const getAllProjects = async (req, res) => {
 
 const getProjectById = async (req, res) => {
   try {
-    const project = await Project.findByPk(req.params.id);
+    const project = await Project.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
     if (project) {
       res.json(project);
     } else {
@@ -48,7 +51,10 @@ const createProject = async (req, res) => {
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-    const project = await Project.create(req.body);
+    const project = await Project.create({
+      ...req.body,
+      userId: req.user.id
+    });
     res.status(201).json(project);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -61,7 +67,7 @@ const updateProject = async (req, res) => {
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-    const [updated] = await Project.update(req.body, { where: { id: req.params.id } });
+    const [updated] = await Project.update(req.body, { where: { id: req.params.id, userId: req.user.id } });
     if (updated) {
       const updatedProject = await Project.findByPk(req.params.id);
       res.json(updatedProject);
@@ -75,7 +81,7 @@ const updateProject = async (req, res) => {
 
 const deleteProject = async (req, res) => {
   try {
-    const deleted = await Project.destroy({ where: { id: req.params.id } });
+    const deleted = await Project.destroy({ where: { id: req.params.id, userId: req.user.id } });
     if (deleted) {
       res.json({ message: 'Project deleted' });
     } else {
