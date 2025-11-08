@@ -50,6 +50,8 @@ app.use('/api/staff', require('./src/routes/staff'));
 app.use('/api/diaries', require('./src/routes/diaries'));
 app.use('/api/settings', require('./src/routes/settings'));
 app.use('/api/equipment', require('./src/routes/equipment'));
+app.use('/api/nodes', require('./src/routes/nodes'));
+app.use('/api/quotes', require('./src/routes/quotes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

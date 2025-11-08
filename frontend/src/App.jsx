@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, Link, Navigate } from 'react-router-dom'
-import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut } from 'lucide-react'
+import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign } from 'lucide-react'
 import Login from './components/Login'
 import Landing from './components/Landing'
 import Dashboard from './components/Dashboard'
@@ -10,6 +10,8 @@ import Diary from './components/Diary'
 import Settings from './components/Settings'
 import Equipment from './components/Equipment'
 import Reports from './components/Reports'
+import Nodes from './components/Nodes'
+import Quotes from './components/Quotes'
 import './App.css'
 
 function App() {
@@ -62,6 +64,8 @@ function App() {
             <Link to="/diary" className="nav-link"><Calendar size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Diary</Link>
             <Link to="/settings" className="nav-link"><SettingsIcon size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Settings</Link>
             <Link to="/equipment" className="nav-link"><Wrench size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Equipment</Link>
+            <Link to="/nodes" className="nav-link"><Package size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Materials</Link>
+            <Link to="/quotes" className="nav-link"><DollarSign size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Quotes</Link>
             <Link to="/reports" className="nav-link"><FileText size={16} style={{ marginRight: 'var(--spacing-xs)' }} />Reports</Link>
             <button onClick={() => setDarkMode(!darkMode)} className="btn btn-outline" style={{ marginLeft: 'var(--spacing-md)' }}>
               {darkMode ? '☀️ Light' : '🌙 Dark'}
@@ -80,6 +84,8 @@ function App() {
           <Route path="/diary" element={<Diary />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/equipment" element={<Equipment />} />
+          <Route path="/nodes" element={<Nodes />} />
+          <Route path="/quotes" element={<Quotes />} />
           <Route path="/reports" element={<Reports />} />
         </Routes>
       </main>
