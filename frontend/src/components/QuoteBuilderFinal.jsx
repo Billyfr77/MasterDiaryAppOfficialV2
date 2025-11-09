@@ -3,8 +3,7 @@ import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState,
 import '@xyflow/react/dist/style.css'
 import { useDrag, useDrop, useDragLayer } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { Shovel, User, Wrench, Package, Zap, Plus, Save, Sparkles, Search, Volume2, VolumeX,
-    Target, TrendingUp, Undo, Redo, Download, Star, Clock, Palette } from 'lucide-react'
+import { Shovel, User, Wrench, Package, Zap, Plus, Save, Sparkles, Search, Volume2, VolumeX, Target, Lightning, TrendingUp, Undo, Redo, Download, Star, Clock } from 'lucide-react'
 import { api } from '../utils/api'
 import CountUp from 'react-countup'
 
@@ -1100,7 +1099,7 @@ const QuoteBuilder = () => {
       }}>
         <HUDGauge label="Cost" value={totalCost} max={50000} color="#ff6b6b" icon={Package} />
         <HUDGauge label="Revenue" value={totalRevenue} max={75000} color="#4ecdc4" icon={TrendingUp} />
-        <HUDGauge label="Margin" value={margin} max={25000} color="#ffd93d" icon={Star} />
+        <HUDGauge label="Margin" value={margin} max={25000} color="#ffd93d" icon={Lightning} />
         <div style={{
           marginLeft: 'var(--spacing-md)',
           color: 'white',
