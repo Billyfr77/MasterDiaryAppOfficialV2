@@ -5,7 +5,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign } from 'lucide-react'
 import Login from './components/Login'
 import Landing from './components/Landing'
-import UltimateDashboardFinal from './components/UltimateDashboardFinal'
+import UltimateDashboard from './components/UltimateDashboard'
         import EnhancedStaff from './components/EnhancedStaff'
         import EnhancedEquipment from './components/EnhancedEquipment'
         import EnhancedNodes from './components/EnhancedNodes'
@@ -103,7 +103,7 @@ function App() {
           <Routes>
     <Route path="/" element={<Landing />} />
     <Route path="/login" element={<Login onLogin={handleLogin} />} />
-    <Route path="/dashboard" element={<UltimateDashboardFinal />} />
+    <Route path="/dashboard" element=\{<UltimateDashboardFinal />} />
     <Route path="/projects" element={<EnhancedProjects />} />
     <Route path="/staff" element={<EnhancedStaff />} />
     <Route path="/diary" element={<EnhancedDiary />} />
