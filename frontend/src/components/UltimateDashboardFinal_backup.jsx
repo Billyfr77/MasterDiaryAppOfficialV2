@@ -5,12 +5,12 @@ import * as d3 from 'd3'
 import { api } from '../utils/api'
 import { io } from 'socket.io-client'
 import {
-  TrendingUp, TrendingDown, DollarSign, Clock, BarChart3, Sparkles, Volume2, VolumeX,
-  Zap, Target, AlertTriangle, CheckCircle, Activity, Users, Wrench, Calendar,
-  Settings, Download, RefreshCw, Maximize2, Minimize2, Grid, Layers, Brain,
-  Eye, EyeOff, Filter, Search, ChevronDown, ChevronUp, Star, Award,
-  Mail, Calendar as CalendarIcon, Clock as ClockIcon, Save, FileText
-} from 'lucide-react'
+          TrendingUp, TrendingDown, DollarSign, Clock, BarChart3, Sparkles, Volume2, VolumeX,
+          Zap, Target, AlertTriangle, CheckCircle, Activity, Users, Wrench, Calendar,
+          Settings, Download, RefreshCw, Maximize2, Minimize2, Grid, Layers, Brain,
+          Eye, EyeOff, Filter, Search, ChevronDown, ChevronUp, Star, Award,
+          Mail, Calendar as CalendarIcon, Clock as ClockIcon, Save, FileText, X
+        } from 'lucide-react'
 import AISuggestionsEnhanced from './AISuggestionsEnhanced'
 import PredictiveAnalytics from './PredictiveAnalytics'
 

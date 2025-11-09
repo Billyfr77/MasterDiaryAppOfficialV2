@@ -1,0 +1,1 @@
+onChange={(e) = ...reportSchedule, format: e.target.value })} 

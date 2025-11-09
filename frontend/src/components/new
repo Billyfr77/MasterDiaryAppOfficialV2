@@ -1,0 +1,1 @@
+.call(d3.axisBottom(x).tickFormat(d = Date(d).toLocaleDateString())) 

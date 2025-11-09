@@ -1,0 +1,1 @@
+.domain([0, d3.max(heatmapData.flatMap(d =, value]) = 
