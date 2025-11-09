@@ -5,12 +5,12 @@ import * as d3 from 'd3'
 import { api } from '../utils/api'
 import { io } from 'socket.io-client'
 import {
-  TrendingUp, TrendingDown, DollarSign, Clock, BarChart3, Sparkles, Volume2, VolumeX,
-  Zap, Target, AlertTriangle, CheckCircle, Activity, Users, Wrench, Calendar,
-  Settings, Download, RefreshCw, Maximize2, Minimize2, Grid, Layers, Brain,
-  Eye, EyeOff, Filter, Search, ChevronDown, ChevronUp, Star, Award,
-  Mail, Calendar as CalendarIcon, Clock as ClockIcon, Save, FileText
-} from 'lucide-react'
+          TrendingUp, TrendingDown, DollarSign, Clock, BarChart3, Sparkles, Volume2, VolumeX,
+          Zap, Target, AlertTriangle, CheckCircle, Activity, Users, Wrench, Calendar,
+          Settings, Download, RefreshCw, Maximize2, Minimize2, Grid, Layers, Brain,
+          Eye, EyeOff, Filter, Search, ChevronDown, ChevronUp, Star, Award,
+          Mail, Calendar as CalendarIcon, Clock as ClockIcon, Save, FileText
+        } from 'lucide-react'
 import AISuggestionsEnhanced from './AISuggestionsEnhanced'
 import PredictiveAnalytics from './PredictiveAnalytics'
 
@@ -205,9 +205,9 @@ const UltimateDashboardFinal = () => {
         const value = cellData ? cellData[1].revenue : 0
 
         g.append("rect")
-          .attr("x", x(date))
+          .attr("x"(date))
           .attr("y", y(project))
-          .attr("width", x.bandwidth())
+          .attr("width".bandwidth())
           .attr("height", y.bandwidth())
           .attr("fill", value > 0 ? colorScale(value) : "#333")
           .attr("stroke", "#555")
@@ -573,7 +573,7 @@ const UltimateDashboardFinal = () => {
                 zIndex: 10
               }}>
                 <button onClick={() => toggleWidget('kpi')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
+                  ?
                 </button>
                 <select
                   value={widgets.kpi.size}
@@ -680,7 +680,7 @@ const UltimateDashboardFinal = () => {
                 zIndex: 10
               }}>
                 <button onClick={() => toggleWidget('charts')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
+                  ?
                 </button>
                 <select
                   value={widgets.charts.size}
@@ -771,7 +771,7 @@ const UltimateDashboardFinal = () => {
                 zIndex: 10
               }}>
                 <button onClick={() => toggleWidget('insights')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
+                  ?
                 </button>
                 <select
                   value={widgets.insights.size}
@@ -822,7 +822,7 @@ const UltimateDashboardFinal = () => {
                 zIndex: 10
               }}>
                 <button onClick={() => toggleWidget('predictive')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
+                  ?
                 </button>
                 <select
                   value={widgets.predictive.size}
@@ -876,7 +876,7 @@ const UltimateDashboardFinal = () => {
                 zIndex: 10
               }}>
                 <button onClick={() => toggleWidget('heatmap')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
+                  ?
                 </button>
                 <select
                   value={widgets.heatmap.size}
@@ -923,7 +923,7 @@ const UltimateDashboardFinal = () => {
                 zIndex: 10
               }}>
                 <button onClick={() => toggleWidget('activities')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
+                  ?
                 </button>
                 <select
                   value={widgets.activities.size}
