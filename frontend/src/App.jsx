@@ -103,7 +103,7 @@ function App() {
           <Routes>
     <Route path="/" element={<Landing />} />
     <Route path="/login" element={<Login onLogin={handleLogin} />} />
-    <Route path="/dashboard" element={<UltimateDashboardFinal />} />
+    <Route path="/dashboard" element=\{<UltimateDashboardFixed />} />
     <Route path="/projects" element={<EnhancedProjects />} />
     <Route path="/staff" element={<EnhancedStaff />} />
     <Route path="/diary" element={<EnhancedDiary />} />
