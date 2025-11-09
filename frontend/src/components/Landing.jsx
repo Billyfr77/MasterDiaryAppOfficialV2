@@ -1,8 +1,9 @@
-import InteractiveQuoteSandbox from './components/InteractiveQuoteSandbox'
+// Landing.jsx without InteractiveQuoteSandbox import
+// Replace the current Landing.jsx with this content
+
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BarChart3, Users, Calendar, FileText, CheckCircle, Star, ArrowRight, Zap, Target, Sparkles, MousePointer, Layers, Wand2, Rocket, Award, TrendingUp, Shield, Play, Pause, Volume2, VolumeX, Trophy, Crown, Diamond, ChevronDown, Check } from 'lucide-react'
-
 
 const Landing = () => {
   const navigate = useNavigate()
@@ -357,18 +358,6 @@ const Landing = () => {
           </div>
         </div>
       </section>
-{/* Live Demo Section */}
-        <section id="demo" className="demo-section">
-          // ... existing demo section ...
-        </section>
-
-        {/* Interactive Quote Sandbox */}
-        <InteractiveQuoteSandbox />
-
-        {/* Revolutionary Drag-Drop Section */}
-        <section className="revolutionary-section">
-          // ... existing revolutionary section ...
-        </section>
 
       {/* Revolutionary Drag-Drop Section */}
       <section className="revolutionary-section">
