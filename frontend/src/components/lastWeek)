@@ -1,1 +1,0 @@
-const recentDiaries = diaries.filter(d = Date(d.date)  

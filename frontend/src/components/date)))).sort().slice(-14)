@@ -1,1 +1,0 @@
-const dates = Array.from(new Set(heatmapData.flatMap(d = 

@@ -1,1 +1,0 @@
-const weeklyGrowth = recentDiaries.length  ? ((recentDiaries.reduce((sum, d) = + parseFloat(d.revenues 

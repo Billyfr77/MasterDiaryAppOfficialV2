@@ -1,1 +1,0 @@
-const projects = Array.from(new Set(heatmapData.map(d =, 10) 

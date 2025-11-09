@@ -1,1 +1,0 @@
-const cellData = heatmapData.find(d = === project)?.[1].find(([d]) = === date) 
