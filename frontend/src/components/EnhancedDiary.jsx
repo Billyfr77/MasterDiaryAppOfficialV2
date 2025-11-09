@@ -74,15 +74,15 @@ const EnhancedDiary = () => {
   const [staff, setStaff] = useState([])
   const [equipment, setEquipment] = useState([])
   const [diaries, setDiaries] = useState([])
-  const [form, setForm] = useState({
-    date: '',
-    projectId: '',
-    staffId: '',
-    equipmentId: '',
-    hours: '',
-    overtime1: '',
-    overtime2: ''
-  })
+   const [form, setForm] = useState({
+            date: '',
+            projectId: '',
+            workerId: '',
+            start: '',
+            finish: '',
+            breakMins: '',
+            revenues: ''
+          })
   const [showConfetti, setShowConfetti] = useState(false)
   const [showParticles, setShowParticles] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(false)
@@ -112,30 +112,29 @@ const EnhancedDiary = () => {
 
   useEffect(() => { fetchData() }, [])
 
- const handleSubmit = async (e) => {
-          e.preventDefault()
-          try {
-            const { id, ...formData } = form
-            const dataToSend = {
-              date: formData.date,
-              projectId: formData.projectId,
-              staffId: formData.staffId,
-              equipmentId: formData.equipmentId || undefined,
-              hours: parseFloat(formData.hours),
-              overtime1: formData.overtime1 ? parseFloat(formData.overtime1) : undefined,
-              overtime2: formData.overtime2 ? parseFloat(formData.overtime2) : undefined
+const handleSubmit = async (e) => {
+                  e.preventDefault()
+                  try {
+                    const dataToSend = {
+                      date: form.date,
+                      projectId: form.projectId,
+                      workerId: form.workerId,
+                      start: form.start,
+                      finish: form.finish,
+                      breakMins: form.breakMins ? parseInt(form.breakMins) : undefined,
+                      revenues: form.revenues ? parseFloat(form.revenues) : undefined
+                    }
+              await api.post('/diaries', dataToSend)
+              alert('Diary entry added successfully!')
+              setShowConfetti(true)
+              setTimeout(() => setShowConfetti(false), 3000)
+              setForm({ date: '', projectId: '', workerId: '', start: '', finish: '', breakMins: '', revenues: '' })
+              fetchData()
+            } catch (err) {
+              alert('Error saving diary entry: ' + (err.response?.data?.error || err.message))
+              console.error('Error saving diary entry:', err)
             }
-      await api.post('/diaries', dataToSend)
-      alert('Diary entry added successfully!')
-      setShowConfetti(true)
-      setTimeout(() => setShowConfetti(false), 3000)
-      setForm({ date: '', projectId: '', staffId: '', equipmentId: '', hours: '', overtime1: '', overtime2: '' })
-      fetchData()
-    } catch (err) {
-      alert('Error saving diary entry: ' + (err.response?.data?.error || err.message))
-      console.error('Error saving diary entry:', err)
-    }
-  }
+          }
 
   const recentDiaries = diaries.slice(-5).reverse()
 
@@ -326,87 +325,87 @@ const EnhancedDiary = () => {
               {projects.map(p => <option key={p.id} value={p.id} style={{ background: '#1a1a2e', color: 'white' }}>{p.name}</option>)}
             </select>
             <select
-              value={form.staffId}
-              onChange={(e) => setForm({ ...form, staffId: e.target.value })}
-              required
-              style={{
-                padding: 'var(--spacing-sm)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
-                fontFamily: "'Inter', sans-serif",
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              <option value="" style={{ background: '#1a1a2e', color: 'white' }}>Select Staff</option>
-              {staff.map(s => <option key={s.id} value={s.id} style={{ background: '#1a1a2e', color: 'white' }}>{s.name}</option>)}
-            </select>
-            <select
-              value={form.equipmentId}
-              onChange={(e) => setForm({ ...form, equipmentId: e.target.value })}
-              style={{
-                padding: 'var(--spacing-sm)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
-                fontFamily: "'Inter', sans-serif",
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              <option value="" style={{ background: '#1a1a2e', color: 'white' }}>Select Equipment (Optional)</option>
-              {equipment.map(e => <option key={e.id} value={e.id} style={{ background: '#1a1a2e', color: 'white' }}>{e.name}</option>)}
-            </select>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Hours"
-              value={form.hours}
-              onChange={(e) => setForm({ ...form, hours: e.target.value })}
-              required
-              style={{
-                padding: 'var(--spacing-sm)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
-                fontFamily: "'Inter', sans-serif",
-                backdropFilter: 'blur(10px)'
-              }}
-            />
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Overtime 1 Hours"
-              value={form.overtime1}
-              onChange={(e) => setForm({ ...form, overtime1: e.target.value })}
-              style={{
-                padding: 'var(--spacing-sm)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
-                fontFamily: "'Inter', sans-serif",
-                backdropFilter: 'blur(10px)'
-              }}
-            />
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Overtime 2 Hours"
-              value={form.overtime2}
-              onChange={(e) => setForm({ ...form, overtime2: e.target.value })}
-              style={{
-                padding: 'var(--spacing-sm)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
-                fontFamily: "'Inter', sans-serif",
-                backdropFilter: 'blur(10px)'
-              }}
-            />
+          value={form.workerId}
+          onChange={(e) => setForm({ ...form, workerId: e.target.value })}
+          required
+          style={{
+            padding: 'var(--spacing-sm)',
+            border: '1px solid rgba(102, 126, 234, 0.3)',
+            borderRadius: '8px',
+            background: 'rgba(255,255,255,0.1)',
+            color: 'white',
+            fontFamily: "'Inter', sans-serif",
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          <option value="" style={{ background: '#1a1a2e', color: 'white' }}>Select Worker</option>
+          {staff.map(s => <option key={s.id} value={s.id} style={{ background: '#1a1a2e', color: 'white' }}>{s.name}</option>)}
+        </select>
+
+        <input
+          type="time"
+          value={form.start}
+          onChange={(e) => setForm({ ...form, start: e.target.value })}
+          required
+          style={{
+            padding: 'var(--spacing-sm)',
+            border: '1px solid rgba(102, 126, 234, 0.3)',
+            borderRadius: '8px',
+            background: 'rgba(255,255,255,0.1)',
+            color: 'white',
+            fontFamily: "'Inter', sans-serif",
+            backdropFilter: 'blur(10px)'
+          }}
+        />
+
+        <input
+          type="time"
+          value={form.finish}
+          onChange={(e) => setForm({ ...form, finish: e.target.value })}
+          required
+          style={{
+            padding: 'var(--spacing-sm)',
+            border: '1px solid rgba(102, 126, 234, 0.3)',
+            borderRadius: '8px',
+            background: 'rgba(255,255,255,0.1)',
+            color: 'white',
+            fontFamily: "'Inter', sans-serif",
+            backdropFilter: 'blur(10px)'
+          }}
+        />
+
+        <input
+          type="number"
+          placeholder="Break minutes (optional)"
+          value={form.breakMins}
+          onChange={(e) => setForm({ ...form, breakMins: e.target.value })}
+          style={{
+            padding: 'var(--spacing-sm)',
+            border: '1px solid rgba(102, 126, 234, 0.3)',
+            borderRadius: '8px',
+            background: 'rgba(255,255,255,0.1)',
+            color: 'white',
+            fontFamily: "'Inter', sans-serif",
+            backdropFilter: 'blur(10px)'
+          }}
+        />
+
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Revenues (optional)"
+          value={form.revenues}
+          onChange={(e) => setForm({ ...form, revenues: e.target.value })}
+          style={{
+            padding: 'var(--spacing-sm)',
+            border: '1px solid rgba(102, 126, 234, 0.3)',
+            borderRadius: '8px',
+            background: 'rgba(255,255,255,0.1)',
+            color: 'white',
+            fontFamily: "'Inter', sans-serif",
+            backdropFilter: 'blur(10px)'
+          }}
+        />
             <button
               type="submit"
               style={{

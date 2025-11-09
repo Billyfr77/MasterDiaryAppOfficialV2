@@ -47,7 +47,7 @@ app.get('/', (req, res) => res.send('Backend running on port ' + (process.env.PO
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/staff', require('./src/routes/staff'));
-app.use('/api/diaries', require('./src/routes/diaries'));
+ app.use('/api/diaries', require('./src/routes/diaries_fixed2'));
 app.use('/api/settings', require('./src/routes/settings'));
 app.use('/api/equipment', require('./src/routes/equipment'));
 app.use('/api/nodes', require('./src/routes/nodes'));
