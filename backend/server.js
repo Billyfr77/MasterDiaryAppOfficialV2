@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
+const http = require('http');
+const socketIo = require('socket.io');
 require('dotenv').config({ path: '../.env' });
 const db = require('./src/models');
 const { loadSettings } = require('./src/utils/settingsCache');
@@ -43,15 +45,47 @@ db.sequelize.authenticate()
   });
 
 // Routes
-app.get('/', (req, res) => res.send('Backend running on port ' + (process.env.PORT || 5000)));
+app.get('/', (req, res) => {
+  const port = process.env.PORT || 5000;
+  res.send(`Backend running on port ${port} with WebSocket support`);
+});
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/staff', require('./src/routes/staff'));
- app.use('/api/diaries', require('./src/routes/diaries_fixed2'));
+app.use('/api/diaries', require('./src/routes/diaries_fixed2'));
 app.use('/api/settings', require('./src/routes/settings'));
 app.use('/api/equipment', require('./src/routes/equipment'));
 app.use('/api/nodes', require('./src/routes/nodes'));
 app.use('/api/quotes', require('./src/routes/quotes'));
+
+// CREATE HTTP SERVER FIRST
+const server = http.createServer(app);
+
+// SETUP SOCKET.IO
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// WEBSOCKET CONNECTION HANDLER
+io.on('connection', (socket) => {
+  console.log('Dashboard client connected:', socket.id);
+
+  // Handle dashboard data updates
+  socket.on('dashboard-data', (data) => {
+    console.log('Dashboard data update received');
+    // Broadcast to all other connected clients
+    socket.broadcast.emit('data-update', data);
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log('Dashboard client disconnected:', socket.id);
+  });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -60,6 +94,6 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT} with WebSocket support`);
 });
