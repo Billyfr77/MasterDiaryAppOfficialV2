@@ -105,19 +105,20 @@ const EnhancedStaff = () => {
 
   useEffect(() => { fetchStaff() }, [])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    try {
-      const dataToSend = {
-        name: form.name,
-        role: form.role,
-        payRateBase: parseFloat(form.payRateBase),
-        payRateOT1: form.payRateOT1 ? parseFloat(form.payRateOT1) : undefined,
-        payRateOT2: form.payRateOT2 ? parseFloat(form.payRateOT2) : undefined,
-        chargeOutBase: parseFloat(form.chargeOutBase),
-        chargeOutOT1: form.chargeOutOT1 ? parseFloat(form.chargeOutOT1) : undefined,
-        chargeOutOT2: form.chargeOutOT2 ? parseFloat(form.chargeOutOT2) : undefined
-      }
+const handleSubmit = async (e) => {
+          e.preventDefault()
+          try {
+            const { id, ...formData } = form
+            const dataToSend = {
+              name: formData.name,
+              role: formData.role,
+              payRateBase: parseFloat(formData.payRateBase),
+              payRateOT1: formData.payRateOT1 ? parseFloat(formData.payRateOT1) : undefined,
+              payRateOT2: formData.payRateOT2 ? parseFloat(formData.payRateOT2) : undefined,
+              chargeOutBase: parseFloat(formData.chargeOutBase),
+              chargeOutOT1: formData.chargeOutOT1 ? parseFloat(formData.chargeOutOT1) : undefined,
+              chargeOutOT2: formData.chargeOutOT2 ? parseFloat(formData.chargeOutOT2) : undefined
+            }
       if (isEditing) {
         await api.put(`/staff/${form.id}`, dataToSend)
         alert('Staff updated successfully!')

@@ -95,22 +95,23 @@ const EnhancedNodes = () => {
 
   useEffect(() => { fetchNodes() }, [])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    try {
-      const dataToSend = {
-        ...form,
-        pricePerUnit: parseFloat(form.pricePerUnit)
-      }
-      if (isEditing) {
-        await api.put(`/nodes/${form.id}`, dataToSend)
-        alert('Node updated successfully!')
-      } else {
-        await api.post('/nodes', dataToSend)
-        alert('Node added successfully!')
-        setShowConfetti(true)
-        setTimeout(() => setShowConfetti(false), 3000)
-      }
+        const handleSubmit = async (e) => {
+          e.preventDefault()
+          try {
+            const { id, ...formData } = form
+            const dataToSend = {
+              ...formData,
+              pricePerUnit: parseFloat(formData.pricePerUnit)
+            }
+            if (isEditing) {
+              await api.put(`/nodes/${form.id}`, dataToSend)
+              alert('Node updated successfully!')
+            } else {
+              await api.post('/nodes', dataToSend)
+              alert('Node added successfully!')
+              setShowConfetti(true)
+              setTimeout(() => setShowConfetti(false), 3000)
+            }
       setForm({ id: null, name: '', category: '', unit: '', pricePerUnit: '' })
       setIsEditing(false)
       fetchNodes()

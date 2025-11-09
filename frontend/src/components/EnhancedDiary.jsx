@@ -112,18 +112,19 @@ const EnhancedDiary = () => {
 
   useEffect(() => { fetchData() }, [])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    try {
-      const dataToSend = {
-        date: form.date,
-        projectId: form.projectId,
-        staffId: form.staffId,
-        equipmentId: form.equipmentId || undefined,
-        hours: parseFloat(form.hours),
-        overtime1: form.overtime1 ? parseFloat(form.overtime1) : undefined,
-        overtime2: form.overtime2 ? parseFloat(form.overtime2) : undefined
-      }
+ const handleSubmit = async (e) => {
+          e.preventDefault()
+          try {
+            const { id, ...formData } = form
+            const dataToSend = {
+              date: formData.date,
+              projectId: formData.projectId,
+              staffId: formData.staffId,
+              equipmentId: formData.equipmentId || undefined,
+              hours: parseFloat(formData.hours),
+              overtime1: formData.overtime1 ? parseFloat(formData.overtime1) : undefined,
+              overtime2: formData.overtime2 ? parseFloat(formData.overtime2) : undefined
+            }
       await api.post('/diaries', dataToSend)
       alert('Diary entry added successfully!')
       setShowConfetti(true)

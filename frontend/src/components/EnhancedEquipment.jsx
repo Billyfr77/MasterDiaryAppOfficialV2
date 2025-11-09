@@ -95,15 +95,16 @@ const EnhancedEquipment = () => {
 
   useEffect(() => { fetchEquipment() }, [])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    try {
-      const dataToSend = {
-        ...form,
-        costRateBase: parseFloat(form.costRateBase),
-        costRateOT1: form.costRateOT1 ? parseFloat(form.costRateOT1) : undefined,
-        costRateOT2: form.costRateOT2 ? parseFloat(form.costRateOT2) : undefined
-      }
+const handleSubmit = async (e) => {
+          e.preventDefault()
+          try {
+            const { id, ...formData } = form
+            const dataToSend = {
+              ...formData,
+              costRateBase: parseFloat(formData.costRateBase),
+              costRateOT1: formData.costRateOT1 ? parseFloat(formData.costRateOT1) : undefined,
+              costRateOT2: formData.costRateOT2 ? parseFloat(formData.costRateOT2) : undefined
+            }
       if (isEditing) {
         await api.put(`/equipment/${form.id}`, dataToSend)
         alert('Equipment updated successfully!')
