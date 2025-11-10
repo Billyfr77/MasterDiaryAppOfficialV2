@@ -1,0 +1,40 @@
+# IP Protection - Sensitive Files to Exclude
+# Add these lines to your .gitignore
+
+# Trade Secret Files
+TRADE_SECRETS_INVENTORY.md
+NDA_TEMPLATE.md
+IP_PROTECTION_README.md
+
+# Copyright Registration Documents
+copyright_registration_*.pdf
+trademark_search_*.pdf
+patent_application_*.pdf
+
+# Legal Documents
+contracts/
+legal_correspondence/
+nda_signed/
+
+# Business Sensitive
+pricing_strategy.md
+competitor_analysis.md
+customer_data.csv
+revenue_projections.xlsx
+
+# Development Secrets
+api_keys.env
+database_credentials.env
+third_party_licenses/
+
+# Patent Related
+patent_notes/
+prior_art_research/
+
+# Backup of sensitive configurations
+config/production.js
+config/staging.js
+
+# Temporary files from IP protection scripts
+temp_header.txt
+copyright_headers_backup/
