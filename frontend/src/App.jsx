@@ -28,6 +28,7 @@ import EnhancedDiary from './components/EnhancedDiary'
 import Quotes from './components/Quotes'
 import NodesLibrary from './components/NodesLibrary'
 import QuoteBuilder from './components/QuoteBuilder'
+import PaintDiary from './components/PaintDiary'
 import './App.css'
 
 function App() {
@@ -182,6 +183,7 @@ function App() {
             <Route path="/dashboard" element={<MasterDashboard />} />
             <Route path="/projects" element={<EnhancedProjects />} />
             <Route path="/staff" element={<EnhancedStaff />} />
+ <Route path="/paint-diary" element={<PaintDiary />} />
             <Route path="/diary" element={<EnhancedDiary />} />
             <Route path="/settings" element={<EnhancedSettings />} />
             <Route path="/equipment" element={<EnhancedEquipment />} />
@@ -189,6 +191,7 @@ function App() {
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/quotes/library" element={<NodesLibrary />} />
             <Route path="/quotes/new" element={<QuoteBuilder />} />
+            <Route path="/paint-diary" element={<PaintDiary />} />
             <Route path="/reports" element={<EnhancedReports />} />
           </Routes>
         </main>
