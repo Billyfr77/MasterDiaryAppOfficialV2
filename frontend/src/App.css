@@ -365,6 +365,7 @@ body {
   font-weight: var(--font-weight-medium);
   transition: color var(--transition-fast), transform var(--transition-fast);
   position: relative;
+  opacity: 0.6;
 }
 
 .nav-link::after {
@@ -385,6 +386,7 @@ body {
 .nav-link:hover {
   color: var(--primary-color);
   transform: translateY(-1px);
+  opacity: 1;
 }
 
 /* Layout */

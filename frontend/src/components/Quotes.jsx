@@ -1,26 +1,22 @@
 /*
  * MasterDiaryApp Official - Construction SaaS Platform
+ * Dark Theme Quotes Page - Professional Version
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  *
- * This software and associated documentation contain proprietary
- * and confidential information of Billy Fraser.
- *
- * Unauthorized copying, modification, distribution, or use of this
- * software, in whole or in part, is strictly prohibited without
- * prior written permission from the copyright holder.
- *
- * For licensing inquiries: billyfr77@example.com
- *
- * Patent Pending: Drag-and-drop construction quote builder system
- * Trade Secret: Real-time calculation algorithms and optimization techniques
- */import React, { useState, useEffect } from 'react'
+ * This is the updated Quotes.jsx with:
+ * - Dark theme matching the app's aesthetic
+ * - Professional gradients and shadows
+ * - Enhanced visual hierarchy
+ * - Consistent color scheme
+ */
+
+import React, { useState, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
 import jsPDF from 'jspdf'
-import { FileText, Eye, Edit, Download, Trash2, Plus, Sparkles, Palette, Zap, Package, User } from
-    'lucide-react'
+import { FileText, Eye, Edit, Download, Trash2, Plus, Sparkles, Palette, Zap, Package, User } from 'lucide-react'
 
 const Quotes = () => {
   const [quotes, setQuotes] = useState([])
@@ -407,7 +403,7 @@ const Quotes = () => {
         justifyContent: 'center',
         alignItems: 'center',
         height: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
         color: 'white',
         fontSize: '18px',
         fontFamily: "'Poppins', sans-serif"
@@ -437,21 +433,24 @@ const Quotes = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
       fontFamily: "'Inter', sans-serif",
       padding: '20px'
     }}>
       <style>{`
         .quote-card {
           transition: all 0.3s ease;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-          background: white;
-          border: 1px solid rgba(102, 126, 234, 0.1);
+          border-radius: 16px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+          border: 1px solid rgba(78, 205, 196, 0.2);
+          overflow: hidden;
+          position: relative;
         }
         .quote-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15);
+          transform: translateY(-6px);
+          box-shadow: 0 20px 40px rgba(78, 205, 196, 0.3);
+          border-color: #4ecdc4;
         }
         .action-button {
           transition: all 0.2s ease;
@@ -468,10 +467,10 @@ const Quotes = () => {
         .action-button:hover {
           transform: translateY(-1px);
         }
-        .view-btn { background: linear-gradient(135deg, #17a2b8, #0d8a9a); color: white; }
-        .edit-btn { background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; }
-        .pdf-btn { background: linear-gradient(135deg, #6f42c1, #5a359a); color: white; }
-        .delete-btn { background: linear-gradient(135deg, #dc3545, #bd2130); color: white; }
+        .view-btn { background: linear-gradient(135deg, #4ecdc4, #44a08d); color: white; }
+        .edit-btn { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
+        .pdf-btn { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; }
+        .delete-btn { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
         .create-btn {
           background: linear-gradient(135deg, #28a745, #1e7e34);
           color: white;
@@ -495,24 +494,26 @@ const Quotes = () => {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(4px);
+          background: rgba(0, 0, 0, 0.8);
+          backdrop-filter: blur(8px);
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: center;
+          justifyContent: center;
           z-index: 1000;
           animation: fadeIn 0.3s ease;
         }
         .modal-content {
-          background: white;
+          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
           border-radius: 16px;
-          padding: 24px;
+          padding: 32px;
           max-width: 600px;
           width: 90%;
           max-height: 80vh;
           overflow-y: auto;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(78, 205, 196, 0.3);
           animation: slideUp 0.3s ease;
+          color: #ecf0f1;
         }
         @keyframes fadeIn {
           from { opacity: 0; }
@@ -523,15 +524,16 @@ const Quotes = () => {
           to { transform: translateY(0); opacity: 1; }
         }
         .table-container {
-          background: white;
+          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
           border-radius: 12px;
           padding: 20px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
           overflow-x: auto;
+          border: 1px solid rgba(78, 205, 196, 0.2);
         }
         .table-header {
-          background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-          border-bottom: 2px solid #dee2e6;
+          background: linear-gradient(135deg, #34495e, #2c3e50);
+          border-bottom: 2px solid rgba(78, 205, 196, 0.3);
         }
         .status-badge {
           padding: 4px 12px;
@@ -540,8 +542,8 @@ const Quotes = () => {
           font-weight: 500;
           text-transform: uppercase;
         }
-        .status-active { background: #d4edda; color: #155724; }
-        .status-pending { background: #fff3cd; color: #856404; }
+        .status-active { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; border: 1px solid #4ecdc4; }
+        .status-pending { background: rgba(243, 156, 18, 0.2); color: #f39c12; border: 1px solid #f39c12; }
       `}</style>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -554,17 +556,21 @@ const Quotes = () => {
           <div>
             <h1 style={{
               margin: '0 0 8px 0',
-              color: '#2c3e50',
+              color: '#ecf0f1',
               fontSize: '2.5rem',
               fontWeight: '700',
               fontFamily: "'Poppins', sans-serif",
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              background: 'linear-gradient(135deg, #4ecdc4 0%, #667eea 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
             }}>
               📋 Professional Quotes
             </h1>
             <p style={{
               margin: 0,
-              color: '#6c757d',
+              color: '#bdc3c7',
               fontSize: '1.1rem',
               fontFamily: "'Inter', sans-serif"
             }}>
@@ -636,7 +642,6 @@ const Quotes = () => {
             Experience Next-Level Quote Building
           </h3>
           <p style={{
-            
             color: 'rgba(255,255,255,0.9)',
             fontSize: '1.1rem',
             fontFamily: "'Inter', sans-serif",
@@ -649,7 +654,6 @@ const Quotes = () => {
           <Link
             to="/quotes/new"
             style={{
-              
               padding: '14px 32px',
               background: 'rgba(255,255,255,0.2)',
               color: 'white',
@@ -688,7 +692,7 @@ const Quotes = () => {
           }}>
             <h2 style={{
               margin: 0,
-              color: '#2c3e50',
+              color: '#ecf0f1',
               fontSize: '1.8rem',
               fontWeight: '600',
               fontFamily: "'Poppins', sans-serif"
@@ -696,11 +700,12 @@ const Quotes = () => {
               Quote Portfolio {projectId && `(Filtered by Project)`}
             </h2>
             <div style={{
-              background: '#e9ecef',
+              background: 'rgba(78, 205, 196, 0.1)',
               padding: '4px 12px',
               borderRadius: '20px',
               fontSize: '14px',
-              color: '#495057'
+              color: '#4ecdc4',
+              border: '1px solid rgba(78, 205, 196, 0.3)'
             }}>
               {quotes.length} Quote{quotes.length !== 1 ? 's' : ''}
             </div>
@@ -718,7 +723,7 @@ const Quotes = () => {
                     padding: '16px 12px',
                     textAlign: 'left',
                     fontWeight: '600',
-                    color: '#495057',
+                    color: '#ecf0f1',
                     fontSize: '14px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px'
@@ -727,7 +732,7 @@ const Quotes = () => {
                     padding: '16px 12px',
                     textAlign: 'left',
                     fontWeight: '600',
-                    color: '#495057',
+                    color: '#ecf0f1',
                     fontSize: '14px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px'
@@ -736,7 +741,7 @@ const Quotes = () => {
                     padding: '16px 12px',
                     textAlign: 'right',
                     fontWeight: '600',
-                    color: '#495057',
+                    color: '#ecf0f1',
                     fontSize: '14px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px'
@@ -745,7 +750,7 @@ const Quotes = () => {
                     padding: '16px 12px',
                     textAlign: 'center',
                     fontWeight: '600',
-                    color: '#495057',
+                    color: '#ecf0f1',
                     fontSize: '14px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px'
@@ -755,45 +760,45 @@ const Quotes = () => {
               <tbody>
                 {quotes.map(quote => (
                   <tr key={quote.id} className="quote-card" style={{
-                    borderBottom: '1px solid #e9ecef',
+                    borderBottom: '1px solid rgba(78, 205, 196, 0.1)',
                     transition: 'all 0.2s ease'
                   }}>
-                    <td style={{ padding: '16px 12px' }}>
+                    <td style={{ padding: '16px 12px', color: '#ecf0f1' }}>
                       <div style={{
                         fontWeight: '600',
-                        color: '#2c3e50',
+                        color: '#ecf0f1',
                         fontSize: '16px',
                         marginBottom: '4px'
                       }}>
                         {quote.name}
                       </div>
                       <div style={{
-                        color: '#6c757d',
+                        color: '#bdc3c7',
                         fontSize: '14px'
                       }}>
                         ID: {quote.id.slice(-8).toUpperCase()}
                       </div>
                     </td>
-                    <td style={{ padding: '16px 12px' }}>
+                    <td style={{ padding: '16px 12px', color: '#ecf0f1' }}>
                       <div style={{
                         fontWeight: '500',
-                        color: '#495057',
+                        color: '#ecf0f1',
                         fontSize: '15px'
                       }}>
                         {quote.project?.name || 'No Project'}
                       </div>
                     </td>
-                    <td style={{ padding: '16px 12px', textAlign: 'right' }}>
+                    <td style={{ padding: '16px 12px', textAlign: 'right', color: '#ecf0f1' }}>
                       <div style={{
                         fontWeight: '600',
-                        color: '#28a745',
+                        color: '#4ecdc4',
                         fontSize: '16px',
                         marginBottom: '4px'
                       }}>
                         ${quote.totalRevenue}
                       </div>
                       <div style={{
-                        color: '#6c757d',
+                        color: '#bdc3c7',
                         fontSize: '14px'
                       }}>
                         Cost: ${quote.totalCost} • Margin: {quote.marginPct}%
@@ -842,10 +847,10 @@ const Quotes = () => {
                     <td colSpan="4" style={{
                       padding: '40px',
                       textAlign: 'center',
-                      color: '#6c757d',
+                      color: '#bdc3c7',
                       fontSize: '16px'
                     }}>
-                      <FileText size={48} style={{ color: '#dee2e6', marginBottom: '16px' }} />
+                      <FileText size={48} style={{ color: 'rgba(78, 205, 196, 0.3)', marginBottom: '16px' }} />
                       <div>No quotes found. Create your first professional quote!</div>
                     </td>
                   </tr>
@@ -865,11 +870,11 @@ const Quotes = () => {
                 alignItems: 'center',
                 marginBottom: '24px',
                 paddingBottom: '16px',
-                borderBottom: '2px solid #e9ecef'
+                borderBottom: '2px solid rgba(78, 205, 196, 0.3)'
               }}>
                 <h2 style={{
                   margin: 0,
-                  color: '#2c3e50',
+                  color: '#ecf0f1',
                   fontSize: '1.8rem',
                   fontWeight: '700',
                   fontFamily: "'Poppins', sans-serif"
@@ -883,7 +888,7 @@ const Quotes = () => {
                     border: 'none',
                     fontSize: '24px',
                     cursor: 'pointer',
-                    color: '#6c757d',
+                    color: '#7f8c8d',
                     padding: '4px'
                   }}
                 >
@@ -899,22 +904,22 @@ const Quotes = () => {
                   marginBottom: '24px'
                 }}>
                   <div style={{
-                    background: '#f8f9fa',
+                    background: 'rgba(78, 205, 196, 0.1)',
                     padding: '16px',
                     borderRadius: '8px',
-                    border: '1px solid #dee2e6'
+                    border: '1px solid rgba(78, 205, 196, 0.3)'
                   }}>
-                    <h4 style={{ margin: '0 0 8px 0', color: '#495057' }}>Project Information</h4>
-                    <p style={{ margin: '4px 0', color: '#2c3e50', fontWeight: '500' }}>
+                    <h4 style={{ margin: '0 0 8px 0', color: '#4ecdc4' }}>Project Information</h4>
+                    <p style={{ margin: '4px 0', color: '#ecf0f1', fontWeight: '500' }}>
                       <strong>Project:</strong> {selectedQuote.project?.name || 'N/A'}
                     </p>
-                    <p style={{ margin: '4px 0', color: '#2c3e50', fontWeight: '500' }}>
+                    <p style={{ margin: '4px 0', color: '#ecf0f1', fontWeight: '500' }}>
                       <strong>Margin:</strong> {selectedQuote.marginPct}%
                     </p>
                   </div>
 
                   <div style={{
-                    background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                    background: 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)',
                     padding: '16px',
                     borderRadius: '8px',
                     color: 'white'
@@ -936,13 +941,13 @@ const Quotes = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
                   {selectedQuote.nodes && selectedQuote.nodes.length > 0 && (
                     <div style={{
-                      background: '#f8f9fa',
+                      background: 'rgba(78, 205, 196, 0.1)',
                       padding: '16px',
                       borderRadius: '8px',
-                      border: '1px solid #dee2e6'
+                      border: '1px solid rgba(78, 205, 196, 0.3)'
                     }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#495057', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Package size={20} style={{ color: '#667eea' }} />
+                      <h4 style={{ margin: '0 0 12px 0', color: '#ecf0f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Package size={20} style={{ color: '#4ecdc4' }} />
                         Materials
                       </h4>
                       {selectedQuote.nodes.map((item, index) => {
@@ -954,17 +959,17 @@ const Quotes = () => {
                             alignItems: 'center',
                             padding: '8px',
                             marginBottom: '8px',
-                            background: 'white',
+                            background: 'rgba(52, 73, 94, 0.5)',
                             borderRadius: '6px',
-                            border: '1px solid #e9ecef'
+                            border: '1px solid rgba(78, 205, 196, 0.2)'
                           }}>
                             <div>
-                              <div style={{ fontWeight: '500', color: '#2c3e50' }}>{node?.name}</div>
-                              <div style={{ fontSize: '14px', color: '#6c757d' }}>
+                              <div style={{ fontWeight: '500', color: '#ecf0f1' }}>{node?.name}</div>
+                              <div style={{ fontSize: '14px', color: '#bdc3c7' }}>
                                 {item.quantity} {node?.unit} × ${node?.pricePerUnit}
                               </div>
                             </div>
-                            <div style={{ fontWeight: '600', color: '#28a745' }}>
+                            <div style={{ fontWeight: '600', color: '#4ecdc4' }}>
                               ${(node?.pricePerUnit * item.quantity).toFixed(2)}
                             </div>
                           </div>
@@ -975,13 +980,13 @@ const Quotes = () => {
 
                   {selectedQuote.staff && selectedQuote.staff.length > 0 && (
                     <div style={{
-                      background: '#f8f9fa',
+                      background: 'rgba(78, 205, 196, 0.1)',
                       padding: '16px',
                       borderRadius: '8px',
-                      border: '1px solid #dee2e6'
+                      border: '1px solid rgba(78, 205, 196, 0.3)'
                     }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#495057', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <User size={20} style={{ color: '#28a745' }} />
+                      <h4 style={{ margin: '0 0 12px 0', color: '#ecf0f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <User size={20} style={{ color: '#4ecdc4' }} />
                         Staff
                       </h4>
                       {selectedQuote.staff.map((item, index) => {
@@ -994,17 +999,17 @@ const Quotes = () => {
                             alignItems: 'center',
                             padding: '8px',
                             marginBottom: '8px',
-                            background: 'white',
+                            background: 'rgba(52, 73, 94, 0.5)',
                             borderRadius: '6px',
-                            border: '1px solid #e9ecef'
+                            border: '1px solid rgba(78, 205, 196, 0.2)'
                           }}>
                             <div>
-                              <div style={{ fontWeight: '500', color: '#2c3e50' }}>{staff?.name}</div>
-                              <div style={{ fontSize: '14px', color: '#6c757d' }}>
+                              <div style={{ fontWeight: '500', color: '#ecf0f1' }}>{staff?.name}</div>
+                              <div style={{ fontSize: '14px', color: '#bdc3c7' }}>
                                 {item.hours} hours × ${rate}/hr
                               </div>
                             </div>
-                            <div style={{ fontWeight: '600', color: '#28a745' }}>
+                            <div style={{ fontWeight: '600', color: '#4ecdc4' }}>
                               ${(rate * item.hours).toFixed(2)}
                             </div>
                           </div>
@@ -1015,13 +1020,13 @@ const Quotes = () => {
 
                   {selectedQuote.equipment && selectedQuote.equipment.length > 0 && (
                     <div style={{
-                      background: '#f8f9fa',
+                      background: 'rgba(78, 205, 196, 0.1)',
                       padding: '16px',
                       borderRadius: '8px',
-                      border: '1px solid #dee2e6'
+                      border: '1px solid rgba(78, 205, 196, 0.3)'
                     }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#495057', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Wrench size={20} style={{ color: '#ffc107' }} />
+                      <h4 style={{ margin: '0 0 12px 0', color: '#ecf0f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Wrench size={20} style={{ color: '#4ecdc4' }} />
                         Equipment
                       </h4>
                       {selectedQuote.equipment.map((item, index) => {
@@ -1033,17 +1038,17 @@ const Quotes = () => {
                             alignItems: 'center',
                             padding: '8px',
                             marginBottom: '8px',
-                            background: 'white',
+                            background: 'rgba(52, 73, 94, 0.5)',
                             borderRadius: '6px',
-                            border: '1px solid #e9ecef'
+                            border: '1px solid rgba(78, 205, 196, 0.2)'
                           }}>
                             <div>
-                              <div style={{ fontWeight: '500', color: '#2c3e50' }}>{equipment?.name}</div>
-                              <div style={{ fontSize: '14px', color: '#6c757d' }}>
+                              <div style={{ fontWeight: '500', color: '#ecf0f1' }}>{equipment?.name}</div>
+                              <div style={{ fontSize: '14px', color: '#bdc3c7' }}>
                                 {item.hours} hours × ${equipment?.costRateBase}/hr
                               </div>
                             </div>
-                            <div style={{ fontWeight: '600', color: '#28a745' }}>
+                            <div style={{ fontWeight: '600', color: '#4ecdc4' }}>
                               ${(equipment?.costRateBase * item.hours).toFixed(2)}
                             </div>
                           </div>
@@ -1059,13 +1064,13 @@ const Quotes = () => {
                 gap: '12px',
                 justifyContent: 'flex-end',
                 paddingTop: '16px',
-                borderTop: '1px solid #e9ecef'
+                borderTop: '1px solid rgba(78, 205, 196, 0.3)'
               }}>
                 <button
                   onClick={() => generateProfessionalPDF(selectedQuote)}
                   style={{
                     padding: '10px 20px',
-                    background: 'linear-gradient(135deg, #6f42c1, #5a359a)',
+                    background: 'linear-gradient(135deg, #9b59b6, #8e44ad)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -1083,9 +1088,9 @@ const Quotes = () => {
                   onClick={() => setSelectedQuote(null)}
                   style={{
                     padding: '10px 20px',
-                    background: '#6c757d',
-                    color: 'white',
-                    border: 'none',
+                    background: '#34495e',
+                    color: '#ecf0f1',
+                    border: '1px solid rgba(78, 205, 196, 0.3)',
                     borderRadius: '8px',
                     cursor: 'pointer',
                     fontWeight: '500'
@@ -1102,26 +1107,26 @@ const Quotes = () => {
         {showCreateForm && (
           <div className="modal-overlay" onClick={() => { setShowCreateForm(false); setEditingQuote(null) }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div style={{ textAlign: 'center', marginBottom: '24px', padding: '20px', backgroundColor: '#e9ecef', borderRadius: '8px' }}>
-                <h4>💡 For Advanced Quote Building:</h4>
-                <p style={{ margin: '8px 0 16px 0', color: '#495057' }}>
+              <div style={{ textAlign: 'center', marginBottom: '24px', padding: '20px', backgroundColor: 'rgba(52, 73, 94, 0.5)', borderRadius: '8px' }}>
+                <h4 style={{ color: '#ecf0f1' }}>💡 For Advanced Quote Building:</h4>
+                <p style={{ margin: '8px 0 16px 0', color: '#bdc3c7' }}>
                   Use the <strong>VISUAL QUOTE BUILDER</strong> for drag-and-drop interface with real-time calculations and stunning animations!
                 </p>
                 <Link
                   to="/quotes/new"
                   style={{
-                    
+                    display: 'inline-block',
                     marginTop: '8px',
                     padding: '12px 24px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
+                    backgroundColor: '#4ecdc4',
+                    color: '#2c3e50',
                     textDecoration: 'none',
                     borderRadius: '8px',
                     fontWeight: '600',
                     transition: 'all 0.3s ease'
                   }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#44a08d'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#4ecdc4'}
                 >
                   🚀 Go to Visual Builder →
                 </Link>
@@ -1129,7 +1134,7 @@ const Quotes = () => {
 
               <h3 style={{
                 margin: '0 0 24px 0',
-                color: '#2c3e50',
+                color: '#ecf0f1',
                 fontSize: '1.5rem',
                 fontWeight: '600',
                 fontFamily: "'Poppins', sans-serif"
@@ -1143,7 +1148,7 @@ const Quotes = () => {
                     display: 'block',
                     marginBottom: '8px',
                     fontWeight: '500',
-                    color: '#495057',
+                    color: '#ecf0f1',
                     fontSize: '14px'
                   }}>
                     Quote Name:
@@ -1156,10 +1161,12 @@ const Quotes = () => {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #ced4da',
+                      border: '1px solid rgba(78, 205, 196, 0.3)',
                       borderRadius: '6px',
                       fontSize: '16px',
-                      fontFamily: "'Inter', sans-serif"
+                      fontFamily: "'Inter', sans-serif",
+                      background: '#2c3e50',
+                      color: '#ecf0f1'
                     }}
                   />
                 </div>
@@ -1169,7 +1176,7 @@ const Quotes = () => {
                     display: 'block',
                     marginBottom: '8px',
                     fontWeight: '500',
-                    color: '#495057',
+                    color: '#ecf0f1',
                     fontSize: '14px'
                   }}>
                     Project:
@@ -1181,16 +1188,17 @@ const Quotes = () => {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #ced4da',
+                      border: '1px solid rgba(78, 205, 196, 0.3)',
                       borderRadius: '6px',
                       fontSize: '16px',
                       fontFamily: "'Inter', sans-serif",
-                      backgroundColor: 'white'
+                      backgroundColor: '#2c3e50',
+                      color: '#ecf0f1'
                     }}
                   >
-                    <option value="">Select Project</option>
+                    <option value="" style={{ background: '#34495e', color: '#ecf0f1' }}>Select Project</option>
                     {projects.map(project => (
-                      <option key={project.id} value={project.id}>{project.name}</option>
+                      <option key={project.id} value={project.id} style={{ background: '#34495e', color: '#ecf0f1' }}>{project.name}</option>
                     ))}
                   </select>
                 </div>
@@ -1200,7 +1208,7 @@ const Quotes = () => {
                     display: 'block',
                     marginBottom: '8px',
                     fontWeight: '500',
-                    color: '#495057',
+                    color: '#ecf0f1',
                     fontSize: '14px'
                   }}>
                     Margin Percentage:
@@ -1216,10 +1224,12 @@ const Quotes = () => {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #ced4da',
+                      border: '1px solid rgba(78, 205, 196, 0.3)',
                       borderRadius: '6px',
                       fontSize: '16px',
-                      fontFamily: "'Inter', sans-serif"
+                      fontFamily: "'Inter', sans-serif",
+                      background: '#2c3e50',
+                      color: '#ecf0f1'
                     }}
                   />
                 </div>
@@ -1227,7 +1237,7 @@ const Quotes = () => {
                 <div style={{
                   textAlign: 'right',
                   paddingTop: '16px',
-                  borderTop: '1px solid #e9ecef'
+                  borderTop: '1px solid rgba(78, 205, 196, 0.3)'
                 }}>
                   <button
                     type="button"
@@ -1235,9 +1245,9 @@ const Quotes = () => {
                     style={{
                       marginRight: '12px',
                       padding: '12px 24px',
-                      backgroundColor: '#6c757d',
-                      color: 'white',
-                      border: 'none',
+                      backgroundColor: '#34495e',
+                      color: '#ecf0f1',
+                      border: '1px solid rgba(78, 205, 196, 0.3)',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       fontWeight: '500',
@@ -1250,8 +1260,8 @@ const Quotes = () => {
                     type="submit"
                     style={{
                       padding: '12px 24px',
-                      backgroundColor: '#28a745',
-                      color: 'white',
+                      backgroundColor: '#4ecdc4',
+                      color: '#2c3e50',
                       border: 'none',
                       borderRadius: '8px',
                       cursor: 'pointer',
