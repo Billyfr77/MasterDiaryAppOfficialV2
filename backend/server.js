@@ -1,99 +1,116 @@
 const express = require('express');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
-const http = require('http');
-const socketIo = require('socket.io');
-require('dotenv').config({ path: '../.env' });
-const db = require('./src/models');
-const { loadSettings } = require('./src/utils/settingsCache');
+        const cors = require('cors');
+        const cookieParser = require('cookie-parser');
+        const rateLimit = require('express-rate-limit');
+        require('dotenv').config({ path: '../.env' });
+        const db = require('./src/models');
+        const { loadSettings } = require('./src/utils/settingsCache');
 
-const app = express();
+        const app = express();
 
-// Rate limiting - increased for development
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
+        // Rate limiting - increased for development
+        const limiter = rateLimit({
+          windowMs: 60 * 1000, // 1 minute (increased for dev)
+          max: 1000, // limit each IP to 1000 requests per windowMs (increased for dev)
+          message: 'Too many requests from this IP, please try again later.'
+        });
 
-// Middleware
-app.use(limiter);
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+        // Middleware
+        app.use(limiter);
 
-// Database connection and sync
-db.sequelize.authenticate()
-  .then(() => {
-    console.log('Database connected successfully.');
-    return db.sequelize.sync(); // Sync models to database
-  })
-  .then(() => {
-    console.log('Database synchronized.');
-    return loadSettings(); // Load settings cache
-  })
-  .then(() => {
-    console.log('Settings cache loaded.');
-  })
-  .catch(err => {
-    console.error('Unable to connect to the database:', err);
-  });
+        // CORS headers middleware
+        app.use((req, res, next) => {
+          res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+          res.header('Access-Control-Allow-Credentials', 'true');
+          res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+          res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+          if (req.method === 'OPTIONS') {
+            res.sendStatus(200);
+          } else {
+            next();
+          }
+        });
 
-// Routes
-app.get('/', (req, res) => {
-  const port = process.env.PORT || 5000;
-  res.send(`Backend running on port ${port} with WebSocket support`);
-});
-app.use('/api/auth', require('./src/routes/auth'));
-app.use('/api/projects', require('./src/routes/projects'));
-app.use('/api/staff', require('./src/routes/staff'));
-app.use('/api/diaries', require('./src/routes/diaries_fixed2'));
-app.use('/api/settings', require('./src/routes/settings'));
-app.use('/api/equipment', require('./src/routes/equipment'));
-app.use('/api/nodes', require('./src/routes/nodes'));
-app.use('/api/quotes', require('./src/routes/quotes'));
+        app.use(cookieParser());
+        app.use(express.json());
+        app.use(express.urlencoded({ extended: true }));
 
-// CREATE HTTP SERVER FIRST
-const server = http.createServer(app);
+        // Error handling middleware
+        app.use((err, req, res, next) => {
+          console.error('Full error details:', err);
+          console.error('Stack trace:', err.stack);
 
-// SETUP SOCKET.IO
-const io = socketIo(server, {
-  cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
+          const isDevelopment = process.env.NODE_ENV !== 'production';
+          res.status(500).json({
+            message: 'Something went wrong!',
+            error: isDevelopment ? err.message : 'Internal server error',
+            stack: isDevelopment ? err.stack : undefined,
+            timestamp: new Date().toISOString(),
+            url: req.url,
+            method: req.method
+          });
+        });
 
-// WEBSOCKET CONNECTION HANDLER
-io.on('connection', (socket) => {
-  console.log('Dashboard client connected:', socket.id);
+        // Request logging
+        app.use((req, res, next) => {
+          console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - User: ${req.user?.id || 'unauthenticated'}`);
+          next();
+        });
 
-  // Handle dashboard data updates
-  socket.on('dashboard-data', (data) => {
-    console.log('Dashboard data update received');
-    // Broadcast to all other connected clients
-    socket.broadcast.emit('data-update', data);
-  });
+        // Health check endpoint
+        app.get('/health', (req, res) => res.json({
+          status: 'ok',
+          timestamp: new Date().toISOString(),
+          pid: process.pid
+        }));
 
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log('Dashboard client disconnected:', socket.id);
-  });
-});
+        // Routes
+        app.get('/', (req, res) => {
+          const port = process.env.PORT || 5000;
+          res.send(`Backend running on port ${port}`);
+        });
+        app.use('/api/auth', require('./src/routes/auth'));
+        app.use('/api/projects', require('./src/routes/projects'));
+        app.use('/api/staff', require('./src/routes/staff'));
+        app.use('/api/diaries', require('./src/routes/diaries_fixed2'));
+        app.use('/api/settings', require('./src/routes/settings'));
+        app.use('/api/equipment', require('./src/routes/equipment'));
+        app.use('/api/nodes', require('./src/routes/nodes'));
+        app.use('/api/quotes', require('./src/routes/quotes'));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
-});
+        // Database connection and sync, then start server
+        db.sequelize.authenticate()
+          .then(() => {
+            console.log('Database connected successfully.');
+            return db.sequelize.sync(); // Sync models to database
+          })
+          .then(() => {
+            console.log('Database synchronized.');
+            return loadSettings(); // Load settings cache
+          })
+          .then(() => {
+            console.log('Settings cache loaded.');
+            const PORT = process.env.PORT || 5000;
+            app.listen(PORT, () => {
+              console.log(`Server is running on port ${PORT}`);
+              console.log(`Server started with PID: ${process.pid}`);
+              console.log(`Health check: http://localhost:${PORT}/health`);
+            });
+          })
+          .catch(err => {
+            console.error('Unable to connect to the database:', err);
+            process.exit(1); // Exit if db fails
+          });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT} with WebSocket support`);
-});
+        // Handle uncaught exceptions (exit to restart)
+        process.on('uncaughtException', (err) => {
+          console.error('Uncaught Exception:', err);
+          console.error('Stack:', err.stack);
+          process.exit(1);
+        });
+
+        // Handle unhandled promise rejections (exit to restart)
+        process.on('unhandledRejection', (reason, promise) => {
+          console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+          process.exit(1);
+        });

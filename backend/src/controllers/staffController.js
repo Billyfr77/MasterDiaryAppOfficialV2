@@ -13,6 +13,7 @@ const staffSchema = Joi.object({
 });
 
 const getAllStaff = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Fetching staff for user: ${req.user?.id}`);
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
@@ -32,11 +33,19 @@ const getAllStaff = async (req, res) => {
       totalPages: Math.ceil(count / limit)
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in GET /api/staff:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: 'GET /api/staff',
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const getStaffById = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Fetching staff ${req.params.id} for user: ${req.user?.id}`);
   try {
     const staffMember = await Staff.findOne({
       where: { id: req.params.id, userId: req.user.id }
@@ -47,11 +56,19 @@ const getStaffById = async (req, res) => {
       res.status(404).json({ error: 'Staff member not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in GET /api/staff/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `GET /api/staff/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const createStaff = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Creating staff:`, req.body, 'for user:', req.user?.id);
   try {
     const { error } = staffSchema.validate(req.body);
     if (error) {
@@ -63,11 +80,19 @@ const createStaff = async (req, res) => {
     });
     res.status(201).json(staffMember);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in POST /api/staff:`, error);
+    console.error('Stack:', error.stack);
+    res.status(400).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: 'POST /api/staff',
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const updateStaff = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Updating staff ${req.params.id}:`, req.body, 'for user:', req.user?.id);
   try {
     const { error } = staffSchema.validate(req.body);
     if (error) {
@@ -83,11 +108,19 @@ const updateStaff = async (req, res) => {
       res.status(404).json({ error: 'Staff member not found' });
     }
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in PUT /api/staff/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(400).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `PUT /api/staff/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const deleteStaff = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Deleting staff ${req.params.id} for user: ${req.user?.id}`);
   try {
     const deleted = await Staff.destroy({
       where: { id: req.params.id, userId: req.user.id }
@@ -98,7 +131,14 @@ const deleteStaff = async (req, res) => {
       res.status(404).json({ error: 'Staff member not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in DELETE /api/staff/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `DELETE /api/staff/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 

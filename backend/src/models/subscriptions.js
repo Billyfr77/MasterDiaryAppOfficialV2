@@ -3,12 +3,12 @@ const { DataTypes } = require('sequelize')
         module.exports = (sequelize) => {
           const Subscription = sequelize.define('Subscription', {
             id: {
-              type: DataTypes.INTEGER,
+              type: DataTypes.UUID,
               primaryKey: true,
-              autoIncrement: true
+              defaultValue: DataTypes.UUIDV4
             },
             userId: {
-              type: DataTypes.INTEGER,
+              type: DataTypes.UUID,
               allowNull: false,
               references: {
                 model: 'Users',

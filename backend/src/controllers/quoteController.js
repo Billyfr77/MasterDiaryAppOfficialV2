@@ -21,7 +21,7 @@ const quoteSchema = Joi.object({
   'object.missing': 'Please add at least one material, staff member, or equipment to your quote'
 });
 
-const calculateTotals = async (nodes, staff, equipment, userId) => {
+const calculateTotals = async (nodes, staff, equipment, userId, transaction = null) => {
   let totalCost = 0;
 
   // Calculate materials cost

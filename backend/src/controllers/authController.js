@@ -53,7 +53,14 @@ const register = async (req, res) => {
 
     res.status(201).json({ message: 'User registered successfully', user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `${req.method} ${req.url}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
@@ -83,7 +90,14 @@ const login = async (req, res) => {
 
     res.json({ accessToken, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `${req.method} ${req.url}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
@@ -109,7 +123,14 @@ const refresh = async (req, res) => {
       res.json({ accessToken: newAccessToken });
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `${req.method} ${req.url}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
@@ -120,7 +141,14 @@ const logout = async (req, res) => {
     res.clearCookie('refreshToken');
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `${req.method} ${req.url}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
@@ -132,7 +160,14 @@ const getUsers = async (req, res) => {
     });
     res.json(users);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `${req.method} ${req.url}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 

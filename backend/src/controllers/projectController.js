@@ -7,6 +7,7 @@ const projectSchema = Joi.object({
 });
 
 const getAllProjects = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Fetching projects for user: ${req.user?.id}`);
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
@@ -26,11 +27,19 @@ const getAllProjects = async (req, res) => {
       totalPages: Math.ceil(count / limit)
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in GET /api/projects:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: 'GET /api/projects',
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const getProjectById = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Fetching project ${req.params.id} for user: ${req.user?.id}`);
   try {
     const project = await Project.findOne({
       where: { id: req.params.id, userId: req.user.id }
@@ -41,11 +50,19 @@ const getProjectById = async (req, res) => {
       res.status(404).json({ error: 'Project not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in GET /api/projects/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `GET /api/projects/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const createProject = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Creating project:`, req.body, 'for user:', req.user?.id);
   try {
     const { error } = projectSchema.validate(req.body);
     if (error) {
@@ -57,11 +74,19 @@ const createProject = async (req, res) => {
     });
     res.status(201).json(project);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in POST /api/projects:`, error);
+    console.error('Stack:', error.stack);
+    res.status(400).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: 'POST /api/projects',
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const updateProject = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Updating project ${req.params.id}:`, req.body, 'for user:', req.user?.id);
   try {
     const { error } = projectSchema.validate(req.body);
     if (error) {
@@ -75,11 +100,19 @@ const updateProject = async (req, res) => {
       res.status(404).json({ error: 'Project not found' });
     }
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in PUT /api/projects/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(400).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `PUT /api/projects/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const deleteProject = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Deleting project ${req.params.id} for user: ${req.user?.id}`);
   try {
     const deleted = await Project.destroy({ where: { id: req.params.id, userId: req.user.id } });
     if (deleted) {
@@ -88,7 +121,14 @@ const deleteProject = async (req, res) => {
       res.status(404).json({ error: 'Project not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in DELETE /api/projects/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `DELETE /api/projects/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
