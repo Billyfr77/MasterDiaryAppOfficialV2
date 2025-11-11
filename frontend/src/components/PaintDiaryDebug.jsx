@@ -1571,4 +1571,6 @@ const PaintDiary = () => {
   )
 }
 
-export default PaintDiary
+export default PaintDiary</content>
+</xai:function_call</xai:function_call name="str_replace_editor">
+<parameter name="path">MasterDiaryAppOfficialV2/frontend/src/components/PaintDiary.jsx

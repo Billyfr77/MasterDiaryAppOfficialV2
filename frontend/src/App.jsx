@@ -183,15 +183,15 @@ function App() {
             <Route path="/dashboard" element={<MasterDashboard />} />
             <Route path="/projects" element={<EnhancedProjects />} />
             <Route path="/staff" element={<EnhancedStaff />} />
- <Route path="/paint-diary" element={<PaintDiary />} />
-            <Route path="/diary" element={<EnhancedDiary />} />
+ 
+            <Route path="/diary" element={<PaintDiary />} />
             <Route path="/settings" element={<EnhancedSettings />} />
             <Route path="/equipment" element={<EnhancedEquipment />} />
             <Route path="/nodes" element={<EnhancedNodes />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/quotes/library" element={<NodesLibrary />} />
             <Route path="/quotes/new" element={<QuoteBuilder />} />
-            <Route path="/paint-diary" element={<PaintDiary />} />
+            
             <Route path="/reports" element={<EnhancedReports />} />
           </Routes>
         </main>

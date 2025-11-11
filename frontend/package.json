@@ -16,6 +16,8 @@
     "axios": "^1.13.2",
     "billy": "file:../..",
     "chart.js": "^4.5.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.3",
     "lucide-react": "^0.553.0",
     "papaparse": "^5.5.3",
     "react": "^18.2.0",
@@ -28,6 +30,7 @@
     "react-hook-form": "^7.66.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.9.5",
+    "recharts": "^3.4.1",
     "yup": "^1.7.1"
   },
   "devDependencies": {

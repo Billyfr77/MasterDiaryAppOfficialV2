@@ -37,7 +37,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     projectId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Optional for Paint Diary
       references: {
         model: 'Projects',
         key: 'id'
@@ -45,19 +45,20 @@ module.exports = (sequelize, DataTypes) => {
     },
     workerId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Optional for Paint Diary
       references: {
         model: 'Staff',
         key: 'id'
       }
     },
+    // Legacy fields for old diary format
     start: {
       type: DataTypes.TIME,
-      allowNull: false
+      allowNull: true
     },
     finish: {
       type: DataTypes.TIME,
-      allowNull: false
+      allowNull: true
     },
     breakMins: {
       type: DataTypes.INTEGER,
@@ -65,11 +66,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     totalHours: {
       type: DataTypes.DECIMAL(5, 2),
-      allowNull: false
+      allowNull: true
     },
     ordinaryHours: {
       type: DataTypes.DECIMAL(5, 2),
-      allowNull: false
+      allowNull: true
     },
     ot1Hours: {
       type: DataTypes.DECIMAL(5, 2),
@@ -90,6 +91,50 @@ module.exports = (sequelize, DataTypes) => {
     marginPct: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: true
+    },
+    // Paint Diary fields
+    canvasData: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: []
+    },
+    additionalCosts: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: []
+    },
+    attachments: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: []
+    },
+    gpsData: {
+      type: DataTypes.JSONB,
+      allowNull: true
+    },
+    weatherData: {
+      type: DataTypes.JSONB,
+      allowNull: true
+    },
+    totalCost: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      defaultValue: 0
+    },
+    totalRevenue: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      defaultValue: 0
+    },
+    productivityScore: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0
+    },
+    diaryType: {
+      type: DataTypes.ENUM('legacy', 'paint'),
+      allowNull: false,
+      defaultValue: 'legacy'
     }
   }, {
     sequelize,

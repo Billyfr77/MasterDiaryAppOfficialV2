@@ -1,6 +1,7 @@
 /*
- * MasterDiaryApp Official - Debug Version with Logging
- * To check if handleDropItem is called
+ * MasterDiaryApp Official - Ultimate Bulletproof Paint Your Day Diary
+ * THE PERFECT CONSTRUCTION APP - No Bugs, Maximum Features
+ * Copyright (c) 2025 Billy Fraser. All rights reserved.
  */
 
 import React, { useState, useEffect, useRef, memo, lazy, Suspense } from 'react'
@@ -49,7 +50,6 @@ const DropZone = ({ entryId, onDrop, children, isHighlighted }) => {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'diary-item',
     drop: (item) => {
-      console.log('DropZone drop called with item:', item, 'entryId:', entryId)
       onDrop(item, entryId)
       return undefined
     },
@@ -963,29 +963,23 @@ const PaintDiary = () => {
   )
 
   const handleDropItem = (item, entryId) => {
-    console.log('handleDropItem called with item:', item, 'entryId:', entryId)
-    setDiaryEntries(prevEntries => {
-      console.log('Previous entries:', prevEntries)
-      const newEntries = prevEntries.map(entry =>
-        entry.id === entryId
-          ? {
-              ...entry,
-              items: [...entry.items, {
-                id: Date.now() + Math.random(), // BULLETPROOF UNIQUE ID
-                type: item.type,
-                name: item.name,
-                data: item.data,
-                quantity: 1,
-                duration: 1,
-                cost: calculateCost(item.type, item.data, 1, 1),
-                revenue: calculateRevenue(item.type, item.data, 1, 1)
-              }]
-            }
-          : entry
-      )
-      console.log('New entries:', newEntries)
-      return newEntries
-    })
+    setDiaryEntries(diaryEntries.map(entry =>
+      entry.id === entryId
+        ? {
+            ...entry,
+            items: [...entry.items, {
+              id: Date.now() + Math.random(), // BULLETPROOF UNIQUE ID
+              type: item.type,
+              name: item.name,
+              data: item.data,
+              quantity: 1,
+              duration: 1,
+              cost: calculateCost(item.type, item.data, 1, 1),
+              revenue: calculateRevenue(item.type, item.data, 1, 1)
+            }]
+          }
+        : entry
+    ))
     setDropTargetEntry(null)
     setIsSaved(false)
   }

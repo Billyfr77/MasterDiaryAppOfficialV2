@@ -73,6 +73,7 @@ const express = require('express');
         app.use('/api/projects', require('./src/routes/projects'));
         app.use('/api/staff', require('./src/routes/staff'));
         app.use('/api/diaries', require('./src/routes/diaries_fixed2'));
+        app.use('/api/paint-diaries', require('./src/routes/paintDiaries'));
         app.use('/api/settings', require('./src/routes/settings'));
         app.use('/api/equipment', require('./src/routes/equipment'));
         app.use('/api/nodes', require('./src/routes/nodes'));
