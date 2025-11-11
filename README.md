@@ -7,6 +7,17 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+### Backend Configuration Notes
+
+- The backend uses SQLite for development, with database file stored in the project root.
+
+- JWT secrets are configured in `backend/.env` - ensure to set strong secrets in production.
+
+- The server auto-syncs the database on startup using Sequelize.
+
+- Recent fixes: Corrected syntax error in server.js sync() call and ensured model compatibility.
+
+---
 ---
 
 ## 🚀 **THE ULTIMATE CONSTRUCTION MANAGEMENT REVOLUTION**
@@ -121,7 +132,7 @@ Node.js + Express + Sequelize ORM
 
 ### **Key Technologies**
 - **Frontend**: React 19, React DnD, React Router, Lucide Icons, DatePicker, jsPDF, PapaParse
-- **Backend**: Node.js, Express, Sequelize, JWT, bcrypt, PostgreSQL
+- **Backend**: Node.js, Express, Sequelize, JWT, bcrypt, SQLite
 - **UI/UX**: Complete Dark Theme, Gradient Backgrounds, Professional Animations
 - **Performance**: Optimized Drag-and-Drop, Real-Time Calculations, Mobile-First
 - **DevOps**: Vite Build System, ESLint, Git Version Control
@@ -148,7 +159,7 @@ cp .env.example .env
 ```bash
 # Database setup
 cd backend
-npm run db:migrate  # Create all tables
+# Database auto-syncs on server start via Sequelize
 
 # Launch both frontend and backend
 npm run dev:all    # Concurrent development servers
