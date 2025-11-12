@@ -1157,7 +1157,7 @@ const PaintDiary = () => {
     setIsSaved(false)
   }, [])
 
-  const calculateCost = (type, data, duration) => {
+  const calculateCost = (type, data, quantity, duration) => {
     switch (type) {
       case 'staff':
         return (data.payRateBase || 25) * duration
