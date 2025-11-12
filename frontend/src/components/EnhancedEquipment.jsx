@@ -28,7 +28,9 @@ const EnhancedEquipment = () => {
     category: '',
     ownership: 'owned',
     costRateBase: '',
-    costRateOvertime: ''
+    costRateOT1: '',
+
+    costRateOT2: ''
   })
 
   useEffect(() => {
@@ -55,7 +57,9 @@ const EnhancedEquipment = () => {
       category: '',
       ownership: 'owned',
       costRateBase: '',
-      costRateOvertime: ''
+      costRateOT1: '',
+
+    costRateOT2: ''
     })
     setShowCreateForm(true)
   }
@@ -67,7 +71,7 @@ const EnhancedEquipment = () => {
       category: equipmentItem.category,
       ownership: equipmentItem.ownership || 'owned',
       costRateBase: equipmentItem.costRateBase || '',
-      costRateOvertime: equipmentItem.costRateOvertime || ''
+      costRateOT1: equipmentItem.costRateOT1 || ''
     })
     setShowCreateForm(true)
   }
@@ -93,7 +97,7 @@ const EnhancedEquipment = () => {
         category: formData.category,
         ownership: formData.ownership,
         costRateBase: parseFloat(formData.costRateBase) || 0,
-        costRateOvertime: parseFloat(formData.costRateOvertime) || 0
+        costRateOT1: parseFloat(formData.costRateOT1) || 0,          costRateOT2: parseFloat(formData.costRateOT2) || 0
       }
 
       if (editingEquipment) {
@@ -332,7 +336,7 @@ const EnhancedEquipment = () => {
                   <h4 style={{ margin: '0 0 8px 0', color: '#4ecdc4', fontSize: '1rem' }}>Cost Rates</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem' }}>
                     <div style={{ color: '#ecf0f1' }}>Base: <span style={{ color: '#4ecdc4', fontWeight: '600' }}>${item.costRateBase}/hr</span></div>
-                    <div style={{ color: '#ecf0f1' }}>OT: <span style={{ color: '#f39c12', fontWeight: '600' }}>${item.costRateOvertime}/hr</span></div>
+                    <div style={{ color: '#ecf0f1' }}>OT: <span style={{ color: '#f39c12', fontWeight: '600' }}>${item.costRateOT1}/hr</span></div>
                   </div>
                 </div>
               </div>
@@ -538,8 +542,8 @@ const EnhancedEquipment = () => {
                       </label>
                       <input
                         type="number"
-                        value={formData.costRateOvertime}
-                        onChange={(e) => setFormData({ ...formData, costRateOvertime: e.target.value })}
+                        value={formData.costRateOT1}
+                        onChange={(e) => setFormData({ ...formData, costRateOT1: e.target.value })}
                         step="0.01"
                         style={{
                           width: '100%',

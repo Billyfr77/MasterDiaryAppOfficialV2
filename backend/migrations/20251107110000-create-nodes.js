@@ -51,3 +51,4 @@
             await queryInterface.dropTable('Nodes');
           }
         };
+

@@ -33,3 +33,4 @@ module.exports = {
     await queryInterface.dropTable('Projects');
   }
 };
+

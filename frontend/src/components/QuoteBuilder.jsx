@@ -586,10 +586,10 @@ const QuoteBuilder = () => {
       let revenue = 0
 
       if (item.type === 'staff') {
-        cost = item.material.payRate * item.quantity
-        revenue = item.material.chargeRate * item.quantity
+        cost = (item.ordinaryHours || item.quantity) * item.material.payRate + (item.ot1Hours || 0) * (item.material.payRateOT1 || item.material.payRate) + (item.ot2Hours || 0) * (item.material.payRateOT2 || item.material.payRate)
+        revenue = (item.ordinaryHours || item.quantity) * item.material.chargeRate + (item.ot1Hours || 0) * (item.material.chargeOutOT1 || item.material.chargeRate) + (item.ot2Hours || 0) * (item.material.chargeOutOT2 || item.material.chargeRate)
       } else if (item.type === 'equipment') {
-        cost = item.material.costRate * item.quantity
+        cost = (item.ordinaryHours || item.quantity) * item.material.costRate + (item.ot1Hours || 0) * (item.material.costRateOT1 || item.material.costRate) + (item.ot2Hours || 0) * (item.material.costRateOT2 || item.material.costRate)
         revenue = cost * (1 + marginPct / 100)
       } else {
         cost = item.material.pricePerUnit * item.quantity

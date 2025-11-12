@@ -53,3 +53,4 @@
             await queryInterface.dropTable('Subscriptions')
           }
         }
+

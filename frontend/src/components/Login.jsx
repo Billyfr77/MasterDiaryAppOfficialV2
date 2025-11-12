@@ -14,7 +14,7 @@
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
  */import React, { useState } from 'react'
-import axios from 'axios'
+import { api } from '../utils/api'
 
 const Login = ({ onLogin }) => {
   const [email, setEmail] = useState('')
@@ -28,15 +28,16 @@ const Login = ({ onLogin }) => {
     setError('')
 
     try {
-      const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login'
-      const data = isRegister ? { username, email, password } : { email, password }
+      const endpoint = isRegister ? '/auth/register' : '/auth/login'
+      const data = isRegister ? { username, email, password, role: 'manager' } : { email, password }
 
-      const response = await axios.post(`http://localhost:5000${endpoint}`, data)
+      const response = await api.post(endpoint, data)
 
       if (isRegister) {
         alert('Registered successfully! Please login.')
         setIsRegister(false)
       } else {
+        localStorage.setItem('token', response.data.accessToken)
         onLogin(response.data.accessToken)
       }
     } catch (err) {

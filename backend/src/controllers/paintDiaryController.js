@@ -329,7 +329,7 @@ const calculateCosts = async (req, res) => {
 };
 
 // Helper function to calculate item cost
-const calculateItemCost = async (item) => {
+const calculateItemCost = async (item, entryTime = null, diaryDate = null) => {
   switch (item.type) {
     case 'staff':
       const staff = await Staff.findByPk(item.data?.id);
@@ -346,7 +346,7 @@ const calculateItemCost = async (item) => {
 };
 
 // Helper function to calculate item revenue
-const calculateItemRevenue = async (item) => {
+const calculateItemRevenue = async (item, entryTime = null, diaryDate = null) => {
   switch (item.type) {
     case 'staff':
       const staff = await Staff.findByPk(item.data?.id);

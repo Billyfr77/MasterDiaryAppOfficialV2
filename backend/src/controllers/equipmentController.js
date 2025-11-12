@@ -21,11 +21,20 @@ const equipmentSchema = Joi.object({
   category: Joi.string().min(1).required(),
   ownership: Joi.string().min(1).required(),
   costRateBase: Joi.number().positive().required(),
-  costRateOT1: Joi.number().positive().optional(),
-  costRateOT2: Joi.number().positive().optional()
+  costRateOT1: Joi.alternatives().try(
+    Joi.number().positive(),
+    Joi.string().empty(''),
+    Joi.allow(null)
+  ).optional(),
+  costRateOT2: Joi.alternatives().try(
+    Joi.number().positive(),
+    Joi.string().empty(''),
+    Joi.allow(null)
+  ).optional()
 });
 
 const getAllEquipment = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Fetching equipment for user: ${req.user?.id}`);
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
@@ -45,11 +54,19 @@ const getAllEquipment = async (req, res) => {
       totalPages: Math.ceil(count / limit)
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in GET /api/equipment:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: 'GET /api/equipment',
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const getEquipmentById = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Fetching equipment ${req.params.id} for user: ${req.user?.id}`);
   try {
     const equipmentItem = await Equipment.findOne({
       where: { id: req.params.id, userId: req.user.id }
@@ -60,33 +77,63 @@ const getEquipmentById = async (req, res) => {
       res.status(404).json({ error: 'Equipment not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in GET /api/equipment/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `GET /api/equipment/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const createEquipment = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Creating equipment:`, req.body, 'for user:', req.user?.id);
   try {
-    const { error } = equipmentSchema.validate(req.body);
+    // Preprocess overtime fields to convert empty strings to null
+    const processedBody = {
+      ...req.body,
+      costRateOT1: req.body.costRateOT1 === '' || req.body.costRateOT1 === null ? null : Number(req.body.costRateOT1),
+      costRateOT2: req.body.costRateOT2 === '' || req.body.costRateOT2 === null ? null : Number(req.body.costRateOT2)
+    };
+
+    const { error } = equipmentSchema.validate(processedBody);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
     const equipmentItem = await Equipment.create({
-      ...req.body,
+      ...processedBody,
       userId: req.user.id
     });
     res.status(201).json(equipmentItem);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in POST /api/equipment:`, error);
+    console.error('Stack:', error.stack);
+    res.status(400).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: 'POST /api/equipment',
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const updateEquipment = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Updating equipment ${req.params.id}:`, req.body, 'for user:', req.user?.id);
   try {
-    const { error } = equipmentSchema.validate(req.body);
+    // Preprocess overtime fields to convert empty strings to null
+    const processedBody = {
+      ...req.body,
+      costRateOT1: req.body.costRateOT1 === '' || req.body.costRateOT1 === null ? null : Number(req.body.costRateOT1),
+      costRateOT2: req.body.costRateOT2 === '' || req.body.costRateOT2 === null ? null : Number(req.body.costRateOT2)
+    };
+
+    const { error } = equipmentSchema.validate(processedBody);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-    const [updated] = await Equipment.update(req.body, {
+    const [updated] = await Equipment.update(processedBody, {
       where: { id: req.params.id, userId: req.user.id }
     });
     if (updated) {
@@ -96,11 +143,19 @@ const updateEquipment = async (req, res) => {
       res.status(404).json({ error: 'Equipment not found' });
     }
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in PUT /api/equipment/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(400).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `PUT /api/equipment/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 
 const deleteEquipment = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Deleting equipment ${req.params.id} for user: ${req.user?.id}`);
   try {
     const deleted = await Equipment.destroy({
       where: { id: req.params.id, userId: req.user.id }
@@ -111,7 +166,14 @@ const deleteEquipment = async (req, res) => {
       res.status(404).json({ error: 'Equipment not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error in DELETE /api/equipment/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `DELETE /api/equipment/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 

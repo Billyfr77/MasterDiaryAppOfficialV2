@@ -45,3 +45,4 @@ module.exports = {
     await queryInterface.dropTable('Staff');
   }
 };
+

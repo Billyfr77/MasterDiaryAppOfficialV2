@@ -27,11 +27,11 @@ const EnhancedStaff = () => {
     name: '',
     role: '',
     payRateBase: '',
-    payRateOvertime1: '',
-    payRateOvertime2: '',
+    payRateOT1: '',
+    payRateOT2: '',
     chargeOutBase: '',
-    chargeOutOvertime1: '',
-    chargeOutOvertime2: ''
+    chargeOutOT1: '',
+    chargeOutOT2: ''
   })
 
   useEffect(() => {
@@ -57,11 +57,11 @@ const EnhancedStaff = () => {
       name: '',
       role: '',
       payRateBase: '',
-      payRateOvertime1: '',
-      payRateOvertime2: '',
+      payRateOT1: '',
+      payRateOT2: '',
       chargeOutBase: '',
-      chargeOutOvertime1: '',
-      chargeOutOvertime2: ''
+      chargeOutOT1: '',
+      chargeOutOT2: ''
     })
     setShowCreateForm(true)
   }
@@ -72,11 +72,11 @@ const EnhancedStaff = () => {
       name: staffMember.name,
       role: staffMember.role,
       payRateBase: staffMember.payRateBase || '',
-      payRateOvertime1: staffMember.payRateOvertime1 || '',
-      payRateOvertime2: staffMember.payRateOvertime2 || '',
+      payRateOT1: staffMember.payRateOT1 || '',
+      payRateOT2: staffMember.payRateOT2 || '',
       chargeOutBase: staffMember.chargeOutBase || '',
-      chargeOutOvertime1: staffMember.chargeOutOvertime1 || '',
-      chargeOutOvertime2: staffMember.chargeOutOvertime2 || ''
+      chargeOutOT1: staffMember.chargeOutOT1 || '',
+      chargeOutOT2: staffMember.chargeOutOT2 || ''
     })
     setShowCreateForm(true)
   }
@@ -101,11 +101,11 @@ const EnhancedStaff = () => {
         name: formData.name,
         role: formData.role,
         payRateBase: parseFloat(formData.payRateBase) || 0,
-        payRateOvertime1: parseFloat(formData.payRateOvertime1) || 0,
-        payRateOvertime2: parseFloat(formData.payRateOvertime2) || 0,
+        payRateOT1: parseFloat(formData.payRateOT1) || 0,
+        payRateOT2: parseFloat(formData.payRateOT2) || 0,
         chargeOutBase: parseFloat(formData.chargeOutBase) || 0,
-        chargeOutOvertime1: parseFloat(formData.chargeOutOvertime1) || 0,
-        chargeOutOvertime2: parseFloat(formData.chargeOutOvertime2) || 0
+        chargeOutOT1: parseFloat(formData.chargeOutOT1) || 0,
+        chargeOutOT2: parseFloat(formData.chargeOutOT2) || 0
       }
 
       if (editingStaff) {
@@ -315,8 +315,8 @@ const EnhancedStaff = () => {
                   <h4 style={{ margin: '0 0 8px 0', color: '#4ecdc4', fontSize: '1rem' }}>Pay Rates</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem' }}>
                     <div style={{ color: '#ecf0f1' }}>Base: <span style={{ color: '#4ecdc4', fontWeight: '600' }}>${member.payRateBase}/hr</span></div>
-                    <div style={{ color: '#ecf0f1' }}>OT1: <span style={{ color: '#f39c12', fontWeight: '600' }}>${member.payRateOvertime1}/hr</span></div>
-                    <div style={{ color: '#ecf0f1' }}>OT2: <span style={{ color: '#e74c3c', fontWeight: '600' }}>${member.payRateOvertime2}/hr</span></div>
+                    <div style={{ color: '#ecf0f1' }}>OT1: <span style={{ color: '#f39c12', fontWeight: '600' }}>${member.payRateOT1}/hr</span></div>
+                    <div style={{ color: '#ecf0f1' }}>OT2: <span style={{ color: '#e74c3c', fontWeight: '600' }}>${member.payRateOT2}/hr</span></div>
                   </div>
                 </div>
 
@@ -325,8 +325,8 @@ const EnhancedStaff = () => {
                   <h4 style={{ margin: '0 0 8px 0', color: '#667eea', fontSize: '1rem' }}>Charge Out Rates</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem' }}>
                     <div style={{ color: '#ecf0f1' }}>Base: <span style={{ color: '#667eea', fontWeight: '600' }}>${member.chargeOutBase}/hr</span></div>
-                    <div style={{ color: '#ecf0f1' }}>OT1: <span style={{ color: '#9b59b6', fontWeight: '600' }}>${member.chargeOutOvertime1}/hr</span></div>
-                    <div style={{ color: '#ecf0f1' }}>OT2: <span style={{ color: '#e67e22', fontWeight: '600' }}>${member.chargeOutOvertime2}/hr</span></div>
+                    <div style={{ color: '#ecf0f1' }}>OT1: <span style={{ color: '#9b59b6', fontWeight: '600' }}>${member.chargeOutOT1}/hr</span></div>
+                    <div style={{ color: '#ecf0f1' }}>OT2: <span style={{ color: '#e67e22', fontWeight: '600' }}>${member.chargeOutOT2}/hr</span></div>
                   </div>
                 </div>
               </div>
@@ -502,8 +502,8 @@ const EnhancedStaff = () => {
                       </label>
                       <input
                         type="number"
-                        value={formData.payRateOvertime1}
-                        onChange={(e) => setFormData({ ...formData, payRateOvertime1: e.target.value })}
+                        value={formData.payRateOT1}
+                        onChange={(e) => setFormData({ ...formData, payRateOT1: e.target.value })}
                         step="0.01"
                         style={{
                           width: '100%',
@@ -529,8 +529,8 @@ const EnhancedStaff = () => {
                       </label>
                       <input
                         type="number"
-                        value={formData.payRateOvertime2}
-                        onChange={(e) => setFormData({ ...formData, payRateOvertime2: e.target.value })}
+                        value={formData.payRateOT2}
+                        onChange={(e) => setFormData({ ...formData, payRateOT2: e.target.value })}
                         step="0.01"
                         style={{
                           width: '100%',
@@ -589,8 +589,8 @@ const EnhancedStaff = () => {
                       </label>
                       <input
                         type="number"
-                        value={formData.chargeOutOvertime1}
-                        onChange={(e) => setFormData({ ...formData, chargeOutOvertime1: e.target.value })}
+                        value={formData.chargeOutOT1}
+                        onChange={(e) => setFormData({ ...formData, chargeOutOT1: e.target.value })}
                         step="0.01"
                         style={{
                           width: '100%',
@@ -616,8 +616,8 @@ const EnhancedStaff = () => {
                       </label>
                       <input
                         type="number"
-                        value={formData.chargeOutOvertime2}
-                        onChange={(e) => setFormData({ ...formData, chargeOutOvertime2: e.target.value })}
+                        value={formData.chargeOutOT2}
+                        onChange={(e) => setFormData({ ...formData, chargeOutOT2: e.target.value })}
                         step="0.01"
                         style={{
                           width: '100%',

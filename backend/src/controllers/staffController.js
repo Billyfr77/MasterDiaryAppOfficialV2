@@ -20,11 +20,27 @@ const staffSchema = Joi.object({
   name: Joi.string().min(1).required(),
   role: Joi.string().min(1).required(),
   payRateBase: Joi.number().positive().required(),
-  payRateOT1: Joi.number().positive().optional(),
-  payRateOT2: Joi.number().positive().optional(),
+  payRateOT1: Joi.alternatives().try(
+    Joi.number().positive(),
+    Joi.string().empty(''),
+    Joi.allow(null)
+  ).optional(),
+  payRateOT2: Joi.alternatives().try(
+    Joi.number().positive(),
+    Joi.string().empty(''),
+    Joi.allow(null)
+  ).optional(),
   chargeOutBase: Joi.number().positive().required(),
-  chargeOutOT1: Joi.number().positive().optional(),
-  chargeOutOT2: Joi.number().positive().optional()
+  chargeOutOT1: Joi.alternatives().try(
+    Joi.number().positive(),
+    Joi.string().empty(''),
+    Joi.allow(null)
+  ).optional(),
+  chargeOutOT2: Joi.alternatives().try(
+    Joi.number().positive(),
+    Joi.string().empty(''),
+    Joi.allow(null)
+  ).optional()
 });
 
 const getAllStaff = async (req, res) => {
@@ -85,12 +101,21 @@ const getStaffById = async (req, res) => {
 const createStaff = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Creating staff:`, req.body, 'for user:', req.user?.id);
   try {
-    const { error } = staffSchema.validate(req.body);
+    // Preprocess overtime fields to convert empty strings to null
+    const processedBody = {
+      ...req.body,
+      payRateOT1: req.body.payRateOT1 === '' || req.body.payRateOT1 === null ? null : Number(req.body.payRateOT1),
+      payRateOT2: req.body.payRateOT2 === '' || req.body.payRateOT2 === null ? null : Number(req.body.payRateOT2),
+      chargeOutOT1: req.body.chargeOutOT1 === '' || req.body.chargeOutOT1 === null ? null : Number(req.body.chargeOutOT1),
+      chargeOutOT2: req.body.chargeOutOT2 === '' || req.body.chargeOutOT2 === null ? null : Number(req.body.chargeOutOT2)
+    };
+
+    const { error } = staffSchema.validate(processedBody);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
     const staffMember = await Staff.create({
-      ...req.body,
+      ...processedBody,
       userId: req.user.id
     });
     res.status(201).json(staffMember);
@@ -109,11 +134,20 @@ const createStaff = async (req, res) => {
 const updateStaff = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Updating staff ${req.params.id}:`, req.body, 'for user:', req.user?.id);
   try {
-    const { error } = staffSchema.validate(req.body);
+    // Preprocess overtime fields to convert empty strings to null
+    const processedBody = {
+      ...req.body,
+      payRateOT1: req.body.payRateOT1 === '' || req.body.payRateOT1 === null ? null : Number(req.body.payRateOT1),
+      payRateOT2: req.body.payRateOT2 === '' || req.body.payRateOT2 === null ? null : Number(req.body.payRateOT2),
+      chargeOutOT1: req.body.chargeOutOT1 === '' || req.body.chargeOutOT1 === null ? null : Number(req.body.chargeOutOT1),
+      chargeOutOT2: req.body.chargeOutOT2 === '' || req.body.chargeOutOT2 === null ? null : Number(req.body.chargeOutOT2)
+    };
+
+    const { error } = staffSchema.validate(processedBody);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-    const [updated] = await Staff.update(req.body, {
+    const [updated] = await Staff.update(processedBody, {
       where: { id: req.params.id, userId: req.user.id }
     });
     if (updated) {
