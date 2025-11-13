@@ -1,6 +1,6 @@
 /*
  * MasterDiaryApp Official - Paint Your Day Diary
- * ENHANCED VERSION - With Unlimited Node Entries
+ * ENHANCED VERSION - With Real-Time Cost, Revenue, Profit Calculations, Editable Quantities/Rates & Overtime Accounting
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  */
 
@@ -86,14 +86,19 @@ const DropZone = ({ entryId, onDrop, children, isHighlighted }) => {
   )
 }
 
-// Enhanced DiaryEntry with unlimited node support
+// Enhanced DiaryEntry with unlimited node support and inline editing
 const DiaryEntry = ({
   entry, onUpdate, onDelete, onDropItem, isDropTarget,
-  onAddPhotos, onAddVoiceNote, onAddLocation, onPredictTime, theme
+  onAddPhotos, onAddVoiceNote, onAddLocation, onPredictTime, theme, formatCurrency,
+  overtimeThreshold, overtimeMultiplier
 }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [noteText, setNoteText] = useState(entry.note)
   const [isRecording, setIsRecording] = useState(false)
+  const [editingQuantityId, setEditingQuantityId] = useState(null)
+  const [editingRateId, setEditingRateId] = useState(null)
+  const [tempQuantity, setTempQuantity] = useState('')
+  const [tempRate, setTempRate] = useState('')
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const [showNotification, setShowNotification] = useState(false)
@@ -109,6 +114,48 @@ const DiaryEntry = ({
     onUpdate(entry.id, { note: noteText })
     setIsEditing(false)
     showNotificationMessage('Note saved')
+  }
+
+  const handleQuantitySave = (itemId) => {
+    const newQuantity = parseFloat(tempQuantity) || 1
+    const updatedItems = entry.items.map(item =>
+      item.id === itemId ? { ...item, quantity: newQuantity } : item
+    )
+    onUpdate(entry.id, { items: updatedItems })
+    setEditingQuantityId(null)
+    setTempQuantity('')
+    showNotificationMessage('Quantity updated')
+  }
+
+  const handleRateSave = (itemId) => {
+    const newRate = parseFloat(tempRate) || 0
+    const updatedItems = entry.items.map(item =>
+      item.id === itemId ? { ...item, rate: newRate } : item
+    )
+    onUpdate(entry.id, { items: updatedItems })
+    setEditingRateId(null)
+    setTempRate('')
+    showNotificationMessage('Rate updated')
+  }
+
+  const calculateItemCost = (item) => {
+    if (item.type !== 'staff') {
+      return item.rate * item.quantity
+    }
+
+    // Overtime calculation for staff
+    const regularHours = Math.min(item.quantity, overtimeThreshold)
+    const overtimeHours = Math.max(0, item.quantity - overtimeThreshold)
+    return (regularHours * item.rate) + (overtimeHours * item.rate * overtimeMultiplier)
+  }
+
+  const getOvertimeBreakdown = (item) => {
+    if (item.type !== 'staff') return null
+
+    const regularHours = Math.min(item.quantity, overtimeThreshold)
+    const overtimeHours = Math.max(0, item.quantity - overtimeThreshold)
+
+    return { regularHours, overtimeHours }
   }
 
   const startRecording = async () => {
@@ -495,71 +542,174 @@ const DiaryEntry = ({
           gap: '12px',
           marginBottom: '16px'
         }}>
-          {entry.items.map(item => (
-            <div key={item.id} style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '16px',
-              background: theme === 'dark' ? '#2d3748' : 'white',
-              border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
-              borderRadius: '10px',
-              boxShadow: theme === 'dark'
-                ? '0 2px 8px rgba(0,0,0,0.2)'
-                : '0 2px 8px rgba(0,0,0,0.05)',
-              transition: 'all 0.3s ease',
-              ':hover': {
-                transform: 'translateY(-2px)',
+          {entry.items.map(item => {
+            const overtimeBreakdown = getOvertimeBreakdown(item)
+            const itemCost = calculateItemCost(item)
+
+            return (
+              <div key={item.id} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px',
+                background: theme === 'dark' ? '#2d3748' : 'white',
+                border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
+                borderRadius: '10px',
                 boxShadow: theme === 'dark'
-                  ? '0 4px 16px rgba(0,0,0,0.3)'
-                  : '0 4px 16px rgba(0,0,0,0.1)'
-              }
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{
-                  color: item.type === 'staff' ? '#4ecdc4' : item.type === 'equipment' ? '#f39c12' : '#9b59b6',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  {item.type === 'staff' ? <Users size={18} /> : item.type === 'equipment' ? <Wrench size={18} /> : <DollarSign size={18} />}
+                  ? '0 2px 8px rgba(0,0,0,0.2)'
+                  : '0 2px 8px rgba(0,0,0,0.05)',
+                transition: 'all 0.3s ease',
+                ':hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme === 'dark'
+                    ? '0 4px 16px rgba(0,0,0,0.3)'
+                    : '0 4px 16px rgba(0,0,0,0.1)'
+                }
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{
+                    color: item.type === 'staff' ? '#4ecdc4' : item.type === 'equipment' ? '#f39c12' : '#9b59b6',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    {item.type === 'staff' ? <Users size={18} /> : item.type === 'equipment' ? <Wrench size={18} /> : <DollarSign size={18} />}
+                  </div>
+                  <div>
+                    <div style={{
+                      fontWeight: '600',
+                      color: theme === 'dark' ? '#e2e8f0' : '#495057'
+                    }}>
+                      {item.name}
+                    </div>
+                    <div style={{
+                      fontSize: '0.85rem',
+                      color: theme === 'dark' ? '#718096' : '#6c757d'
+                    }}>
+                      {editingQuantityId === item.id ? (
+                        <input
+                          type="number"
+                          value={tempQuantity}
+                          onChange={(e) => setTempQuantity(e.target.value)}
+                          onBlur={() => handleQuantitySave(item.id)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleQuantitySave(item.id)
+                            }
+                          }}
+                          style={{
+                            width: '60px',
+                            padding: '2px 4px',
+                            border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
+                            borderRadius: '4px',
+                            background: theme === 'dark' ? '#2d3748' : 'white',
+                            color: theme === 'dark' ? '#e2e8f0' : '#495057',
+                            fontSize: '0.85rem',
+                            textAlign: 'center'
+                          }}
+                          placeholder="hrs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          onClick={() => {
+                            setEditingQuantityId(item.id)
+                            setTempQuantity(item.quantity.toString())
+                          }}
+                          style={{
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            color: '#4ecdc4'
+                          }}
+                          title="Click to edit quantity/hours"
+                        >
+                          {item.quantity} {item.type === 'material' ? 'units' : 'hrs'}
+                        </span>
+                      )}
+                      {' × '}
+                      {editingRateId === item.id ? (
+                        <input
+                          type="number"
+                          value={tempRate}
+                          onChange={(e) => setTempRate(e.target.value)}
+                          onBlur={() => handleRateSave(item.id)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleRateSave(item.id)
+                            }
+                          }}
+                          style={{
+                            width: '70px',
+                            padding: '2px 4px',
+                            border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
+                            borderRadius: '4px',
+                            background: theme === 'dark' ? '#2d3748' : 'white',
+                            color: theme === 'dark' ? '#e2e8f0' : '#495057',
+                            fontSize: '0.85rem',
+                            textAlign: 'center'
+                          }}
+                          placeholder="$/unit"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          onClick={() => {
+                            setEditingRateId(item.id)
+                            setTempRate(item.rate.toString())
+                          }}
+                          style={{
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            color: '#f39c12'
+                          }}
+                          title="Click to edit rate"
+                        >
+                          {formatCurrency(item.rate || 0)}
+                        </span>
+                      )}
+                      {overtimeBreakdown && overtimeBreakdown.overtimeHours > 0 && (
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#e74c3c',
+                          marginTop: '2px'
+                        }}>
+                          OT: {overtimeBreakdown.overtimeHours}hrs × {formatCurrency((item.rate || 0) * overtimeMultiplier)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div>
+                <div style={{ textAlign: 'right' }}>
                   <div style={{
                     fontWeight: '600',
-                    color: theme === 'dark' ? '#e2e8f0' : '#495057'
+                    color: theme === 'dark' ? '#e2e8f0' : '#495057',
+                    fontSize: '0.9rem'
                   }}>
-                    {item.name}
+                    {formatCurrency(itemCost)}
                   </div>
-                  <div style={{
-                    fontSize: '0.85rem',
-                    color: theme === 'dark' ? '#718096' : '#6c757d'
-                  }}>
-                    {item.duration || 1}h × ${(item.cost || 0).toFixed(2)}
-                  </div>
+                  <button
+                    onClick={() => {
+                      // Remove item functionality
+                      const updatedItems = entry.items.filter(i => i.id !== item.id)
+                      onUpdate(entry.id, { items: updatedItems })
+                      showNotificationMessage('Item removed')
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#dc3545',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      borderRadius: '4px',
+                      transition: 'all 0.2s ease',
+                      ':hover': { background: 'rgba(220, 53, 69, 0.1)' }
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  // Remove item functionality
-                  const updatedItems = entry.items.filter(i => i.id !== item.id)
-                  onUpdate(entry.id, { items: updatedItems })
-                  showNotificationMessage('Item removed')
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#dc3545',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  borderRadius: '4px',
-                  transition: 'all 0.2s ease',
-                  ':hover': { background: 'rgba(220, 53, 69, 0.1)' }
-                }}
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* AI Prediction Button */}
@@ -654,7 +804,7 @@ const DiaryEntry = ({
 }
 
 // Enhanced Toolbar with search and filters
-const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle }) => {
+const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onMarginChange, overtimeThreshold, onOvertimeThresholdChange, overtimeMultiplier, onOvertimeMultiplierChange }) => {
   const [staff, setStaff] = useState([])
   const [equipment, setEquipment] = useState([])
   const [materials, setMaterials] = useState([])
@@ -682,19 +832,19 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle }) => {
       console.error('Error fetching toolbar data:', err)
       // Fallback to sample data for demo
       setStaff([
-        { id: 1, name: 'John Smith', type: 'staff' },
-        { id: 2, name: 'Sarah Johnson', type: 'staff' },
-        { id: 3, name: 'Mike Davis', type: 'staff' }
+        { id: 1, name: 'John Smith', type: 'staff', payRateBase: 25 },
+        { id: 2, name: 'Sarah Johnson', type: 'staff', payRateBase: 28 },
+        { id: 3, name: 'Mike Davis', type: 'staff', payRateBase: 22 }
       ])
       setEquipment([
-        { id: 4, name: 'Excavator', type: 'equipment' },
-        { id: 5, name: 'Dump Truck', type: 'equipment' },
-        { id: 6, name: 'Concrete Mixer', type: 'equipment' }
+        { id: 4, name: 'Excavator', type: 'equipment', costRateBase: 150 },
+        { id: 5, name: 'Dump Truck', type: 'equipment', costRateBase: 120 },
+        { id: 6, name: 'Concrete Mixer', type: 'equipment', costRateBase: 80 }
       ])
       setMaterials([
-        { id: 7, name: 'Concrete', type: 'material' },
-        { id: 8, name: 'Steel Rebar', type: 'material' },
-        { id: 9, name: 'Lumber', type: 'material' }
+        { id: 7, name: 'Concrete', type: 'material', pricePerUnit: 150 },
+        { id: 8, name: 'Steel Rebar', type: 'material', pricePerUnit: 3 },
+        { id: 9, name: 'Lumber', type: 'material', pricePerUnit: 5 }
       ])
     }
   }
@@ -777,6 +927,64 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle }) => {
           <option value="equipment">Equipment</option>
           <option value="material">Materials</option>
         </select>
+      </div>
+
+      {/* Margin Input */}
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ color: theme === 'dark' ? '#e2e8f0' : '#495057', fontSize: '14px', display: 'block', marginBottom: '6px' }}>Margin %</label>
+        <input
+          type="number"
+          value={margin}
+          onChange={(e) => onMarginChange(parseFloat(e.target.value) || 0)}
+          style={{
+            width: '100%',
+            padding: '10px 14px',
+            border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
+            borderRadius: '8px',
+            background: theme === 'dark' ? '#2d3748' : 'white',
+            color: theme === 'dark' ? '#e2e8f0' : '#495057',
+            fontSize: '14px',
+            transition: 'all 0.2s ease'
+          }}
+        />
+      </div>
+
+      {/* Overtime Settings */}
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ color: theme === 'dark' ? '#e2e8f0' : '#495057', fontSize: '14px', display: 'block', marginBottom: '6px' }}>Overtime Threshold (hrs)</label>
+        <input
+          type="number"
+          value={overtimeThreshold}
+          onChange={(e) => onOvertimeThresholdChange(parseFloat(e.target.value) || 8)}
+          style={{
+            width: '100%',
+            padding: '10px 14px',
+            border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
+            borderRadius: '8px',
+            background: theme === 'dark' ? '#2d3748' : 'white',
+            color: theme === 'dark' ? '#e2e8f0' : '#495057',
+            fontSize: '14px',
+            marginBottom: '10px',
+            transition: 'all 0.2s ease'
+          }}
+        />
+        <label style={{ color: theme === 'dark' ? '#e2e8f0' : '#495057', fontSize: '14px', display: 'block', marginBottom: '6px' }}>Overtime Multiplier</label>
+        <input
+          type="number"
+          step="0.1"
+          value={overtimeMultiplier}
+          onChange={(e) => onOvertimeMultiplierChange(parseFloat(e.target.value) || 1.5)}
+          style={{
+            width: '100%',
+            padding: '10px 14px',
+            border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
+            borderRadius: '8px',
+            background: theme === 'dark' ? '#2d3748' : 'white',
+            color: theme === 'dark' ? '#e2e8f0' : '#495057',
+            fontSize: '14px',
+            transition: 'all 0.2s ease'
+          }}
+        />
       </div>
 
       <h3 style={{
@@ -872,7 +1080,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle }) => {
           {filteredItems(staff).slice(0, 5).map(member => (
             <DraggableElement
               key={member.id}
-              item={{ type: 'staff', id: member.id, name: member.name, data: member }}
+              item={{ type: 'staff', id: member.id, name: member.name, data: member, rate: member.payRateBase || 25 }}
             >
               <div style={{
                 padding: '12px 14px',
@@ -911,7 +1119,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle }) => {
           {filteredItems(equipment).slice(0, 5).map(item => (
             <DraggableElement
               key={item.id}
-              item={{ type: 'equipment', id: item.id, name: item.name, data: item }}
+              item={{ type: 'equipment', id: item.id, name: item.name, data: item, rate: item.costRateBase || 150 }}
             >
               <div style={{
                 padding: '12px 14px',
@@ -950,7 +1158,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle }) => {
           {filteredItems(materials).slice(0, 5).map(item => (
             <DraggableElement
               key={item.id}
-              item={{ type: 'material', id: item.id, name: item.name, data: item }}
+              item={{ type: 'material', id: item.id, name: item.name, data: item, rate: item.pricePerUnit || 10 }}
             >
               <div style={{
                 padding: '12px 14px',
@@ -985,12 +1193,22 @@ const PaintDiary = () => {
   const [dropTargetEntry, setDropTargetEntry] = useState(null)
   const [productivityScore, setProductivityScore] = useState(0)
   const [theme, setTheme] = useState('light')
+  const [margin, setMargin] = useState(20) // Default margin percentage
+  const [overtimeThreshold, setOvertimeThreshold] = useState(8) // Default 8 hours
+  const [overtimeMultiplier, setOvertimeMultiplier] = useState(1.5) // Default 1.5x rate
   const [autoSaveInterval, setAutoSaveInterval] = useState(null)
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount)
+  }
 
   useEffect(() => {
     calculateTotals()
     calculateProductivityScore()
-  }, [diaryEntries])
+  }, [diaryEntries, margin, overtimeThreshold, overtimeMultiplier])
 
   useEffect(() => {
     // Auto-save every 30 seconds if there are unsaved changes
@@ -1027,17 +1245,25 @@ const PaintDiary = () => {
     return () => document.removeEventListener('keydown', handleKeyPress)
   }, [])
 
+  const calculateItemCost = (item) => {
+    if (item.type !== 'staff') {
+      return item.rate * item.quantity
+    }
+
+    // Overtime calculation for staff
+    const regularHours = Math.min(item.quantity, overtimeThreshold)
+    const overtimeHours = Math.max(0, item.quantity - overtimeThreshold)
+    return (regularHours * item.rate) + (overtimeHours * item.rate * overtimeMultiplier)
+  }
+
   const calculateTotals = () => {
     let cost = 0
-    let revenue = 0
-
     diaryEntries.forEach(entry => {
       entry.items.forEach(item => {
-        cost += (item.cost || 0) * (item.duration || 1)
-        revenue += (item.revenue || 0) * (item.duration || 1)
+        cost += calculateItemCost(item)
       })
     })
-
+    const revenue = cost * (1 + margin / 100)
     setTotalCost(cost)
     setTotalRevenue(revenue)
   }
@@ -1068,9 +1294,7 @@ const PaintDiary = () => {
               name: item.name,
               data: item.data,
               quantity: 1,
-              duration: 1,
-              cost: calculateCost(item.type, item.data, 1, 1),
-              revenue: calculateRevenue(item.type, item.data, 1, 1)
+              rate: item.rate || 0
             }]
           }
         : entry
@@ -1157,32 +1381,6 @@ const PaintDiary = () => {
     setIsSaved(false)
   }, [])
 
-  const calculateCost = (type, data, quantity, duration) => {
-    switch (type) {
-      case 'staff':
-        return (data.payRateBase || 25) * duration
-      case 'equipment':
-        return (data.costRateBase || 50) * duration
-      case 'material':
-        return (data.pricePerUnit || 10) * duration
-      default:
-        return 0
-    }
-  }
-
-  const calculateRevenue = (type, data, duration) => {
-    switch (type) {
-      case 'staff':
-        return (data.chargeOutBase || 35) * duration
-      case 'equipment':
-        return (data.costRateBase || 50) * duration * 1.3 // 30% markup
-      case 'material':
-        return (data.pricePerUnit || 10) * duration * 1.4 // 40% markup
-      default:
-        return 0
-    }
-  }
-
   const handleAutoSave = async () => {
     if (!isSaved && diaryEntries.length > 0) {
       try {
@@ -1191,6 +1389,9 @@ const PaintDiary = () => {
           entries: diaryEntries,
           totalCost,
           totalRevenue,
+          margin,
+          overtimeThreshold,
+          overtimeMultiplier,
           productivityScore
         }
         await api.post('/diaries', diaryData)
@@ -1208,6 +1409,9 @@ const PaintDiary = () => {
         entries: diaryEntries,
         totalCost,
         totalRevenue,
+        margin,
+        overtimeThreshold,
+        overtimeMultiplier,
         productivityScore
       }
 
@@ -1227,6 +1431,9 @@ const PaintDiary = () => {
         totalCost,
         totalRevenue,
         profit: totalRevenue - totalCost,
+        margin,
+        overtimeThreshold,
+        overtimeMultiplier,
         productivityScore,
         totalEntries: diaryEntries.length
       }
@@ -1243,15 +1450,17 @@ const PaintDiary = () => {
 
   const handleExportCSV = () => {
     const csvData = [
-      ['Time', 'Notes', 'Items Count', 'Photos', 'Voice Notes', 'Location', 'Total Cost'],
+      ['Time', 'Notes', 'Items Count', 'Total Cost', 'Total Revenue', 'Profit', 'Photos', 'Voice Notes', 'Location'],
       ...diaryEntries.map(entry => [
         entry.time,
         entry.note || '',
         entry.items.length,
+        entry.items.reduce((sum, item) => sum + calculateItemCost(item), 0).toFixed(2),
+        (entry.items.reduce((sum, item) => sum + calculateItemCost(item), 0) * (1 + margin / 100)).toFixed(2),
+        ((entry.items.reduce((sum, item) => sum + calculateItemCost(item), 0) * (1 + margin / 100)) - entry.items.reduce((sum, item) => sum + calculateItemCost(item), 0)).toFixed(2),
         entry.photos?.length || 0,
         entry.voiceNotes?.length || 0,
-        entry.location ? `${entry.location.lat.toFixed(4)}, ${entry.location.lng.toFixed(4)}` : '',
-        entry.items.reduce((sum, item) => sum + (item.cost || 0), 0).toFixed(2)
+        entry.location ? `${entry.location.lat.toFixed(4)}, ${entry.location.lng.toFixed(4)}` : ''
       ])
     ]
 
@@ -1350,7 +1559,7 @@ const PaintDiary = () => {
                 color: theme === 'dark' ? '#a0aec0' : '#6c757d',
                 fontSize: '1.2rem'
               }}>
-                The ultimate construction time-tracking solution with AI, photos, voice, GPS & analytics
+                The ultimate construction time-tracking solution with AI, photos, voice, GPS & real-time cost calculations with overtime
               </p>
             </div>
 
@@ -1436,7 +1645,7 @@ const PaintDiary = () => {
               ':hover': { transform: 'translateY(-5px)' }
             }}>
               <DollarSign size={28} style={{ marginBottom: '8px', opacity: 0.9 }} />
-              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>${totalCost.toFixed(2)}</div>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{formatCurrency(totalCost)}</div>
               <div style={{ fontSize: '0.95rem', opacity: 0.9 }}>Total Cost</div>
             </div>
 
@@ -1451,8 +1660,8 @@ const PaintDiary = () => {
               ':hover': { transform: 'translateY(-5px)' }
             }}>
               <TrendingUp size={28} style={{ marginBottom: '8px', opacity: 0.9 }} />
-              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>${totalRevenue.toFixed(2)}</div>
-              <div style={{ fontSize: '0.95rem', opacity: 0.9 }}>Revenue</div>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{formatCurrency(totalRevenue)}</div>
+              <div style={{ fontSize: '0.95rem', opacity: 0.9 }}>Revenue ({margin}% margin)</div>
             </div>
 
             <div style={{
@@ -1466,7 +1675,7 @@ const PaintDiary = () => {
               ':hover': { transform: 'translateY(-5px)' }
             }}>
               <BarChart3 size={28} style={{ marginBottom: '8px', opacity: 0.9 }} />
-              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>${(totalRevenue - totalCost).toFixed(2)}</div>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{formatCurrency(totalRevenue - totalCost)}</div>
               <div style={{ fontSize: '0.95rem', opacity: 0.9 }}>Profit</div>
             </div>
 
@@ -1546,6 +1755,28 @@ const PaintDiary = () => {
                 </div>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ color: theme === 'dark' ? '#a0aec0' : '#6c757d' }}>Profit Margin</span>
+                    <span style={{ fontWeight: '600', color: theme === 'dark' ? '#e2e8f0' : '#495057' }}>
+                      {margin}%
+                    </span>
+                  </div>
+                  <div style={{
+                    height: '24px',
+                    background: theme === 'dark' ? '#2d3748' : '#e9ecef',
+                    borderRadius: '12px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${margin}%`,
+                      background: 'linear-gradient(90deg, #f39c12, #e67e22)',
+                      transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                      borderRadius: '12px'
+                    }}></div>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: theme === 'dark' ? '#a0aec0' : '#6c757d' }}>Productivity</span>
                     <span style={{ fontWeight: '600', color: theme === 'dark' ? '#e2e8f0' : '#495057' }}>
                       {productivityScore}%
@@ -1591,6 +1822,12 @@ const PaintDiary = () => {
               onExportCSV={handleExportCSV}
               theme={theme}
               onThemeToggle={toggleTheme}
+              margin={margin}
+              onMarginChange={setMargin}
+              overtimeThreshold={overtimeThreshold}
+              onOvertimeThresholdChange={setOvertimeThreshold}
+              overtimeMultiplier={overtimeMultiplier}
+              onOvertimeMultiplierChange={setOvertimeMultiplier}
             />
 
             <div style={{ flex: 1 }}>
@@ -1675,6 +1912,9 @@ const PaintDiary = () => {
                           onAddLocation={handleAddLocation}
                           onPredictTime={handlePredictTime}
                           theme={theme}
+                          formatCurrency={formatCurrency}
+                          overtimeThreshold={overtimeThreshold}
+                          overtimeMultiplier={overtimeMultiplier}
                         />
                       ))
                     )}
