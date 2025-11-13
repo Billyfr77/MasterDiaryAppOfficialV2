@@ -503,7 +503,7 @@ const DiaryEntry = ({
             }}
           >
             {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
-            {isRecording ? 'Stop" : "Record'}
+            {isRecording ? 'Stop Recording' : 'Record Voice'}
           </button>
           <button
             onClick={getLocation}
@@ -1190,7 +1190,7 @@ const PaintDiary = () => {
   const [diaryEntries, setDiaryEntries] = useState([])
   const [totalCost, setTotalCost] = useState(0)
   const [totalRevenue, setTotalRevenue] = useState(0)
-  const [isSaved, setIsSaved] = useState(true)
+  const [isSaved, setIsSaved] = useState(true); const [isSaving, setIsSaving] = useState(false)
   const [dropTargetEntry, setDropTargetEntry] = useState(null)
   const [productivityScore, setProductivityScore] = useState(0)
   const [theme, setTheme] = useState('light')
