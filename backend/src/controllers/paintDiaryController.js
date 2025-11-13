@@ -75,17 +75,9 @@ const getAllPaintDiaries = async (req, res) => {
     if (date) where.date = date;
 
     const diaries = await Diary.findAll({
-      where,
-      include: [
-        {
-          model: Project,
-          as: 'Project',
-          where: { userId: req.user.id },
-          required: true
-        }
-      ],
-      order: [['date', 'DESC'], ['createdAt', 'DESC']]
-    });
+          where,
+          order: [['date', 'DESC'], ['createdAt', 'DESC']]
+        });
 
     res.json(diaries);
   } catch (error) {
@@ -119,12 +111,12 @@ const getPaintDiaryById = async (req, res) => {
 
 // Create new paint diary
 const createPaintDiary = async (req, res) => {
-  const transaction = await sequelize.transaction();
+  // const transaction = await sequelize.transaction();
 
   try {
-    const { error } = paintDiarySchema.validate(req.body);
+    // // const { error } = paintDiarySchema.validate(req.body);
     if (error) {
-      await transaction.rollback();
+      // // await transaction.rollback();
       return res.status(400).json({ error: error.details[0].message });
     }
 
@@ -139,7 +131,7 @@ const createPaintDiary = async (req, res) => {
       location: entry.location || null
     }));
 
-    const diaryData = {
+    const diaryData = { // console.log('Creating diary', diaryData);
       date,
       canvasData,
       totalCost,
@@ -148,13 +140,13 @@ const createPaintDiary = async (req, res) => {
       diaryType: 'paint'
     };
 
-    const diary = await Diary.create(diaryData, { transaction });
-    await transaction.commit();
+    const diary = await Diary.create(diaryData);
+    // await transaction.commit();
 
-    const fullDiary = await Diary.findByPk(diary.id);
-    res.status(201).json(fullDiary);
+    const fullDiary = await Diary.findByPk(diary.id); // console.log('Full diary', fullDiary);
+    // console.log('Sending response', fullDiary); res.status(201).json(fullDiary);
   } catch (error) {
-    await transaction.rollback();
+    // // await transaction.rollback();
     res.status(400).json({ error: error.message });
   }
 };
@@ -174,7 +166,7 @@ const updatePaintDiary = async (req, res) => {
       return res.status(404).json({ error: 'Paint diary entry not found or access denied' });
     }
 
-    const { error } = paintDiarySchema.validate(req.body);
+    // // const { error } = paintDiarySchema.validate(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }

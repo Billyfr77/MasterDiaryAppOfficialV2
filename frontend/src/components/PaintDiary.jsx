@@ -1683,7 +1683,7 @@ const PaintDiary = () => {
                 }}
               >
                 <Save size={18} />
-                {isSaved ? 'Saved' : 'Save Diary'}
+                {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save Diary'}
               </button>
             </div>
           </div>

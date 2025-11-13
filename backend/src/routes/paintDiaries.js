@@ -19,7 +19,7 @@ const {
   calculateCosts
 } = require('../controllers/paintDiaryController');
 
-router.use(authenticateToken);
+
 
 // Paint Diary CRUD routes
 router.get('/', getAllPaintDiaries);
