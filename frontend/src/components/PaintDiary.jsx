@@ -1394,7 +1394,7 @@ const PaintDiary = () => {
           overtimeMultiplier,
           productivityScore
         }
-        await api.post('/diaries', diaryData)
+        await api.post('/paint-diaries', diaryData)
         setIsSaved(true)
       } catch (err) {
         console.error('Auto-save error:', err)
@@ -1415,7 +1415,7 @@ const PaintDiary = () => {
         productivityScore
       }
 
-      await api.post('/diaries', diaryData)
+      await api.post('/paint-diaries', diaryData)
       setIsSaved(true)
     } catch (err) {
       console.error('Save error:', err)
