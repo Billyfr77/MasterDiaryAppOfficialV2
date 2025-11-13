@@ -1069,8 +1069,8 @@ const PaintDiary = () => {
               data: item.data,
               quantity: 1,
               duration: 1,
-              cost: calculateCost(item.type, item.data, 1),
-              revenue: calculateRevenue(item.type, item.data, 1)
+              cost: calculateCost(item.type, item.data, 1, 1),
+              revenue: calculateRevenue(item.type, item.data, 1, 1)
             }]
           }
         : entry

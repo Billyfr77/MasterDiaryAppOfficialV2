@@ -1,19 +1,4 @@
-/*
- * MasterDiaryApp Official - Construction SaaS Platform
- * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * This software and associated documentation contain proprietary
- * and confidential information of Billy Fraser.
- *
- * Unauthorized copying, modification, distribution, or use of this
- * software, in whole or in part, is strictly prohibited without
- * prior written permission from the copyright holder.
- *
- * For licensing inquiries: billyfr77@example.com
- *
- * Patent Pending: Drag-and-drop construction quote builder system
- * Trade Secret: Real-time calculation algorithms and optimization techniques
- */const { User } = require('../models');
+const { User } = require('../models');
 const Joi = require('joi');
 const jwt = require('jsonwebtoken');
 
@@ -68,14 +53,7 @@ const register = async (req, res) => {
 
     res.status(201).json({ message: 'User registered successfully', user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
-    console.error('Stack:', error.stack);
-    res.status(500).json({
-      error: error.message,
-      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
-      endpoint: `${req.method} ${req.url}`,
-      timestamp: new Date().toISOString()
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -105,14 +83,7 @@ const login = async (req, res) => {
 
     res.json({ accessToken, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
-    console.error('Stack:', error.stack);
-    res.status(500).json({
-      error: error.message,
-      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
-      endpoint: `${req.method} ${req.url}`,
-      timestamp: new Date().toISOString()
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -138,14 +109,7 @@ const refresh = async (req, res) => {
       res.json({ accessToken: newAccessToken });
     });
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
-    console.error('Stack:', error.stack);
-    res.status(500).json({
-      error: error.message,
-      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
-      endpoint: `${req.method} ${req.url}`,
-      timestamp: new Date().toISOString()
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -156,14 +120,7 @@ const logout = async (req, res) => {
     res.clearCookie('refreshToken');
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
-    console.error('Stack:', error.stack);
-    res.status(500).json({
-      error: error.message,
-      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
-      endpoint: `${req.method} ${req.url}`,
-      timestamp: new Date().toISOString()
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -175,14 +132,7 @@ const getUsers = async (req, res) => {
     });
     res.json(users);
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.url}:`, error);
-    console.error('Stack:', error.stack);
-    res.status(500).json({
-      error: error.message,
-      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
-      endpoint: `${req.method} ${req.url}`,
-      timestamp: new Date().toISOString()
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
