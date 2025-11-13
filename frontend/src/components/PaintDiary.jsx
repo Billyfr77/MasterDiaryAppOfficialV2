@@ -1,6 +1,7 @@
 /*
  * MasterDiaryApp Official - Paint Your Day Diary
  * ENHANCED VERSION - With Real-Time Cost, Revenue, Profit Calculations, Editable Quantities/Rates & Overtime Accounting
+ * FIXED: Data Persistence and Loading
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  */
 
@@ -502,7 +503,7 @@ const DiaryEntry = ({
             }}
           >
             {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
-            {isRecording ? 'Stop' : 'Record'}
+            {isRecording ? 'Stop" : "Record'}
           </button>
           <button
             onClick={getLocation}
@@ -1196,6 +1197,7 @@ const PaintDiary = () => {
   const [margin, setMargin] = useState(20) // Default margin percentage
   const [overtimeThreshold, setOvertimeThreshold] = useState(8) // Default 8 hours
   const [overtimeMultiplier, setOvertimeMultiplier] = useState(1.5) // Default 1.5x rate
+  const [currentDiaryId, setCurrentDiaryId] = useState(null)
   const [autoSaveInterval, setAutoSaveInterval] = useState(null)
 
   const formatCurrency = (amount) => {
@@ -1204,6 +1206,46 @@ const PaintDiary = () => {
       currency: 'USD'
     }).format(amount)
   }
+
+  // Load existing diary data for selected date
+  const loadExistingDiary = async (date) => {
+    try {
+      const response = await api.get(`/paint-diaries?date=${date}`)
+      if (response.data && response.data.length > 0) {
+        const diary = response.data[0] // Get the first/last diary for this date
+        setCurrentDiaryId(diary.id)
+        setDiaryEntries(diary.canvasData || [])
+        setTotalCost(diary.totalCost || 0)
+        setTotalRevenue(diary.totalRevenue || 0)
+        setMargin(diary.margin || 20)
+        setOvertimeThreshold(diary.overtimeThreshold || 8)
+        setOvertimeMultiplier(diary.overtimeMultiplier || 1.5)
+        setIsSaved(true)
+        console.log('Loaded existing diary:', diary.id)
+      } else {
+        // No existing diary, start fresh
+        setCurrentDiaryId(null)
+        setDiaryEntries([])
+        setTotalCost(0)
+        setTotalRevenue(0)
+        setIsSaved(true)
+        console.log('No existing diary found, starting fresh')
+      }
+    } catch (error) {
+      console.error('Error loading diary:', error)
+      // Start fresh on error
+      setCurrentDiaryId(null)
+      setDiaryEntries([])
+      setTotalCost(0)
+      setTotalRevenue(0)
+      setIsSaved(true)
+    }
+  }
+
+  // Load diary when date changes
+  useEffect(() => {
+    loadExistingDiary(selectedDate.toISOString().split('T')[0])
+  }, [selectedDate])
 
   useEffect(() => {
     calculateTotals()
@@ -1394,10 +1436,18 @@ const PaintDiary = () => {
           overtimeMultiplier,
           productivityScore
         }
-        await api.post('/diaries', diaryData)
+
+        if (currentDiaryId) {
+          await api.put(`/paint-diaries/${currentDiaryId}`, diaryData)
+          console.log('Diary auto-updated successfully')
+        } else {
+          const response = await api.post('/paint-diaries', diaryData)
+          setCurrentDiaryId(response.data.id)
+          console.log('Diary auto-created successfully')
+        }
         setIsSaved(true)
-      } catch (err) {
-        console.error('Auto-save error:', err)
+      } catch (error) {
+        console.error('Auto-save error:', error)
       }
     }
   }
@@ -1415,10 +1465,17 @@ const PaintDiary = () => {
         productivityScore
       }
 
-      await api.post('/diaries', diaryData)
+      if (currentDiaryId) {
+        await api.put(`/paint-diaries/${currentDiaryId}`, diaryData)
+        console.log('Diary updated successfully')
+      } else {
+        const response = await api.post('/paint-diaries', diaryData)
+        setCurrentDiaryId(response.data.id)
+        console.log('Diary created successfully')
+      }
       setIsSaved(true)
-    } catch (err) {
-      console.error('Save error:', err)
+    } catch (error) {
+      console.error('Save error:', error)
       setIsSaved(true)
     }
   }
@@ -1566,7 +1623,11 @@ const PaintDiary = () => {
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <DatePicker
                 selected={selectedDate}
-                onChange={setSelectedDate}
+                onChange={(date) => {
+                  setSelectedDate(date)
+                  // Reset current diary ID when date changes
+                  setCurrentDiaryId(null)
+                }}
                 dateFormat="EEEE, MMMM d, yyyy"
                 className="filter-input"
                 style={{
@@ -1625,6 +1686,19 @@ const PaintDiary = () => {
                 {isSaved ? 'Saved' : 'Save Diary'}
               </button>
             </div>
+          </div>
+
+          {/* Status Indicator */}
+          <div style={{
+            background: currentDiaryId ? '#d4edda' : '#fff3cd',
+            color: currentDiaryId ? '#155724' : '#856404',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            marginBottom: '16px',
+            fontSize: '14px',
+            textAlign: 'center'
+          }}>
+            {currentDiaryId ? `Loaded existing diary (ID: ${currentDiaryId})` : 'No saved diary for this date - create new entries'}
           </div>
 
           {/* Summary Cards */}
