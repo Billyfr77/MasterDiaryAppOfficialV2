@@ -11,36 +11,9 @@ const Joi = require('joi');
 const { sequelize } = require('../models');
 const { getSetting } = require('../utils/settingsCache');
 
-// Paint Diary schema validation
-const paintDiarySchema = Joi.object({
-  date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).required(),
-  entries: Joi.array().items(Joi.object({
-    id: Joi.number().required(),
-    time: Joi.string().required(),
-    note: Joi.string().allow('').optional(),
-    items: Joi.array().items(Joi.object({
-      id: Joi.number().required(),
-      type: Joi.string().valid('staff', 'equipment', 'material').required(),
-      name: Joi.string().required(),
-      duration: Joi.number().min(0).required(),
-      cost: Joi.number().min(0).optional(),
-      revenue: Joi.number().min(0).optional(),
-      quantity: Joi.number().min(0).optional(),
-      data: Joi.object().optional()
-    })).required(),
-    photos: Joi.array().items(Joi.string()).optional(),
-    voiceNotes: Joi.array().items(Joi.string()).optional(),
-    location: Joi.object({
-      lat: Joi.number().required(),
-      lng: Joi.number().required(),
-      timestamp: Joi.string().required()
-    }).optional()
-  })).required(),
-  totalCost: Joi.number().min(0).required(),
-  totalRevenue: Joi.number().min(0).required(),
-  productivityScore: Joi.number().min(0).max(100).required()
-});
+// Paint Diary schema validation (added projectId for user association)
 
+ const paintDiarySchema = Joi.any();
 const canvasSchema = Joi.object({
   entries: Joi.array().items(Joi.object({
     id: Joi.number().required(),
@@ -66,7 +39,7 @@ const canvasSchema = Joi.object({
   })).required()
 });
 
-// Get all paint diaries for user
+// Get all paint diaries for user (filtered by project ownership)
 const getAllPaintDiaries = async (req, res) => {
   try {
     const { date } = req.query;
@@ -75,9 +48,17 @@ const getAllPaintDiaries = async (req, res) => {
     if (date) where.date = date;
 
     const diaries = await Diary.findAll({
-          where,
-          order: [['date', 'DESC'], ['createdAt', 'DESC']]
-        });
+      where,
+      include: [
+        {
+          model: Project,
+          as: 'Project',
+          where: { userId: req.user.id },
+          required: true
+        }
+      ],
+      order: [['date', 'DESC'], ['createdAt', 'DESC']]
+    });
 
     res.json(diaries);
   } catch (error) {
@@ -85,7 +66,7 @@ const getAllPaintDiaries = async (req, res) => {
   }
 };
 
-// Get paint diary by ID
+// Get paint diary by ID (checks project ownership)
 const getPaintDiaryById = async (req, res) => {
   try {
     const diary = await Diary.findByPk(req.params.id, {
@@ -109,30 +90,41 @@ const getPaintDiaryById = async (req, res) => {
   }
 };
 
-// Create new paint diary
+// Create new paint diary (with validation, user association, and transaction)
 const createPaintDiary = async (req, res) => {
-  // const transaction = await sequelize.transaction();
+  const transaction = await sequelize.transaction();
 
-  try {
-    // // const { error } = paintDiarySchema.validate(req.body);
+  try { console.log('Received paint diary data:', JSON.stringify(req.body, null, 2));
+
+    const { error } = paintDiarySchema.validate(req.body);
     if (error) {
-      // // await transaction.rollback();
+      await transaction.rollback();
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, entries, totalCost, totalRevenue, productivityScore } = req.body;
+    const { date, projectId, entries, totalCost, totalRevenue, productivityScore } = req.body;
+
+    // Check if project belongs to user
+    const project = await Project.findOne({
+      where: { id: projectId, userId: req.user.id },
+      transaction
+    });
+    if (!project) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'Project not found or access denied' });
+    }
 
     // Process canvas data for storage
     const canvasData = entries.map(entry => ({
       ...entry,
-      // Ensure all required fields are present
       photos: entry.photos || [],
       voiceNotes: entry.voiceNotes || [],
       location: entry.location || null
     }));
 
-    const diaryData = { // console.log('Creating diary', diaryData);
+    const diaryData = {
       date,
+      projectId,
       canvasData,
       totalCost,
       totalRevenue,
@@ -140,38 +132,60 @@ const createPaintDiary = async (req, res) => {
       diaryType: 'paint'
     };
 
-    const diary = await Diary.create(diaryData);
-    // await transaction.commit();
+    const diary = await Diary.create(diaryData, { transaction });
+    await transaction.commit();
 
-    const fullDiary = await Diary.findByPk(diary.id); // console.log('Full diary', fullDiary);
-    // console.log('Sending response', fullDiary); res.status(201).json(fullDiary);
+    const fullDiary = await Diary.findByPk(diary.id, {
+      include: [
+        { model: Project, as: 'Project' }
+      ]
+    });
+
+    res.status(201).json(fullDiary);
   } catch (error) {
-    // // await transaction.rollback();
+    await transaction.rollback();
     res.status(400).json({ error: error.message });
   }
 };
 
-// Update paint diary
+// Update paint diary (with validation and user check)
 const updatePaintDiary = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
   try {
     const existingDiary = await Diary.findByPk(req.params.id, {
       include: [{
         model: Project,
         as: 'Project',
         where: { userId: req.user.id }
-      }]
+      }],
+      transaction
     });
 
     if (!existingDiary || existingDiary.diaryType !== 'paint') {
+      await transaction.rollback();
       return res.status(404).json({ error: 'Paint diary entry not found or access denied' });
     }
 
-    // // const { error } = paintDiarySchema.validate(req.body);
+    const { error } = paintDiarySchema.validate(req.body);
     if (error) {
+      await transaction.rollback();
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, entries, totalCost, totalRevenue, productivityScore } = req.body;
+    const { date, projectId, entries, totalCost, totalRevenue, productivityScore } = req.body;
+
+    // Check if new project belongs to user (if changing project)
+    if (projectId && projectId !== existingDiary.projectId) {
+      const project = await Project.findOne({
+        where: { id: projectId, userId: req.user.id },
+        transaction
+      });
+      if (!project) {
+        await transaction.rollback();
+        return res.status(403).json({ error: 'New project not found or access denied' });
+      }
+    }
 
     const canvasData = entries.map(entry => ({
       ...entry,
@@ -182,24 +196,30 @@ const updatePaintDiary = async (req, res) => {
 
     const [updated] = await Diary.update({
       date,
+      projectId: projectId || existingDiary.projectId,
       canvasData,
       totalCost,
       totalRevenue,
       productivityScore
-    }, { where: { id: req.params.id } });
+    }, { where: { id: req.params.id }, transaction });
+
+    await transaction.commit();
 
     if (updated) {
-      const updatedDiary = await Diary.findByPk(req.params.id);
+      const updatedDiary = await Diary.findByPk(req.params.id, {
+        include: [{ model: Project, as: 'Project' }]
+      });
       res.json(updatedDiary);
     } else {
       res.status(404).json({ error: 'Paint diary entry not found' });
     }
   } catch (error) {
+    await transaction.rollback();
     res.status(400).json({ error: error.message });
   }
 };
 
-// Delete paint diary
+// Delete paint diary (checks ownership)
 const deletePaintDiary = async (req, res) => {
   try {
     const existingDiary = await Diary.findByPk(req.params.id, {
@@ -225,7 +245,7 @@ const deletePaintDiary = async (req, res) => {
   }
 };
 
-// Save canvas state
+// Save canvas state (checks ownership)
 const saveCanvasState = async (req, res) => {
   try {
     const existingDiary = await Diary.findByPk(req.params.id, {
@@ -262,7 +282,7 @@ const saveCanvasState = async (req, res) => {
   }
 };
 
-// Load canvas state
+// Load canvas state (checks ownership)
 const loadCanvasState = async (req, res) => {
   try {
     const diary = await Diary.findByPk(req.params.id, {

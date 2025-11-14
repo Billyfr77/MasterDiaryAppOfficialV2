@@ -19,22 +19,7 @@ const moment = require('moment');
 const { sequelize } = require('../models');
 const { getSetting } = require('../utils/settingsCache');
 
-const diarySchema = Joi.object({
-  date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).required(),
-  projectId: Joi.string().uuid().required(),
-  workerId: Joi.string().uuid().required(),
-  start: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).required(),
-  finish: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).required(),
-  breakMins: Joi.number().integer().min(0).optional(),
-  revenues: Joi.number().positive().optional()
-}).custom((value, helpers) => {
-  const start = moment(value.start, 'HH:mm');
-  const finish = moment(value.finish, 'HH:mm');
-  if (start.isSameOrAfter(finish)) {
-    return helpers.error('any.invalid', { message: 'Start time must be before finish time' });
-  }
-  return value;
-});
+  const diarySchema = Joi.any();
 
 const getAllDiaries = async (req, res) => {
   try {

@@ -16,10 +16,15 @@
  */const { Project } = require('../models');
 const Joi = require('joi');
 
-const projectSchema = Joi.object({
-  name: Joi.string().min(1).required(),
-  site: Joi.string().min(1).required()
-});
+  const projectSchema = Joi.object({
+          name: Joi.string().min(1).required(),
+          site: Joi.string().min(1).required(),
+          status: Joi.string().valid('active', 'completed', 'on-hold', 'cancelled').optional(),
+          estimatedValue: Joi.number().min(0).optional(),
+          description: Joi.string().allow('').optional(),
+          startDate: Joi.date().iso().optional().allow(null),
+          endDate: Joi.date().iso().optional().allow(null)
+        });
 
 const getAllProjects = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Fetching projects for user: ${req.user?.id}`);

@@ -22,7 +22,7 @@ import EnhancedStaff from './components/EnhancedStaff'
 import EnhancedEquipment from './components/EnhancedEquipment'
 import EnhancedNodes from './components/EnhancedNodes'
 import EnhancedProjects from './components/EnhancedProjects'
-import EnhancedReports from './components/EnhancedReports'
+import ReportsSimple from './components/ReportsSimple';
 import EnhancedSettings from './components/EnhancedSettings'
 import EnhancedDiary from './components/EnhancedDiary'
 import Quotes from './components/Quotes'
@@ -183,7 +183,7 @@ function App() {
             <Route path="/dashboard" element={<MasterDashboard />} />
             <Route path="/projects" element={<EnhancedProjects />} />
             <Route path="/staff" element={<EnhancedStaff />} />
- 
+
             <Route path="/diary" element={<PaintDiary />} />
             <Route path="/settings" element={<EnhancedSettings />} />
             <Route path="/equipment" element={<EnhancedEquipment />} />
@@ -191,9 +191,8 @@ function App() {
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/quotes/library" element={<NodesLibrary />} />
             <Route path="/quotes/new" element={<QuoteBuilder />} />
-            
-            <Route path="/reports" element={<EnhancedReports />} />
-          </Routes>
+<Route path="/reports" element={<ReportsSimple />} />
+                      </Routes>
         </main>
       </div>
     </DndProvider>

@@ -13,44 +13,45 @@
  *
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
- */const jwt = require('jsonwebtoken');
+ */
+const jwt = require('jsonwebtoken');
 
-               const authenticateToken = (req, res, next) => {
-                 if (req.method === 'OPTIONS') {
-                   return next();
-                 }
+const authenticateToken = (req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
 
-                 const authHeader = req.headers['authorization'];
-                 const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-                 if (!token) {
-                   return next();
-                 }
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
 
-                 jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-                   if (err) {
-                     return res.status(401).json({ error: 'Invalid token' });
-                   }
-                   req.user = decoded;
-                   next();
-                 });
-               };
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
 
-               const authorizeRoles = (...roles) => {
-                 return (req, res, next) => {
-                   if (!req.user) {
-                     return res.status(401).json({ error: 'Authentication required' });
-                   }
+const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
-                   if (!roles.includes(req.user.role)) {
-                     return res.status(403).json({ error: 'Insufficient permissions' });
-                   }
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
 
-                   next();
-                 };
-               };
+    next();
+  };
+};
 
-               module.exports = {
-                 authenticateToken,
-                 authorizeRoles
-               };
+module.exports = {
+  authenticateToken,
+  authorizeRoles
+};
