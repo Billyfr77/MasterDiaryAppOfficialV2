@@ -1,0 +1,22 @@
+:root{
+  --bg-primary:#0f1724;
+  --bg-secondary:#1a1a1a;
+  --bg-surface:#2d3748;
+  --text-primary:#ffffff;
+  --text-secondary:#d1d5db;
+  --text-muted:#9aa4b2;
+  --border-primary:#4a5568;
+  --accent-indigo:#667eea;
+  --accent-teal:#4ecdc4;
+  --accent-red:#ef4444;
+  --accent-amber:#f59e0b;
+  --accent-pink:#ec4899;
+}
+body.dark .bg-diag{ background: linear-gradient(180deg,var(--bg-primary),#070812); }
+.bg-surface{ background: var(--bg-surface); }
+.text-muted{ color: var(--text-muted); }
+.bg-skeleton{ background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.06)); }
+.btn-primary{ background: linear-gradient(90deg,var(--accent-indigo),#764ba2); color:var(--text-primary); padding:.5rem .75rem; border-radius:8px; }
+.btn-ghost{ background:transparent; color:var(--text-primary); padding:.5rem .75rem; border:1px solid rgba(255,255,255,0.04); border-radius:8px; }
+.btn-ghost:hover{ background: rgba(255,255,255,0.02) }
+.focus-visible:focus{ outline:2px solid rgba(102,124,234,0.4); outline-offset:2px }
