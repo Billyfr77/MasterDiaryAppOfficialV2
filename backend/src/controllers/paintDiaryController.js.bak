@@ -102,7 +102,7 @@ const createPaintDiary = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, entries, totalCost, totalRevenue, productivityScore } = req.body;
+    const { date, projectId, entries, totalCost, totalRevenue, productivityScore } = req.body;\s+\s+    // Ensure numeric fields are valid\s+    const validTotalCost = isNaN(totalCost) || totalCost === null ? 0 : parseFloat(totalCost);\s+    const validTotalRevenue = isNaN(totalRevenue) || totalRevenue === null ? 0 : parseFloat(totalRevenue);\s+    const validProductivityScore = isNaN(productivityScore) || productivityScore === null ? 0 : parseInt(productivityScore);
 
     // Check if project belongs to user
     const project = await Project.findOne({
@@ -173,7 +173,7 @@ const updatePaintDiary = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, entries, totalCost, totalRevenue, productivityScore } = req.body;
+    const { date, projectId, entries, totalCost, totalRevenue, productivityScore } = req.body;\s+\s+    // Ensure numeric fields are valid\s+    const validTotalCost = isNaN(totalCost) || totalCost === null ? 0 : parseFloat(totalCost);\s+    const validTotalRevenue = isNaN(totalRevenue) || totalRevenue === null ? 0 : parseFloat(totalRevenue);\s+    const validProductivityScore = isNaN(productivityScore) || productivityScore === null ? 0 : parseInt(productivityScore);
 
     // Check if new project belongs to user (if changing project)
     if (projectId && projectId !== existingDiary.projectId) {

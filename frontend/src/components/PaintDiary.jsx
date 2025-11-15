@@ -1188,6 +1188,8 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
 const PaintDiary = () => {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [diaryEntries, setDiaryEntries] = useState([])
+  const [projects, setProjects] = useState([])
+  const [selectedProject, setSelectedProject] = useState(null)
   const [totalCost, setTotalCost] = useState(0)
   const [totalRevenue, setTotalRevenue] = useState(0)
   const [isSaved, setIsSaved] = useState(true); const [isSaving, setIsSaving] = useState(false)
