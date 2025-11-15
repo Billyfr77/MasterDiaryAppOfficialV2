@@ -29,6 +29,7 @@ import Quotes from './components/Quotes'
 import NodesLibrary from './components/NodesLibrary'
 import QuoteBuilder from './components/QuoteBuilder'
 import PaintDiary from './components/PaintDiary'
+import HMRIndicator from './components/HMRIndicator'
 import './App.css'
 
 function App() {
@@ -60,6 +61,7 @@ function App() {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="App">
+        <HMRIndicator />
         <header style={{
           padding: 'var(--spacing-lg)',
           background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%)',

@@ -170,6 +170,7 @@ npm run dev:all    # Concurrent development servers
 - **Paint Your Day Diary**: Click "Diary" in navigation - the feature that will change everything!
 - **Dark Theme**: Automatic professional dark mode for eye comfort
 - **API**: http://localhost:5000/api (RESTful endpoints)
+- **🔥 Real-Time Updates**: Edit files and see changes instantly! See [REALTIME_DEVELOPMENT.md](REALTIME_DEVELOPMENT.md)
 
 ---
 
