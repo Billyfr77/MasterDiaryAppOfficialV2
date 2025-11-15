@@ -21,7 +21,7 @@ app.use(limiter);
 // CORS headers middleware - FIXED for multiple ports
 app.use((req, res, next) => {
   // Allow multiple frontend ports for development
-  const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
+  const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000'];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
