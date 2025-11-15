@@ -437,7 +437,7 @@ const QuoteBuilder = () => {
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [nodes.length, quoteItems.length])
+  }, [hasUnsavedChanges])
 
   // Data fetching
   const fetchMaterials = async () => {

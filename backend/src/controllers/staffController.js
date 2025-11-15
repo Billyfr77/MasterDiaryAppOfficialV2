@@ -51,7 +51,7 @@ const getAllStaff = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Staff.findAndCountAll({
-      where: { userId: req.user.id },
+      where: req.user ? { userId: req.user?.id || null } : {},
       limit,
       offset
     });
@@ -79,7 +79,7 @@ const getStaffById = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Fetching staff ${req.params.id} for user: ${req.user?.id}`);
   try {
     const staffMember = await Staff.findOne({
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
     if (staffMember) {
       res.json(staffMember);
@@ -116,7 +116,7 @@ const createStaff = async (req, res) => {
     }
     const staffMember = await Staff.create({
       ...processedBody,
-      userId: req.user.id
+      userId: req.user?.id || null
     });
     res.status(201).json(staffMember);
   } catch (error) {
@@ -148,7 +148,7 @@ const updateStaff = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
     const [updated] = await Staff.update(processedBody, {
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
     if (updated) {
       const updatedStaff = await Staff.findByPk(req.params.id);
@@ -172,7 +172,7 @@ const deleteStaff = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Deleting staff ${req.params.id} for user: ${req.user?.id}`);
   try {
     const deleted = await Staff.destroy({
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
     if (deleted) {
       res.json({ message: 'Staff member deleted' });

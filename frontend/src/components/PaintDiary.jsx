@@ -1,8 +1,6 @@
 /*
  * MasterDiaryApp Official - Paint Your Day Diary
- * ENHANCED VERSION - With Real-Time Cost, Revenue, Profit Calculations, Editable Quantities/Rates & Overtime Accounting
- * FIXED: Data Persistence and Loading
- * Copyright (c) 2025 Billy Fraser. All rights reserved.
+ * Fully functional with project assignment, saving, and reports integration
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -18,7 +16,7 @@ import {
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 
-// Enhanced Draggable Element with animations
+// Draggable Element
 const DraggableElement = ({ item, children }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'diary-item',
@@ -44,7 +42,7 @@ const DraggableElement = ({ item, children }) => {
   )
 }
 
-// Enhanced DropZone with better UX
+// DropZone
 const DropZone = ({ entryId, onDrop, children, isHighlighted }) => {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'diary-item',
@@ -87,7 +85,7 @@ const DropZone = ({ entryId, onDrop, children, isHighlighted }) => {
   )
 }
 
-// Enhanced DiaryEntry with unlimited node support and inline editing
+// DiaryEntry
 const DiaryEntry = ({
   entry, onUpdate, onDelete, onDropItem, isDropTarget,
   onAddPhotos, onAddVoiceNote, onAddLocation, onPredictTime, theme, formatCurrency,
@@ -143,8 +141,6 @@ const DiaryEntry = ({
     if (item.type !== 'staff') {
       return item.rate * item.quantity
     }
-
-    // Overtime calculation for staff
     const regularHours = Math.min(item.quantity, overtimeThreshold)
     const overtimeHours = Math.max(0, item.quantity - overtimeThreshold)
     return (regularHours * item.rate) + (overtimeHours * item.rate * overtimeMultiplier)
@@ -152,10 +148,8 @@ const DiaryEntry = ({
 
   const getOvertimeBreakdown = (item) => {
     if (item.type !== 'staff') return null
-
     const regularHours = Math.min(item.quantity, overtimeThreshold)
     const overtimeHours = Math.max(0, item.quantity - overtimeThreshold)
-
     return { regularHours, overtimeHours }
   }
 
@@ -242,7 +236,6 @@ const DiaryEntry = ({
       animation: 'fadeInUp 0.6s ease-out',
       overflow: 'hidden'
     }}>
-      {/* Notification */}
       {showNotification && (
         <div style={{
           position: 'absolute',
@@ -260,7 +253,6 @@ const DiaryEntry = ({
         </div>
       )}
 
-      {/* Entry Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -291,15 +283,13 @@ const DiaryEntry = ({
             cursor: 'pointer',
             padding: '8px',
             borderRadius: '6px',
-            transition: 'all 0.2s ease',
-            ':hover': { background: 'rgba(220, 53, 69, 0.1)' }
+            transition: 'all 0.2s ease'
           }}
         >
           <Trash2 size={20} />
         </button>
       </div>
 
-      {/* Note Section */}
       <div style={{ marginBottom: '20px' }}>
         {isEditing ? (
           <div>
@@ -318,8 +308,7 @@ const DiaryEntry = ({
                 resize: 'vertical',
                 background: theme === 'dark' ? '#2d3748' : 'white',
                 color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                transition: 'all 0.3s ease',
-                ':focus': { outline: 'none', borderColor: '#4ecdc4', boxShadow: '0 0 0 3px rgba(78, 205, 196, 0.1)' }
+                transition: 'all 0.3s ease'
               }}
             />
             <div style={{ marginTop: '12px', textAlign: 'right' }}>
@@ -389,11 +378,7 @@ const DiaryEntry = ({
                 cursor: 'pointer',
                 color: theme === 'dark' ? '#e2e8f0' : '#495057',
                 fontSize: '13px',
-                transition: 'all 0.2s ease',
-                ':hover': {
-                  background: theme === 'dark' ? '#4a5568' : '#f8f9fa',
-                  borderColor: '#4ecdc4'
-                }
+                transition: 'all 0.2s ease'
               }}
             >
               <Edit3 size={14} style={{ marginRight: '6px' }} />
@@ -403,7 +388,6 @@ const DiaryEntry = ({
         )}
       </div>
 
-      {/* Multimedia Section */}
       <div style={{ marginBottom: '20px' }}>
         <h4 style={{
           margin: '0 0 16px 0',
@@ -417,7 +401,6 @@ const DiaryEntry = ({
           Multimedia ({(entry.photos?.length || 0) + (entry.voiceNotes?.length || 0)})
         </h4>
 
-        {/* Photos */}
         {entry.photos && entry.photos.length > 0 && (
           <div style={{
             display: 'grid',
@@ -432,14 +415,12 @@ const DiaryEntry = ({
                 objectFit: 'cover',
                 borderRadius: '10px',
                 border: `2px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
-                transition: 'all 0.3s ease',
-                ':hover': { transform: 'scale(1.05)' }
+                transition: 'all 0.3s ease'
               }} />
             ))}
           </div>
         )}
 
-        {/* Voice Notes */}
         {entry.voiceNotes && entry.voiceNotes.length > 0 && (
           <div style={{
             display: 'grid',
@@ -462,7 +443,6 @@ const DiaryEntry = ({
           </div>
         )}
 
-        {/* Control Buttons */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
@@ -528,14 +508,13 @@ const DiaryEntry = ({
         </div>
       </div>
 
-      {/* Work Details Section - Unlimited Nodes */}
       <div>
         <h4 style={{
           margin: '0 0 16px 0',
           color: theme === 'dark' ? '#e2e8f0' : '#495057',
           fontSize: '1.1rem'
         }}>
-          Work Details - Unlimited Nodes ({entry.items.length})
+          Work Details ({entry.items.length})
         </h4>
         <div style={{
           display: 'grid',
@@ -559,13 +538,7 @@ const DiaryEntry = ({
                 boxShadow: theme === 'dark'
                   ? '0 2px 8px rgba(0,0,0,0.2)'
                   : '0 2px 8px rgba(0,0,0,0.05)',
-                transition: 'all 0.3s ease',
-                ':hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: theme === 'dark'
-                    ? '0 4px 16px rgba(0,0,0,0.3)'
-                    : '0 4px 16px rgba(0,0,0,0.1)'
-                }
+                transition: 'all 0.3s ease'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{
@@ -689,7 +662,6 @@ const DiaryEntry = ({
                   </div>
                   <button
                     onClick={() => {
-                      // Remove item functionality
                       const updatedItems = entry.items.filter(i => i.id !== item.id)
                       onUpdate(entry.id, { items: updatedItems })
                       showNotificationMessage('Item removed')
@@ -701,8 +673,7 @@ const DiaryEntry = ({
                       cursor: 'pointer',
                       padding: '4px',
                       borderRadius: '4px',
-                      transition: 'all 0.2s ease',
-                      ':hover': { background: 'rgba(220, 53, 69, 0.1)' }
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     <Trash2 size={16} />
@@ -713,7 +684,6 @@ const DiaryEntry = ({
           })}
         </div>
 
-        {/* AI Prediction Button */}
         <div style={{ marginBottom: '16px', textAlign: 'center' }}>
           <button
             onClick={() => onPredictTime(entry.id)}
@@ -732,8 +702,7 @@ const DiaryEntry = ({
               fontWeight: '500',
               margin: '0 auto',
               transition: 'all 0.3s ease',
-              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-              ':hover': { transform: 'translateY(-2px)' }
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
             }}
           >
             <Zap size={16} />
@@ -741,13 +710,12 @@ const DiaryEntry = ({
           </button>
         </div>
 
-        {/* Drop Zone */}
         <DropZone entryId={entry.id} onDrop={onDropItem} isHighlighted={isDropTarget}>
           <div style={{ textAlign: 'center' }}>
             <Plus size={24} style={{ marginBottom: '6px' }} />
             <div style={{ fontSize: '16px', fontWeight: '500' }}>Drop items here</div>
             <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>
-              Support unlimited node entries for accurate daily tracking
+              Support unlimited node entries
             </div>
           </div>
         </DropZone>
@@ -804,7 +772,7 @@ const DiaryEntry = ({
   )
 }
 
-// Enhanced Toolbar with search and filters
+// DiaryToolbar
 const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onMarginChange, overtimeThreshold, onOvertimeThresholdChange, overtimeMultiplier, onOvertimeMultiplierChange }) => {
   const [staff, setStaff] = useState([])
   const [equipment, setEquipment] = useState([])
@@ -815,7 +783,6 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
 
   useEffect(() => {
     fetchData()
-    // Mock weather data
     setWeather({ temp: Math.floor(Math.random() * 20) + 15, condition: 'Sunny' })
   }, [])
 
@@ -831,7 +798,6 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
       setMaterials(nodesRes.data.data || nodesRes.data)
     } catch (err) {
       console.error('Error fetching toolbar data:', err)
-      // Fallback to sample data for demo
       setStaff([
         { id: 1, name: 'John Smith', type: 'staff', payRateBase: 25 },
         { id: 2, name: 'Sarah Johnson', type: 'staff', payRateBase: 28 },
@@ -875,7 +841,6 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
         : '0 8px 32px rgba(0,0,0,0.1)',
       backdropFilter: 'blur(20px)'
     }}>
-      {/* Weather Widget */}
       <div style={{
         background: 'linear-gradient(135deg, #87CEEB 0%, #4682B4 100%)',
         padding: '16px',
@@ -890,7 +855,6 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
         <div style={{ fontSize: '0.95rem' }}>{weather.condition}</div>
       </div>
 
-      {/* Search and Filter */}
       <div style={{ marginBottom: '20px' }}>
         <input
           type="text"
@@ -930,7 +894,6 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
         </select>
       </div>
 
-      {/* Margin Input */}
       <div style={{ marginBottom: '20px' }}>
         <label style={{ color: theme === 'dark' ? '#e2e8f0' : '#495057', fontSize: '14px', display: 'block', marginBottom: '6px' }}>Margin %</label>
         <input
@@ -950,7 +913,6 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
         />
       </div>
 
-      {/* Overtime Settings */}
       <div style={{ marginBottom: '20px' }}>
         <label style={{ color: theme === 'dark' ? '#e2e8f0' : '#495057', fontSize: '14px', display: 'block', marginBottom: '6px' }}>Overtime Threshold (hrs)</label>
         <input
@@ -1008,15 +970,13 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
             color: theme === 'dark' ? '#63b3ed' : '#4ecdc4',
             padding: '4px',
             borderRadius: '6px',
-            transition: 'all 0.2s ease',
-            ':hover': { background: theme === 'dark' ? '#4a5568' : '#e9ecef' }
+            transition: 'all 0.2s ease'
           }}
         >
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
       </h3>
 
-      {/* Export Buttons */}
       <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <button
           onClick={onExport}
@@ -1064,7 +1024,6 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
         </button>
       </div>
 
-      {/* Staff Section */}
       <div style={{ marginBottom: '20px' }}>
         <h4 style={{
           color: '#4ecdc4',
@@ -1093,8 +1052,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
                 textAlign: 'center',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 border: '2px solid transparent',
-                boxShadow: '0 2px 8px rgba(78, 205, 196, 0.3)',
-                ':hover': { transform: 'scale(1.02)', borderColor: 'rgba(255,255,255,0.3)' }
+                boxShadow: '0 2px 8px rgba(78, 205, 196, 0.3)'
               }}>
                 {member.name}
               </div>
@@ -1103,7 +1061,6 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
         </div>
       </div>
 
-      {/* Equipment Section */}
       <div style={{ marginBottom: '20px' }}>
         <h4 style={{
           color: '#f39c12',
@@ -1132,8 +1089,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
                 textAlign: 'center',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 border: '2px solid transparent',
-                boxShadow: '0 2px 8px rgba(243, 156, 18, 0.3)',
-                ':hover': { transform: 'scale(1.02)', borderColor: 'rgba(255,255,255,0.3)' }
+                boxShadow: '0 2px 8px rgba(243, 156, 18, 0.3)'
               }}>
                 {item.name}
               </div>
@@ -1142,7 +1098,6 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
         </div>
       </div>
 
-      {/* Materials Section */}
       <div>
         <h4 style={{
           color: '#9b59b6',
@@ -1171,8 +1126,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
                 textAlign: 'center',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 border: '2px solid transparent',
-                boxShadow: '0 2px 8px rgba(155, 89, 182, 0.3)',
-                ':hover': { transform: 'scale(1.02)', borderColor: 'rgba(255,255,255,0.3)' }
+                boxShadow: '0 2px 8px rgba(155, 89, 182, 0.3)'
               }}>
                 {item.name}
               </div>
@@ -1184,7 +1138,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
   )
 }
 
-// Main PaintDiary Component with all enhancements
+// Main PaintDiary Component
 const PaintDiary = () => {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [diaryEntries, setDiaryEntries] = useState([])
@@ -1192,13 +1146,14 @@ const PaintDiary = () => {
   const [selectedProject, setSelectedProject] = useState(null)
   const [totalCost, setTotalCost] = useState(0)
   const [totalRevenue, setTotalRevenue] = useState(0)
-  const [isSaved, setIsSaved] = useState(true); const [isSaving, setIsSaving] = useState(false)
+  const [isSaved, setIsSaved] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [dropTargetEntry, setDropTargetEntry] = useState(null)
   const [productivityScore, setProductivityScore] = useState(0)
-  const [theme, setTheme] = useState('light')
-  const [margin, setMargin] = useState(20) // Default margin percentage
-  const [overtimeThreshold, setOvertimeThreshold] = useState(8) // Default 8 hours
-  const [overtimeMultiplier, setOvertimeMultiplier] = useState(1.5) // Default 1.5x rate
+  const [theme, setTheme] = useState('dark')
+  const [margin, setMargin] = useState(20)
+  const [overtimeThreshold, setOvertimeThreshold] = useState(8)
+  const [overtimeMultiplier, setOvertimeMultiplier] = useState(1.5)
   const [currentDiaryId, setCurrentDiaryId] = useState(null)
   const [autoSaveInterval, setAutoSaveInterval] = useState(null)
 
@@ -1209,45 +1164,13 @@ const PaintDiary = () => {
     }).format(amount)
   }
 
-  // Load existing diary data for selected date
-  const loadExistingDiary = async (date) => {
-    try {
-      const response = await api.get(`/paint-diaries?date=${date}`)
-      if (response.data && response.data.length > 0) {
-        const diary = response.data[0] // Get the first/last diary for this date
-        setCurrentDiaryId(diary.id)
-        setDiaryEntries(diary.canvasData || [])
-        setTotalCost(diary.totalCost || 0)
-        setTotalRevenue(diary.totalRevenue || 0)
-        setMargin(diary.margin || 20)
-        setOvertimeThreshold(diary.overtimeThreshold || 8)
-        setOvertimeMultiplier(diary.overtimeMultiplier || 1.5)
-        setIsSaved(true)
-        console.log('Loaded existing diary:', diary.id)
-      } else {
-        // No existing diary, start fresh
-        setCurrentDiaryId(null)
-        setDiaryEntries([])
-        setTotalCost(0)
-        setTotalRevenue(0)
-        setIsSaved(true)
-        console.log('No existing diary found, starting fresh')
-      }
-    } catch (error) {
-      console.error('Error loading diary:', error)
-      // Start fresh on error
-      setCurrentDiaryId(null)
-      setDiaryEntries([])
-      setTotalCost(0)
-      setTotalRevenue(0)
-      setIsSaved(true)
-    }
-  }
-
-  // Load diary when date changes
   useEffect(() => {
     loadExistingDiary(selectedDate.toISOString().split('T')[0])
   }, [selectedDate])
+
+  useEffect(() => {
+    api.get('/projects').then(res => setProjects(res.data.data || [])).catch(() => setProjects([]))
+  }, [])
 
   useEffect(() => {
     calculateTotals()
@@ -1255,7 +1178,6 @@ const PaintDiary = () => {
   }, [diaryEntries, margin, overtimeThreshold, overtimeMultiplier])
 
   useEffect(() => {
-    // Auto-save every 30 seconds if there are unsaved changes
     if (!isSaved && diaryEntries.length > 0) {
       const interval = setInterval(() => {
         handleAutoSave()
@@ -1269,7 +1191,6 @@ const PaintDiary = () => {
   }, [isSaved, diaryEntries])
 
   useEffect(() => {
-    // Keyboard shortcuts
     const handleKeyPress = (e) => {
       if (e.ctrlKey || e.metaKey) {
         switch (e.key) {
@@ -1293,8 +1214,6 @@ const PaintDiary = () => {
     if (item.type !== 'staff') {
       return item.rate * item.quantity
     }
-
-    // Overtime calculation for staff
     const regularHours = Math.min(item.quantity, overtimeThreshold)
     const overtimeHours = Math.max(0, item.quantity - overtimeThreshold)
     return (regularHours * item.rate) + (overtimeHours * item.rate * overtimeMultiplier)
@@ -1325,6 +1244,35 @@ const PaintDiary = () => {
     const efficiency = totalRevenue > 0 ? (totalRevenue - totalCost) / totalRevenue : 0
     const score = Math.min(100, Math.max(0, (efficiency * 100) + (totalHours * 2)))
     setProductivityScore(Math.round(score))
+  }
+
+  const loadExistingDiary = async (date) => {
+    try {
+      const response = await api.get(`/paint-diaries?date=${date}`)
+      if (response.data && response.data.length > 0) {
+        const diary = response.data[0]
+        setCurrentDiaryId(diary.id)
+        setDiaryEntries(diary.canvasData || [])
+        setTotalCost(diary.totalCost || 0)
+        setTotalRevenue(diary.totalRevenue || 0)
+        setMargin(diary.margin || 20)
+        setOvertimeThreshold(diary.overtimeThreshold || 8)
+        setOvertimeMultiplier(diary.overtimeMultiplier || 1.5)
+        setIsSaved(true)
+      } else {
+        setCurrentDiaryId(null)
+        setDiaryEntries([])
+        setTotalCost(0)
+        setTotalRevenue(0)
+        setIsSaved(true)
+      }
+    } catch (error) {
+      setCurrentDiaryId(null)
+      setDiaryEntries([])
+      setTotalCost(0)
+      setTotalRevenue(0)
+      setIsSaved(true)
+    }
   }
 
   const handleDropItem = (item, entryId) => {
@@ -1395,15 +1343,13 @@ const PaintDiary = () => {
       const equipmentCount = entry.items.filter(item => item.type === 'equipment').length
       const materialCount = entry.items.filter(item => item.type === 'material').length
 
-      // Enhanced AI prediction with better algorithm
-      let predictedDuration = 1.5 // base time
-      predictedDuration += staffCount * 1.5 // staff factor
-      predictedDuration += equipmentCount * 1.2 // equipment factor
-      predictedDuration += materialCount * 0.5 // material factor
-      predictedDuration += entry.photos?.length * 0.3 || 0 // photo factor
-      predictedDuration += entry.voiceNotes?.length * 0.2 || 0 // voice factor
+      let predictedDuration = 1.5
+      predictedDuration += staffCount * 1.5
+      predictedDuration += equipmentCount * 1.2
+      predictedDuration += materialCount * 0.5
+      predictedDuration += entry.photos?.length * 0.3 || 0
+      predictedDuration += entry.voiceNotes?.length * 0.2 || 0
 
-      // Update items duration
       const updatedItems = entry.items.map(item => ({ ...item, duration: Math.max(0.25, predictedDuration) }))
 
       return { ...entry, items: updatedItems }
@@ -1430,22 +1376,18 @@ const PaintDiary = () => {
       try {
         const diaryData = {
           date: selectedDate.toISOString().split('T')[0],
-          entries: diaryEntries,
+          projectId: selectedProject?.id,
+          canvasData: diaryEntries,
           totalCost,
           totalRevenue,
-          margin,
-          overtimeThreshold,
-          overtimeMultiplier,
           productivityScore
         }
 
         if (currentDiaryId) {
           await api.put(`/paint-diaries/${currentDiaryId}`, diaryData)
-          console.log('Diary auto-updated successfully')
         } else {
           const response = await api.post('/paint-diaries', diaryData)
           setCurrentDiaryId(response.data.id)
-          console.log('Diary auto-created successfully')
         }
         setIsSaved(true)
       } catch (error) {
@@ -1456,29 +1398,27 @@ const PaintDiary = () => {
 
   const handleSave = async () => {
     try {
+      setIsSaving(true)
       const diaryData = {
         date: selectedDate.toISOString().split('T')[0],
-        entries: diaryEntries,
+        projectId: selectedProject?.id,
+        canvasData: diaryEntries,
         totalCost,
         totalRevenue,
-        margin,
-        overtimeThreshold,
-        overtimeMultiplier,
         productivityScore
       }
 
       if (currentDiaryId) {
         await api.put(`/paint-diaries/${currentDiaryId}`, diaryData)
-        console.log('Diary updated successfully')
       } else {
         const response = await api.post('/paint-diaries', diaryData)
         setCurrentDiaryId(response.data.id)
-        console.log('Diary created successfully')
       }
       setIsSaved(true)
+      setIsSaving(false)
     } catch (error) {
       console.error('Save error:', error)
-      setIsSaved(true)
+      setIsSaving(false)
     }
   }
 
@@ -1593,7 +1533,6 @@ const PaintDiary = () => {
         `}</style>
 
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          {/* Header */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -1627,7 +1566,6 @@ const PaintDiary = () => {
                 selected={selectedDate}
                 onChange={(date) => {
                   setSelectedDate(date)
-                  // Reset current diary ID when date changes
                   setCurrentDiaryId(null)
                 }}
                 dateFormat="EEEE, MMMM d, yyyy"
@@ -1643,6 +1581,25 @@ const PaintDiary = () => {
                 }}
               />
 
+              <select
+                value={selectedProject?.id || ''}
+                onChange={(e) => setSelectedProject(projects.find(p => p.id === e.target.value) || null)}
+                style={{
+                  background: theme === 'dark' ? '#2d3748' : '#f8f9fa',
+                  color: theme === 'dark' ? '#e2e8f0' : '#495057',
+                  border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}
+              >
+                <option value="">No Project</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+
               <button
                 onClick={handleCreateEntry}
                 style={{
@@ -1657,8 +1614,7 @@ const PaintDiary = () => {
                   gap: '6px',
                   fontSize: '14px',
                   boxShadow: '0 4px 15px rgba(78, 205, 196, 0.4)',
-                  transition: 'all 0.3s ease',
-                  ':hover': { transform: 'translateY(-2px)' }
+                  transition: 'all 0.3s ease'
                 }}
               >
                 <Plus size={16} />
@@ -1680,8 +1636,7 @@ const PaintDiary = () => {
                   fontSize: '16px',
                   fontWeight: '500',
                   boxShadow: isSaved ? '0 4px 12px rgba(40, 167, 69, 0.3)' : '0 4px 15px rgba(102, 126, 234, 0.4)',
-                  transition: 'all 0.3s ease',
-                  ':hover': { transform: 'translateY(-2px)' }
+                  transition: 'all 0.3s ease'
                 }}
               >
                 <Save size={18} />
@@ -1690,7 +1645,6 @@ const PaintDiary = () => {
             </div>
           </div>
 
-          {/* Status Indicator */}
           <div style={{
             background: currentDiaryId ? '#d4edda' : '#fff3cd',
             color: currentDiaryId ? '#155724' : '#856404',
@@ -1703,7 +1657,6 @@ const PaintDiary = () => {
             {currentDiaryId ? `Loaded existing diary (ID: ${currentDiaryId})` : 'No saved diary for this date - create new entries'}
           </div>
 
-          {/* Summary Cards */}
           <div className="summary-cards" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -1717,8 +1670,7 @@ const PaintDiary = () => {
               color: 'white',
               textAlign: 'center',
               boxShadow: '0 8px 25px rgba(231, 76, 60, 0.3)',
-              transition: 'all 0.3s ease',
-              ':hover': { transform: 'translateY(-5px)' }
+              transition: 'all 0.3s ease'
             }}>
               <DollarSign size={28} style={{ marginBottom: '8px', opacity: 0.9 }} />
               <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{formatCurrency(totalCost)}</div>
@@ -1732,8 +1684,7 @@ const PaintDiary = () => {
               color: 'white',
               textAlign: 'center',
               boxShadow: '0 8px 25px rgba(78, 205, 196, 0.3)',
-              transition: 'all 0.3s ease',
-              ':hover': { transform: 'translateY(-5px)' }
+              transition: 'all 0.3s ease'
             }}>
               <TrendingUp size={28} style={{ marginBottom: '8px', opacity: 0.9 }} />
               <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{formatCurrency(totalRevenue)}</div>
@@ -1747,8 +1698,7 @@ const PaintDiary = () => {
               color: 'white',
               textAlign: 'center',
               boxShadow: '0 8px 25px rgba(243, 156, 18, 0.3)',
-              transition: 'all 0.3s ease',
-              ':hover': { transform: 'translateY(-5px)' }
+              transition: 'all 0.3s ease'
             }}>
               <BarChart3 size={28} style={{ marginBottom: '8px', opacity: 0.9 }} />
               <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{formatCurrency(totalRevenue - totalCost)}</div>
@@ -1762,8 +1712,7 @@ const PaintDiary = () => {
               color: 'white',
               textAlign: 'center',
               boxShadow: '0 8px 25px rgba(155, 89, 182, 0.3)',
-              transition: 'all 0.3s ease',
-              ':hover': { transform: 'translateY(-5px)' }
+              transition: 'all 0.3s ease'
             }}>
               <FileText size={28} style={{ marginBottom: '8px', opacity: 0.9 }} />
               <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{diaryEntries.length}</div>
@@ -1777,8 +1726,7 @@ const PaintDiary = () => {
               color: 'white',
               textAlign: 'center',
               boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-              transition: 'all 0.3s ease',
-              ':hover': { transform: 'translateY(-5px)' }
+              transition: 'all 0.3s ease'
             }}>
               <Award size={28} style={{ marginBottom: '8px', opacity: 0.9 }} />
               <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{productivityScore}</div>
@@ -1786,7 +1734,6 @@ const PaintDiary = () => {
             </div>
           </div>
 
-          {/* Enhanced Analytics */}
           {diaryEntries.length > 0 && (
             <div style={{
               background: theme === 'dark' ? '#1a202c' : 'white',
@@ -1891,7 +1838,6 @@ const PaintDiary = () => {
             </div>
           )}
 
-          {/* Main Diary Area */}
           <div className="diary-main" style={{ display: 'flex', gap: '24px' }}>
             <DiaryToolbar
               onExport={handleExport}
@@ -1937,7 +1883,6 @@ const PaintDiary = () => {
                     </p>
                   </div>
 
-                  {/* Diary Entries */}
                   <div style={{ marginTop: '20px' }}>
                     {diaryEntries.length === 0 ? (
                       <div style={{
@@ -1967,8 +1912,7 @@ const PaintDiary = () => {
                             fontSize: '16px',
                             fontWeight: '600',
                             boxShadow: '0 6px 20px rgba(78, 205, 196, 0.4)',
-                            transition: 'all 0.3s ease',
-                            ':hover': { transform: 'translateY(-3px)' }
+                            transition: 'all 0.3s ease'
                           }}
                         >
                           Create First Entry

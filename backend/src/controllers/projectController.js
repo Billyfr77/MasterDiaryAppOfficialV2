@@ -34,7 +34,7 @@ const getAllProjects = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Project.findAndCountAll({
-      where: { userId: req.user.id },
+      where: req.user ? { userId: req.user?.id || null } : {},
       limit,
       offset
     });
@@ -62,7 +62,7 @@ const getProjectById = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Fetching project ${req.params.id} for user: ${req.user?.id}`);
   try {
     const project = await Project.findOne({
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
     if (project) {
       res.json(project);
@@ -90,7 +90,7 @@ const createProject = async (req, res) => {
     }
     const project = await Project.create({
       ...req.body,
-      userId: req.user.id
+      userId: req.user?.id || null
     });
     res.status(201).json(project);
   } catch (error) {
@@ -112,7 +112,7 @@ const updateProject = async (req, res) => {
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-    const [updated] = await Project.update(req.body, { where: { id: req.params.id, userId: req.user.id } });
+    const [updated] = await Project.update(req.body, { where: { id: req.params.id, userId: req.user?.id || null } });
     if (updated) {
       const updatedProject = await Project.findByPk(req.params.id);
       res.json(updatedProject);
@@ -134,7 +134,7 @@ const updateProject = async (req, res) => {
 const deleteProject = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Deleting project ${req.params.id} for user: ${req.user?.id}`);
   try {
-    const deleted = await Project.destroy({ where: { id: req.params.id, userId: req.user.id } });
+    const deleted = await Project.destroy({ where: { id: req.params.id, userId: req.user?.id || null } });
     if (deleted) {
       res.json({ message: 'Project deleted' });
     } else {

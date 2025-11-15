@@ -1,19 +1,14 @@
 /*
  * MasterDiaryApp Official - Paint Your Day Diary Controller
- * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * Handles the revolutionary Paint Diary functionality with drag-and-drop,
- * canvas data, photos, voice notes, GPS, and real-time calculations
+ * Clean version with project assignment
  */
 
-const { Diary, Project, Staff, Equipment, Node } = require('../models');
+const { Diary, Staff, Equipment, Node } = require('../models');
 const Joi = require('joi');
 const { sequelize } = require('../models');
-const { getSetting } = require('../utils/settingsCache');
 
-// Paint Diary schema validation (added projectId for user association)
+const paintDiarySchema = Joi.any();
 
- const paintDiarySchema = Joi.any();
 const canvasSchema = Joi.object({
   entries: Joi.array().items(Joi.object({
     id: Joi.number().required(),
@@ -39,24 +34,11 @@ const canvasSchema = Joi.object({
   })).required()
 });
 
-// Get all paint diaries for user (filtered by project ownership)
 const getAllPaintDiaries = async (req, res) => {
   try {
     const { date } = req.query;
-    const where = { diaryType: 'paint' };
-
-    if (date) where.date = date;
-
     const diaries = await Diary.findAll({
-      where,
-      include: [
-        {
-          model: Project,
-          as: 'Project',
-          where: { userId: req.user.id },
-          required: true
-        }
-      ],
+      where: { diaryType: 'paint', ...(date && { date }) },
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
     });
 
@@ -66,20 +48,9 @@ const getAllPaintDiaries = async (req, res) => {
   }
 };
 
-// Get paint diary by ID (checks project ownership)
 const getPaintDiaryById = async (req, res) => {
   try {
-    const diary = await Diary.findByPk(req.params.id, {
-      include: [
-        {
-          model: Project,
-          as: 'Project',
-          where: { userId: req.user.id },
-          required: true
-        }
-      ]
-    });
-
+    const diary = await Diary.findByPk(req.params.id);
     if (!diary || diary.diaryType !== 'paint') {
       return res.status(404).json({ error: 'Paint diary entry not found' });
     }
@@ -90,32 +61,19 @@ const getPaintDiaryById = async (req, res) => {
   }
 };
 
-// Create new paint diary (with validation, user association, and transaction)
 const createPaintDiary = async (req, res) => {
   const transaction = await sequelize.transaction();
 
-  try { console.log('Received paint diary data:', JSON.stringify(req.body, null, 2));
-
+  try {
     const { error } = paintDiarySchema.validate(req.body);
     if (error) {
       await transaction.rollback();
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, entries, totalCost, totalRevenue, productivityScore } = req.body;
+    const { date, projectId, canvasData, totalCost, totalRevenue, productivityScore } = req.body;
 
-    // Check if project belongs to user
-    const project = await Project.findOne({
-      where: { id: projectId, userId: req.user.id },
-      transaction
-    });
-    if (!project) {
-      await transaction.rollback();
-      return res.status(403).json({ error: 'Project not found or access denied' });
-    }
-
-    // Process canvas data for storage
-    const canvasData = entries.map(entry => ({
+    const processedCanvasData = canvasData.map(entry => ({
       ...entry,
       photos: entry.photos || [],
       voiceNotes: entry.voiceNotes || [],
@@ -125,7 +83,7 @@ const createPaintDiary = async (req, res) => {
     const diaryData = {
       date,
       projectId,
-      canvasData,
+      canvasData: processedCanvasData,
       totalCost,
       totalRevenue,
       productivityScore,
@@ -135,11 +93,7 @@ const createPaintDiary = async (req, res) => {
     const diary = await Diary.create(diaryData, { transaction });
     await transaction.commit();
 
-    const fullDiary = await Diary.findByPk(diary.id, {
-      include: [
-        { model: Project, as: 'Project' }
-      ]
-    });
+    const fullDiary = diary;
 
     res.status(201).json(fullDiary);
   } catch (error) {
@@ -148,23 +102,14 @@ const createPaintDiary = async (req, res) => {
   }
 };
 
-// Update paint diary (with validation and user check)
 const updatePaintDiary = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const existingDiary = await Diary.findByPk(req.params.id, {
-      include: [{
-        model: Project,
-        as: 'Project',
-        where: { userId: req.user.id }
-      }],
-      transaction
-    });
-
+    const existingDiary = await Diary.findByPk(req.params.id);
     if (!existingDiary || existingDiary.diaryType !== 'paint') {
       await transaction.rollback();
-      return res.status(404).json({ error: 'Paint diary entry not found or access denied' });
+      return res.status(404).json({ error: 'Paint diary entry not found' });
     }
 
     const { error } = paintDiarySchema.validate(req.body);
@@ -173,21 +118,9 @@ const updatePaintDiary = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, entries, totalCost, totalRevenue, productivityScore } = req.body;
+    const { date, projectId, canvasData, totalCost, totalRevenue, productivityScore } = req.body;
 
-    // Check if new project belongs to user (if changing project)
-    if (projectId && projectId !== existingDiary.projectId) {
-      const project = await Project.findOne({
-        where: { id: projectId, userId: req.user.id },
-        transaction
-      });
-      if (!project) {
-        await transaction.rollback();
-        return res.status(403).json({ error: 'New project not found or access denied' });
-      }
-    }
-
-    const canvasData = entries.map(entry => ({
+    const processedCanvasData = canvasData.map(entry => ({
       ...entry,
       photos: entry.photos || [],
       voiceNotes: entry.voiceNotes || [],
@@ -196,8 +129,8 @@ const updatePaintDiary = async (req, res) => {
 
     const [updated] = await Diary.update({
       date,
-      projectId: projectId || existingDiary.projectId,
-      canvasData,
+      projectId,
+      canvasData: processedCanvasData,
       totalCost,
       totalRevenue,
       productivityScore
@@ -206,9 +139,7 @@ const updatePaintDiary = async (req, res) => {
     await transaction.commit();
 
     if (updated) {
-      const updatedDiary = await Diary.findByPk(req.params.id, {
-        include: [{ model: Project, as: 'Project' }]
-      });
+      const updatedDiary = await Diary.findByPk(req.params.id);
       res.json(updatedDiary);
     } else {
       res.status(404).json({ error: 'Paint diary entry not found' });
@@ -219,19 +150,11 @@ const updatePaintDiary = async (req, res) => {
   }
 };
 
-// Delete paint diary (checks ownership)
 const deletePaintDiary = async (req, res) => {
   try {
-    const existingDiary = await Diary.findByPk(req.params.id, {
-      include: [{
-        model: Project,
-        as: 'Project',
-        where: { userId: req.user.id }
-      }]
-    });
-
+    const existingDiary = await Diary.findByPk(req.params.id);
     if (!existingDiary || existingDiary.diaryType !== 'paint') {
-      return res.status(404).json({ error: 'Paint diary entry not found or access denied' });
+      return res.status(404).json({ error: 'Paint diary entry not found' });
     }
 
     const deleted = await Diary.destroy({ where: { id: req.params.id } });
@@ -245,19 +168,11 @@ const deletePaintDiary = async (req, res) => {
   }
 };
 
-// Save canvas state (checks ownership)
 const saveCanvasState = async (req, res) => {
   try {
-    const existingDiary = await Diary.findByPk(req.params.id, {
-      include: [{
-        model: Project,
-        as: 'Project',
-        where: { userId: req.user.id }
-      }]
-    });
-
+    const existingDiary = await Diary.findByPk(req.params.id);
     if (!existingDiary || existingDiary.diaryType !== 'paint') {
-      return res.status(404).json({ error: 'Paint diary entry not found or access denied' });
+      return res.status(404).json({ error: 'Paint diary entry not found' });
     }
 
     const { error } = canvasSchema.validate(req.body);
@@ -282,19 +197,11 @@ const saveCanvasState = async (req, res) => {
   }
 };
 
-// Load canvas state (checks ownership)
 const loadCanvasState = async (req, res) => {
   try {
-    const diary = await Diary.findByPk(req.params.id, {
-      include: [{
-        model: Project,
-        as: 'Project',
-        where: { userId: req.user.id }
-      }]
-    });
-
+    const diary = await Diary.findByPk(req.params.id);
     if (!diary || diary.diaryType !== 'paint') {
-      return res.status(404).json({ error: 'Paint diary entry not found or access denied' });
+      return res.status(404).json({ error: 'Paint diary entry not found' });
     }
 
     res.json({ entries: diary.canvasData || [] });
@@ -303,7 +210,6 @@ const loadCanvasState = async (req, res) => {
   }
 };
 
-// Calculate real-time costs
 const calculateCosts = async (req, res) => {
   try {
     const { entries } = req.body;
@@ -315,7 +221,6 @@ const calculateCosts = async (req, res) => {
     let totalCost = 0;
     let totalRevenue = 0;
 
-    // Process each entry
     for (const entry of entries) {
       for (const item of entry.items || []) {
         const cost = await calculateItemCost(item);
@@ -340,8 +245,7 @@ const calculateCosts = async (req, res) => {
   }
 };
 
-// Helper function to calculate item cost
-const calculateItemCost = async (item, entryTime = null, diaryDate = null) => {
+const calculateItemCost = async (item) => {
   switch (item.type) {
     case 'staff':
       const staff = await Staff.findByPk(item.data?.id);
@@ -357,18 +261,17 @@ const calculateItemCost = async (item, entryTime = null, diaryDate = null) => {
   }
 };
 
-// Helper function to calculate item revenue
-const calculateItemRevenue = async (item, entryTime = null, diaryDate = null) => {
+const calculateItemRevenue = async (item) => {
   switch (item.type) {
     case 'staff':
       const staff = await Staff.findByPk(item.data?.id);
       return staff ? staff.chargeOutBase : 0;
     case 'equipment':
       const equipment = await Equipment.findByPk(item.data?.id);
-      return equipment ? equipment.costRateBase * 1.2 : 0; // 20% markup
+      return equipment ? equipment.costRateBase * 1.2 : 0;
     case 'material':
       const material = await Node.findByPk(item.data?.id);
-      return material ? material.pricePerUnit * 1.3 : 0; // 30% markup
+      return material ? material.pricePerUnit * 1.3 : 0;
     default:
       return 0;
   }

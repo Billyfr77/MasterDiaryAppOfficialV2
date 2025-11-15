@@ -41,7 +41,7 @@ const getAllEquipment = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Equipment.findAndCountAll({
-      where: { userId: req.user.id },
+      where: req.user ? { userId: req.user?.id || null } : {},
       limit,
       offset
     });
@@ -69,7 +69,7 @@ const getEquipmentById = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Fetching equipment ${req.params.id} for user: ${req.user?.id}`);
   try {
     const equipmentItem = await Equipment.findOne({
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
     if (equipmentItem) {
       res.json(equipmentItem);
@@ -104,7 +104,7 @@ const createEquipment = async (req, res) => {
     }
     const equipmentItem = await Equipment.create({
       ...processedBody,
-      userId: req.user.id
+      userId: req.user?.id || null
     });
     res.status(201).json(equipmentItem);
   } catch (error) {
@@ -134,7 +134,7 @@ const updateEquipment = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
     const [updated] = await Equipment.update(processedBody, {
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
     if (updated) {
       const updatedEquipment = await Equipment.findByPk(req.params.id);
@@ -158,7 +158,7 @@ const deleteEquipment = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Deleting equipment ${req.params.id} for user: ${req.user?.id}`);
   try {
     const deleted = await Equipment.destroy({
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
     if (deleted) {
       res.json({ message: 'Equipment deleted' });

@@ -31,7 +31,7 @@ const calculateTotals = async (nodes, staff, equipment, userId, transaction = nu
           // Calculate materials cost
           for (const item of nodes || []) {
             const node = await Node.findOne({
-              where: { id: item.nodeId, userId: userId }
+              where: userId ? { id: item.nodeId, userId: userId } : { id: item.nodeId }
             });
             if (!node) {
               console.warn(`Material ${item.nodeId} not found, skipping`);
@@ -43,7 +43,7 @@ const calculateTotals = async (nodes, staff, equipment, userId, transaction = nu
           // Calculate staff cost
           for (const item of staff || []) {
             const staffMember = await Staff.findOne({
-              where: { id: item.staffId, userId: userId }
+              where: userId ? { id: item.staffId, userId: userId } : { id: item.staffId }
             });
             if (!staffMember) {
               console.warn(`Staff member ${item.staffId} not found, skipping`);
@@ -57,7 +57,7 @@ const calculateTotals = async (nodes, staff, equipment, userId, transaction = nu
           // Calculate equipment cost
           for (const item of equipment || []) {
             const equipmentItem = await Equipment.findOne({
-              where: { id: item.equipmentId, userId: userId }
+              where: userId ? { id: item.equipmentId, userId: userId } : { id: item.equipmentId }
             });
             if (!equipmentItem) {
               console.warn(`Equipment ${item.equipmentId} not found, skipping`);
@@ -76,7 +76,7 @@ const getAllQuotes = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Quote.findAndCountAll({
-      where: { userId: req.user.id },
+      where: req.user ? { userId: req.user?.id || null } : {},
       include: [{ model: Project, as: 'project' }],
       limit,
       offset
@@ -97,7 +97,7 @@ const getAllQuotes = async (req, res) => {
 const getQuoteById = async (req, res) => {
   try {
     const quote = await Quote.findOne({
-      where: { id: req.params.id, userId: req.user.id },
+      where: { id: req.params.id, userId: req.user?.id || null },
       include: [{ model: Project, as: 'project' }]
     });
     if (quote) {
@@ -123,7 +123,7 @@ const createQuote = async (req, res) => {
 
     // Check if project belongs to user
     const project = await Project.findOne({
-      where: { id: value.projectId, userId: req.user.id }
+      where: req.user ? { id: value.projectId, userId: req.user?.id || null } : { id: value.projectId }
     });
     if (!project) {
       return res.status(404).json({ error: 'Project not found or not accessible' });
@@ -137,7 +137,7 @@ const createQuote = async (req, res) => {
     const quote = await Quote.create({
       name: value.name,
       projectId: value.projectId,
-      userId: req.user.id,
+      userId: req.user?.id || null,
       marginPct: value.marginPct,
       nodes: value.nodes || [],
       staff: value.staff || [],
@@ -171,7 +171,7 @@ const updateQuote = async (req, res) => {
 
     // Check if project belongs to user
     const project = await Project.findOne({
-      where: { id: value.projectId, userId: req.user.id }
+      where: req.user ? { id: value.projectId, userId: req.user?.id || null } : { id: value.projectId }
     });
     if (!project) {
       return res.status(404).json({ error: 'Project not found or not accessible' });
@@ -179,7 +179,7 @@ const updateQuote = async (req, res) => {
 
     // Check if quote exists and belongs to user
     const existingQuote = await Quote.findOne({
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
     if (!existingQuote) {
       return res.status(404).json({ error: 'Quote not found' });
@@ -200,7 +200,7 @@ const updateQuote = async (req, res) => {
       totalCost: totalCost.toFixed(2),
       totalRevenue: totalRevenue.toFixed(2)
     }, {
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
 
     if (updated) {
@@ -220,7 +220,7 @@ const updateQuote = async (req, res) => {
 const deleteQuote = async (req, res) => {
   try {
     const deleted = await Quote.destroy({
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user?.id || null }
     });
     if (deleted) {
       res.json({ message: 'Quote deleted successfully' });

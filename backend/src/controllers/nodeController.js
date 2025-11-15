@@ -30,7 +30,7 @@
             const offset = (page - 1) * limit;
 
             const { count, rows } = await Node.findAndCountAll({
-              where: { userId: req.user.id },
+              where: req.user ? { userId: req.user?.id || null } : {},
               limit,
               offset
             });
@@ -50,7 +50,7 @@
         const getNodeById = async (req, res) => {
           try {
             const node = await Node.findOne({
-              where: { id: req.params.id, userId: req.user.id }
+              where: { id: req.params.id, userId: req.user?.id || null }
             });
             if (node) {
               res.json(node);
@@ -70,7 +70,7 @@
             }
             const node = await Node.create({
               ...req.body,
-              userId: req.user.id
+              userId: req.user?.id || null
             });
             res.status(201).json(node);
           } catch (error) {
@@ -85,7 +85,7 @@
               return res.status(400).json({ error: error.details[0].message });
             }
             const [updated] = await Node.update(req.body, {
-              where: { id: req.params.id, userId: req.user.id }
+              where: { id: req.params.id, userId: req.user?.id || null }
             });
             if (updated) {
               const updatedNode = await Node.findByPk(req.params.id);
@@ -101,7 +101,7 @@
         const deleteNode = async (req, res) => {
           try {
             const deleted = await Node.destroy({
-              where: { id: req.params.id, userId: req.user.id }
+              where: { id: req.params.id, userId: req.user?.id || null }
             });
             if (deleted) {
               res.json({ message: 'Node deleted' });
