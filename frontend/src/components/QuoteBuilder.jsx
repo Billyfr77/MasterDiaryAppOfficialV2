@@ -198,11 +198,11 @@ const HUDGauge = ({ label, value, max, color, icon: Icon }) => {
           strokeLinecap="round" transform="rotate(-90 50 50)"
           style={{ transition: 'stroke-dashoffset 1s ease-out' }}
         />
-        <text x="50" y="42" textAnchor="middle" fill="white" fontSize="9" fontFamily="'Poppins', sans-serif" fontWeight="bold">
+        <text x="50" y="42" textAnchor="middle" fill="white" fontSize="9" fontFamily="'Poppins', sans-serif" fontWeight="bold" stroke="#000" strokeWidth="0.5">
           {label}
         </text>
-        <text x="50" y="56" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="'Inter', sans-serif">
-          $<CountUp end={value} decimals={0} duration={0.8} />
+        <text x="50" y="56" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" stroke="#000" strokeWidth="0.5" fontFamily="'Inter', sans-serif">
+          $<CountUp end={value} decimals={0} duration={0.8} formattingFn={(val) => val.toLocaleString() } />
         </text>
       </svg>
     </div>
@@ -1052,10 +1052,10 @@ const QuoteBuilder = () => {
             Overview
           </h4>
           <p style={{ margin: 'var(--spacing-xs) 0', color: margin > 0 ? '#4ecdc4' : '#ff6b6b' }}>
-            💰 Cost: <strong>$<CountUp end={totalCost} decimals={2} duration={1} /></strong>
+            💰 Cost: <strong>\${totalCost.toFixed(2)}</strong>
           </p>
           <p style={{ margin: 'var(--spacing-xs) 0', color: margin > 0 ? '#4ecdc4' : '#ff6b6b' }}>
-            📈 Revenue: <strong>$<CountUp end={totalRevenue} decimals={2} duration={1} /></strong>
+            📈 Revenue: <strong>\${totalRevenue.toFixed(2)}</strong>
           </p>
           <p style={{ margin: 'var(--spacing-xs) 0', color: margin > 0 ? '#4ecdc4' : '#ff6b6b', fontWeight: 'bold' }}>
             🎯 Margin: <strong>${margin.toFixed(2)}</strong>

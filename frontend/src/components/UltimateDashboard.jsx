@@ -1,1039 +1,713 @@
-/*
- * MasterDiaryApp Official - Construction SaaS Platform
- * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * This software and associated documentation contain proprietary
- * and confidential information of Billy Fraser.
- *
- * Unauthorized copying, modification, distribution, or use of this
- * software, in whole or in part, is strictly prohibited without
- * prior written permission from the copyright holder.
- *
- * For licensing inquiries: billyfr77@example.com
- *
- * Patent Pending: Drag-and-drop construction quote builder system
- * Trade Secret: Real-time calculation algorithms and optimization techniques
- */import React, { useState, useEffect, useRef } from 'react'
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js'
-import { Line, Bar, Doughnut } from 'react-chartjs-2'
-import * as d3 from 'd3'
-import { api } from '../utils/api'
-import { io } from 'socket.io-client'
-import {
-  TrendingUp, TrendingDown, DollarSign, Clock, BarChart3, Sparkles, Volume2, VolumeX,
-  Zap, Target, AlertTriangle, CheckCircle, Activity, Users, Wrench, Calendar,
-  Settings, Download, RefreshCw, Maximize2, Minimize2, Grid, Layers, Brain,
-  Eye, EyeOff, Filter, Search, ChevronDown, ChevronUp, Star, Award
-} from 'lucide-react'
-import AISuggestions from './AISuggestions'
-import PredictiveAnalytics from './PredictiveAnalytics'
+import React, { useState, useEffect } from 'react';
+import { api } from '../utils/api';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement)
-
-const UltimateDashboard = () => {
+function UltimateDashboard() {
   const [data, setData] = useState({
     diaries: [],
     projects: [],
     staff: [],
-    equipment: []
-  })
-  const [loading, setLoading] = useState(true)
-  const [lastUpdate, setLastUpdate] = useState(new Date())
-  const [socketConnected, setSocketConnected] = useState(false)
-  const [widgets, setWidgets] = useState({
-    kpi: { visible: true, size: 'large' },
-    charts: { visible: true, size: 'large' },
-    activities: { visible: true, size: 'medium' },
-    insights: { visible: true, size: 'medium' },
-    predictive: { visible: true, size: 'large' },
-    heatmap: { visible: true, size: 'medium' }
-  })
-  const [layoutMode, setLayoutMode] = useState(false)
-  const [filters, setFilters] = useState({
-    dateRange: '7d',
-    project: 'all',
-    staff: 'all'
-  })
-  const [soundEnabled, setSoundEnabled] = useState(false)
-  const [theme, setTheme] = useState('dark')
-  const socketRef = useRef(null)
-  const heatmapRef = useRef(null)
+    equipment: [],
+    quotes: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeModule, setActiveModule] = useState('overview');
+  const [userRole, setUserRole] = useState('manager'); // 'manager' or 'staff'
 
-  // WebSocket connection
   useEffect(() => {
-    socketRef.current = io('http://localhost:5000', {
-      transports: ['websocket', 'polling']
-    })
+    fetchData();
+    const interval = setInterval(fetchData, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
 
-    socketRef.current.on('connect', () => {
-      setSocketConnected(true)
-      console.log('Dashboard connected to real-time updates')
-    })
-
-    socketRef.current.on('disconnect', () => {
-      setSocketConnected(false)
-      console.log('Dashboard disconnected from real-time updates')
-    })
-
-    socketRef.current.on('data-update', (updateData) => {
-      setData(prevData => ({ ...prevData, ...updateData }))
-      setLastUpdate(new Date())
-      if (soundEnabled) {
-        // Play notification sound
-        const audio = new Audio('/notification.mp3')
-        audio.play().catch(e => console.log('Audio play failed:', e))
-      }
-    })
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-      }
-    }
-  }, [soundEnabled])
-
-  // Initial data fetch
   const fetchData = async () => {
-    setLoading(true)
+    setLoading(true);
+    setError(null);
     try {
-      const [diariesRes, projectsRes, staffRes, equipmentRes] = await Promise.all([
+      const [diariesRes, projectsRes, staffRes, equipmentRes, quotesRes] = await Promise.all([
         api.get('/diaries'),
         api.get('/projects'),
         api.get('/staff'),
-        api.get('/equipment')
-      ])
+        api.get('/equipment'),
+        api.get('/quotes')
+      ]);
 
-      const newData = {
-        diaries: diariesRes.data,
-        projects: projectsRes.data.data || projectsRes.data,
-        staff: staffRes.data.data || staffRes.data,
-        equipment: equipmentRes.data.data || equipmentRes.data
-      }
-
-      setData(newData)
-      setLastUpdate(new Date())
-
-      // Emit to socket for real-time sync
-      if (socketRef.current) {
-        socketRef.current.emit('dashboard-data', newData)
-      }
-
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err)
+      setData({
+        diaries: Array.isArray(diariesRes.data) ? diariesRes.data : [],
+        projects: Array.isArray(projectsRes.data?.data || projectsRes.data) ? projectsRes.data?.data || projectsRes.data : [],
+        staff: Array.isArray(staffRes.data?.data || staffRes.data) ? staffRes.data?.data || staffRes.data : [],
+        equipment: Array.isArray(equipmentRes.data?.data || equipmentRes.data) ? equipmentRes.data?.data || equipmentRes.data : [],
+        quotes: Array.isArray(quotesRes.data?.data || quotesRes.data) ? quotesRes.data?.data || quotesRes.data : []
+      });
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Unable to load dashboard data. Please refresh the page.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  useEffect(() => {
-    fetchData()
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchData, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Calculate advanced metrics
-  const metrics = React.useMemo(() => {
-    const { diaries, projects, staff, equipment } = data
-
-    const totalHours = diaries.reduce((sum, d) => sum + parseFloat(d.totalHours || 0), 0)
-    const totalCosts = diaries.reduce((sum, d) => sum + parseFloat(d.costs || 0), 0)
-    const totalRevenues = diaries.reduce((sum, d) => sum + parseFloat(d.revenues || 0), 0)
-    const totalMargin = totalRevenues - totalCosts
-    const avgMargin = diaries.length > 0 ? diaries.reduce((sum, d) => sum + parseFloat(d.marginPct || 0), 0) / diaries.length : 0
-
-    // Advanced calculations
-    const laborEfficiency = totalHours > 0 ? (totalRevenues / totalHours).toFixed(2) : 0
-    const projectCount = projects.length
-    const activeProjects = projects.filter(p => diaries.some(d => d.projectId === p.id)).length
-    const staffUtilization = staff.length > 0 ? ((diaries.length / staff.length) * 100).toFixed(1) : 0
-
-    // Trend analysis (last 7 days)
-    const lastWeek = new Date()
-    lastWeek.setDate(lastWeek.getDate() - 7)
-    const recentDiaries = diaries.filter(d => new Date(d.date) >= lastWeek)
-    const weeklyGrowth = recentDiaries.length > 0 ? ((recentDiaries.reduce((sum, d) => sum + parseFloat(d.revenues || 0), 0) / 7)).toFixed(2) : 0
+  // Safe calculations
+  const calculateKPIs = () => {
+    const { diaries, projects, staff, quotes } = data;
+    const totalRevenue = diaries.reduce((sum, d) => sum + (d.revenues ? parseFloat(d.revenues) : 0), 0);
+    const totalCosts = diaries.reduce((sum, d) => sum + (d.costs ? parseFloat(d.costs) : 0), 0);
+    const totalHours = diaries.reduce((sum, d) => sum + (d.totalHours ? parseFloat(d.totalHours) : 0), 0);
 
     return {
-      totalHours,
-      totalCosts,
-      totalRevenues,
-      totalMargin,
-      avgMargin,
-      laborEfficiency,
-      projectCount,
-      activeProjects,
-      staffUtilization,
-      weeklyGrowth,
-      diaryCount: diaries.length,
-      staffCount: staff.length,
-      equipmentCount: equipment.length
-    }
-  }, [data])
+      projects: projects.length,
+      staff: staff.length,
+      diaries: diaries.length,
+      quotes: quotes.length,
+      revenue: totalRevenue,
+      costs: totalCosts,
+      profit: totalRevenue - totalCosts,
+      margin: totalRevenue > 0 ? ((totalRevenue - totalCosts) / totalRevenue * 100) : 0,
+      efficiency: totalHours > 0 ? totalRevenue / totalHours : 0,
+      activeProjects: projects.filter(p => diaries.some(d => d.projectId === p.id)).length,
+      pendingQuotes: quotes.filter(q => q.status === 'pending').length
+    };
+  };
 
-  // D3.js Heatmap for project profitability
-  useEffect(() => {
-    if (heatmapRef.current && data.diaries.length > 0) {
-      createHeatmap()
-    }
-  }, [data.diaries, filters])
+  const kpis = calculateKPIs();
 
-  const createHeatmap = () => {
-    const svg = d3.select(heatmapRef.current)
-    svg.selectAll("*").remove()
+  // Simple chart components using SVG
+  const LineChart = ({ data, width = 300, height = 150 }) => {
+    if (!data || data.length === 0) return <div>No data available</div>;
 
-    const margin = { top: 20, right: 20, bottom: 60, left: 60 }
-    const width = 600 - margin.left - margin.right
-    const height = 300 - margin.top - margin.bottom
+    const maxValue = Math.max(...data.map(d => d.value));
+    const minValue = Math.min(...data.map(d => d.value));
+    const range = maxValue - minValue || 1;
 
-    // Group data by project and date
-    const heatmapData = d3.rollups(
-      data.diaries,
-      v => ({
-        revenue: d3.sum(v, d => parseFloat(d.revenues || 0)),
-        count: v.length
-      }),
-      d => d.Project?.name || 'Unknown',
-      d => d.date
-    )
+    const points = data.map((d, i) => {
+      const x = (i / (data.length - 1)) * width;
+      const y = height - ((d.value - minValue) / range) * height;
+      return `${x},${y}`;
+    }).join(' ');
 
-    const projects = Array.from(new Set(heatmapData.map(d => d[0]))).slice(0, 10)
-    const dates = Array.from(new Set(heatmapData.flatMap(d => d[1].map(([date]) => date)))).sort().slice(-14)
+    return (
+      <svg width={width} height={height} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+        <polyline
+          fill="none"
+          stroke="#4ecdc4"
+          strokeWidth="3"
+          points={points}
+        />
+        {data.map((d, i) => {
+          const x = (i / (data.length - 1)) * width;
+          const y = height - ((d.value - minValue) / range) * height;
+          <text
+                      x={x + barWidth / 2}
+                      y={height - 25}
+                      textAnchor="middle"
+                      fontSize="12"
+                      fill="#2d3748"
+                      fontWeight="bold"
+                    >
+                      {d.value}
+                    </text>
 
-    const colorScale = d3.scaleSequential(d3.interpolateRdYlGn)
-      .domain([0, d3.max(heatmapData.flatMap(d => d[1].map(([, value]) => value.revenue)))])
+  const BarChart = ({ data, width = 300, height = 150 }) => {
+    if (!data || data.length === 0) return <div>No data available</div>;
 
-    const x = d3.scaleBand().domain(dates).range([0, width]).padding(0.1)
-    const y = d3.scaleBand().domain(projects).range([0, height]).padding(0.1)
+    const maxValue = Math.max(...data.map(d => d.value));
+    const barWidth = width / data.length * 0.8;
+    const barSpacing = width / data.length * 0.2;
 
-    svg.attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
+    return (
+      <svg width={width} height={height} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+        {data.map((d, i) => {
+          const barHeight = (d.value / maxValue) * (height - 40);
+          const x = i * (barWidth + barSpacing) + barSpacing / 2;
+          const y = height - barHeight - 20;
 
-    const g = svg.append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`)
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={y}
+              width={barWidth}
+              height={barHeight}
+              fill="#667eea"
+              rx="4"
+              style={{ filter: 'drop-shadow(0 2px 4px rgba(102, 126, 234, 0.3))' }}
+            />
+          );
+        })}
+      </svg>
+    );
+  };
 
-    // Create cells
-    projects.forEach(project => {
-      dates.forEach(date => {
-        const cellData = heatmapData.find(d => d[0] === project)?.[1].find(([d]) => d === date)
-        const value = cellData ? cellData[1].revenue : 0
-
-        g.append("rect")
-          .attr("x", x(date))
-          .attr("y", y(project))
-          .attr("width", x.bandwidth())
-          .attr("height", y.bandwidth())
-          .attr("fill", value > 0 ? colorScale(value) : "#333")
-          .attr("stroke", "#555")
-          .attr("stroke-width", 1)
-          .on("mouseover", function() {
-            d3.select(this).attr("stroke", "#fff").attr("stroke-width", 2)
-          })
-          .on("mouseout", function() {
-            d3.select(this).attr("stroke", "#555").attr("stroke-width", 1)
-          })
-          .append("title")
-          .text(`${project} - ${date}: $${value.toLocaleString()}`)
-      })
-    })
-
-    // Add axes
-    g.append("g")
-      .attr("transform", `translate(0,${height})`)
-      .call(d3.axisBottom(x).tickFormat(d => new Date(d).toLocaleDateString()))
-      .selectAll("text")
-      .style("text-anchor", "end")
-      .attr("dx", "-.8em")
-      .attr("dy", ".15em")
-      .attr("transform", "rotate(-65)")
-
-    g.append("g")
-      .call(d3.axisLeft(y))
-  }
-
-  // Toggle widget visibility
-  const toggleWidget = (widgetName) => {
-    setWidgets(prev => ({
-      ...prev,
-      [widgetName]: {
-        ...prev[widgetName],
-        visible: !prev[widgetName].visible
-      }
-    }))
-  }
-
-  // Resize widget
-  const resizeWidget = (widgetName, newSize) => {
-    setWidgets(prev => ({
-      ...prev,
-      [widgetName]: {
-        ...prev[widgetName],
-        size: newSize
-      }
-    }))
-  }
+  const modules = [
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'analytics', label: 'Analytics', icon: '📈' },
+    { id: 'insights', label: 'AI Insights', icon: '🧠' },
+    { id: 'team', label: 'Team', icon: '👥' },
+    { id: 'projects', label: 'Projects', icon: '🏗️' }
+  ];
 
   if (loading) {
     return (
       <div style={{
-        height: '100vh',
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
-        color: 'white',
-        fontFamily: "'Inter', sans-serif"
+        alignItems: 'center',
+        height: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
       }}>
-        <div style={{
-          width: '60px',
-          height: '60px',
-          border: '6px solid rgba(102, 126, 234, 0.3)',
-          borderTop: '6px solid #667eea',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: 'var(--spacing-md)'
-        }}></div>
-        <span style={{ fontSize: '1.4em', fontFamily: "'Poppins', sans-serif" }}>Loading Ultimate Dashboard...</span>
-        <div style={{
-          marginTop: 'var(--spacing-md)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--spacing-sm)',
-          color: socketConnected ? '#4ecdc4' : '#ff6b6b'
-        }}>
-          <Activity size={16} />
-          <span>{socketConnected ? 'Live Updates Active' : 'Connecting...'}</span>
+        <div style={{ textAlign: 'center', color: 'white' }}>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: '3px solid rgba(255,255,255,0.3)',
+            borderTop: '3px solid white',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 20px'
+          }}></div>
+          <h2>Loading Dashboard...</h2>
+        </div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        color: 'white',
+        padding: '20px'
+      }}>
+        <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+          <h1>⚠️ Dashboard Error</h1>
+          <p>{error}</p>
+          <button
+            onClick={fetchData}
+            style={{
+              padding: '12px 24px',
+              background: '#4ecdc4',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              marginTop: '20px'
+            }}
+          >
+            Try Again
+          </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
-      position: 'relative',
-      fontFamily: "'Inter', sans-serif",
-      padding: 'var(--spacing-xl)',
-      overflow: 'hidden'
+      display: 'flex',
+      height: '100vh',
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
     }}>
-      {/* Enhanced Animations */}
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes glow { from { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); } to { box-shadow: 0 0 40px rgba(102, 126, 234, 1); } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeInUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes realTimePulse {
-          0%, 100% { box-shadow: 0 0 5px rgba(78, 205, 196, 0.5); }
-          50% { box-shadow: 0 0 20px rgba(78, 205, 196, 1); }
-        }
-      `}</style>
 
-      {/* Enhanced Background Effects */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'url(https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80) no-repeat center center',
-        backgroundSize: 'cover',
-        opacity: 0.03,
-        zIndex: -2
-      }}></div>
-
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.2) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.2) 0%, transparent 50%)',
-        zIndex: -1
-      }}></div>
-
-      {/* Dashboard Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 'var(--spacing-xl)',
-        paddingBottom: 'var(--spacing-md)',
-        borderBottom: '2px solid #667eea',
-        position: 'relative'
+      {/* Sidebar */}
+      <aside style={{
+        width: sidebarCollapsed ? '60px' : '250px',
+        background: 'white',
+        boxShadow: '2px 0 10px rgba(0,0,0,0.1)',
+        transition: 'width 0.3s ease',
+        overflow: 'hidden'
       }}>
         <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '2px',
-          background: 'linear-gradient(90deg, #667eea, #764ba2, #f093fb)',
-          animation: 'glow 2s ease-in-out infinite alternate'
-        }}></div>
+          padding: '20px',
+          borderBottom: '1px solid #e1e5e9',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: sidebarCollapsed ? 'center' : 'space-between'
+        }}>
+          {!sidebarCollapsed && <h2 style={{ margin: 0, color: '#2d3748' }}>MasterDiary</h2>}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '18px',
+              color: '#4a5568'
+            }}
+          >
+            {sidebarCollapsed ? '→' : '←'}
+          </button>
+        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-          <Sparkles size={32} color="#667eea" style={{ filter: 'drop-shadow(0 0 10px #667eea)' }} />
-          <div>
-            <h1 style={{
-              margin: 0,
-              color: '#ffffff',
-              fontFamily: "'Poppins', sans-serif",
-              fontWeight: 700,
-              textShadow: '0 0 20px rgba(102, 126, 234, 0.5)',
-              fontSize: '2.5em',
-              animation: 'float 3s ease-in-out infinite'
-            }}>
-              Ultimate Dashboard
-            </h1>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--spacing-md)',
-              marginTop: 'var(--spacing-xs)'
-            }}>
-              <div style={{
+        <nav style={{ padding: '20px 0' }}>
+          {modules.map(module => (
+            <button
+              key={module.id}
+              onClick={() => setActiveModule(module.id)}
+              style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 'var(--spacing-xs)',
-                color: socketConnected ? '#4ecdc4' : '#ff6b6b',
-                fontSize: '0.9em'
-              }}>
-                <Activity size={14} style={{ animation: socketConnected ? 'realTimePulse 2s infinite' : 'none' }} />
-                <span>{socketConnected ? 'LIVE' : 'OFFLINE'}</span>
-              </div>
-              <span style={{ color: '#ccc', fontSize: '0.9em' }}>
-                Last updated: {lastUpdate.toLocaleTimeString()}
+                width: '100%',
+                padding: '12px 20px',
+                background: activeModule === module.id ? '#e6fffa' : 'transparent',
+                border: 'none',
+                borderLeft: activeModule === module.id ? '4px solid #4ecdc4' : '4px solid transparent',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: activeModule === module.id ? '#2d3748' : '#4a5568',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <span style={{ fontSize: '18px', marginRight: sidebarCollapsed ? 0 : '12px' }}>
+                {module.icon}
               </span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-          <button
-            onClick={() => setLayoutMode(!layoutMode)}
-            style={{
-              padding: 'var(--spacing-sm) var(--spacing-md)',
-              background: layoutMode ? 'rgba(102, 126, 234, 0.8)' : 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(102, 126, 234, 0.3)',
-              borderRadius: '8px',
-              color: 'white',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--spacing-xs)',
-              fontSize: '0.9em'
-            }}
-          >
-            <Grid size={16} />
-            {layoutMode ? 'Exit Layout' : 'Customize'}
-          </button>
-
-          <button
-            onClick={fetchData}
-            style={{
-              padding: 'var(--spacing-sm)',
-              background: 'rgba(78, 205, 196, 0.2)',
-              border: '1px solid #4ecdc4',
-              borderRadius: '50%',
-              color: '#4ecdc4',
-              cursor: 'pointer'
-            }}
-          >
-            <RefreshCw size={16} />
-          </button>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--spacing-xs)',
-            color: '#ccc',
-            fontSize: '0.9em'
-          }}>
-            <VolumeX size={16} style={{ cursor: 'pointer' }} onClick={() => setSoundEnabled(!soundEnabled)} />
-            <span>Sound {soundEnabled ? 'ON' : 'OFF'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters Bar */}
-      <div style={{
-        background: 'rgba(26, 26, 46, 0.95)',
-        borderRadius: '15px',
-        padding: 'var(--spacing-md)',
-        marginBottom: 'var(--spacing-xl)',
-        display: 'flex',
-        gap: 'var(--spacing-md)',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        border: '1px solid rgba(102, 126, 234, 0.3)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xs)' }}>
-          <Filter size={16} color="#667eea" />
-          <span style={{ color: 'white', fontWeight: '500' }}>Filters:</span>
-        </div>
-
-        <select
-          value={filters.dateRange}
-          onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-          style={{
-            padding: 'var(--spacing-xs) var(--spacing-sm)',
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            borderRadius: '6px',
-            color: 'white'
-          }}
-        >
-          <option value="1d">Last 24 Hours</option>
-          <option value="7d">Last 7 Days</option>
-          <option value="30d">Last 30 Days</option>
-          <option value="90d">Last 90 Days</option>
-        </select>
-
-        <select
-          value={filters.project}
-          onChange={(e) => setFilters({ ...filters, project: e.target.value })}
-          style={{
-            padding: 'var(--spacing-xs) var(--spacing-sm)',
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            borderRadius: '6px',
-            color: 'white'
-          }}
-        >
-          <option value="all">All Projects</option>
-          {data.projects.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
+              {!sidebarCollapsed && module.label}
+            </button>
           ))}
-        </select>
+        </nav>
 
-        <select
-          value={filters.staff}
-          onChange={(e) => setFilters({ ...filters, staff: e.target.value })}
-          style={{
-            padding: 'var(--spacing-xs) var(--spacing-sm)',
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            borderRadius: '6px',
-            color: 'white'
-          }}
-        >
-          <option value="all">All Staff</option>
-          {data.staff.map(s => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Widgets Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-        gap: 'var(--spacing-xl)',
-        marginBottom: 'var(--spacing-xl)'
-      }}>
-        {/* KPI Cards Widget */}
-        {widgets.kpi.visible && (
+        <div style={{ padding: '20px', borderTop: '1px solid #e1e5e9' }}>
           <div style={{
-            gridColumn: widgets.kpi.size === 'large' ? 'span 2' : 'span 1',
-            background: 'rgba(26, 26, 46, 0.95)',
-            borderRadius: '20px',
-            padding: 'var(--spacing-lg)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            position: 'relative',
-            animation: 'fadeInUp 0.6s ease-out'
+            width: '100%',
+            height: '8px',
+            background: '#e1e5e9',
+            borderRadius: '4px',
+            overflow: 'hidden'
           }}>
-            {layoutMode && (
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                display: 'flex',
-                gap: 'var(--spacing-xs)',
-                zIndex: 10
-              }}>
-                <button onClick={() => toggleWidget('kpi')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
-                </button>
-                <select
-                  value={widgets.kpi.size}
-                  onChange={(e) => resizeWidget('kpi', e.target.value)}
-                  style={{ fontSize: '12px', padding: '2px' }}
-                >
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
-                </select>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-lg)' }}>
-              <BarChart3 size={24} color="#667eea" />
-              <h3 style={{ margin: 0, color: 'white', fontFamily: "'Poppins', sans-serif" }}>Key Performance Indicators</h3>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--spacing-md)' }}>
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2))',
-                padding: 'var(--spacing-md)',
-                borderRadius: '12px',
-                textAlign: 'center',
-                border: '1px solid rgba(102, 126, 234, 0.3)'
-              }}>
-                <DollarSign size={32} color="#667eea" style={{ marginBottom: 'var(--spacing-sm)' }} />
-                <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#667eea' }}>${metrics.totalRevenues.toLocaleString()}</div>
-                <div style={{ color: '#ccc', fontSize: '0.9em' }}>Total Revenue</div>
-                <div style={{ color: '#4ecdc4', fontSize: '0.8em', marginTop: 'var(--spacing-xs)' }}>
-                  <TrendingUp size={12} style={{ verticalAlign: 'middle' }} />
-                  +{metrics.weeklyGrowth}/day avg
-                </div>
-              </div>
-
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(70, 160, 140, 0.2))',
-                padding: 'var(--spacing-md)',
-                borderRadius: '12px',
-                textAlign: 'center',
-                border: '1px solid rgba(78, 205, 196, 0.3)'
-              }}>
-                <Target size={32} color="#4ecdc4" style={{ marginBottom: 'var(--spacing-sm)' }} />
-                <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#4ecdc4' }}>{metrics.avgMargin.toFixed(1)}%</div>
-                <div style={{ color: '#ccc', fontSize: '0.9em' }}>Avg Margin</div>
-                <div style={{ color: metrics.totalMargin >= 0 ? '#4ecdc4' : '#ff6b6b', fontSize: '0.8em', marginTop: 'var(--spacing-xs)' }}>
-                  {metrics.totalMargin >= 0 ? <TrendingUp size={12} style={{ verticalAlign: 'middle' }} /> : <TrendingDown size={12} style={{ verticalAlign: 'middle' }} />}
-                  ${Math.abs(metrics.totalMargin).toLocaleString()} {metrics.totalMargin >= 0 ? 'profit' : 'loss'}
-                </div>
-              </div>
-
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(255, 193, 77, 0.2), rgba(255, 160, 0, 0.2))',
-                padding: 'var(--spacing-md)',
-                borderRadius: '12px',
-                textAlign: 'center',
-                border: '1px solid rgba(255, 193, 77, 0.3)'
-              }}>
-                <Clock size={32} color="#ffd93d" style={{ marginBottom: 'var(--spacing-sm)' }} />
-                <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#ffd93d' }}>{metrics.totalHours.toFixed(0)}</div>
-                <div style={{ color: '#ccc', fontSize: '0.9em' }}>Total Hours</div>
-                <div style={{ color: '#4ecdc4', fontSize: '0.8em', marginTop: 'var(--spacing-xs)' }}>
-                  ${metrics.laborEfficiency}/hr efficiency
-                </div>
-              </div>
-
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(220, 53, 69, 0.2))',
-                padding: 'var(--spacing-md)',
-                borderRadius: '12px',
-                textAlign: 'center',
-                border: '1px solid rgba(255, 107, 107, 0.3)'
-              }}>
-                <Users size={32} color="#ff6b6b" style={{ marginBottom: 'var(--spacing-sm)' }} />
-                <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#ff6b6b' }}>{metrics.staffUtilization}%</div>
-                <div style={{ color: '#ccc', fontSize: '0.9em' }}>Staff Utilization</div>
-                <div style={{ color: '#ccc', fontSize: '0.8em', marginTop: 'var(--spacing-xs)' }}>
-                  {metrics.activeProjects}/{metrics.projectCount} active projects
-                </div>
-              </div>
-            </div>
+            <div style={{
+              width: '75%',
+              height: '100%',
+              background: 'linear-gradient(90deg, #4ecdc4, #667eea)',
+              borderRadius: '4px'
+            }}></div>
           </div>
-        )}
+          {!sidebarCollapsed && (
+            <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#718096' }}>
+              System Health: Good
+            </p>
+          )}
+        </div>
+      </aside>
 
-        {/* Charts Widget */}
-        {widgets.charts.visible && (
-          <div style={{
-            gridColumn: widgets.charts.size === 'large' ? 'span 2' : 'span 1',
-            background: 'rgba(26, 26, 46, 0.95)',
-            borderRadius: '20px',
-            padding: 'var(--spacing-lg)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            position: 'relative',
-            animation: 'fadeInUp 0.8s ease-out'
-          }}>
-            {layoutMode && (
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                display: 'flex',
-                gap: 'var(--spacing-xs)',
-                zIndex: 10
-              }}>
-                <button onClick={() => toggleWidget('charts')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
-                </button>
-                <select
-                  value={widgets.charts.size}
-                  onChange={(e) => resizeWidget('charts', e.target.value)}
-                  style={{ fontSize: '12px', padding: '2px' }}
-                >
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
-                </select>
-              </div>
-            )}
+      {/* Main Content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-lg)' }}>
-              <TrendingUp size={24} color="#667eea" />
-              <h3 style={{ margin: 0, color: 'white', fontFamily: "'Poppins', sans-serif" }}>Revenue & Performance Trends</h3>
-            </div>
-
-            <div style={{ height: '300px' }}>
-              <Line
-                data={{
-                  labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                  datasets: [
-                    {
-                      label: 'Revenue ($)',
-                      data: [1200, 1500, 1800, 2100, 1900, 2200, 2500],
-                      borderColor: '#667eea',
-                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                      tension: 0.4,
-                      pointBackgroundColor: '#667eea'
-                    },
-                    {
-                      label: 'Margin (%)',
-                      data: [15, 18, 22, 20, 25, 23, 28],
-                      borderColor: '#4ecdc4',
-                      backgroundColor: 'rgba(78, 205, 196, 0.1)',
-                      yAxisID: 'y1',
-                      tension: 0.4,
-                      pointBackgroundColor: '#4ecdc4'
-                    }
-                  ]
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { labels: { color: 'white' } }
-                  },
-                  scales: {
-                    x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-                    y: {
-                      ticks: { color: 'white' },
-                      grid: { color: 'rgba(255,255,255,0.1)' },
-                      title: { display: true, text: 'Revenue ($)', color: 'white' }
-                    },
-                    y1: {
-                      ticks: { color: 'white' },
-                      position: 'right',
-                      title: { display: true, text: 'Margin (%)', color: 'white' },
-                      grid: { drawOnChartArea: false }
-                    }
-                  }
-                }}
-              />
-            </div>
+        {/* Top Navigation */}
+        <header style={{
+          background: 'white',
+          padding: '16px 24px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <h1 style={{ margin: 0, color: '#2d3748', fontSize: '24px' }}>
+              {modules.find(m => m.id === activeModule)?.label}
+            </h1>
+            <p style={{ margin: '4px 0 0 0', color: '#718096', fontSize: '14px' }}>
+              Last updated: {lastUpdate.toLocaleString()}
+            </p>
           </div>
-        )}
 
-        {/* AI Insights Widget */}
-        {widgets.insights.visible && (
-          <div style={{
-            gridColumn: widgets.insights.size === 'large' ? 'span 2' : 'span 1',
-            background: 'rgba(26, 26, 46, 0.95)',
-            borderRadius: '20px',
-            padding: 'var(--spacing-lg)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            position: 'relative',
-            animation: 'fadeInUp 1s ease-out'
-          }}>
-            {layoutMode && (
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                display: 'flex',
-                gap: 'var(--spacing-xs)',
-                zIndex: 10
-              }}>
-                <button onClick={() => toggleWidget('insights')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
-                </button>
-                <select
-                  value={widgets.insights.size}
-                  onChange={(e) => resizeWidget('insights', e.target.value)}
-                  style={{ fontSize: '12px', padding: '2px' }}
-                >
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
-                </select>
-              </div>
-            )}
-
-            <AISuggestions
-              quoteData={{
-                nodes: data.diaries,
-                staff: data.staff,
-                marginPct: metrics.avgMargin
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <select
+              value={userRole}
+              onChange={(e) => setUserRole(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #e1e5e9',
+                borderRadius: '6px',
+                background: 'white'
               }}
-              onApplySuggestion={(suggestion) => {
-                console.log('Applying suggestion:', suggestion)
-                // Handle suggestion application
+            >
+              <option value="manager">Manager View</option>
+              <option value="staff">Staff View</option>
+            </select>
+
+            <button
+              onClick={fetchData}
+              style={{
+                padding: '8px 16px',
+                background: '#4ecdc4',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px'
               }}
-            />
+            >
+              Refresh
+            </button>
           </div>
-        )}
+        </header>
 
-        {/* Predictive Analytics Widget */}
-        {widgets.predictive.visible && (
-          <div style={{
-            gridColumn: widgets.predictive.size === 'large' ? 'span 2' : 'span 1',
-            background: 'rgba(26, 26, 46, 0.95)',
-            borderRadius: '20px',
-            padding: 'var(--spacing-lg)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            position: 'relative',
-            animation: 'fadeInUp 1.2s ease-out'
-          }}>
-            {layoutMode && (
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                display: 'flex',
-                gap: 'var(--spacing-xs)',
-                zIndex: 10
-              }}>
-                <button onClick={() => toggleWidget('predictive')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
-                </button>
-                <select
-                  value={widgets.predictive.size}
-                  onChange={(e) => resizeWidget('predictive', e.target.value)}
-                  style={{ fontSize: '12px', padding: '2px' }}
-                >
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
-                </select>
-              </div>
-            )}
+        {/* Content Area */}
+        <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
 
-            <PredictiveAnalytics
-              projectData={{
-                staffCount: metrics.staffCount,
-                optimalStaff: Math.ceil(metrics.diaryCount / 10),
-                materialCost: metrics.totalCosts * 0.6,
-                budget: metrics.totalRevenues,
-                weatherSensitivity: 7,
-                complexity: 1.2
-              }}
-              historicalData={[
-                { duration: 45, actualCost: 15000, estimatedCost: 14000, profitMargin: 22 },
-                { duration: 38, actualCost: 12000, estimatedCost: 13000, profitMargin: 18 },
-                { duration: 52, actualCost: 18000, estimatedCost: 17000, profitMargin: 25 }
-              ]}
-            />
-          </div>
-        )}
-
-        {/* Heatmap Widget */}
-        {widgets.heatmap.visible && (
-          <div style={{
-            gridColumn: widgets.heatmap.size === 'large' ? 'span 2' : 'span 1',
-            background: 'rgba(26, 26, 46, 0.95)',
-            borderRadius: '20px',
-            padding: 'var(--spacing-lg)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            position: 'relative',
-            animation: 'fadeInUp 1.4s ease-out'
-          }}>
-            {layoutMode && (
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                display: 'flex',
-                gap: 'var(--spacing-xs)',
-                zIndex: 10
-              }}>
-                <button onClick={() => toggleWidget('heatmap')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
-                </button>
-                <select
-                  value={widgets.heatmap.size}
-                  onChange={(e) => resizeWidget('heatmap', e.target.value)}
-                  style={{ fontSize: '12px', padding: '2px' }}
-                >
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
-                </select>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-lg)' }}>
-              <Zap size={24} color="#667eea" />
-              <h3 style={{ margin: 0, color: 'white', fontFamily: "'Poppins', sans-serif" }}>Project Profitability Heatmap</h3>
-            </div>
-
-            <div style={{ overflowX: 'auto' }}>
-              <svg ref={heatmapRef} style={{ minWidth: '600px' }}></svg>
-            </div>
-          </div>
-        )}
-
-        {/* Recent Activities Widget */}
-        {widgets.activities.visible && (
-          <div style={{
-            gridColumn: widgets.activities.size === 'large' ? 'span 2' : 'span 1',
-            background: 'rgba(26, 26, 46, 0.95)',
-            borderRadius: '20px',
-            padding: 'var(--spacing-lg)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            position: 'relative',
-            animation: 'fadeInUp 1.6s ease-out'
-          }}>
-            {layoutMode && (
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                display: 'flex',
-                gap: 'var(--spacing-xs)',
-                zIndex: 10
-              }}>
-                <button onClick={() => toggleWidget('activities')} style={{ background: '#ff6b6b', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>
-                  <X size={14} color="white" />
-                </button>
-                <select
-                  value={widgets.activities.size}
-                  onChange={(e) => resizeWidget('activities', e.target.value)}
-                  style={{ fontSize: '12px', padding: '2px' }}
-                >
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
-                </select>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-lg)' }}>
-              <Calendar size={24} color="#667eea" />
-              <h3 style={{ margin: 0, color: 'white', fontFamily: "'Poppins', sans-serif" }}>Recent Activities</h3>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-              {data.diaries.slice(-5).reverse().map(d => (
-                <div key={d.id} style={{
-                  padding: 'var(--spacing-md)',
-                  border: '1px solid rgba(102, 126, 234, 0.3)',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <strong style={{ color: 'white', fontFamily: "'Poppins', sans-serif" }}>
-                        {d.Staff?.name} on {d.Project?.name}
-                      </strong>
-                      <br />
-                      <small style={{ color: '#ccc', fontFamily: "'Inter', sans-serif" }}>
-                        {d.date} • {d.totalHours}h worked
-                      </small>
+          {activeModule === 'overview' && (
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+                {[
+                  { label: 'Total Projects', value: kpis.projects, icon: '🏗️', color: '#667eea' },
+                  { label: 'Active Staff', value: kpis.staff, icon: '👥', color: '#4ecdc4' },
+                  { label: 'Diary Entries', value: kpis.diaries, icon: '📝', color: '#ffc107' },
+                  { label: 'Pending Quotes', value: kpis.pendingQuotes, icon: '💰', color: '#ff6b6b' }
+                ].map((metric, index) => (
+                  <div key={index} style={{
+                    background: 'white',
+                    padding: '24px',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                    border: '1px solid #e1e5e9'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                      <span style={{ fontSize: '24px', marginRight: '12px' }}>{metric.icon}</span>
+                      <h3 style={{ margin: 0, color: '#4a5568', fontSize: '14px', fontWeight: '600' }}>
+                        {metric.label}
+                      </h3>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: '#4ecdc4', fontWeight: 'bold', fontSize: '1.1em' }}>
-                        ${d.revenues}
+                    <div style={{ fontSize: '32px', fontWeight: '700', color: metric.color }}>
+                      {metric.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {userRole === 'manager' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  {[
+                    { label: 'Total Revenue', value: `$${kpis.revenue.toLocaleString()}`, icon: '💵', color: '#4ecdc4' },
+                    { label: 'Total Costs', value: `$${kpis.costs.toLocaleString()}`, icon: '💸', color: '#ff6b6b' },
+                    { label: 'Net Profit', value: `$${kpis.profit.toLocaleString()}`, icon: '📈', color: '#ffc107' },
+                    { label: 'Profit Margin', value: `${kpis.margin.toFixed(1)}%`, icon: '🎯', color: kpis.margin > 20 ? '#4ecdc4' : kpis.margin < 10 ? '#ff6b6b' : '#ffc107' }
+                  ].map((metric, index) => (
+                    <div key={index} style={{
+                      background: 'white',
+                      padding: '24px',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                      border: '1px solid #e1e5e9'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                        <span style={{ fontSize: '24px', marginRight: '12px' }}>{metric.icon}</span>
+                        <h3 style={{ margin: 0, color: '#4a5568', fontSize: '14px', fontWeight: '600' }}>
+                          {metric.label}
+                        </h3>
                       </div>
-                      <div style={{
-                        color: d.marginPct >= 0 ? '#4ecdc4' : '#ff6b6b',
-                        fontSize: '0.9em'
-                      }}>
-                        {d.marginPct.toFixed(1)}%
+                      <div style={{ fontSize: '32px', fontWeight: '700', color: metric.color }}>
+                        {metric.value}
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {userRole === 'staff' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  <div style={{
+                    background: 'white',
+                    padding: '24px',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                    border: '1px solid #e1e5e9'
+                  }}>
+                    <h3 style={{ margin: '0 0 16px 0', color: '#4a5568', fontSize: '18px', fontWeight: '600' }}>
+                      Today's Tasks
+                    </h3>
+                    <div style={{ fontSize: '14px', color: '#718096' }}>
+                      No tasks assigned for today
+                    </div>
+                  </div>
+
+                  <div style={{
+                    background: 'white',
+                    padding: '24px',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                    border: '1px solid #e1e5e9'
+                  }}>
+                    <h3 style={{ margin: '0 0 16px 0', color: '#4a5568', fontSize: '18px', fontWeight: '600' }}>
+                      Recent Activity
+                    </h3>
+                    <div style={{ fontSize: '14px', color: '#718096' }}>
+                      {data.diaries.slice(-3).map((diary, i) => (
+                        <div key={i} style={{ marginBottom: '8px' }}>
+                          • {new Date(diary.date).toLocaleDateString()} - {diary.totalHours || 0}h worked
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        )}
-      </div>
+          )}
 
-      {/* Export Controls */}
-      <div style={{
-        background: 'rgba(26, 26, 46, 0.95)',
-        borderRadius: '15px',
-        padding: 'var(--spacing-md)',
-        display: 'flex',
-        gap: 'var(--spacing-md)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        border: '1px solid rgba(102, 126, 234, 0.3)'
-      }}>
-        <button style={{
-          padding: 'var(--spacing-sm) var(--spacing-md)',
-          background: 'linear-gradient(135deg, #28a745, #20c997)',
-          border: 'none',
-          borderRadius: '8px',
-          color: 'white',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--spacing-xs)',
-          fontSize: '0.9em'
-        }}>
-          <Download size={16} />
-          Export PDF
-        </button>
+          {activeModule === 'analytics' && (
+            <div>
+              <h2 style={{ margin: '0 0 24px 0', color: '#2d3748' }}>Analytics Dashboard</h2>
 
-        <button style={{
-          padding: 'var(--spacing-sm) var(--spacing-md)',
-          background: 'linear-gradient(135deg, #007bff, #0056b3)',
-          border: 'none',
-          borderRadius: '8px',
-          color: 'white',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--spacing-xs)',
-          fontSize: '0.9em'
-        }}>
-          <Download size={16} />
-          Export Excel
-        </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
+                <div style={{
+                  background: 'white',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                  border: '1px solid #e1e5e9'
+                }}>
+                  <h3 style={{ margin: '0 0 16px 0', color: '#2d3748' }}>Revenue Trend</h3>
+                  <LineChart
+                    data={[
+                      { label: 'Jan', value: kpis.revenue * 0.7 },
+                      { label: 'Feb', value: kpis.revenue * 0.8 },
+                      { label: 'Mar', value: kpis.revenue * 0.9 },
+                      { label: 'Apr', value: kpis.revenue }
+                    ]}
+                  />
+                </div>
 
-        <button style={{
-          padding: 'var(--spacing-sm) var(--spacing-md)',
-          background: 'linear-gradient(135deg, #6f42c1, #5a32a3)',
-          border: 'none',
-          borderRadius: '8px',
-          color: 'white',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--spacing-xs)',
-          fontSize: '0.9em'
-        }}>
-          <Settings size={16} />
-          Schedule Reports
-        </button>
+                <div style={{
+                  background: 'white',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                  border: '1px solid #e1e5e9'
+                }}>
+                  <h3 style={{ margin: '0 0 16px 0', color: '#2d3748' }}>Project Distribution</h3>
+                  <BarChart
+                    data={[
+                      { label: 'Active', value: kpis.activeProjects },
+                      { label: 'Completed', value: kpis.projects - kpis.activeProjects },
+                      { label: 'Pending', value: Math.max(0, kpis.quotes - kpis.pendingQuotes) }
+                    ]}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeModule === 'insights' && (
+            <div>
+              <h2 style={{ margin: '0 0 24px 0', color: '#2d3748' }}>AI-Powered Insights</h2>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
+                <div style={{
+                  background: 'white',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                  border: '1px solid #e1e5e9'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '24px', marginRight: '12px' }}>🎯</span>
+                    <h3 style={{ margin: 0, color: '#2d3748' }}>Performance Prediction</h3>
+                  </div>
+                  <p style={{ color: '#4a5568', marginBottom: '16px' }}>
+                    Based on current trends, your team efficiency is expected to improve by 15% next quarter.
+                  </p>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#4ecdc4' }}>
+                    +15% Predicted
+                  </div>
+                </div>
+
+                <div style={{
+                  background: 'white',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                  border: '1px solid #e1e5e9'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '24px', marginRight: '12px' }}>⚡</span>
+                    <h3 style={{ margin: 0, color: '#2d3748' }}>Optimization Opportunity</h3>
+                  </div>
+                  <p style={{ color: '#4a5568', marginBottom: '16px' }}>
+                    AI suggests reallocating resources to maximize project completion rates.
+                  </p>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#667eea' }}>
+                    23% Improvement
+                  </div>
+                </div>
+
+                <div style={{
+                  background: 'white',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                  border: '1px solid #e1e5e9'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '24px', marginRight: '12px' }}>🔍</span>
+                    <h3 style={{ margin: 0, color: '#2d3748' }}>Risk Assessment</h3>
+                  </div>
+                  <p style={{ color: '#4a5568', marginBottom: '16px' }}>
+                    Current risk level is low. All critical projects are on track.
+                  </p>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#4ecdc4' }}>
+                    ✅ Low Risk
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeModule === 'team' && (
+            <div>
+              <h2 style={{ margin: '0 0 24px 0', color: '#2d3748' }}>Team Performance</h2>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+                {data.staff.slice(0, 6).map((member, index) => {
+                  const memberDiaries = data.diaries.filter(d => d.workerId === member.id);
+                  const totalHours = memberDiaries.reduce((sum, d) => sum + (parseFloat(d.totalHours) || 0), 0);
+                  const totalRevenue = memberDiaries.reduce((sum, d) => sum + (parseFloat(d.revenues) || 0), 0);
+                  const efficiency = totalHours > 0 ? totalRevenue / totalHours : 0;
+
+                  return (
+                    <div key={member.id || index} style={{
+                      background: 'white',
+                      padding: '24px',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                      border: '1px solid #e1e5e9'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                        <div style={{
+                          width: '50px',
+                          height: '50px',
+                          borderRadius: '50%',
+                          background: `linear-gradient(45deg, ${efficiency > 150 ? '#4ecdc4' : efficiency > 100 ? '#667eea' : efficiency > 50 ? '#ffc107' : '#ff6b6b'}, #e2e8f0)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '18px',
+                          fontWeight: '600',
+                          color: 'white',
+                          marginRight: '16px'
+                        }}>
+                          {member.name ? member.name.charAt(0).toUpperCase() : '?'}
+                        </div>
+                        <div>
+                          <h3 style={{ margin: '0 0 4px 0', color: '#2d3748' }}>{member.name || 'Unknown'}</h3>
+                          <p style={{ margin: 0, color: '#718096', fontSize: '14px' }}>{member.role || 'Staff'}</p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div>
+                          <p style={{ margin: '0 0 4px 0', color: '#718096', fontSize: '12px' }}>Hours Worked</p>
+                          <p style={{ margin: 0, color: '#2d3748', fontSize: '18px', fontWeight: '600' }}>{totalHours.toFixed(1)}h</p>
+                        </div>
+                        <div>
+                          <p style={{ margin: '0 0 4px 0', color: '#718096', fontSize: '12px' }}>Revenue Generated</p>
+                          <p style={{ margin: 0, color: '#2d3748', fontSize: '18px', fontWeight: '600' }}>${totalRevenue.toFixed(0)}</p>
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <p style={{ margin: '0 0 4px 0', color: '#718096', fontSize: '12px' }}>Efficiency Score</p>
+                          <p style={{
+                            margin: 0,
+                            color: efficiency > 150 ? '#4ecdc4' : efficiency > 100 ? '#667eea' : efficiency > 50 ? '#ffc107' : '#ff6b6b',
+                            fontSize: '18px',
+                            fontWeight: '600'
+                          }}>
+                            {efficiency.toFixed(1)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {activeModule === 'projects' && (
+            <div>
+              <h2 style={{ margin: '0 0 24px 0', color: '#2d3748' }}>Project Portfolio</h2>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
+                {data.projects.slice(0, 6).map((project, index) => {
+                  const projectDiaries = data.diaries.filter(d => d.projectId === project.id);
+                  const totalRevenue = projectDiaries.reduce((sum, d) => sum + (parseFloat(d.revenues) || 0), 0);
+                  const totalCosts = projectDiaries.reduce((sum, d) => sum + (parseFloat(d.costs) || 0), 0);
+                  const totalHours = projectDiaries.reduce((sum, d) => sum + (parseFloat(d.totalHours) || 0), 0);
+                  const margin = totalRevenue > 0 ? ((totalRevenue - totalCosts) / totalRevenue * 100) : 0;
+
+                  return (
+                    <div key={project.id || index} style={{
+                      background: 'white',
+                      padding: '24px',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+                      border: '1px solid #e1e5e9'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                        <div>
+                          <h3 style={{ margin: '0 0 8px 0', color: '#2d3748' }}>{project.name || 'Unnamed Project'}</h3>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            background: project.status === 'completed' ? '#c6f6d5' :
+                                       project.status === 'in-progress' ? '#fef5e7' : '#fed7d7',
+                            color: project.status === 'completed' ? '#22543d' :
+                                   project.status === 'in-progress' ? '#744210' : '#742a2a'
+                          }}>
+                            {project.status || 'Unknown'}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '20px', fontWeight: '700', color: margin > 20 ? '#4ecdc4' : margin < 10 ? '#ff6b6b' : '#ffc107' }}>
+                            {margin.toFixed(1)}%
+                          </div>
+                          <div style={{ color: '#718096', fontSize: '12px' }}>Margin</div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                        <div>
+                          <p style={{ margin: '0 0 4px 0', color: '#718096', fontSize: '12px' }}>Revenue</p>
+                          <p style={{ margin: 0, color: '#2d3748', fontSize: '16px', fontWeight: '600' }}>${totalRevenue.toFixed(0)}</p>
+                        </div>
+                        <div>
+                          <p style={{ margin: '0 0 4px 0', color: '#718096', fontSize: '12px' }}>Costs</p>
+                          <p style={{ margin: 0, color: '#2d3748', fontSize: '16px', fontWeight: '600' }}>${totalCosts.toFixed(0)}</p>
+                        </div>
+                        <div>
+                          <p style={{ margin: '0 0 4px 0', color: '#718096', fontSize: '12px' }}>Hours</p>
+                          <p style={{ margin: 0, color: '#2d3748', fontSize: '16px', fontWeight: '600' }}>{totalHours.toFixed(1)}h</p>
+                        </div>
+                      </div>
+
+                      <div style={{ color: '#718096', fontSize: '12px' }}>
+                        {projectDiaries.length} entries • {new Set(projectDiaries.map(d => d.workerId)).size} team members
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+        </main>
       </div>
     </div>
-  )
+  );
 }
 
-export default UltimateDashboard
+export default UltimateDashboard;

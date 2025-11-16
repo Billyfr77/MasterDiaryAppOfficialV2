@@ -84,10 +84,10 @@ const HUDGauge = ({ label, value, max, color, icon }) => {
           transform="rotate(-90 50 50)"
           style={{ transition: 'stroke-dashoffset 1s ease-out' }}
         />
-        <text x="50" y="45" textAnchor="middle" fill="white" fontSize="12" fontFamily="'Poppins', sans-serif">
+        <text x="50" y="45" textAnchor="middle" fill="#2d3748" fontSize="12" fontFamily="'Poppins', sans-serif">
           {label}
         </text>
-        <text x="50" y="60" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="'Inter', sans-serif">
+        <text x="50" y="60" textAnchor="middle" fill="#2d3748" fontSize="16" fontWeight="bold" fontFamily="'Inter', sans-serif">
           {typeof value === 'number' ? (label.includes('%') ? value.toFixed(1) + '%' : '$' + value.toFixed(0)) : value}
         </text>
       </svg>
