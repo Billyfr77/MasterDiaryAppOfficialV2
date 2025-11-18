@@ -24,7 +24,6 @@ const {
   deleteProject
 } = require('../controllers/projectController');
 
-router.use(authenticateToken);
 
 router.get('/', getAllProjects);
 router.get('/:id', getProjectById);

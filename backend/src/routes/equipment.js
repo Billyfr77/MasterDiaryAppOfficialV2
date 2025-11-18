@@ -24,7 +24,6 @@ const {
   deleteEquipment
 } = require('../controllers/equipmentController');
 
-router.use(authenticateToken);
 
 router.get('/', getAllEquipment);
 router.get('/:id', getEquipmentById);

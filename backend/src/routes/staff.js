@@ -24,7 +24,6 @@ const {
   deleteStaff
 } = require('../controllers/staffController');
 
-router.use(authenticateToken);
 
 router.get('/', getAllStaff);
 router.get('/:id', getStaffById);

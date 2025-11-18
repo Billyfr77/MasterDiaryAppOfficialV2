@@ -24,7 +24,6 @@
           deleteNode
         } = require('../controllers/nodeController');
 
-        router.use(authenticateToken); // Require auth for all routes
 
         router.get('/', getAllNodes);
         router.get('/:id', getNodeById);
