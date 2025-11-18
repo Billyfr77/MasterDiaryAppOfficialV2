@@ -89,17 +89,10 @@ const UltimateDashboardFinalEnhanced = () => {
       localStorage.setItem('dashboardData', JSON.stringify(newData))
     } catch (error) {
       setUiState(prev => ({ ...prev, loading: false, connectionStatus: 'offline' }))
-      console.error('Dashboard data fetch error:', error)
       const cached = localStorage.getItem('dashboardData')
       if (cached) setData(JSON.parse(cached))
     }
   }, [])
-
-  // Load data on component mount
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
 
   // Analytics calculations
   const analytics = React.useMemo(() => {

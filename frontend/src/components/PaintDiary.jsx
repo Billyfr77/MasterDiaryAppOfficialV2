@@ -761,6 +761,10 @@ const DiaryEntry = ({
             transform: scale(1);
           }
           50% {
+.diary-toolbar::-webkit-scrollbar { width: 8px; }
+.diary-toolbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.diary-toolbar::-webkit-scrollbar-thumb { background: #4ecdc4; border-radius: 4px; }
+.diary-toolbar::-webkit-scrollbar-thumb:hover { background: #44a08d; }
             transform: scale(1.02);
           }
           100% {
@@ -835,7 +839,8 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
       marginRight: '24px',
       position: 'sticky',
       top: '20px',
-      height: 'fit-content',
+      height: '80vh',
+overflowY: 'auto',
       boxShadow: theme === 'dark'
         ? '0 8px 32px rgba(0,0,0,0.3)'
         : '0 8px 32px rgba(0,0,0,0.1)',
@@ -1037,7 +1042,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
           Team Members ({filteredItems(staff).length})
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {filteredItems(staff).slice(0, 5).map(member => (
+          {filteredItems(staff).map(member => (
             <DraggableElement
               key={member.id}
               item={{ type: 'staff', id: member.id, name: member.name, data: member, rate: member.payRateBase || 25 }}
@@ -1074,7 +1079,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
           Equipment ({filteredItems(equipment).length})
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {filteredItems(equipment).slice(0, 5).map(item => (
+          {filteredItems(equipment).map(item => (
             <DraggableElement
               key={item.id}
               item={{ type: 'equipment', id: item.id, name: item.name, data: item, rate: item.costRateBase || 150 }}
@@ -1111,7 +1116,7 @@ const DiaryToolbar = ({ onExport, onExportCSV, theme, onThemeToggle, margin, onM
           Materials ({filteredItems(materials).length})
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {filteredItems(materials).slice(0, 5).map(item => (
+          {filteredItems(materials).map(item => (
             <DraggableElement
               key={item.id}
               item={{ type: 'material', id: item.id, name: item.name, data: item, rate: item.pricePerUnit || 10 }}
