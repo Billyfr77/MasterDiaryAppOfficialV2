@@ -1,10 +1,9 @@
 /*
- * MasterDiaryApp Official - Paint Your Day Diary (Enhanced Version)
+ * MasterDiaryApp Official - Paint Your Day Diary (Fixed Version)
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  *
- * Enhanced: Project data included in all diaries view
- * Correct data resolution for staff/equipment/materials items
- * Items now show current names and rates when viewing saved diaries
+ * Fixed: Project saving with diary entries, nodes data loading correctly
+ * Clean, professional layout with working drag-and-drop
  */
 
 import React, { useState, useEffect, useCallback } from 'react'
@@ -389,14 +388,14 @@ const ConstructionToolbar = ({
         marginBottom: '16px'
       }}>
         <h3 style={{
-          margin: '0 0 12px 0',
+          margin: 0,
           color: theme === 'dark' ? '#e2e8f0' : '#495057',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          fontSize: '14px'
+          gap: '8px',
+          fontSize: '18px'
         }}>
-          <Palette size={16} style={{ color: '#4ecdc4' }} />
+          <Palette size={20} style={{ color: '#4ecdc4' }} />
           Construction Tools
         </h3>
 
@@ -714,40 +713,12 @@ const PaintDiary = () => {
 
   const { cost, revenue, profit } = calculateTotals()
 
-  // Resolve items data from current loaded lists
-  const resolveItems = useCallback((items) => {
-    return items.map(item => {
-      let resolved = { ...item };
-      if (item.type === 'staff') {
-        const staffItem = staff.find(s => s.id == item.dataId);
-        if (staffItem) {
-          resolved.name = staffItem.name;
-          resolved.rate = staffItem.payRateBase || staffItem.rate || resolved.rate;
-        }
-      } else if (item.type === 'equipment') {
-        const equipItem = equipment.find(e => e.id == item.dataId);
-        if (equipItem) {
-          resolved.name = equipItem.name;
-          resolved.rate = equipItem.costRateBase || equipItem.rate || resolved.rate;
-        }
-      } else if (item.type === 'material') {
-        const matItem = materials.find(m => m.id == item.dataId);
-        if (matItem) {
-          resolved.name = matItem.name;
-          resolved.rate = matItem.pricePerUnit || matItem.rate || resolved.rate;
-        }
-      }
-      return resolved;
-    });
-  }, [staff, equipment, materials]);
-
   // Event handlers
   const handleDropItem = useCallback((item) => {
     setCurrentEntry(prev => ({
       ...prev,
       items: [...prev.items, {
         id: generateId(),
-        dataId: item.id,
         type: item.type,
         name: item.name,
         rate: item.payRateBase || item.costRateBase || item.pricePerUnit || item.rate || 0,
@@ -829,8 +800,8 @@ const PaintDiary = () => {
 
   const handleViewDiary = useCallback((diary) => {
     setSelectedDate(new Date(diary.date))
-    setSelectedProject(diary.Project || null)
-    let entry = diary.canvasData?.[0] || {
+    setSelectedProject(diary.project || null)
+    setCurrentEntry(diary.canvasData?.[0] || {
       id: generateId(),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       items: [],
@@ -838,30 +809,26 @@ const PaintDiary = () => {
       voiceNotes: [],
       location: null,
       note: ''
-    }
-    entry.items = resolveItems(entry.items)
-    setCurrentEntry(entry)
+    })
     setViewMode('daily')
     setIsSaved(true)
-  }, [resolveItems])
+  }, [])
 
   // Keyboard shortcuts
-   useEffect(() => {
-          const handleKeyPress = (e) => {
-            if (e.ctrlKey || e.metaKey) {
-              switch (e.key) {
-                case 's':
-                  e.preventDefault()
-                  if (!isSaving) {
-                    handleSave()
-                  }
-                  break
-              }
-            }
-          }
-          document.addEventListener('keydown', handleKeyPress)
-          return () => document.removeEventListener('keydown', handleKeyPress)
-        }, [isSaving])
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 's':
+            e.preventDefault()
+            handleSave()
+            break
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyPress)
+    return () => document.removeEventListener('keydown', handleKeyPress)
+  }, [])
 
   // Render daily view
   if (viewMode === 'daily') {
@@ -1270,7 +1237,7 @@ const PaintDiary = () => {
                       color: theme === 'dark' ? '#a0aec0' : '#6c757d',
                       fontSize: '0.9rem'
                     }}>
-                      {diary.Project?.name || 'No Project'}
+                      {diary.project?.name || 'No Project'}
                     </p>
                   </div>
 

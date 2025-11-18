@@ -1,13 +1,9 @@
 /*
- * MasterDiaryApp Official - Paint Your Day Diary (Enhanced Version)
- * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * Enhanced: Project data included in all diaries view
- * Correct data resolution for staff/equipment/materials items
- * Items now show current names and rates when viewing saved diaries
+ * MasterDiaryApp Official - Paint Your Day Diary (Clean Professional Version - Updated)
+ * Fixes: Project associations for reports, proper node data loading
  */
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { DndProvider, useDrag, useDrop } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { api } from '../utils/api'
@@ -389,14 +385,14 @@ const ConstructionToolbar = ({
         marginBottom: '16px'
       }}>
         <h3 style={{
-          margin: '0 0 12px 0',
+          margin: 0,
           color: theme === 'dark' ? '#e2e8f0' : '#495057',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          fontSize: '14px'
+          gap: '8px',
+          fontSize: '18px'
         }}>
-          <Palette size={16} style={{ color: '#4ecdc4' }} />
+          <Palette size={20} style={{ color: '#4ecdc4' }} />
           Construction Tools
         </h3>
 
@@ -506,7 +502,7 @@ const ConstructionToolbar = ({
                     fontSize: '10px',
                     color: theme === 'dark' ? '#a0aec0' : '#6c757d'
                   }}>
-                    {formatCurrency(member.rate || 0)}/hr
+                    {formatCurrency(member.payRateBase || member.rate || 0)}/hr
                   </div>
                 </div>
               </DraggableElement>
@@ -556,7 +552,7 @@ const ConstructionToolbar = ({
                     fontSize: '10px',
                     color: theme === 'dark' ? '#a0aec0' : '#6c757d'
                   }}>
-                    {formatCurrency(item.rate || 0)}/day
+                    {formatCurrency(item.costRateBase || item.rate || 0)}/day
                   </div>
                 </div>
               </DraggableElement>
@@ -606,7 +602,7 @@ const ConstructionToolbar = ({
                     fontSize: '10px',
                     color: theme === 'dark' ? '#a0aec0' : '#6c757d'
                   }}>
-                    {formatCurrency(item.pricePerUnit || item.rate || 0)}/{item.unit || 'unit'}
+                    {formatCurrency(item.pricePerUnit || item.rate || 0)}/unit
                   </div>
                 </div>
               </DraggableElement>
@@ -665,7 +661,7 @@ const PaintDiary = () => {
     }
   }, [viewMode])
 
-  // Load initial data - FIXED: Handle different API response formats
+  // Load initial data
   const loadData = async () => {
     try {
       const [staffRes, equipmentRes, nodesRes, projectsRes] = await Promise.all([
@@ -675,29 +671,24 @@ const PaintDiary = () => {
         api.get('/projects')
       ])
 
-      // Handle different response formats
-      setStaff(staffRes.data?.data || staffRes.data || [])
-      setEquipment(equipmentRes.data?.data || equipmentRes.data || [])
-      setMaterials(nodesRes.data?.data || nodesRes.data || [])
-      setProjects(projectsRes.data?.data || projectsRes.data || [])
+      setStaff(staffRes.data.data || staffRes.data || [])
+      setEquipment(equipmentRes.data.data || equipmentRes.data || [])
+      setMaterials(nodesRes.data.data || nodesRes.data || [])
+      setProjects(projectsRes.data.data || projectsRes.data || [])
     } catch (err) {
       console.error('Error loading data:', err)
       // Fallback demo data
       setStaff([
-        { id: 1, name: 'John Doe', type: 'staff', rate: 25, payRateBase: 25, payRateOT1: 37.5 },
-        { id: 2, name: 'Jane Smith', type: 'staff', rate: 28, payRateBase: 28, payRateOT1: 42 }
+        { id: 1, name: 'John Doe', type: 'staff', payRateBase: 25, rate: 25 },
+        { id: 2, name: 'Jane Smith', type: 'staff', payRateBase: 28, rate: 28 }
       ])
       setEquipment([
-        { id: 3, name: 'Excavator', type: 'equipment', rate: 150, costRateBase: 150 },
-        { id: 4, name: 'Truck', type: 'equipment', rate: 80, costRateBase: 80 }
+        { id: 3, name: 'Excavator', type: 'equipment', costRateBase: 150, rate: 150 },
+        { id: 4, name: 'Truck', type: 'equipment', costRateBase: 80, rate: 80 }
       ])
       setMaterials([
-        { id: 5, name: 'Concrete', type: 'material', rate: 200, pricePerUnit: 200, unit: 'cubic yard' },
-        { id: 6, name: 'Steel', type: 'material', rate: 300, pricePerUnit: 300, unit: 'ton' }
-      ])
-      setProjects([
-        { id: 1, name: 'Downtown Office Building' },
-        { id: 2, name: 'Residential Complex' }
+        { id: 5, name: 'Concrete', type: 'material', pricePerUnit: 200, rate: 200 },
+        { id: 6, name: 'Steel', type: 'material', pricePerUnit: 300, rate: 300 }
       ])
     }
   }
@@ -706,7 +697,7 @@ const PaintDiary = () => {
   const calculateTotals = useCallback(() => {
     let cost = 0
     currentEntry.items.forEach(item => {
-      cost += calculateItemCost(item, 8, 1.5)
+      cost += calculateItemCost(item, 8, 1.5) // Default overtime settings
     })
     const revenue = cost * 1.2 // Default 20% margin
     return { cost, revenue, profit: revenue - cost }
@@ -714,40 +705,12 @@ const PaintDiary = () => {
 
   const { cost, revenue, profit } = calculateTotals()
 
-  // Resolve items data from current loaded lists
-  const resolveItems = useCallback((items) => {
-    return items.map(item => {
-      let resolved = { ...item };
-      if (item.type === 'staff') {
-        const staffItem = staff.find(s => s.id == item.dataId);
-        if (staffItem) {
-          resolved.name = staffItem.name;
-          resolved.rate = staffItem.payRateBase || staffItem.rate || resolved.rate;
-        }
-      } else if (item.type === 'equipment') {
-        const equipItem = equipment.find(e => e.id == item.dataId);
-        if (equipItem) {
-          resolved.name = equipItem.name;
-          resolved.rate = equipItem.costRateBase || equipItem.rate || resolved.rate;
-        }
-      } else if (item.type === 'material') {
-        const matItem = materials.find(m => m.id == item.dataId);
-        if (matItem) {
-          resolved.name = matItem.name;
-          resolved.rate = matItem.pricePerUnit || matItem.rate || resolved.rate;
-        }
-      }
-      return resolved;
-    });
-  }, [staff, equipment, materials]);
-
   // Event handlers
   const handleDropItem = useCallback((item) => {
     setCurrentEntry(prev => ({
       ...prev,
       items: [...prev.items, {
         id: generateId(),
-        dataId: item.id,
         type: item.type,
         name: item.name,
         rate: item.payRateBase || item.costRateBase || item.pricePerUnit || item.rate || 0,
@@ -806,7 +769,6 @@ const PaintDiary = () => {
     }
   }, [selectedDate, selectedProject, currentEntry, cost, revenue, isSaved])
 
-  // Fetch all diaries with project relations
   const fetchAllDiaries = useCallback(async () => {
     try {
       const response = await api.get('/paint-diaries')
@@ -829,8 +791,7 @@ const PaintDiary = () => {
 
   const handleViewDiary = useCallback((diary) => {
     setSelectedDate(new Date(diary.date))
-    setSelectedProject(diary.Project || null)
-    let entry = diary.canvasData?.[0] || {
+    setCurrentEntry(diary.canvasData?.[0] || {
       id: generateId(),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       items: [],
@@ -838,30 +799,26 @@ const PaintDiary = () => {
       voiceNotes: [],
       location: null,
       note: ''
-    }
-    entry.items = resolveItems(entry.items)
-    setCurrentEntry(entry)
+    })
     setViewMode('daily')
     setIsSaved(true)
-  }, [resolveItems])
+  }, [])
 
   // Keyboard shortcuts
-   useEffect(() => {
-          const handleKeyPress = (e) => {
-            if (e.ctrlKey || e.metaKey) {
-              switch (e.key) {
-                case 's':
-                  e.preventDefault()
-                  if (!isSaving) {
-                    handleSave()
-                  }
-                  break
-              }
-            }
-          }
-          document.addEventListener('keydown', handleKeyPress)
-          return () => document.removeEventListener('keydown', handleKeyPress)
-        }, [isSaving])
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 's':
+            e.preventDefault()
+            handleSave()
+            break
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyPress)
+    return () => document.removeEventListener('keydown', handleKeyPress)
+  }, [])
 
   // Render daily view
   if (viewMode === 'daily') {
@@ -928,7 +885,7 @@ const PaintDiary = () => {
               >
                 <option value="">Select Project</option>
                 {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.name}>{p.name}</option>
                 ))}
               </select>
 
@@ -1079,7 +1036,7 @@ const PaintDiary = () => {
                     fontSize: '14px',
                     color: theme === 'dark' ? '#a0aec0' : '#6c757d'
                   }}>
-                    {currentEntry.items.length} items • {selectedDate.toLocaleDateString()} {selectedProject ? `• ${selectedProject.name}` : ''}
+                    {currentEntry.items.length} items • {selectedDate.toLocaleDateString()}
                   </div>
                 </div>
 
@@ -1245,6 +1202,7 @@ const PaintDiary = () => {
               }}
               onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
               onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+              onClick={() => handleViewDiary(diary)}
               >
                 <div style={{
                   display: 'flex',
@@ -1270,7 +1228,7 @@ const PaintDiary = () => {
                       color: theme === 'dark' ? '#a0aec0' : '#6c757d',
                       fontSize: '0.9rem'
                     }}>
-                      {diary.Project?.name || 'No Project'}
+                      {diary.project?.name || 'No Project'}
                     </p>
                   </div>
 

@@ -1,9 +1,10 @@
 /*
- * MasterDiaryApp Official - Paint Your Day Diary Controller
- * Clean version with project assignment
+ * MasterDiaryApp Official - Paint Your Day Diary Controller (Updated)
+ * Includes project associations for proper reporting
  */
 
-const { Diary, Staff, Equipment, Node, Project } = require('../models');const Joi = require('joi');
+const { Diary, Staff, Equipment, Node, Project } = require('../models');
+const Joi = require('joi');
 const { sequelize } = require('../models');
 
 const paintDiarySchema = Joi.any();
@@ -37,10 +38,14 @@ const getAllPaintDiaries = async (req, res) => {
   try {
     const { date } = req.query;
     const diaries = await Diary.findAll({
-          where: { diaryType: 'paint', ...(date && { date }) },
-          include: [{ model: Project }],
-          order: [['date', 'DESC'], ['createdAt', 'DESC']]
-        });
+      where: { diaryType: 'paint', ...(date && { date }) },
+      include: [{
+        model: Project,
+        as: 'project', // Use lowercase alias for frontend compatibility
+        required: false
+      }],
+      order: [['date', 'DESC'], ['createdAt', 'DESC']]
+    });
 
     res.json(diaries);
   } catch (error) {
@@ -50,7 +55,13 @@ const getAllPaintDiaries = async (req, res) => {
 
 const getPaintDiaryById = async (req, res) => {
   try {
-    const diary = await Diary.findByPk(req.params.id);
+    const diary = await Diary.findByPk(req.params.id, {
+      include: [{
+        model: Project,
+        as: 'project',
+        required: false
+      }]
+    });
     if (!diary || diary.diaryType !== 'paint') {
       return res.status(404).json({ error: 'Paint diary entry not found' });
     }
@@ -93,7 +104,14 @@ const createPaintDiary = async (req, res) => {
     const diary = await Diary.create(diaryData, { transaction });
     await transaction.commit();
 
-    const fullDiary = diary;
+    // Fetch the created diary with project data
+    const fullDiary = await Diary.findByPk(diary.id, {
+      include: [{
+        model: Project,
+        as: 'project',
+        required: false
+      }]
+    });
 
     res.status(201).json(fullDiary);
   } catch (error) {
@@ -139,7 +157,14 @@ const updatePaintDiary = async (req, res) => {
     await transaction.commit();
 
     if (updated) {
-      const updatedDiary = await Diary.findByPk(req.params.id);
+      // Fetch the updated diary with project data
+      const updatedDiary = await Diary.findByPk(req.params.id, {
+        include: [{
+          model: Project,
+          as: 'project',
+          required: false
+        }]
+      });
       res.json(updatedDiary);
     } else {
       res.status(404).json({ error: 'Paint diary entry not found' });
