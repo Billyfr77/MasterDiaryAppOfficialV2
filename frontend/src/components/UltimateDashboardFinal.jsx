@@ -493,10 +493,10 @@ const EnhancedUltimateDashboardFinal = () => {
         ])
 
       // Ensure all data is always arrays to prevent filter errors
-      setProjects(Array.isArray(projectsRes.data) ? projectsRes.data : [])
-      setStaff(Array.isArray(staffRes.data) ? staffRes.data : [])
-      setEquipment(Array.isArray(equipRes.data) ? equipRes.data : [])
-      setMaterials(Array.isArray(nodesRes.data) ? nodesRes.data : [])
+      setProjects(Array.isArray(projectsRes.data.data) ? projectsRes.data.data : [])
+      setStaff(Array.isArray(staffRes.data.data) ? staffRes.data.data : [])
+      setEquipment(Array.isArray(equipRes.data.data) ? equipRes.data.data : [])
+      setMaterials(Array.isArray(nodesRes.data.data) ? nodesRes.data.data : [])
       setLastUpdate(new Date())
     } catch (error) {
       console.error('Error loading dashboard data:', error)
