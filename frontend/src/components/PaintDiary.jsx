@@ -1161,6 +1161,8 @@ const PaintDiary = () => {
   const [overtimeMultiplier, setOvertimeMultiplier] = useState(1.5)
   const [currentDiaryId, setCurrentDiaryId] = useState(null)
   const [autoSaveInterval, setAutoSaveInterval] = useState(null)
+  const [viewMode, setViewMode] = useState('daily')
+  const [allDiaries, setAllDiaries] = useState([])
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -1479,6 +1481,30 @@ const PaintDiary = () => {
   }
 
   const toggleTheme = () => {
+
+  const fetchAllDiaries = async () =    try {
+      const response = await api.get('/paint-diaries')
+      setAllDiaries(response.data)
+    } catch (err) {
+      console.error('Error fetching all diaries:', err)
+    }
+  }
+
+  const handleDeleteDiary = async (diaryId) =    if (confirm('Are you sure you want to delete this diary?')) {
+      try {
+        await api.delete(/paint-diaries/)
+        setAllDiaries(allDiaries.filter(d = !== diaryId))
+      } catch (err) {
+        console.error('Error deleting diary:', err)
+      }
+    }
+  }
+
+  const handleViewDiary = (diary) =    setSelectedDate(new Date(diary.date))
+    setCurrentDiaryId(diary.id)
+    setViewMode('daily')
+  }
+
     setTheme(prev => prev === 'light' ? 'dark' : 'light')
   }
 
@@ -1565,6 +1591,39 @@ const PaintDiary = () => {
                 The ultimate construction time-tracking solution with AI, photos, voice, GPS & real-time cost calculations with overtime
               </p>
             </div>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                <button
+                  onClick={() => setViewMode('daily')}
+                  style={{
+                    background: viewMode === 'daily' ? '#4ecdc4' : (theme === 'dark' ? '#2d3748' : '#f8f9fa'),
+                    color: viewMode === 'daily' ? 'white' : (theme === 'dark' ? '#e2e8f0' : '#495057'),
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  Daily View
+                </button>
+                <button
+                  onClick={() => {
+                    setViewMode('all')
+                    fetchAllDiaries()
+                  }}
+                  style={{
+                    background: viewMode === 'all' ? '#4ecdc4' : (theme === 'dark' ? '#2d3748' : '#f8f9fa'),
+                    color: viewMode === 'all' ? 'white' : (theme === 'dark' ? '#e2e8f0' : '#495057'),
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  All Diaries
+                </button>
+              </div>
 
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <DatePicker
