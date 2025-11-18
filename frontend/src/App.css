@@ -582,3 +582,63 @@ body {
 
 
 
+
+/* Select/Dropdown Styles - Clean Implementation */
+select {
+  background-color: var(--white);
+  color: var(--gray-900);
+  border: 1px solid var(--gray-400);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 120px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+select:hover {
+  border-color: var(--primary-hover);
+}
+
+select option {
+  background-color: var(--white) !important;
+  color: var(--gray-900) !important;
+  padding: var(--spacing-sm) var(--spacing-md) !important;
+  font-family: var(--font-family) !important;
+  font-size: var(--font-size-base) !important;
+  cursor: pointer !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  min-height: 1.2em !important;
+  line-height: 1.2 !important;
+}
+
+select option:hover {
+  background-color: var(--gray-200) !important;
+}
+
+.dark select {
+  background-color: var(--gray-800);
+  color: var(--gray-100);
+  border-color: var(--gray-600);
+}
+
+.dark select option {
+  background-color: var(--gray-800) !important;
+  color: var(--gray-100) !important;
+}
+
+.dark select option:hover {
+  background-color: var(--gray-700) !important;
+}
