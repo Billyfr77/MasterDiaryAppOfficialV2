@@ -18,14 +18,9 @@ const limiter = rateLimit({
 // Middleware
 app.use(limiter);
 
-// CORS headers middleware - FIXED for multiple ports
+// CORS headers middleware - Allow All for Production
 app.use((req, res, next) => {
-  // Allow multiple frontend ports for development
-  const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000'];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
+  res.header('Access-Control-Allow-Origin', '*'); // Allow any frontend
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -72,18 +67,119 @@ app.get('/health', (req, res) => res.json({
 app.get('/', (req, res) => {
   res.send('Backend API is running');
 });
+
+// Serve static files (uploaded images) for local development
+app.use('/uploads', express.static('uploads'));
+
 app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/staff', require('./src/routes/staff'));
-app.use('/api/diaries', require('./src/routes/diaries_fixed2'));
+app.use('/api/diaries', require('./src/routes/diaries'));
 app.use('/api/paint-diaries', require('./src/routes/paintDiaries'));
 app.use('/api/invoices', require('./src/routes/invoices'));
 app.use('/api/settings', require('./src/routes/settings'));
 app.use('/api/equipment', require('./src/routes/equipment'));
 app.use('/api/nodes', require('./src/routes/nodes'));
 app.use('/api/quotes', require('./src/routes/quotes'));
+app.use('/api/quote-templates', require('./src/routes/quoteTemplates'));
+app.use('/api/subscriptions', require('./src/routes/subscriptions'));
 app.use('/api/auth', require('./src/routes/auth'));
+app.use('/api/ai', require('./src/routes/ai')); // Register AI routes
+app.use('/api/uploads', require('./src/routes/uploads')); // Register Upload routes
+app.use('/api/notifications', require('./src/routes/notifications')); // Register Notification routes
 
-// Database connection and sync, then start server
+const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
+
+// ... existing imports
+
+// Temporary Seeding Route
+app.get('/api/seed-secret', async (req, res) => {
+  try {
+    // 1. Create Default Admin User
+    const existingUser = await db.User.findOne({ where: { email: 'admin@masterdiary.com' } });
+    let userId;
+    if (!existingUser) {
+      const hashedPassword = await bcrypt.hash('Admin123!', 10);
+      const newUser = await db.User.create({
+        username: 'Admin',
+        email: 'admin@masterdiary.com',
+        password: hashedPassword,
+        role: 'admin'
+      });
+      userId = newUser.id;
+    } else {
+      userId = existingUser.id;
+    }
+
+    // 2. Create Default Settings
+    const existingSettings = await db.Setting.findOne();
+    if (!existingSettings) {
+      await db.Setting.create({
+        companyName: 'My Construction Co',
+        currency: 'USD',
+        theme: 'dark'
+      });
+    }
+
+    // 3. Create a Sample Project
+    const existingProject = await db.Project.findOne();
+    if (!existingProject) {
+      await db.Project.create({
+        name: 'Example Renovation',
+        client: 'John Doe',
+        status: 'active',
+        userId: userId,
+        site: '123 Main St',
+        value: 15000
+      });
+    }
+
+    // 4. Create Sample Equipment
+    const existingEquip = await db.Equipment.findOne();
+    if (!existingEquip) {
+      await db.Equipment.create({
+        name: 'Graco 390 PC Stand',
+        userId: userId,
+        status: 'available',
+        costRateBase: 15.00,
+        chargeRate: 45.00,
+        purchaseDate: new Date(),
+        category: 'Sprayers'
+      });
+    }
+
+    // 5. Create Sample Material (Node)
+    const existingNode = await db.Node.findOne();
+    if (!existingNode) {
+      await db.Node.create({
+        name: 'Dulux Wash&Wear 10L',
+        description: 'Low Sheen Vivid White',
+        unit: 'Bucket',
+        pricePerUnit: 145.00,
+        category: 'material',
+        supplier: 'Bunnings',
+        userId: userId
+      });
+    }
+
+    res.send('Database Fully Seeded! User: admin@masterdiary.com / Admin123! Equipment & Materials Added.');
+  } catch (error) {
+    console.error('Seeding Error:', error);
+    res.status(500).send('Seeding Failed: ' + error.message);
+  }
+});
+
+// Start AI Watchdog (Background Jobs)
+const { startWatchdog } = require('./src/cron/aiWatchdog');
+startWatchdog();
+
+// Start Server IMMEDIATELY for Cloud Run Health Checks
+const PORT = process.env.PORT || 5003;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
+});
+
+// Database connection (Background)
 db.sequelize.authenticate()
   .then(() => {
     console.log('Database connected successfully.');
@@ -95,16 +191,10 @@ db.sequelize.authenticate()
   })
   .then(() => {
     console.log('Settings cache loaded.');
-    const PORT = process.env.PORT || 5003;
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`Server started with PID: ${process.pid}`);
-      console.log(`Health check: http://localhost:${PORT}/health`);
-    });
   })
   .catch(err => {
     console.error('Unable to connect to the database:', err);
-    process.exit(1); // Exit if db fails
+    // Do NOT exit process, keep server alive for logs
   });
 
 // Handle uncaught exceptions (exit to restart)

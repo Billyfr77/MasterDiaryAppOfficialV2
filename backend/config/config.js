@@ -8,8 +8,15 @@ module.exports = {
     storage: './database_test.sqlite'
   },
   production: {
-    dialect: 'sqlite',
-    storage: './database_prod.sqlite'
+    username: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST, // For Cloud SQL, this might be a socket path or IP
+    dialect: 'postgres',
+    dialectOptions: {
+      socketPath: process.env.DB_SOCKET_PATH // Optional: for Cloud SQL via Unix socket
+    },
+    logging: false
   }
 };
 

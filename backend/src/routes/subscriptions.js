@@ -16,10 +16,10 @@
  */const express = require('express')
 const router = express.Router()
 const subscriptionController = require('../controllers/subscriptionController')  // Corrected to singular
-const auth = require('../middleware/auth')
+const { authenticateToken } = require('../middleware/auth')
 
-router.get('/', auth, subscriptionController.getUserSubscription)
-router.put('/', auth, subscriptionController.updateSubscription)
-router.delete('/', auth, subscriptionController.cancelSubscription)
+router.get('/', authenticateToken, subscriptionController.getUserSubscription)
+router.put('/', authenticateToken, subscriptionController.updateSubscription)
+router.delete('/', authenticateToken, subscriptionController.cancelSubscription)
 
 module.exports = router

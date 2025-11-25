@@ -2,18 +2,9 @@
  * MasterDiaryApp Official - Construction SaaS Platform
  * Enhanced Projects Page - The Best Ever Version
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * This is the upgraded version of EnhancedProjects.jsx with:
- * - Advanced filtering and search
- * - Real-time analytics dashboard
- * - CSV export functionality
- * - Enhanced UI with dark theme
- * - Sorting capabilities
- * - Professional project cards
  */
 
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
@@ -200,189 +191,50 @@ const EnhancedProjects = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'active': return '#4ecdc4'
-      case 'completed': return '#45b7d1'
-      case 'on-hold': return '#f39c12'
-      case 'cancelled': return '#e74c3c'
-      default: return '#95a5a6'
+      case 'active': return 'bg-success'
+      case 'completed': return 'bg-blue-400'
+      case 'on-hold': return 'bg-warning'
+      case 'cancelled': return 'bg-danger'
+      default: return 'bg-gray-400'
     }
   }
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
-        color: 'white'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            border: '5px solid rgba(255,255,255,0.3)',
-            borderTop: '5px solid white',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
-          Loading Projects...
+      <div className="flex justify-center items-center h-screen bg-transparent text-white">
+        <div className="bg-stone-900/80 p-8 rounded-3xl backdrop-blur-xl border border-white/10 shadow-2xl text-center">
+          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-xl font-bold">Loading Projects...</div>
         </div>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
-      padding: '20px',
-      fontFamily: "'Inter', sans-serif"
-    }}>
-      <style>{`
-        .project-card {
-          transition: all 0.3s ease;
-          border-radius: 16px;
-          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-          border: 1px solid rgba(78, 205, 196, 0.2);
-          overflow: hidden;
-          position: relative;
-        }
-        .project-card:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 40px rgba(78, 205, 196, 0.3);
-          border-color: #4ecdc4;
-        }
-        .status-badge {
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-          text-transform: uppercase;
-        }
-        .analytics-card {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 16px;
-          padding: 24px;
-          color: white;
-          text-align: center;
-          box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
-        }
-        .filter-input {
-          background: #2c3e50;
-          border: 1px solid #34495e;
-          border-radius: 8px;
-          padding: 12px;
-          color: #ecf0f1;
-          font-size: 14px;
-        }
-        .filter-input:focus {
-          outline: none;
-          border-color: #4ecdc4;
-          box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
-        }
-        .action-button {
-          transition: all 0.2s ease;
-          border-radius: 8px;
-          border: none;
-          padding: 8px 16px;
-          font-weight: 500;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 14px;
-        }
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.8);
-          backdrop-filter: blur(8px);
-          display: flex;
-          alignItems: center;
-          justifyContent: center;
-          z-index: 1000;
-          animation: fadeIn 0.3s ease;
-        }
-        .modal-content {
-          background: #2c3e50;
-          border-radius: 16px;
-          padding: 32px;
-          max-width: 600px;
-          width: 90%;
-          max-height: 80vh;
-          overflow-y: auto;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-          animation: slideUp 0.3s ease;
-          border: 1px solid rgba(78, 205, 196, 0.3);
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
-
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="min-h-screen bg-transparent p-4 md:p-8 animate-fade-in font-sans">
+      <div className="max-w-[1600px] mx-auto">
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '32px'
-        }}>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
           <div>
-            <h1 style={{
-              margin: '0 0 8px 0',
-              color: '#ecf0f1',
-              fontSize: '3rem',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              🚀 Ultimate Projects Hub
+            <h1 className="text-4xl font-black mb-2 text-white tracking-tight drop-shadow-md">
+              Projects Hub
             </h1>
-            <p style={{
-              margin: 0,
-              color: '#bdc3c7',
-              fontSize: '1.2rem'
-            }}>
-              Master your construction projects with advanced analytics and management tools
+            <p className="text-gray-400 text-lg font-medium">
+              Manage your construction projects with precision
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="flex gap-3">
             <button
               onClick={exportToCSV}
-              className="action-button"
-              style={{
-                background: 'linear-gradient(135deg, #28a745, #20c997)',
-                color: 'white'
-              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded-xl transition-all font-bold border border-white/10 shadow-lg"
             >
               <Download size={18} />
               Export CSV
             </button>
             <button
               onClick={handleCreateProject}
-              className="action-button"
-              style={{
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                color: 'white',
-                padding: '14px 28px',
-                fontSize: '16px',
-                fontWeight: '600'
-              }}
+              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all font-bold shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] hover:-translate-y-0.5"
             >
               <Plus size={20} />
               Create Project
@@ -391,218 +243,173 @@ const EnhancedProjects = () => {
         </div>
 
         {/* Analytics Dashboard */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '24px',
-          marginBottom: '32px'
-        }}>
-          <div className="analytics-card">
-            <BarChart3 size={32} style={{ marginBottom: '12px', opacity: 0.8 }} />
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', opacity: 0.9 }}>Total Projects</h3>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{analytics.totalProjects}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <div className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-blue-600 to-indigo-700 shadow-lg shadow-blue-900/20 group hover:scale-[1.02] transition-transform">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+               <BarChart3 size={80} className="text-white" />
+            </div>
+            <div className="relative z-10">
+              <div className="p-3 rounded-2xl bg-white/20 w-fit mb-4 backdrop-blur-md">
+                <BarChart3 size={24} className="text-white" />
+              </div>
+              <h3 className="text-xs font-black text-white/60 uppercase tracking-widest mb-1">Total Projects</h3>
+              <div className="text-4xl font-black text-white tracking-tight">{analytics.totalProjects}</div>
+            </div>
           </div>
           
-          <div className="analytics-card" style={{ background: 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)' }}>
-            <TrendingUp size={32} style={{ marginBottom: '12px', opacity: 0.8 }} />
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', opacity: 0.9 }}>Active Projects</h3>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{analytics.activeProjects}</div>
+          <div className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-emerald-500 to-teal-700 shadow-lg shadow-emerald-900/20 group hover:scale-[1.02] transition-transform">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+               <TrendingUp size={80} className="text-white" />
+            </div>
+            <div className="relative z-10">
+              <div className="p-3 rounded-2xl bg-white/20 w-fit mb-4 backdrop-blur-md">
+                <TrendingUp size={24} className="text-white" />
+              </div>
+              <h3 className="text-xs font-black text-white/60 uppercase tracking-widest mb-1">Active Projects</h3>
+              <div className="text-4xl font-black text-white tracking-tight">{analytics.activeProjects}</div>
+            </div>
           </div>
           
-          <div className="analytics-card" style={{ background: 'linear-gradient(135deg, #45b7d1 0%, #96c93d 100%)' }}>
-            <Clock size={32} style={{ marginBottom: '12px', opacity: 0.8 }} />
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', opacity: 0.9 }}>Completed</h3>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{analytics.completedProjects}</div>
+          <div className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-900/20 group hover:scale-[1.02] transition-transform">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+               <Clock size={80} className="text-white" />
+            </div>
+            <div className="relative z-10">
+              <div className="p-3 rounded-2xl bg-white/20 w-fit mb-4 backdrop-blur-md">
+                <Clock size={24} className="text-white" />
+              </div>
+              <h3 className="text-xs font-black text-white/60 uppercase tracking-widest mb-1">Completed</h3>
+              <div className="text-4xl font-black text-white tracking-tight">{analytics.completedProjects}</div>
+            </div>
           </div>
           
-          <div className="analytics-card" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
-            <DollarSign size={32} style={{ marginBottom: '12px', opacity: 0.8 }} />
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', opacity: 0.9 }}>Total Value</h3>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>${analytics.totalValue.toLocaleString()}</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '4px' }}>
-              Avg: ${analytics.avgProjectValue.toLocaleString()}
+          <div className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-violet-600 to-purple-700 shadow-lg shadow-violet-900/20 group hover:scale-[1.02] transition-transform">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+               <DollarSign size={80} className="text-white" />
+            </div>
+            <div className="relative z-10">
+              <div className="p-3 rounded-2xl bg-white/20 w-fit mb-4 backdrop-blur-md">
+                <DollarSign size={24} className="text-white" />
+              </div>
+              <h3 className="text-xs font-black text-white/60 uppercase tracking-widest mb-1">Total Value</h3>
+              <div className="text-3xl font-black text-white tracking-tight truncate">${analytics.totalValue.toLocaleString()}</div>
+              <div className="text-xs text-white/60 mt-1 font-medium">
+                Avg: ${analytics.avgProjectValue.toLocaleString()}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Advanced Filters */}
-        <div style={{
-          background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
-          padding: '24px',
-          borderRadius: '16px',
-          marginBottom: '32px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-          border: '1px solid rgba(78, 205, 196, 0.2)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-            <Filter size={20} style={{ color: '#4ecdc4', marginRight: '8px' }} />
-            <h3 style={{ margin: 0, color: '#ecf0f1', fontSize: '1.2rem' }}>Advanced Filters & Search</h3>
+        <div className="bg-stone-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 mb-10 shadow-xl">
+          <div className="flex items-center mb-6 gap-3">
+            <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
+              <Filter size={20} />
+            </div>
+            <h3 className="text-lg font-bold text-white">Filters & Search</h3>
           </div>
           
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '16px'
-          }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={16} style={{
-                position: 'absolute',
-                left: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#7f8c8d'
-              }} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="relative lg:col-span-2">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search projects..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="filter-input"
-                style={{ paddingLeft: '40px' }}
+                className="w-full pl-11 pr-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all"
               />
             </div>
             
             <select
               value={filters.status}
               onChange={(e) => setFilters({...filters, status: e.target.value})}
-              className="filter-input"
+              className="px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer appearance-none"
             >
-              <option value="">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="on-hold">On Hold</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="" className="bg-stone-900">All Statuses</option>
+              <option value="active" className="bg-stone-900">Active</option>
+              <option value="completed" className="bg-stone-900">Completed</option>
+              <option value="on-hold" className="bg-stone-900">On Hold</option>
+              <option value="cancelled" className="bg-stone-900">Cancelled</option>
             </select>
-            
-            <input
-              type="text"
-              placeholder="Filter by site..."
-              value={filters.site}
-              onChange={(e) => setFilters({...filters, site: e.target.value})}
-              className="filter-input"
-            />
             
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="filter-input"
+              className="px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer appearance-none"
             >
-              <option value="created_at">Created Date</option>
-              <option value="name">Name</option>
-              <option value="site">Site</option>
-              <option value="estimatedValue">Value</option>
+              <option value="created_at" className="bg-stone-900">Sort: Date</option>
+              <option value="name" className="bg-stone-900">Sort: Name</option>
+              <option value="site" className="bg-stone-900">Sort: Site</option>
+              <option value="estimatedValue" className="bg-stone-900">Sort: Value</option>
             </select>
             
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="filter-input"
+              className="px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer appearance-none"
             >
-              <option value="desc">Descending</option>
-              <option value="asc">Ascending</option>
+              <option value="desc" className="bg-stone-900">Descending</option>
+              <option value="asc" className="bg-stone-900">Ascending</option>
             </select>
           </div>
         </div>
 
         {/* Projects Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
-          gap: '24px'
-        }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map(project => (
-            <div key={project.id} className="project-card" style={{
-              padding: '24px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
+            <div key={project.id} className="group bg-stone-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-indigo-500/50 hover:shadow-2xl hover:-translate-y-1 transition-all relative overflow-hidden">
+              {/* Glossy Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              
               {/* Status Badge */}
-              <div style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                zIndex: 2
-              }}>
-                <span
-                  className="status-badge"
-                  style={{
-                    background: getStatusColor(project.status),
-                    color: 'white'
-                  }}
-                >
+              <div className="absolute top-6 right-6 z-10">
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm border border-white/10 ${getStatusColor(project.status)} text-white`}>
                   {project.status || 'Active'}
                 </span>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{
-                  margin: '0 0 8px 0',
-                  color: '#ecf0f1',
-                  fontSize: '1.3rem',
-                  fontWeight: '600'
-                }}>
+              <div className="mb-6 relative z-10">
+                <h3 className="text-xl font-bold text-white mb-2 pr-20 group-hover:text-indigo-400 transition-colors truncate">
                   {project.name}
                 </h3>
                 
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#bdc3c7',
-                  fontSize: '0.9rem',
-                  marginBottom: '8px'
-                }}>
-                  <MapPin size={14} style={{ marginRight: '4px' }} />
+                <div className="flex items-center text-gray-400 text-sm mb-4 font-medium">
+                  <MapPin size={16} className="mr-1.5 text-indigo-500" />
                   {project.site}
                 </div>
                 
                 {project.estimatedValue && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: '#4ecdc4',
-                    fontSize: '1.1rem',
-                    fontWeight: '600',
-                    marginBottom: '8px'
-                  }}>
-                    <DollarSign size={16} style={{ marginRight: '4px' }} />
+                  <div className="flex items-center text-2xl font-black text-white mb-4 tracking-tight">
+                    <span className="text-emerald-500 mr-1">$</span>
                     {project.estimatedValue.toLocaleString()}
                   </div>
                 )}
                 
-                <div style={{
-                  color: '#7f8c8d',
-                  fontSize: '0.8rem',
-                  marginBottom: '16px'
-                }}>
-                  Created {new Date(project.createdAt).toLocaleDateString()} by {project.createdBy?.username || 'Unknown'}
+                <div className="flex items-center gap-3 text-xs text-gray-500 mb-5 font-mono">
+                  <div className="flex items-center gap-1">
+                    <Calendar size={12} />
+                    {new Date(project.createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="w-1 h-1 bg-gray-600 rounded-full" />
+                  <div className="flex items-center gap-1">
+                    <User size={12} />
+                    {project.createdBy?.username || 'Unknown'}
+                  </div>
                 </div>
                 
                 {project.description && (
-                  <p style={{
-                    color: '#bdc3c7',
-                    fontSize: '0.9rem',
-                    margin: '0 0 16px 0',
-                    lineHeight: '1.4'
-                  }}>
-                    {project.description.length > 100 ? `${project.description.substring(0, 100)}...` : project.description}
+                  <p className="text-gray-300 text-sm line-clamp-2 leading-relaxed bg-black/20 p-3 rounded-lg border border-white/5">
+                    {project.description}
                   </p>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                flexWrap: 'wrap'
-              }}>
+              <div className="flex gap-2 pt-4 border-t border-white/10 relative z-10">
                 <button
                   onClick={() => setSelectedProject(project)}
-                  className="action-button"
-                  style={{
-                    background: 'rgba(78, 205, 196, 0.2)',
-                    color: '#4ecdc4',
-                    border: '1px solid #4ecdc4'
-                  }}
+                  className="flex-1 py-2.5 px-3 bg-white/5 hover:bg-indigo-600 hover:text-white text-indigo-300 border border-white/5 hover:border-indigo-500 rounded-xl transition-all flex items-center justify-center gap-2 font-bold text-sm"
                 >
                   <Folder size={16} />
                   View
@@ -610,277 +417,165 @@ const EnhancedProjects = () => {
                 
                 <button
                   onClick={() => handleEditProject(project)}
-                  className="action-button"
-                  style={{
-                    background: 'rgba(255, 193, 7, 0.2)',
-                    color: '#ffc107',
-                    border: '1px solid #ffc107'
-                  }}
+                  className="p-2.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl hover:bg-amber-500 hover:text-white transition-all"
+                  title="Edit"
                 >
                   <Edit size={16} />
-                  Edit
                 </button>
                 
                 <button
                   onClick={() => handleDeleteProject(project.id)}
-                  className="action-button"
-                  style={{
-                    background: 'rgba(231, 76, 60, 0.2)',
-                    color: '#e74c3c',
-                    border: '1px solid #e74c3c'
-                  }}
+                  className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                  title="Delete"
                 >
                   <Trash2 size={16} />
-                  Delete
                 </button>
               </div>
             </div>
           ))}
           
           {projects.length === 0 && (
-            <div style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '80px 20px',
-              color: '#7f8c8d'
-            }}>
-              <Folder size={64} style={{ color: '#34495e', marginBottom: '16px' }} />
-              <h3>No projects found</h3>
-              <p>Create your first project to get started!</p>
+            <div className="col-span-full py-20 text-center">
+              <div className="w-24 h-24 bg-stone-900/60 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10">
+                <Folder size={48} className="text-gray-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">No projects found</h3>
+              <p className="text-gray-400">Create your first project to get started!</p>
             </div>
           )}
         </div>
 
         {/* Create/Edit Project Modal */}
         {showCreateForm && (
-          <div className="modal-overlay" onClick={() => { setShowCreateForm(false); setEditingProject(null) }}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '24px'
-              }}>
-                <h2 style={{
-                  margin: 0,
-                  color: '#ecf0f1',
-                  fontSize: '1.8rem',
-                  fontWeight: '700'
-                }}>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => { setShowCreateForm(false); setEditingProject(null) }}>
+            <div className="bg-stone-900 border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-slide-up rounded-3xl" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-stone-900/95 backdrop-blur-md z-10">
+                <h2 className="text-2xl font-black text-white tracking-tight">
                   {editingProject ? 'Edit Project' : 'Create New Project'}
                 </h2>
                 <button
                   onClick={() => { setShowCreateForm(false); setEditingProject(null) }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '24px',
-                    cursor: 'pointer',
-                    color: '#7f8c8d'
-                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
-                  ×
+                  <X size={24} />
                 </button>
               </div>
 
-              <form onSubmit={handleFormSubmit}>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: '500',
-                    color: '#ecf0f1'
-                  }}>
-                    Project Name:
+              <form onSubmit={handleFormSubmit} className="p-8 space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    Project Name
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: '1px solid #34495e',
-                      background: '#2c3e50',
-                      color: '#ecf0f1',
-                      fontSize: '16px'
-                    }}
+                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-600"
+                    placeholder="e.g. Skyline Tower Renovation"
                   />
                 </div>
 
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: '500',
-                    color: '#ecf0f1'
-                  }}>
-                    Site Location:
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    Site Location
                   </label>
                   <input
                     type="text"
                     value={formData.site}
                     onChange={(e) => setFormData({ ...formData, site: e.target.value })}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: '1px solid #34495e',
-                      background: '#2c3e50',
-                      color: '#ecf0f1',
-                      fontSize: '16px'
-                    }}
+                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
+                    placeholder="e.g. 123 Construction Ave, NY"
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: '500',
-                      color: '#ecf0f1'
-                    }}>
-                      Status:
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      Status
                     </label>
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid #34495e',
-                        background: '#2c3e50',
-                        color: '#ecf0f1',
-                        fontSize: '16px'
-                      }}
+                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none appearance-none cursor-pointer"
                     >
-                      <option value="active">Active</option>
-                      <option value="completed">Completed</option>
-                      <option value="on-hold">On Hold</option>
-                      <option value="cancelled">Cancelled</option>
+                      <option value="active" className="bg-stone-900">Active</option>
+                      <option value="completed" className="bg-stone-900">Completed</option>
+                      <option value="on-hold" className="bg-stone-900">On Hold</option>
+                      <option value="cancelled" className="bg-stone-900">Cancelled</option>
                     </select>
                   </div>
 
                   <div>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: '500',
-                      color: '#ecf0f1'
-                    }}>
-                      Estimated Value:
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      Estimated Value
                     </label>
-                    <input
-                      type="number"
-                      value={formData.estimatedValue}
-                      onChange={(e) => setFormData({ ...formData, estimatedValue: e.target.value })}
-                      placeholder="0"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid #34495e',
-                        background: '#2c3e50',
-                        color: '#ecf0f1',
-                        fontSize: '16px'
-                      }}
-                    />
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                      <input
+                        type="number"
+                        value={formData.estimatedValue}
+                        onChange={(e) => setFormData({ ...formData, estimatedValue: e.target.value })}
+                        placeholder="0.00"
+                        className="w-full pl-8 pr-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: '500',
-                    color: '#ecf0f1'
-                  }}>
-                    Description:
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    Description
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows="4"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: '1px solid #34495e',
-                      background: '#2c3e50',
-                      color: '#ecf0f1',
-                      fontSize: '16px',
-                      resize: 'vertical'
-                    }}
+                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none resize-y transition-all"
+                    placeholder="Enter project details..."
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: '500',
-                      color: '#ecf0f1'
-                    }}>
-                      Start Date:
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      Start Date
                     </label>
                     <DatePicker
                       selected={formData.startDate}
                       onChange={(date) => setFormData({ ...formData, startDate: date })}
                       dateFormat="MMMM d, yyyy"
-                      className="filter-input"
-                      style={{ width: '100%' }}
+                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer"
+                      placeholderText="Select start date"
                     />
                   </div>
 
                   <div>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: '500',
-                      color: '#ecf0f1'
-                    }}>
-                      End Date:
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      End Date
                     </label>
                     <DatePicker
                       selected={formData.endDate}
                       onChange={(date) => setFormData({ ...formData, endDate: date })}
                       dateFormat="MMMM d, yyyy"
-                      className="filter-input"
-                      style={{ width: '100%' }}
+                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer"
+                      placeholderText="Select end date"
                     />
                   </div>
                 </div>
 
-                <div style={{
-                  display: 'flex',
-                  gap: '12px',
-                  justifyContent: 'flex-end'
-                }}>
+                <div className="flex gap-3 justify-end pt-6 border-t border-white/10 mt-6">
                   <button
                     type="button"
                     onClick={() => { setShowCreateForm(false); setEditingProject(null) }}
-                    className="action-button"
-                    style={{
-                      background: '#34495e',
-                      color: '#ecf0f1',
-                      border: '1px solid #34495e'
-                    }}
+                    className="px-6 py-3 rounded-xl text-gray-300 hover:bg-white/5 transition-colors font-bold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="action-button"
-                    style={{
-                      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                      color: 'white'
-                    }}
+                    className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all font-bold shadow-lg shadow-indigo-500/30 hover:-translate-y-0.5"
                   >
                     {editingProject ? 'Update Project' : 'Create Project'}
                   </button>
@@ -892,119 +587,84 @@ const EnhancedProjects = () => {
 
         {/* Project Details Modal */}
         {selectedProject && (
-          <div className="modal-overlay" onClick={() => setSelectedProject(null)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '24px'
-              }}>
-                <h2 style={{
-                  margin: 0,
-                  color: '#ecf0f1',
-                  fontSize: '1.8rem',
-                  fontWeight: '700'
-                }}>
-                  Project Details: {selectedProject.name}
-                </h2>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setSelectedProject(null)}>
+            <div className="bg-stone-900 border border-white/10 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl animate-slide-up p-8 rounded-3xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <h2 className="text-3xl font-black text-white tracking-tight mb-2">
+                    {selectedProject.name}
+                  </h2>
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <MapPin size={16} className="text-indigo-500" />
+                    {selectedProject.site}
+                  </div>
+                </div>
                 <button
                   onClick={() => setSelectedProject(null)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '24px',
-                    cursor: 'pointer',
-                    color: '#7f8c8d'
-                  }}
+                  className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
                 >
-                  ×
+                  <X size={24} />
                 </button>
               </div>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '24px',
-                marginBottom: '24px'
-              }}>
-                <div style={{
-                  background: 'rgba(78, 205, 196, 0.1)',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(78, 205, 196, 0.3)'
-                }}>
-                  <h4 style={{ margin: '0 0 12px 0', color: '#4ecdc4' }}>Project Information</h4>
-                  <div style={{ color: '#ecf0f1' }}>
-                    <p><strong>Site:</strong> {selectedProject.site}</p>
-                    <p><strong>Status:</strong> 
-                      <span style={{
-                        background: getStatusColor(selectedProject.status),
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        marginLeft: '8px'
-                      }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6">
+                  <h4 className="text-emerald-400 font-bold mb-4 flex items-center gap-2 uppercase tracking-wider text-xs">
+                    <Folder size={16} /> Project Information
+                  </h4>
+                  <div className="space-y-4 text-gray-200 text-sm">
+                    <p className="flex justify-between border-b border-white/5 pb-2">
+                      <span className="text-gray-400">Status</span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${getStatusColor(selectedProject.status)}`}>
                         {selectedProject.status || 'Active'}
                       </span>
                     </p>
-                    <p><strong>Created:</strong> {new Date(selectedProject.createdAt).toLocaleDateString()}</p>
-                    <p><strong>Created By:</strong> {selectedProject.createdBy?.username || 'Unknown'}</p>
+                    <p className="flex justify-between border-b border-white/5 pb-2">
+                      <span className="text-gray-400">Created</span>
+                      <span className="font-mono font-bold">{new Date(selectedProject.createdAt).toLocaleDateString()}</span>
+                    </p>
+                    <p className="flex justify-between">
+                      <span className="text-gray-400">Manager</span>
+                      <span className="font-bold">{selectedProject.createdBy?.username || 'Unknown'}</span>
+                    </p>
                   </div>
                 </div>
 
-                <div style={{
-                  background: 'rgba(102, 126, 234, 0.1)',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(102, 126, 234, 0.3)'
-                }}>
-                  <h4 style={{ margin: '0 0 12px 0', color: '#667eea' }}>Financial Overview</h4>
-                  <div style={{ color: '#ecf0f1' }}>
-                    <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4ecdc4' }}>
+                <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-6 relative overflow-hidden">
+                  <h4 className="text-indigo-400 font-bold mb-4 flex items-center gap-2 uppercase tracking-wider text-xs relative z-10">
+                    <DollarSign size={16} /> Financials
+                  </h4>
+                  <div className="flex flex-col items-center justify-center h-32 relative z-10">
+                    <p className="text-5xl font-black text-white mb-2 tracking-tight">
                       ${selectedProject.estimatedValue?.toLocaleString() || '0'}
                     </p>
-                    <p><strong>Estimated Value</strong></p>
+                    <p className="text-xs text-indigo-300 uppercase tracking-widest font-bold">Estimated Value</p>
                   </div>
+                  {/* Background decoration */}
+                  <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
                 </div>
               </div>
 
               {selectedProject.description && (
-                <div style={{
-                  background: 'rgba(52, 73, 94, 0.5)',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  marginBottom: '24px'
-                }}>
-                  <h4 style={{ margin: '0 0 12px 0', color: '#ecf0f1' }}>Description</h4>
-                  <p style={{ color: '#bdc3c7', lineHeight: '1.6' }}>{selectedProject.description}</p>
+                <div className="bg-black/20 border border-white/5 rounded-2xl p-6 mb-8">
+                  <h4 className="font-bold text-gray-400 mb-3 text-xs uppercase tracking-wider">Description</h4>
+                  <p className="text-gray-200 leading-relaxed">
+                    {selectedProject.description}
+                  </p>
                 </div>
               )}
 
-              <div style={{
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'flex-end'
-              }}>
+              <div className="flex gap-3 justify-end pt-6 border-t border-white/10">
                 <button
                   onClick={() => handleEditProject(selectedProject)}
-                  className="action-button"
-                  style={{
-                    background: 'linear-gradient(135deg, #ffc107, #e0a800)',
-                    color: '#212529'
-                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white rounded-xl transition-colors font-bold text-sm border border-amber-500/20"
                 >
                   <Edit size={16} />
                   Edit Project
                 </button>
                 <button
                   onClick={() => setSelectedProject(null)}
-                  className="action-button"
-                  style={{
-                    background: '#34495e',
-                    color: '#ecf0f1',
-                    border: '1px solid #34495e'
-                  }}
+                  className="px-5 py-2.5 bg-white/5 text-gray-300 hover:bg-white/10 rounded-xl transition-colors font-bold text-sm border border-white/5"
                 >
                   Close
                 </button>

@@ -1,380 +1,344 @@
 /*
  * MasterDiaryApp Official - Construction SaaS Platform
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * This software and associated documentation contain proprietary
- * and confidential information of Billy Fraser.
- *
- * Unauthorized copying, modification, distribution, or use of this
- * software, in whole or in part, is strictly prohibited without
- * prior written permission from the copyright holder.
- *
- * For licensing inquiries: billyfr77@example.com
- *
- * Patent Pending: Drag-and-drop construction quote builder system
- * Trade Secret: Real-time calculation algorithms and optimization techniques
- */import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge } from '@xyflow/react'
+ * 
+ * VISUAL OVERHAUL: "Vibrant Solid 3D" & "Input on Drop"
+ */
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { 
+  ReactFlow, 
+  MiniMap, 
+  Controls, 
+  Background, 
+  useNodesState, 
+  useEdgesState, 
+  addEdge, 
+  useReactFlow, 
+  ReactFlowProvider,
+  Handle, 
+  Position 
+} from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useDrag, useDrop, useDragLayer } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
-import { Shovel, User, Wrench, Package, Zap, Plus, Save, Sparkles, Search, Volume2, VolumeX,
-    Target, TrendingUp, Undo, Redo, Download, Star, Clock, Palette } from 'lucide-react'
+import { 
+  User, Wrench, Package, Plus, Save, Search, Trash2,
+  Crown, List, GripVertical, CheckCircle2, X, Sparkles, MapPin, Eye, EyeOff, UploadCloud
+} from 'lucide-react'
 import { api } from '../utils/api'
 import CountUp from 'react-countup'
+import MapBackground from './MapBackground'
+import GeoreferenceModal from './GeoreferenceModal'
+
+// ================================
+// UTILITIES
+// ================================
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0
+  }).format(amount || 0)
+}
+
+// ================================
+// CONFIGURATION MODAL (Input on Drop)
+// ================================
+
+const ConfigModal = ({ isOpen, onClose, onConfirm, item }) => {
+  const [value, setValue] = useState(1)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      setTimeout(() => inputRef.current.focus(), 100)
+      setValue(1)
+    }
+  }, [isOpen])
+
+  if (!isOpen || !item) return null
+
+  const isTimeBased = item.type === 'staff' || item.type === 'equipment'
+  const label = isTimeBased ? 'Hours Worked' : 'Units'
+  const unit = isTimeBased ? 'hrs' : 'units'
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-stone-900 border border-white/10 rounded-2xl p-6 w-80 shadow-2xl transform transition-all scale-100">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-black text-white uppercase tracking-wide">Add {item.type}</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+        </div>
+        
+        <div className="mb-6">
+          <div className="text-sm font-bold text-gray-300 mb-2">{item.name}</div>
+          <label className="block text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">
+            {label}
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              ref={inputRef}
+              type="number"
+              min="0.1"
+              step="0.5"
+              value={value}
+              onChange={(e) => setValue(parseFloat(e.target.value) || 0)}
+              onKeyDown={(e) => e.key === 'Enter' && onConfirm(value)}
+              className="flex-1 bg-black/30 border-2 border-indigo-500/50 rounded-xl px-4 py-2 text-xl font-mono font-bold text-white focus:border-indigo-500 focus:outline-none text-center"
+            />
+            <span className="text-sm font-bold text-gray-500">{unit}</span>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-xl font-bold text-gray-400 hover:bg-white/5 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => onConfirm(value)}
+            className="flex-1 px-4 py-2 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/30 transition-all"
+          >
+            Add Item
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ================================
+// VISUAL NODE COMPONENT (Solid & Amazing)
+// ================================
+
+const GlassNode = ({ data, selected }) => {
+  const { label, subLabel, quantity, type, onDelete } = data
+  
+  let containerClass = "bg-gradient-to-br from-indigo-600 to-violet-700 border-2 border-indigo-300 shadow-[0_10px_30px_-5px_rgba(79,70,229,0.6)]"
+  let iconBg = "bg-white/20"
+  let badgeClass = "bg-black/20 text-indigo-100 border border-white/20"
+  let glowClass = "shadow-indigo-500/80"
+
+  if (type === 'staff') {
+    containerClass = "bg-gradient-to-br from-emerald-500 to-teal-700 border-2 border-emerald-200 shadow-[0_10px_30px_-5px_rgba(16,185,129,0.6)]"
+    badgeClass = "bg-black/20 text-emerald-100 border border-white/20"
+    glowClass = "shadow-emerald-500/80"
+  } else if (type === 'equipment') {
+    containerClass = "bg-gradient-to-br from-orange-500 to-amber-600 border-2 border-orange-200 shadow-[0_10px_30px_-5px_rgba(249,115,22,0.6)]"
+    badgeClass = "bg-black/20 text-orange-100 border border-white/20"
+    glowClass = "shadow-orange-500/80"
+  }
+
+  const getIcon = () => {
+    switch (type) {
+      case 'staff': return <User size={22} className="text-white" strokeWidth={2.5} />
+      case 'equipment': return <Wrench size={22} className="text-white" strokeWidth={2.5} />
+      default: return <Package size={22} className="text-white" strokeWidth={2.5} />
+    }
+  }
+
+  return (
+    <div className={`
+      relative min-w-[280px] rounded-[2rem] transition-all duration-300 group
+      ${containerClass}
+      ${selected ? `scale-110 -translate-y-2 z-50 ring-4 ring-white/60 ${glowClass}` : 'hover:scale-105 hover:-translate-y-1 hover:shadow-2xl'}
+    `}>
+      <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-white/30 via-white/5 to-transparent pointer-events-none" />
+      <Handle type="target" position={Position.Top} className="!w-4 !h-4 !bg-white !border-4 !border-slate-900 transition-transform hover:scale-150" />
+      
+      <div className="relative p-5">
+        <div className="flex justify-between items-start mb-4">
+          <div className={`p-3 rounded-2xl ${iconBg} backdrop-blur-sm border border-white/30 shadow-inner`}>
+            {getIcon()}
+          </div>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onDelete?.() }}
+            className="p-2 rounded-full bg-black/10 text-white/70 hover:bg-red-500 hover:text-white hover:shadow-lg transition-all backdrop-blur-md"
+          >
+            <X size={18} strokeWidth={3} />
+          </button>
+        </div>
+        
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase ${badgeClass}`}>
+              {type}
+            </span>
+            {selected && <span className="flex items-center gap-1 text-[10px] font-bold text-white animate-pulse"><Sparkles size={10}/> ACTIVE</span>}
+          </div>
+          <div className="text-2xl font-black leading-none text-white drop-shadow-md tracking-tight">
+            {label}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t border-white/20">
+          <div className="flex flex-col">
+            <span className="text-[9px] text-white/80 font-bold uppercase tracking-wider">Quantity</span>
+            <span className="text-xl font-mono font-bold text-white drop-shadow-sm">{quantity}</span>
+          </div>
+          <div className={`px-3 py-1.5 rounded-xl ${badgeClass} backdrop-blur-md`}>
+            <div className="text-xs font-bold text-white/90 truncate max-w-[120px]">
+              {subLabel}
+            </div>
+          </div>
+        </div>
+      </div>
+      <Handle type="source" position={Position.Bottom} className="!w-4 !h-4 !bg-white !border-4 !border-slate-900 transition-transform hover:scale-150" />
+    </div>
+  )
+}
+
+// ================================
+// SIDEBAR DRAGGABLE ITEM (Matching Solids)
+// ================================
+
+const DraggableItem = ({ item }) => {
+  const onDragStart = (event) => {
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(item))
+    event.dataTransfer.effectAllowed = 'move'
+  }
+
+  let wrapperClass = "bg-gradient-to-r from-indigo-600 to-violet-700 border-indigo-400/50 shadow-indigo-900/30"
+  let hoverClass = "hover:from-indigo-500 hover:to-violet-600 hover:shadow-indigo-600/50 hover:-translate-y-1"
+  let badgeClass = "bg-indigo-900/40 text-indigo-200 border-indigo-400/30"
+  
+  if (item.type === 'staff') {
+    wrapperClass = "bg-gradient-to-r from-emerald-600 to-teal-700 border-emerald-400/50 shadow-emerald-900/30"
+    hoverClass = "hover:from-emerald-500 hover:to-teal-600 hover:shadow-emerald-600/50 hover:-translate-y-1"
+    badgeClass = "bg-emerald-900/40 text-emerald-200 border-emerald-400/30"
+  } else if (item.type === 'equipment') {
+    wrapperClass = "bg-gradient-to-r from-orange-500 to-amber-600 border-orange-400/50 shadow-orange-900/30"
+    hoverClass = "hover:from-orange-400 hover:to-amber-500 hover:shadow-orange-600/50 hover:-translate-y-1"
+    badgeClass = "bg-orange-900/40 text-orange-200 border-orange-400/30"
+  }
+
+  const getIcon = () => {
+    if (item.type === 'staff') return <User size={18} className="text-white" strokeWidth={3} />
+    if (item.type === 'equipment') return <Wrench size={18} className="text-white" strokeWidth={3} />
+    return <Package size={18} className="text-white" strokeWidth={3} />
+  }
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      className={`
+        group relative flex items-center gap-4 p-4 rounded-2xl border-t border-l border-white/20
+        cursor-grab active:cursor-grabbing transition-all duration-300
+        shadow-lg ${wrapperClass} ${hoverClass}
+      `}
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent rounded-2xl pointer-events-none" />
+      
+      <div className="relative p-2.5 rounded-xl bg-black/20 shadow-inner ring-1 ring-white/10 group-hover:scale-110 transition-transform">
+        {getIcon()}
+      </div>
+      
+      <div className="relative flex-1 min-w-0">
+        <div className="text-sm font-black text-white truncate drop-shadow-md tracking-tight">{item.name}</div>
+        <div className="flex items-center gap-2 mt-1">
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badgeClass}`}>
+            {item.type === 'staff' ? `$${item.chargeRate}/hr` : item.type === 'equipment' ? `$${item.costRate}/day` : `$${item.pricePerUnit}/unit`}
+          </span>
+        </div>
+      </div>
+
+      <div className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 rounded-lg p-1 backdrop-blur-sm">
+        <GripVertical size={14} className="text-white" />
+      </div>
+    </div>
+  )
+}
+
+// ================================
+// LIST ITEM COMPONENT
+// ================================
+
+const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
+  const [isEditing, setIsEditing] = useState(false)
+
+  const getRate = () => {
+    if (item.type === 'staff') return item.material.chargeRate
+    if (item.type === 'equipment') return item.material.costRate
+    return item.material.pricePerUnit
+  }
+
+  let themeClass = "bg-indigo-900/20 border-indigo-500/30 hover:bg-indigo-900/40"
+  let barColor = "bg-indigo-500"
+  
+  if (item.type === 'staff') {
+    themeClass = "bg-emerald-900/20 border-emerald-500/30 hover:bg-emerald-900/40"
+    barColor = "bg-emerald-500"
+  } else if (item.type === 'equipment') {
+    themeClass = "bg-amber-900/20 border-amber-500/30 hover:bg-amber-900/40"
+    barColor = "bg-orange-500"
+  }
+
+  return (
+    <div className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 group hover:shadow-md ${themeClass}`}>
+      <div className="flex items-center gap-3 overflow-hidden">
+        <div className={`w-1.5 h-10 rounded-full ${barColor} shadow-[0_0_12px_currentColor]`} />
+        <div className="space-y-1">
+          <div className="bg-stone-900/80 border border-white/10 px-2 py-0.5 rounded-lg">
+            <div className="text-sm font-bold text-white truncate w-32 lg:w-48">{item.material.name}</div>
+          </div>
+          <div className="inline-block bg-stone-900/50 border border-white/5 px-2 py-0.5 rounded-md">
+            <div className="text-[10px] text-gray-300 font-mono">{formatCurrency(getRate())} / unit</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">QTY</span>
+          {isEditing ? (
+            <input
+              type="number"
+              className="w-14 bg-stone-800 border border-indigo-500 text-white text-xs px-2 py-1 rounded-lg text-right focus:outline-none shadow-[0_0_10px_rgba(99,102,241,0.3)]"
+              defaultValue={item.quantity}
+              onBlur={(e) => {
+                const val = parseFloat(e.target.value)
+                if (val > 0) onUpdate(item.tempId, { quantity: val })
+                setIsEditing(false)
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+              autoFocus
+            />
+          ) : (
+            <div 
+              onClick={() => setIsEditing(true)}
+              className="bg-stone-900/80 border border-white/10 px-3 py-1 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors hover:scale-105"
+            >
+              <div className="text-sm font-mono font-bold text-white">
+                {item.quantity}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-end w-24 gap-1">
+          <span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">Total</span>
+          <div className="bg-stone-900/80 border border-white/10 px-2 py-1 rounded-lg w-full text-right">
+            <div className="text-sm font-bold text-emerald-400">{formatCurrency(getRate() * item.quantity)}</div>
+          </div>
+        </div>
+        <button onClick={() => onRemove(item.tempId)} className="p-2 bg-stone-800 hover:bg-red-900/80 border border-white/10 hover:border-red-500/50 rounded-xl text-gray-400 hover:text-white transition-all opacity-0 group-hover:opacity-100">
+          <Trash2 size={16} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ================================
+// MAIN COMPONENT
+// ================================
 
 const initialNodes = []
 const initialEdges = []
 
-const getMaterialIcon = (category) => {
-  const cat = category?.toLowerCase() || ''
-  if (cat.includes('sand') || cat.includes('concrete') || cat.includes('gravel')) return <Shovel size={18} />
-  if (cat.includes('labor') || cat.includes('worker')) return <User size={18} />
-  if (cat.includes('equipment') || cat.includes('tool')) return <Wrench size={18} />
-  return <Package size={18} />
-}
-
-const getItemIcon = (item) => {
-  if (item.type === 'staff') return <User size={18} />
-  if (item.type === 'equipment') return <Wrench size={18} />
-  return getMaterialIcon(item.category || '')
-}
-
-const layerStyles = {
-  position: 'fixed',
-  pointerEvents: 'none',
-  zIndex: 100,
-  left: 0,
-  top: 0,
-}
-
-function getItemStyles(initialOffset, currentOffset) {
-  if (!initialOffset || !currentOffset) return { display: 'none' }
-  const { x, y } = currentOffset
-  return {
-    position: 'fixed',
-    left: x,
-    top: y,
-    transform: 'translate(-50%, -50%)',
-  }
-}
-
-const Confetti = ({ show }) => {
-  if (!show) return null
-  const particles = Array.from({ length: 50 }, (_, i) => (
-    <div key={i} style={{
-      position: 'fixed',
-      left: `${Math.random() * 100}%`,
-      top: '-10px',
-      width: '8px',
-      height: '8px',
-      backgroundColor: `hsl(${Math.random() * 360}, 100%, 50%)`,
-      animation: `confetti ${2 + Math.random() * 2}s ease-in-out forwards`,
-      zIndex: 9999,
-    }} />
-  ))
-  return <div>{particles}</div>
-}
-
-const Particles = ({ show }) => {
-  if (!show) return null
-  const particles = Array.from({ length: 20 }, (_, i) => (
-    <div key={i} style={{
-      position: 'absolute',
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      width: '4px',
-      height: '4px',
-      backgroundColor: '#667eea',
-      borderRadius: '50%',
-      animation: `particle ${1 + Math.random() * 1}s ease-out forwards`,
-      zIndex: 10,
-    }} />
-  ))
-  return <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>{particles}</div>
-}
-
-const RippleEffect = ({ show, x, y }) => {
-  if (!show) return null
-  return (
-    <div style={{
-      position: 'absolute',
-      left: x - 50,
-      top: y - 50,
-      width: '100px',
-      height: '100px',
-      border: '2px solid #667eea',
-      borderRadius: '50%',
-      animation: 'ripple 0.6s ease-out forwards',
-      zIndex: 50,
-      pointerEvents: 'none'
-    }} />
-  )
-}
-
-const ParticleTrail = ({ show, x, y }) => {
-  if (!show) return null
-  const particles = Array.from({ length: 10 }, (_, i) => (
-    <div key={i} style={{
-      position: 'absolute',
-      left: x + Math.random() * 30 - 15,
-      top: y + Math.random() * 30 - 15,
-      width: '3px',
-      height: '3px',
-      backgroundColor: '#764ba2',
-      borderRadius: '50%',
-      animation: `trailParticle 0.5s ease-out forwards`,
-      zIndex: 40,
-    }} />
-  ))
-  return <div>{particles}</div>
-}
-
-const Tooltip = ({ children, content }) => {
-  const [visible, setVisible] = useState(false)
-  return (
-    <div style={{ position: 'relative', display: 'inline-block' }}
-         onMouseEnter={() => setVisible(true)}
-         onMouseLeave={() => setVisible(false)}>
-      {children}
-      {visible && (
-        <div style={{
-          position: 'absolute',
-          bottom: '100%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.8)',
-          color: 'white',
-          padding: '8px 12px',
-          borderRadius: '6px',
-          fontSize: '0.9em',
-          whiteSpace: 'nowrap',
-          zIndex: 1000,
-          marginBottom: '8px',
-          fontFamily: "'Inter', sans-serif"
-        }}>
-          {content}
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            border: '5px solid transparent',
-            borderTopColor: 'rgba(0,0,0,0.8)'
-          }} />
-        </div>
-      )}
-    </div>
-  )
-}
-
-const HUDGauge = ({ label, value, max, color, icon: Icon }) => {
-  const percentage = Math.min((value / max) * 100, 100)
-  const strokeDasharray = 283
-  const strokeDashoffset = strokeDasharray - (strokeDasharray * percentage) / 100
-
-  return (
-    <div style={{ textAlign: 'center', margin: '0 var(--spacing-md)', position: 'relative' }}>
-      <div style={{
-        position: 'absolute',
-        top: '-8px',
-        right: '-8px',
-        background: color,
-        borderRadius: '50%',
-        width: '20px',
-        height: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: `0 0 8px ${color}`,
-      }}>
-        <Icon size={10} color="white" />
-      </div>
-      <svg width="90" height="90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
-        <circle
-          cx="50" cy="50" r="45" fill="none" stroke={color} strokeWidth="8"
-          strokeDasharray={strokeDasharray} strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round" transform="rotate(-90 50 50)"
-          style={{ transition: 'stroke-dashoffset 1s ease-out' }}
-        />
-        <text x="50" y="42" textAnchor="middle" fill="white" fontSize="9" fontFamily="'Poppins', sans-serif" fontWeight="bold" stroke="#000" strokeWidth="0.5">
-          {label}
-        </text>
-        <text x="50" y="56" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" stroke="#000" strokeWidth="0.5" fontFamily="'Inter', sans-serif">
-          $<CountUp end={value} decimals={0} duration={0.8} formattingFn={(val) => val.toLocaleString() } />
-        </text>
-      </svg>
-    </div>
-  )
-}
-
-const SoundToggle = ({ enabled, onToggle }) => (
-  <Tooltip content={enabled ? 'Disable Sound Effects' : 'Enable Sound Effects'} position="left">
-    <button onClick={onToggle} style={{
-      position: 'fixed',
-      top: '20px',
-      right: '20px',
-      background: 'rgba(255,255,255,0.1)',
-      border: '1px solid rgba(255,255,255,0.3)',
-      borderRadius: '50%',
-      width: '40px',
-      height: '40px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: 'pointer',
-      zIndex: 1000,
-      backdropFilter: 'blur(10px)',
-      transition: 'all 0.3s ease'
-    }}>
-      {enabled ? <Volume2 size={18} color="white" /> : <VolumeX size={18} color="white" />}
-    </button>
-  </Tooltip>
-)
-
-const DragPreview = () => {
-  const { itemType, isDragging, item, initialOffset, currentOffset } = useDragLayer((monitor) => ({
-    item: monitor.getItem(),
-    itemType: monitor.getItemType(),
-    initialOffset: monitor.getInitialSourceClientOffset(),
-    currentOffset: monitor.getSourceClientOffset(),
-    isDragging: monitor.isDragging(),
-  }))
-
-  if (!isDragging || itemType !== 'material') return null
-
-  const material = item.material
-  const getPreviewText = () => {
-    if (material.type === 'staff') return `Charge: $${material.chargeRate}/hr`
-    if (material.type === 'equipment') return `$${material.costRate}/day`
-    return `$${material.pricePerUnit}/${material.unit}`
-  }
-
-  return (
-    <div style={layerStyles}>
-      <div style={getItemStyles(initialOffset, currentOffset)}>
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          border: '2px solid rgba(255,255,255,0.3)',
-          padding: 'var(--spacing-sm)',
-          borderRadius: '12px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--spacing-sm)',
-          backdropFilter: 'blur(10px)',
-          animation: 'pulse 2s infinite, glow 1s ease-in-out infinite alternate',
-          minWidth: '180px'
-        }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: '50%',
-            padding: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: 'spin 3s linear infinite'
-          }}>
-            {getItemIcon(material)}
-          </div>
-          <div>
-            <strong style={{ fontSize: '1em', fontFamily: "'Poppins', sans-serif" }}>{material.name}</strong>
-            <br />
-            <small style={{ opacity: 0.9, fontFamily: "'Inter', sans-serif" }}>
-              {getPreviewText()}
-              <br />
-              <span style={{ color: '#4ecdc4' }}>Click to set quantity</span>
-            </small>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const ItemCard = ({ item, onHover }) => {
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'material',
-    item: { material: { ...item, type: item.type || 'material' } },
-    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-  }))
-
-  const getDisplayInfo = () => {
-    if (item.type === 'staff') {
-      return { label: item.name, sub: `Charge: $${item.chargeRate}/hr`, icon: <User size={16} />, color: '#28a745' }
-    }
-    if (item.type === 'equipment') {
-      return { label: item.name, sub: `$${item.costRate}/day`, icon: <Wrench size={16} />, color: '#ffc107' }
-    }
-    return { label: item.name, sub: `$${item.pricePerUnit}/${item.unit}`, icon: getMaterialIcon(item.category), color: '#667eea' }
-  }
-
-  const { label, sub, icon, color } = getDisplayInfo()
-
-  return (
-    <Tooltip content={`${label}: ${item.category || item.role || 'Material'} - ${sub}`}>
-      <div ref={drag} style={{
-        padding: 'var(--spacing-md)',
-        marginBottom: 'var(--spacing-sm)',
-        border: `2px solid ${isDragging ? color : 'var(--gray-200)'}`,
-        borderRadius: '12px',
-        cursor: 'grab',
-        opacity: isDragging ? 0.7 : 1,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--spacing-sm)',
-        background: `linear-gradient(135deg, ${color}15 0%, ${color}05 100%)`,
-        boxShadow: isDragging ? `0 8px 25px ${color}40` : '0 2px 8px rgba(0,0,0,0.1)',
-        transition: 'all 0.3s ease',
-        position: 'relative',
-        overflow: 'hidden',
-        fontFamily: "'Inter', sans-serif",
-        transform: isDragging ? 'rotate(3deg) scale(1.02)' : 'rotate(0deg) scale(1)',
-      }}
-      onMouseEnter={(e) => {
-        if (!isDragging) {
-          e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'
-          e.currentTarget.style.boxShadow = `0 4px 16px ${color}25`
-          e.currentTarget.style.borderColor = color
-          onHover?.(item)
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isDragging) {
-          e.currentTarget.style.transform = 'translateY(0) scale(1)'
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
-          e.currentTarget.style.borderColor = 'var(--gray-200)'
-        }
-      }}>
-        <div style={{
-          color: color,
-          background: `${color}20`,
-          borderRadius: '50%',
-          padding: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          animation: isDragging ? 'none' : 'float 3s ease-in-out infinite',
-          boxShadow: `0 0 8px ${color}25`,
-        }}>
-          {icon}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 'bold', color: '#333', fontFamily: "'Poppins', sans-serif", fontSize: '0.95em' }}>
-            {label}
-          </div>
-          <div style={{ fontSize: '0.8em', color: '#666', fontFamily: "'Inter', sans-serif" }}>
-            {sub}
-          </div>
-        </div>
-      </div>
-    </Tooltip>
-  )
-}
-
-const QuoteBuilder = () => {
+const QuoteBuilderContent = () => {
+  const nodeTypes = useMemo(() => ({ glass: GlassNode }), [])
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [materials, setMaterials] = useState([])
@@ -385,803 +349,534 @@ const QuoteBuilder = () => {
   const [selectedProject, setSelectedProject] = useState('')
   const [marginPct, setMarginPct] = useState(20)
   const [searchTerm, setSearchTerm] = useState('')
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
-  const [showConfetti, setShowConfetti] = useState(false)
-  const [showParticles, setShowParticles] = useState(false)
-  const [rippleEffect, setRippleEffect] = useState({ show: false, x: 0, y: 0 })
-  const [particleTrail, setParticleTrail] = useState({ show: false, x: 0, y: 0 })
-  const [soundEnabled, setSoundEnabled] = useState(false)
-  const [hoveredItem, setHoveredItem] = useState(null)
-  const [theme, setTheme] = useState('dark')
-  const [templates, setTemplates] = useState([])
-  const [autoSaveEnabled] = useState(true)
-  const [lastSaved, setLastSaved] = useState(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [dropSuccess, setDropSuccess] = useState(false)
+  const [pendingNode, setPendingNode] = useState(null)
+  
+  // Map State
+  const [showMap, setShowMap] = useState(false)
+  const [projectLocation, setProjectLocation] = useState(null)
+  const [showGeoModal, setShowGeoModal] = useState(false)
+  const [sitePlan, setSitePlan] = useState(null) // { imageUrl, bounds, opacity }
+
+  // AI State
+  const [aiAnalysis, setAiAnalysis] = useState(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+
   const canvasRef = useRef(null)
-  const autoSaveRef = useRef(null)
+  const { screenToFlowPosition } = useReactFlow()
 
-  // Auto-save functionality
-  useEffect(() => {
-    if (autoSaveEnabled && (nodes.length > 0 || quoteItems.length > 0)) {
-      autoSaveRef.current = setTimeout(() => {
-        const saveData = { nodes, edges, quoteItems, selectedProject, marginPct }
-        localStorage.setItem('quoteBuilderAutoSave', JSON.stringify(saveData))
-        setLastSaved(new Date())
-      }, 30000)
+  const handleSitePlanSave = (planData) => {
+    setSitePlan(planData);
+    // Auto-enable map if not already
+    setShowMap(true);
+    // If we have bounds, center map roughly there (optional enhancement later)
+    if (planData.bounds) {
+       const centerLat = (planData.bounds.north + planData.bounds.south) / 2;
+       const centerLng = (planData.bounds.east + planData.bounds.west) / 2;
+       setProjectLocation({ lat: centerLat, lng: centerLng });
     }
-    return () => clearTimeout(autoSaveRef.current)
-  }, [nodes, edges, quoteItems, selectedProject, marginPct, autoSaveEnabled])
+  }
 
-  // Load auto-save on mount
+  // AI Analysis Handler
+  const handleAnalyze = async () => {
+    if (quoteItems.length === 0) return alert('Add items to the quote first!')
+    setIsAnalyzing(true)
+    try {
+      const res = await api.post('/ai/analyze-quote', {
+        items: quoteItems.map(i => ({ name: i.material.name, type: i.type, quantity: i.quantity })),
+        location: projectLocation,
+        projectName: selectedProject ? projects.find(p => p.id === selectedProject)?.name : 'Draft Quote'
+      })
+      setAiAnalysis(res.data.analysis)
+    } catch (err) {
+      console.error(err)
+      alert('AI Analysis failed. Make sure Backend is running with Gemini API Key.')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  // Fetch Data
   useEffect(() => {
-    const saved = localStorage.getItem('quoteBuilderAutoSave')
-    if (saved) {
+    const fetchData = async () => {
       try {
-        const saveData = JSON.parse(saved)
-        setNodes(saveData.nodes || [])
-        setEdges(saveData.edges || [])
-        setQuoteItems(saveData.quoteItems || [])
-        setSelectedProject(saveData.selectedProject || '')
-        setMarginPct(saveData.marginPct || 20)
-      } catch (err) {
-        console.error('Failed to load auto-save:', err)
-      }
+        const [n, s, e, p] = await Promise.all([
+          api.get('/nodes'), api.get('/staff'), api.get('/equipment'), api.get('/projects')
+        ])
+        setMaterials(n.data.data || n.data || [])
+        setStaff((s.data.data || s.data || []).map(x => ({...x, type: 'staff', payRate: x.payRateBase, chargeRate: x.chargeOutBase})))
+        setEquipment((e.data.data || e.data || []).map(x => ({...x, type: 'equipment', costRate: x.costRateBase})))
+        setProjects(p.data.data || p.data || [])
+      } catch (err) { console.error(err) }
     }
+    fetchData()
   }, [])
 
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (nodes.length > 0 || quoteItems.length > 0) {
-        e.preventDefault()
-        e.returnValue = ''
-      }
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [nodes.length, quoteItems.length])
+  const filtered = (items) => items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  
+  const deleteNode = useCallback((id) => {
+    setNodes((nds) => nds.filter(n => n.id !== id))
+    setQuoteItems((items) => items.filter(i => i.tempId !== id))
+  }, [setNodes])
 
-  // Data fetching
-  const fetchMaterials = async () => {
-    try {
-      const response = await api.get('/nodes')
-      setMaterials(response.data.data || response.data)
-    } catch (err) {
-      console.error('Error fetching materials:', err)
-    }
-  }
-
-  const fetchStaff = async () => {
-    try {
-      const response = await api.get('/staff')
-      const staffData = response.data.data || response.data
-      setStaff(staffData.map(s => ({
-        ...s,
-        payRate: s.payRateBase || 0,
-        chargeRate: s.chargeOutBase || 0
-      })))
-    } catch (err) {
-      console.error('Error fetching staff:', err)
-    }
-  }
-
-  const fetchEquipment = async () => {
-    try {
-      const response = await api.get('/equipment')
-      const equipmentData = response.data.data || response.data
-      setEquipment(equipmentData.map(e => ({
-        ...e,
-        costRate: e.costRateBase || 0
-      })))
-    } catch (err) {
-      console.error('Error fetching equipment:', err)
-    }
-  }
-
-  const fetchProjects = async () => {
-    try {
-      const response = await api.get('/projects')
-      setProjects(response.data.data || response.data)
-    } catch (err) {
-      console.error('Error fetching projects:', err)
-    }
-  }
-
-  useEffect(() => {
-    fetchMaterials()
-    fetchStaff()
-    fetchEquipment()
-    fetchProjects()
-  }, [])
-
-  // Search debouncing
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300)
-    return () => clearTimeout(timer)
-  }, [searchTerm])
-
-  const filteredMaterials = useMemo(() => {
-    if (!debouncedSearchTerm) return materials
-    return materials.filter(material =>
-      material.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      material.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-    )
-  }, [materials, debouncedSearchTerm])
-
-  const filteredStaff = useMemo(() => {
-    if (!debouncedSearchTerm) return staff
-    return staff.filter(s =>
-      s.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      s.role.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-    )
-  }, [staff, debouncedSearchTerm])
-
-  const filteredEquipment = useMemo(() => {
-    if (!debouncedSearchTerm) return equipment
-    return equipment.filter(e =>
-      e.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      e.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-    )
-  }, [equipment, debouncedSearchTerm])
+  const updateItem = useCallback((tempId, updates) => {
+    setQuoteItems(prev => prev.map(i => i.tempId === tempId ? { ...i, ...updates } : i))
+    setNodes(nds => nds.map(n => n.id === tempId ? { ...n, data: { ...n.data, ...updates } } : n))
+  }, [setNodes])
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges])
 
-  const [{ isOver }, drop] = useDrop(() => ({
-    accept: 'material',
-    drop: (item, monitor) => {
-      const offset = monitor.getClientOffset()
-      if (!offset) return
-
-      const material = item.material
-      const quantity = prompt(`Enter quantity for ${material.name}:`, material.type === 'staff' ? '8' : material.type === 'equipment' ? '1' : '1')
-      if (quantity && parseFloat(quantity) > 0) {
-        const nodeType = material.type === 'staff' ? 'Staff' : material.type === 'equipment' ? 'Equipment' : 'Material'
-        const newNode = {
-          id: `${material.type}-${material.id}-${Date.now()}`,
-          type: 'default',
-          position: {
-            x: Math.round((offset.x - 200) / 20) * 20,
-            y: Math.round((offset.y - 100) / 20) * 20
-          },
-          data: {
-            label: `${nodeType}: ${material.name} - Qty: ${quantity}`,
-            material,
-            quantity: parseFloat(quantity)
-          },
-          style: {
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            border: '2px solid rgba(255,255,255,0.3)',
-            borderRadius: '12px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-            padding: '10px',
-            animation: 'nodeAppear 0.5s ease-out',
-            fontFamily: "'Inter', sans-serif",
-            minWidth: '160px',
-            textAlign: 'center'
-          }
-        }
-        setNodes((nds) => nds.concat(newNode))
-        setQuoteItems(prev => [...prev, {
-          nodeId: material.id,
-          quantity: parseFloat(quantity),
-          material,
-          type: material.type
-        }])
-        setShowParticles(true)
-        setRippleEffect({ show: true, x: offset.x, y: offset.y })
-        setParticleTrail({ show: true, x: offset.x, y: offset.y })
-        setTimeout(() => setShowParticles(false), 1200)
-        setTimeout(() => setRippleEffect({ show: false, x: 0, y: 0 }), 600)
-        setTimeout(() => setParticleTrail({ show: false, x: 0, y: 0 }), 800)
-      }
-    },
-    collect: (monitor) => ({ isOver: monitor.isOver() }),
-  }))
-
-  // Mouse trail tracking
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (particleTrail.show) {
-        setParticleTrail({ show: true, x: e.clientX, y: e.clientY })
-      }
-    }
-    document.addEventListener('mousemove', handleMouseMove)
-    return () => document.removeEventListener('mousemove', handleMouseMove)
-  }, [particleTrail.show])
-
-  const calculateTotals = useCallback(() => {
-    let totalCost = 0
-    let totalRevenue = 0
-
-    quoteItems.forEach(item => {
-      let cost = 0
-      let revenue = 0
-
-      if (item.type === 'staff') {
-        cost = (item.ordinaryHours || item.quantity) * item.material.payRate + (item.ot1Hours || 0) * (item.material.payRateOT1 || item.material.payRate) + (item.ot2Hours || 0) * (item.material.payRateOT2 || item.material.payRate)
-        revenue = (item.ordinaryHours || item.quantity) * item.material.chargeRate + (item.ot1Hours || 0) * (item.material.chargeOutOT1 || item.material.chargeRate) + (item.ot2Hours || 0) * (item.material.chargeOutOT2 || item.material.chargeRate)
-      } else if (item.type === 'equipment') {
-        cost = (item.ordinaryHours || item.quantity) * item.material.costRate + (item.ot1Hours || 0) * (item.material.costRateOT1 || item.material.costRate) + (item.ot2Hours || 0) * (item.material.costRateOT2 || item.material.costRate)
-        revenue = cost * (1 + marginPct / 100)
-      } else {
-        cost = item.material.pricePerUnit * item.quantity
-        revenue = cost * (1 + marginPct / 100)
-      }
-
-      totalCost += cost
-      totalRevenue += revenue
-    })
-
-    const margin = totalRevenue - totalCost
-    return { totalCost, totalRevenue, margin }
-  }, [quoteItems, marginPct])
-
-  const { totalCost, totalRevenue, margin } = calculateTotals()
-
- 
-
-  const saveQuote = async () => {
-    if (!selectedProject || quoteItems.length === 0) {
-      alert('Select a project and add items.')
-      return
-    }
-    try {
-      const data = {
-        name: `Quote ${Date.now()}`,
-        projectId: selectedProject,
-        marginPct,
-        nodes: quoteItems.filter(item => !item.type || item.type === 'material').map(item => ({ nodeId: item.nodeId, quantity: item.quantity })),
-        staff: quoteItems.filter(item => item.type === 'staff').map(item => ({ staffId: item.nodeId, hours: item.quantity })),
-        equipment: quoteItems.filter(item => item.type === 'equipment').map(item => ({ equipmentId: item.nodeId, hours: item.quantity }))
-      }
-      await api.post('/quotes', data)
-      setShowConfetti(true)
-      setTimeout(() => setShowConfetti(false), 3000)
-      alert('🎉 Quote deployed successfully!')
-      localStorage.removeItem('quoteBuilderAutoSave')
-      setNodes([])
-      setEdges([])
-      setQuoteItems([])
-    } catch (err) {
-      alert('Error saving quote: ' + (err.response?.data?.error || err.message))
-    }
-  }
-
-  // Template functions
-  const saveAsTemplate = () => {
-    const template = {
-      name: prompt('Template name:') || `Template ${Date.now()}`,
-      nodes,
-      edges,
-      quoteItems,
-      marginPct
-    }
-    const existing = JSON.parse(localStorage.getItem('quoteTemplates') || '[]')
-    existing.push(template)
-    localStorage.setItem('quoteTemplates', JSON.stringify(existing))
-    setTemplates(existing)
-  }
-
-  const loadTemplate = (template) => {
-    setNodes(template.nodes || [])
-    setEdges(template.edges || [])
-    setQuoteItems(template.quoteItems || [])
-    setMarginPct(template.marginPct || 20)
-  }
-
-  // Load templates
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('quoteTemplates') || '[]')
-    setTemplates(saved)
+  // Drag & Drop
+  const onDragOver = useCallback((event) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    setIsDragOver(true)
   }, [])
 
+  const onDragLeave = () => setIsDragOver(false)
+
+  const onDrop = useCallback((event) => {
+    event.preventDefault()
+    setIsDragOver(false)
+    const type = event.dataTransfer.getData('application/reactflow')
+    if (!type) return
+
+    const item = JSON.parse(type)
+    const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+    
+    // Open modal instead of direct add
+    setPendingNode({ item, position })
+  }, [screenToFlowPosition])
+
+  const handleAddNode = (quantity) => {
+    if (!pendingNode) return
+    const { item, position } = pendingNode
+    const nodeId = `${item.type || 'material'}-${item.id}-${Date.now()}`
+    
+    const newNode = {
+      id: nodeId,
+      type: 'glass',
+      position,
+      data: { 
+        label: item.name, 
+        subLabel: item.category || item.role || 'Material',
+        quantity: quantity, 
+        type: item.type || 'material',
+        onDelete: () => deleteNode(nodeId)
+      }
+    }
+
+    setNodes(nds => nds.concat(newNode))
+    setQuoteItems(prev => [...prev, { nodeId: item.id, tempId: nodeId, quantity: quantity, material: item, type: item.type || 'material' }])
+    
+    setDropSuccess(true)
+    setTimeout(() => setDropSuccess(false), 600)
+    setPendingNode(null)
+  }
+
+  // Calculations
+  const { totalCost, totalRevenue, margin } = useMemo(() => {
+    let c = 0, r = 0
+    quoteItems.forEach(i => {
+      const qty = i.quantity
+      if (i.type === 'staff') {
+        c += qty * i.material.payRate
+        r += qty * i.material.chargeRate
+      } else if (i.type === 'equipment') {
+        c += qty * i.material.costRate
+        r += (qty * i.material.costRate) * (1 + marginPct / 100)
+      } else {
+        c += qty * i.material.pricePerUnit
+        r += (qty * i.material.pricePerUnit) * (1 + marginPct / 100)
+      }
+    })
+    return { totalCost: c, totalRevenue: r, margin: r - c }
+  }, [quoteItems, marginPct])
+
+  const handleSave = async () => {
+    if (!selectedProject) return alert('Select a project first!')
+    
+    try {
+      // If map location is set, update project location first
+      if (projectLocation) {
+        await api.put(`/projects/${selectedProject}`, {
+          latitude: projectLocation.lat,
+          longitude: projectLocation.lng
+        })
+      }
+      
+      // Save logic (currently simulation, but now acknowledges map)
+      alert('Quote & Location Saved Successfully! (Simulation)')
+    } catch (err) {
+      console.error('Error saving quote/location:', err)
+      alert('Error saving location data.')
+    }
+  }
+
   return (
-    <div style={{
-      height: '100vh',
-      display: 'flex',
-      background: theme === 'dark'
-        ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)'
-        : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-      position: 'relative',
-      fontFamily: "'Inter', sans-serif",
-      flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-      overflow: 'hidden'
-    }}>
-      <style>{`
-        @keyframes confetti {
-          0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-        }
-        @keyframes particle {
-          0% { transform: scale(0); opacity: 1; }
-          100% { transform: scale(1); opacity: 0; }
-        }
-        @keyframes nodeAppear {
-          0% { transform: scale(0) rotate(-180deg); opacity: 0; }
-          50% { transform: scale(1.1) rotate(0deg); opacity: 1; }
-          100% { transform: scale(1); }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes glow {
-          from { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
-          to { box-shadow: 0 0 40px rgba(102, 126, 234, 1); }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.03); }
-        }
-        @keyframes bounce {
-          0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
-          40%, 43% { transform: translate3d(0, -15px, 0); }
-          70% { transform: translate3d(0, -7px, 0); }
-          90% { transform: translate3d(0, -2px, 0); }
-        }
-        @keyframes ripple {
-          0% { transform: scale(0); opacity: 1; }
-          100% { transform: scale(2); opacity: 0; }
-        }
-        @keyframes trailParticle {
-          0% { transform: scale(1); opacity: 0.8; }
-          100% { transform: scale(0); opacity: 0; }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-3px); }
-        }
-        --spacing-xs: 4px;
-        --spacing-sm: 8px;
-        --spacing-md: 16px;
-        --spacing-lg: 24px;
-        --spacing-xl: 32px;
-        --gray-200: #e9ecef;
-        --primary-color: #667eea;
-      `}</style>
+    <div className="h-[calc(100vh-80px)] bg-transparent flex flex-col font-sans overflow-hidden text-white relative">
+      <GeoreferenceModal 
+         isOpen={showGeoModal} 
+         onClose={() => setShowGeoModal(false)}
+         onSave={handleSitePlanSave}
+      />
 
-      {/* Background Layers */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'url(https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80) no-repeat center center',
-        backgroundSize: 'cover',
-        opacity: theme === 'dark' ? 0.06 : 0.04,
-        zIndex: -2,
-        animation: 'parallax 20s ease-in-out infinite alternate'
-      }}></div>
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%)',
-        zIndex: -1,
-        animation: 'lighting 12s ease-in-out infinite alternate'
-      }}></div>
-
-      <SoundToggle enabled={soundEnabled} onToggle={() => setSoundEnabled(!soundEnabled)} />
-
-      <Particles show={showParticles} />
-      <RippleEffect show={rippleEffect.show} x={rippleEffect.x} y={rippleEffect.y} />
-      <ParticleTrail show={particleTrail.show} x={particleTrail.x} y={particleTrail.y} />
-      <Confetti show={showConfetti} />
-
-      {/* Enhanced Sidebar */}
-      <div style={{
-        width: '340px',
-        padding: 'var(--spacing-xl)',
-        borderRight: '2px solid rgba(102, 126, 234, 0.5)',
-        overflowY: 'auto',
-        position: 'sticky',
-        top: 0,
-        height: '100vh',
-        background: theme === 'dark'
-          ? 'rgba(26, 26, 46, 0.95)'
-          : 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-        borderRadius: '0 25px 25px 0',
-        border: '1px solid rgba(102, 126, 234, 0.3)',
-        borderLeft: 'none'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--spacing-sm)',
-          marginBottom: 'var(--spacing-xl)',
-          paddingBottom: 'var(--spacing-md)',
-          borderBottom: '2px solid #667eea',
-          position: 'relative'
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '2px',
-            background: 'linear-gradient(90deg, #667eea, #764ba2, #f093fb)',
-            animation: 'glow 2s ease-in-out infinite alternate'
-          }}></div>
-          <Sparkles size={28} color="#667eea" style={{ animation: 'float 2s ease-in-out infinite' }} />
-          <h3 style={{
-            margin: 0,
-            color: theme === 'dark' ? '#ffffff' : '#333',
-            fontFamily: "'Poppins', sans-serif",
-            fontWeight: 700,
-            textShadow: theme === 'dark' ? '0 0 20px rgba(102, 126, 234, 0.5)' : 'none',
-            fontSize: '2em',
-            animation: 'float 3s ease-in-out infinite reverse'
-          }}>
-            Strategic Builder
-          </h3>
-        </div>
-
-        {/* Toolbar */}
-        <div style={{
-          display: 'flex',
-          gap: 'var(--spacing-sm)',
-          marginBottom: 'var(--spacing-lg)',
-          flexWrap: 'wrap'
-        }}>
-          <button onClick={saveAsTemplate} style={{
-            padding: '6px',
-            background: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer'
-          }} title="Save as Template">
-            <Star size={14} />
-          </button>
-          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} style={{
-            padding: '6px',
-            background: '#6f42c1',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer'
-          }} title="Toggle Theme">
-            <Palette size={14} />
-          </button>
-        </div>
-
-        {/* Templates */}
-        {templates.length > 0 && (
-          <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-            <select onChange={(e) => {
-              const template = templates.find(t => t.name === e.target.value)
-              if (template) loadTemplate(template)
-            }} style={{
-              width: '100%',
-              padding: 'var(--spacing-sm)',
-              border: '1px solid rgba(102, 126, 234, 0.3)',
-              borderRadius: '6px',
-              background: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-              color: theme === 'dark' ? 'white' : '#333'
-            }}>
-              <option value="">Load Template...</option>
-              {templates.map(template => (
-                <option key={template.name} value={template.name}>{template.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Search */}
-        <div style={{
-          position: 'relative',
-          marginBottom: 'var(--spacing-lg)'
-        }}>
-          <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#667eea' }} />
-          <input
-            type="text"
-            placeholder="🔍 Search items..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: 'var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) 34px',
-              border: '1px solid rgba(102, 126, 234, 0.3)',
-              borderRadius: '8px',
-              background: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-              color: theme === 'dark' ? 'white' : '#333',
-              fontFamily: "'Inter', sans-serif"
-            }}
-          />
-        </div>
-
-        {/* Project Selector */}
-        <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} style={{
-          width: '100%',
-          marginBottom: 'var(--spacing-lg)',
-          padding: 'var(--spacing-sm)',
-          border: '1px solid rgba(102, 126, 234, 0.3)',
-          borderRadius: '8px',
-          background: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-          color: theme === 'dark' ? 'white' : '#333'
-        }}>
-          <option value="">🎯 Select Project</option>
-          {projects.map(p => (
-            <option key={p.id} value={p.id}>📁 {p.name}</option>
-          ))}
-        </select>
-
-        {/* Margin Control */}
-        <div style={{
-          marginBottom: 'var(--spacing-lg)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--spacing-sm)',
-          background: 'rgba(102, 126, 234, 0.1)',
-          padding: 'var(--spacing-md)',
-          borderRadius: '8px'
-        }}>
-          <TrendingUp size={18} color="#4ecdc4" />
-          <label style={{ color: theme === 'dark' ? '#ffffff' : '#333', fontWeight: '500' }}>
-            Margin %:
-          </label>
-          <input
-            type="number"
-            value={marginPct}
-            onChange={(e) => setMarginPct(parseFloat(e.target.value))}
-            min="0"
-            max="100"
-            step="0.1"
-            style={{
-              flex: 1,
-              padding: 'var(--spacing-sm)',
-              border: '1px solid rgba(102, 126, 234, 0.3)',
-              borderRadius: '6px',
-              background: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-              color: theme === 'dark' ? 'white' : '#333',
-              textAlign: 'center',
-              fontWeight: 'bold'
-            }}
-          />
-        </div>
-
-        {/* Status */}
-        <div style={{
-          marginBottom: 'var(--spacing-lg)',
-          padding: 'var(--spacing-sm)',
-          background: 'rgba(102, 126, 234, 0.1)',
-          borderRadius: '8px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: '4px' }}>
-            <Clock size={14} color="#ffc107" />
-            <span style={{ color: theme === 'dark' ? '#ffffff' : '#333', fontSize: '0.85em' }}>
-              Auto-save: ON
-            </span>
-          </div>
-          {lastSaved && (
-            <div style={{ color: '#666', fontSize: '0.75em' }}>
-              Last saved: {lastSaved.toLocaleTimeString()}
-            </div>
-          )}
-        </div>
-
-        {/* Item Lists */}
-        <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-          <h4 style={{ color: theme === 'dark' ? '#ffffff' : '#333', marginBottom: 'var(--spacing-sm)' }}>
-            <Package size={18} style={{ color: '#667eea', marginRight: 'var(--spacing-sm)' }} />
-            Materials ({filteredMaterials.length})
-          </h4>
-          {filteredMaterials.map(material => (
-            <ItemCard
-              key={`material-${material.id}`}
-              item={{ ...material, type: 'material' }}
-              onHover={setHoveredItem}
+      {/* Map Background Layer */}
+      {showMap && (
+        <div className="absolute inset-0 z-0 animate-fade-in">
+            <MapBackground 
+              activeLocation={projectLocation} 
+              onLocationSelect={setProjectLocation} 
+              overlayImage={sitePlan}
             />
-          ))}
-        </div>
-
-        <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-          <h4 style={{ color: theme === 'dark' ? '#ffffff' : '#333', marginBottom: 'var(--spacing-sm)' }}>
-            <User size={18} style={{ color: '#28a745', marginRight: 'var(--spacing-sm)' }} />
-            Staff ({filteredStaff.length})
-          </h4>
-          {filteredStaff.map(s => (
-            <ItemCard
-              key={`staff-${s.id}`}
-              item={{ ...s, type: 'staff' }}
-              onHover={setHoveredItem}
-            />
-          ))}
-        </div>
-
-        <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-          <h4 style={{ color: theme === 'dark' ? '#ffffff' : '#333', marginBottom: 'var(--spacing-sm)' }}>
-            <Wrench size={18} style={{ color: '#ffc107', marginRight: 'var(--spacing-sm)' }} />
-            Equipment ({filteredEquipment.length})
-          </h4>
-          {filteredEquipment.map(e => (
-            <ItemCard
-              key={`equipment-${e.id}`}
-              item={{ ...e, type: 'equipment' }}
-              onHover={setHoveredItem}
-            />
-          ))}
-        </div>
-
-        {/* Save Button */}
-        <button onClick={saveQuote} style={{
-          width: '100%',
-          padding: 'var(--spacing-lg)',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '12px',
-          cursor: 'pointer',
-          fontWeight: 'bold',
-          fontSize: '1em',
-          transition: 'all 0.3s ease',
-          boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-          fontFamily: "'Poppins', sans-serif",
-          textShadow: '0 0 8px rgba(255,255,255,0.5)',
-          transform: 'translateY(0)',
-          animation: 'pulse 2s infinite'
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.transform = 'translateY(-2px)'
-          e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.transform = 'translateY(0)'
-          e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.3)'
-        }}>
-          <Target size={18} />
-          🚀 Deploy Quote
-        </button>
-
-        {/* Summary */}
-        <div style={{
-          marginTop: 'var(--spacing-lg)',
-          padding: 'var(--spacing-lg)',
-          background: 'linear-gradient(135deg, #f093fb20 0%, #f5576c20 100%)',
-          borderRadius: '12px',
-          color: theme === 'dark' ? 'white' : '#333',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-          border: '1px solid rgba(240, 147, 251, 0.3)'
-        }}>
-          <h4 style={{ margin: '0 0 var(--spacing-sm) 0', color: '#f093fb' }}>
-            <Zap size={16} />
-            Overview
-          </h4>
-          <p style={{ margin: 'var(--spacing-xs) 0', color: margin > 0 ? '#4ecdc4' : '#ff6b6b' }}>
-            💰 Cost: <strong>\${totalCost.toFixed(2)}</strong>
-          </p>
-          <p style={{ margin: 'var(--spacing-xs) 0', color: margin > 0 ? '#4ecdc4' : '#ff6b6b' }}>
-            📈 Revenue: <strong>\${totalRevenue.toFixed(2)}</strong>
-          </p>
-          <p style={{ margin: 'var(--spacing-xs) 0', color: margin > 0 ? '#4ecdc4' : '#ff6b6b', fontWeight: 'bold' }}>
-            🎯 Margin: <strong>${margin.toFixed(2)}</strong>
-          </p>
-        </div>
-      </div>
-
-      {/* Canvas */}
-      <div
-        className="canvas"
-        ref={(el) => { canvasRef.current = el; drop(el); }}
-        style={{
-          flex: 1,
-          transition: 'all 0.5s ease',
-          backgroundColor: isOver ? 'rgba(102, 126, 234, 0.3)' : 'rgba(26, 26, 46, 0.8)',
-          border: isOver ? '3px dashed #667eea' : '3px dashed rgba(102, 126, 234, 0.5)',
-          borderRadius: '25px',
-          margin: 'var(--spacing-xl)',
-          boxShadow: isOver ? '0 0 40px rgba(102, 126, 234, 0.8)' : '0 8px 32px rgba(0,0,0,0.3)',
-          backdropFilter: 'blur(20px)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-       
-       
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          snapToGrid={true}
-          snapGrid={[20, 20]}
-          fitView
-          style={{ borderRadius: '22px' }}
-        >
-          <MiniMap style={{
-            background: 'rgba(26, 26, 46, 0.9)',
-            borderRadius: '8px',
-            border: '1px solid rgba(102, 126, 234, 0.3)'
-          }} />
-          <Controls style={{
-            background: 'rgba(26, 26, 46, 0.9)',
-            borderRadius: '8px',
-            border: '1px solid rgba(102, 126, 234, 0.3)'
-          }} />
-          <Background color="#667eea" gap={20} size={1} />
-        </ReactFlow>
-      </div>
-
-      {/* HUD */}
-      <div style={{
-        position: 'absolute',
-        bottom: '25px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        display: 'flex',
-        alignItems: 'center',
-        background: 'rgba(26, 26, 46, 0.95)',
-        borderRadius: '20px',
-        padding: 'var(--spacing-lg)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(102, 126, 234, 0.4)',
-        zIndex: 100,
-        gap: 'var(--spacing-lg)'
-      }}>
-        <HUDGauge label="Cost" value={totalCost} max={50000} color="#ff6b6b" icon={Package} />
-        <HUDGauge label="Revenue" value={totalRevenue} max={75000} color="#4ecdc4" icon={TrendingUp} />
-        <HUDGauge label="Margin" value={margin} max={25000} color="#ffd93d" icon={Star} />
-        <div style={{
-          marginLeft: 'var(--spacing-md)',
-          color: 'white',
-          fontFamily: "'Poppins', sans-serif",
-          fontSize: '1.2em',
-          textShadow: '0 0 10px rgba(102, 126, 234, 0.5)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center'
-        }}>
-          <div style={{ fontSize: '0.6em', opacity: 0.8 }}>Items</div>
-          <div style={{
-            fontSize: '1.8em',
-            fontWeight: 'bold',
-            background: 'linear-gradient(45deg, #667eea, #764ba2)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-          }}>
-            {nodes.length}
-          </div>
-        </div>
-      </div>
-
-      {/* Hover Info */}
-      {hoveredItem && (
-        <div style={{
-          position: 'absolute',
-          top: '15px',
-          right: '15px',
-          background: 'rgba(26, 26, 46, 0.95)',
-          borderRadius: '12px',
-          padding: 'var(--spacing-lg)',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-          border: '1px solid rgba(102, 126, 234, 0.3)',
-          backdropFilter: 'blur(10px)',
-          zIndex: 50
-        }}>
-          <h4 style={{ margin: '0 0 var(--spacing-sm) 0', color: 'white', fontSize: '1em' }}>
-            {hoveredItem.name}
-          </h4>
-          <p style={{ margin: '0', color: '#ccc', fontSize: '0.85em' }}>
-            {hoveredItem.type === 'staff'
-              ? `Charge: $${hoveredItem.chargeRate}/hr`
-              : hoveredItem.type === 'equipment'
-              ? `Cost: $${hoveredItem.costRate}/day`
-              : `Price: $${hoveredItem.pricePerUnit}/${hoveredItem.unit}`
-            }
-          </p>
         </div>
       )}
 
-      <DragPreview />
+      {/* Main Content Overlay */}
+      <div className={`absolute inset-0 z-10 flex flex-col transition-all duration-500 ${showMap ? 'bg-stone-900/40 backdrop-blur-sm' : ''}`}>
+      
+      <ConfigModal 
+        isOpen={!!pendingNode} 
+        item={pendingNode?.item} 
+        onClose={() => setPendingNode(null)} 
+        onConfirm={handleAddNode} 
+      />
+
+      {/* --- TOP NAVIGATION BAR --- */}
+      <div className={`h-16 px-6 border-b border-white/10 ${showMap ? 'bg-stone-900/60' : 'bg-stone-900/80'} backdrop-blur-md z-30 flex justify-between items-center shadow-lg transition-colors`}>
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.4)] ring-1 ring-white/20">
+            <Crown className="text-white" size={20} />
+          </div>
+          <div>
+            <div className="bg-stone-900/80 px-2 py-0.5 rounded border border-white/10 inline-block mb-0.5">
+              <h1 className="text-sm font-black text-white tracking-tight">QUOTE BUILDER</h1>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 bg-stone-900/60 px-2 py-0.5 rounded border border-white/5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />
+              Live Editor
+            </div>
+          </div>
+        </div>
+
+        {/* Center Stats HUD */}
+        <div className={`hidden md:flex items-center gap-4 ${showMap ? 'bg-stone-900/80' : 'bg-stone-900/90'} p-2 rounded-2xl border border-white/10 shadow-2xl transition-colors`}>
+          <div className="flex items-center gap-2 px-3">
+             <div className="flex flex-col">
+               <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Cost</div>
+               <div className="text-sm font-mono font-bold text-red-400 drop-shadow-sm"><CountUp end={totalCost} prefix="$" separator="," /></div>
+             </div>
+          </div>
+          <div className="w-px h-8 bg-white/10" />
+          <div className="flex items-center gap-2 px-3">
+             <div className="flex flex-col">
+               <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Revenue</div>
+               <div className="text-sm font-mono font-bold text-emerald-400 drop-shadow-sm"><CountUp end={totalRevenue} prefix="$" separator="," /></div>
+             </div>
+          </div>
+          <div className="w-px h-8 bg-white/10" />
+          
+          {/* Margin Simulation Control */}
+          <div className="flex items-center gap-4 px-4 py-1 bg-indigo-950/40 border border-indigo-500/30 rounded-xl relative group">
+            {marginPct !== 20 && (
+              <div className="absolute -top-3 -right-2 bg-amber-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-md shadow-lg animate-bounce">
+                SIMULATION
+              </div>
+            )}
+            <div className="flex flex-col">
+              <div className="flex justify-between items-center mb-1 w-24">
+                <span className="text-[9px] font-bold text-indigo-300 uppercase tracking-wider">Target Margin</span>
+                <span className="text-[9px] font-mono font-bold text-white">{marginPct}%</span>
+              </div>
+              <input 
+                type="range" 
+                min="0" 
+                max="100" 
+                value={marginPct} 
+                onChange={(e) => setMarginPct(Number(e.target.value))}
+                className="w-24 h-1.5 bg-stone-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
+              />
+            </div>
+            <div className="flex flex-col items-end min-w-[60px]">
+               <div className="text-sm font-mono font-bold text-indigo-100 drop-shadow-md"><CountUp end={margin} prefix="$" separator="," /></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+           
+           {/* Site Plan Upload */}
+           <button
+             onClick={() => setShowGeoModal(true)}
+             className="p-2 rounded-lg border border-white/10 bg-stone-800 text-emerald-400 hover:bg-stone-700 hover:text-emerald-300 transition-all shadow-lg"
+             title="Upload Site Plan"
+           >
+             <UploadCloud size={20} />
+           </button>
+
+           {/* Map Toggle Button */}
+           <button
+             onClick={() => setShowMap(!showMap)}
+             className={`
+               p-2 rounded-lg border transition-all shadow-lg flex items-center gap-2
+               ${showMap 
+                 ? 'bg-indigo-600 border-indigo-400 text-white shadow-indigo-500/50' 
+                 : 'bg-stone-800 border-white/10 text-gray-400 hover:text-white'
+               }
+             `}
+             title={showMap ? "Hide Map" : "Show Map"}
+           >
+             {showMap ? <EyeOff size={20} /> : <MapPin size={20} />}
+           </button>
+
+          <select 
+            value={selectedProject} 
+            onChange={e => setSelectedProject(e.target.value)}
+            className="bg-stone-900 border border-white/10 text-sm text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none shadow-inner"
+          >
+            <option value="">Select Project...</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          
+          <button 
+            onClick={handleAnalyze}
+            disabled={isAnalyzing}
+            className={`
+              px-4 py-2 rounded-lg text-sm font-bold border transition-all flex items-center gap-2
+              ${isAnalyzing ? 'bg-indigo-900/50 text-indigo-300 border-indigo-500/20' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-white/20 hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]'}
+            `}
+          >
+            <Sparkles size={16} className={isAnalyzing ? 'animate-spin' : ''} />
+            {isAnalyzing ? 'Analyzing...' : 'AI Insights'}
+          </button>
+
+          <button 
+            onClick={handleSave}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-[0_0_20px_rgba(99,102,241,0.4)] border border-indigo-400/50 transition-all flex items-center gap-2 active:scale-95"
+          >
+            <Save size={16} /> <span className="hidden sm:inline">Save Quote</span>
+          </button>
+        </div>
+      </div>
+      
+      {/* AI Analysis Modal */}
+      {aiAnalysis && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-stone-900 border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 bg-gradient-to-r from-purple-900/50 to-indigo-900/50 border-b border-white/10 flex justify-between items-start">
+               <div>
+                 <div className="flex items-center gap-2 text-purple-400 mb-1">
+                   <Sparkles size={18} />
+                   <span className="text-xs font-bold uppercase tracking-widest">Gemini Intelligence</span>
+                 </div>
+                 <h2 className="text-xl font-bold text-white">Project Analysis</h2>
+               </div>
+               <button onClick={() => setAiAnalysis(null)} className="text-gray-400 hover:text-white"><X size={20}/></button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div className="flex items-center gap-4">
+                 <div className="bg-stone-800 p-3 rounded-xl border border-white/5">
+                   <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Estimated Duration</div>
+                   <div className="text-2xl font-black text-white">{aiAnalysis.estimatedDuration}</div>
+                 </div>
+                 <div className="flex-1 bg-stone-800 p-3 rounded-xl border border-white/5">
+                   <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Weather Insight</div>
+                   <div className="text-sm text-gray-300 leading-snug">{aiAnalysis.weatherNote}</div>
+                 </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-bold text-red-400 uppercase tracking-wider mb-3">Identified Risks</h3>
+                <div className="space-y-2">
+                  {aiAnalysis.risks?.map((risk, i) => (
+                    <div key={i} className="flex gap-3 bg-red-950/20 border border-red-500/20 p-3 rounded-xl">
+                      <div className="text-red-500 font-bold">{i+1}.</div>
+                      <div className="text-sm text-gray-300">{risk}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                 <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-3">Efficiency Opportunity</h3>
+                 <div className="bg-emerald-950/20 border border-emerald-500/20 p-4 rounded-xl text-sm text-gray-300 italic">
+                   "{aiAnalysis.efficiencyTip}"
+                 </div>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-white/10 bg-stone-900/50">
+               <button onClick={() => setAiAnalysis(null)} className="w-full py-3 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition-colors">
+                 Acknowledge
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* --- LEFT SIDEBAR (Vibrant) --- */}
+        <div className="w-80 bg-stone-900/95 border-r border-white/5 flex flex-col z-20 shadow-2xl">
+          <div className="p-4 border-b border-white/5 bg-stone-900/50">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 text-gray-500" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search items..." 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full bg-stone-800 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white focus:border-indigo-500 focus:bg-stone-900 outline-none transition-all placeholder-gray-500"
+              />
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+            <div>
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] bg-emerald-950/40 px-2 py-1 rounded border border-emerald-500/20">Staffing</h3>
+                <span className="text-[10px] font-bold bg-emerald-950/60 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(16,185,129,0.1)]">{filtered(staff).length}</span>
+              </div>
+              <div className="space-y-2">{filtered(staff).map(x => <DraggableItem key={x.id} item={x} />)}</div>
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] bg-amber-950/40 px-2 py-1 rounded border border-amber-500/20">Equipment</h3>
+                <span className="text-[10px] font-bold bg-amber-950/60 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(245,158,11,0.1)]">{filtered(equipment).length}</span>
+              </div>
+              <div className="space-y-2">{filtered(equipment).map(x => <DraggableItem key={x.id} item={x} />)}</div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] bg-indigo-950/40 px-2 py-1 rounded border border-indigo-500/20">Materials</h3>
+                <span className="text-[10px] font-bold bg-indigo-950/60 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(99,102,241,0.1)]">{filtered(materials).length}</span>
+              </div>
+              <div className="space-y-2">{filtered(materials).map(x => <DraggableItem key={x.id} item={x} />)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* --- CENTER (Canvas / Drop Zone) --- */}
+        <div className="flex-1 flex flex-col relative bg-transparent">
+          
+          {/* Blueprint Grid Background */}
+          <div className="absolute inset-0 opacity-20 pointer-events-none bg-[size:40px_40px] bg-[linear-gradient(to_right,#4f46e5_1px,transparent_1px),linear-gradient(to_bottom,#4f46e5_1px,transparent_1px)]" />
+          
+          {/* Prominent Drop Box Backing */}
+          <div className="flex-1 p-6 relative overflow-hidden flex flex-col">
+            <div 
+              ref={canvasRef}
+              className={`
+                flex-1 rounded-3xl relative overflow-hidden transition-all duration-500 ease-out
+                ${isDragOver 
+                  ? 'border-4 border-indigo-500 bg-indigo-900/20 shadow-[0_0_100px_rgba(99,102,241,0.3)] scale-[0.99]' 
+                  : 'border-2 border-white/5 bg-stone-900/40 shadow-2xl'}
+                backdrop-blur-sm
+              `}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+            >
+              {/* Empty State Prompt */}
+              {quoteItems.length === 0 && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none z-10 animate-fade-in">
+                  <div className={`
+                    w-32 h-32 rounded-full flex items-center justify-center mb-6 transition-all duration-500 border-2
+                    ${isDragOver ? 'bg-indigo-500/20 border-indigo-500/50 scale-110 animate-pulse shadow-[0_0_50px_rgba(99,102,241,0.4)]' : 'bg-stone-900/50 border-white/10'}
+                  `}>
+                    <Plus size={48} className={`transition-colors duration-300 ${isDragOver ? 'text-indigo-400' : 'text-white/20'}`} />
+                  </div>
+                  <div className="bg-stone-900/80 px-6 py-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl">
+                    <h2 className="text-2xl font-black text-white tracking-tight mb-1 drop-shadow-lg">
+                      {isDragOver ? 'DROP TO ADD' : 'BUILD YOUR QUOTE'}
+                    </h2>
+                    <p className="text-white/50 font-medium text-sm uppercase tracking-widest">Drag resources from the left</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Drop Success Flash Overlay */}
+              <div className={`absolute inset-0 bg-emerald-500/10 pointer-events-none transition-opacity duration-500 z-50 ${dropSuccess ? 'opacity-100' : 'opacity-0'}`} />
+
+              {/* React Flow Canvas */}
+              <div style={{ width: '100%', height: '100%' }}>
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  nodeTypes={nodeTypes}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  snapToGrid={true}
+                  snapGrid={[20, 20]}
+                  fitView
+                  proOptions={{ hideAttribution: true }}
+                >
+                  <Background color="#6366f1" gap={40} size={1} className="opacity-[0.05]" />
+                  <Controls className="!bg-stone-900 !border-white/10 !text-white !rounded-lg overflow-hidden shadow-xl !p-1" />
+                  <MiniMap 
+                    className="!bg-stone-900 !border-white/10 !rounded-lg shadow-xl !m-4" 
+                    nodeColor={n => n.type==='staff'?'#10b981':n.type==='equipment'?'#f59e0b':'#6366f1'}
+                    maskColor="rgba(0,0,0,0.6)"
+                  />
+                </ReactFlow>
+              </div>
+            </div>
+          </div>
+
+          {/* --- BOTTOM SHEET (Quote Details) --- */}
+          <div className="h-72 bg-stone-900 border-t border-white/10 flex flex-col z-20 shadow-[0_-10px_50px_rgba(0,0,0,0.5)]">
+            <div className="px-6 py-3 border-b border-white/5 flex justify-between items-center bg-stone-900/95 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="bg-indigo-500/20 p-1.5 rounded-lg border border-indigo-500/30">
+                  <List size={16} className="text-indigo-400" /> 
+                </div>
+                <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest">Line Items ({quoteItems.length})</h3>
+              </div>
+              <div className="flex items-center gap-2 bg-stone-900/80 px-3 py-1.5 rounded-lg border border-white/5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total</span>
+                <span className="text-sm font-mono font-bold text-white">{formatCurrency(totalRevenue)}</span>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-stone-950/50">
+              {quoteItems.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-600 text-sm italic">
+                  <List size={24} className="mb-2 opacity-20" />
+                  <div className="bg-stone-900/80 px-4 py-2 rounded-lg border border-white/5 text-white/50">
+                    Drag items to the canvas to generate line items.
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {quoteItems.map(item => (
+                    <QuoteItem 
+                      key={item.tempId} 
+                      item={item} 
+                      onUpdate={updateItem} 
+                      onRemove={deleteNode} 
+                      formatCurrency={formatCurrency}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
+  </div>
   )
 }
+
+const QuoteBuilder = () => (
+  <ReactFlowProvider>
+    <QuoteBuilderContent />
+  </ReactFlowProvider>
+)
 
 export default QuoteBuilder

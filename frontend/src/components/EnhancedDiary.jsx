@@ -2,21 +2,17 @@
  * MasterDiaryApp Official - Paint Your Day Diary
  * Working Drag-and-Drop Version - Main Feature Restored
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * This version restores proper drag-and-drop as the main feature:
- * - Working drag from toolbar to diary entries
- * - Visual feedback during dragging
- * - Smooth, satisfying user experience
- * - Real diary appearance with modern functionality
  */
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { DndProvider, useDrag, useDrop } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { api } from '../utils/api'
-import { Calendar, Users, Wrench, DollarSign, Save, Trash2, Plus, Clock, TrendingUp, BarChart3, Edit3, FileText, Palette } from 'lucide-react'
+import { Calendar, Users, Wrench, DollarSign, Save, Trash2, Plus, Clock, TrendingUp, BarChart3, Edit3, FileText, Palette, MapPin, Eye, EyeOff, UploadCloud } from 'lucide-react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import MapBackground from './MapBackground'
+import GeoreferenceModal from './GeoreferenceModal'
 
 // Draggable Element Component
 const DraggableElement = ({ item, children }) => {
@@ -31,12 +27,7 @@ const DraggableElement = ({ item, children }) => {
   return (
     <div
       ref={drag}
-      style={{
-        opacity: isDragging ? 0.5 : 1,
-        transform: isDragging ? 'scale(1.05)' : 'scale(1)',
-        transition: 'all 0.2s ease',
-        cursor: isDragging ? 'grabbing' : 'grab'
-      }}
+      className={`transition-all duration-200 ${isDragging ? 'opacity-50 scale-105 cursor-grabbing' : 'opacity-100 scale-100 cursor-grab'}`}
     >
       {children}
     </div>
@@ -59,24 +50,18 @@ const DropZone = ({ entryId, onDrop, children, isHighlighted }) => {
   return (
     <div
       ref={drop}
-      style={{
-        border: `2px ${isOver || isHighlighted ? 'solid' : 'dashed'} ${isOver || isHighlighted ? '#4ecdc4' : '#dee2e6'}`,
-        borderRadius: '8px',
-        background: isOver || isHighlighted ? 'rgba(78, 205, 196, 0.1)' : 'rgba(248, 249, 250, 0.5)',
-        transition: 'all 0.3s ease',
-        cursor: 'pointer',
-        minHeight: '60px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: isOver || isHighlighted ? '#4ecdc4' : '#6c757d',
-        padding: '20px'
-      }}
+      className={`
+        border-2 border-dashed rounded-xl transition-all duration-300 min-h-[60px] flex items-center justify-center p-5
+        ${isOver || isHighlighted 
+          ? 'border-primary bg-primary/10 text-primary' 
+          : 'border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-700/30 text-gray-500 dark:text-gray-400'
+        }
+      `}
     >
       {children || (
-        <div style={{ textAlign: 'center' }}>
-          <Plus size={24} style={{ marginBottom: '8px' }} />
-          <div>Drop items here to add to this entry</div>
+        <div className="text-center">
+          <Plus size={24} className="mb-2 mx-auto opacity-70" />
+          <div className="font-medium">Drop items here to add to this entry</div>
         </div>
       )}
     </div>
@@ -94,116 +79,62 @@ const DiaryEntry = ({ entry, onUpdate, onDelete, onDropItem, isDropTarget }) => 
   }
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, #fefefe 0%, #f8f9fa 100%)',
-      borderRadius: '12px',
-      padding: '20px',
-      marginBottom: '16px',
-      border: '2px solid #e9ecef',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-      position: 'relative'
-    }}>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 mb-4 border border-gray-200 dark:border-gray-700 shadow-sm relative animate-fade-in">
       {/* Entry Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '16px',
-        borderBottom: '1px solid #dee2e6',
-        paddingBottom: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Clock size={20} style={{ color: '#6c757d' }} />
-          <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#495057' }}>
+      <div className="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">
+        <div className="flex items-center gap-3">
+          <Clock size={20} className="text-primary" />
+          <span className="text-lg font-bold text-gray-800 dark:text-white">
             {entry.time}
           </span>
         </div>
         <button
           onClick={() => onDelete(entry.id)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#dc3545',
-            cursor: 'pointer',
-            padding: '4px'
-          }}
+          className="text-gray-400 hover:text-danger transition-colors p-1 rounded-full hover:bg-danger/10"
         >
           <Trash2 size={18} />
         </button>
       </div>
 
       {/* Note Section */}
-      <div style={{ marginBottom: '16px' }}>
+      <div className="mb-4">
         {isEditing ? (
-          <div>
+          <div className="space-y-2">
             <textarea
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               placeholder="Write about your work today..."
-              style={{
-                width: '100%',
-                minHeight: '80px',
-                padding: '12px',
-                border: '1px solid #ced4da',
-                borderRadius: '8px',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: '14px',
-                resize: 'vertical'
-              }}
+              className="w-full min-h-[80px] p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none resize-y text-sm"
             />
-            <div style={{ marginTop: '8px', textAlign: 'right' }}>
+            <div className="flex justify-end gap-2">
               <button
                 onClick={() => setIsEditing(false)}
-                style={{
-                  marginRight: '8px',
-                  padding: '6px 12px',
-                  background: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
+                className="px-3 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveNote}
-                style={{
-                  padding: '6px 12px',
-                  background: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
+                className="px-3 py-1.5 bg-success text-white rounded text-sm font-medium hover:bg-success/90 transition-colors"
               >
                 Save Note
               </button>
             </div>
           </div>
         ) : (
-          <div>
+          <div className="group">
             {entry.note ? (
-              <p style={{ margin: 0, color: '#495057', lineHeight: '1.6' }}>{entry.note}</p>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm">{entry.note}</p>
             ) : (
-              <p style={{ margin: 0, color: '#6c757d', fontStyle: 'italic' }}>
+              <p className="text-gray-400 dark:text-gray-500 italic text-sm">
                 No notes yet. Click edit to add your thoughts about this work session.
               </p>
             )}
             <button
               onClick={() => setIsEditing(true)}
-              style={{
-                marginTop: '8px',
-                padding: '4px 8px',
-                background: 'none',
-                border: '1px solid #ced4da',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                color: '#495057',
-                fontSize: '12px'
-              }}
+              className="mt-2 flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium opacity-0 group-hover:opacity-100 transition-opacity"
             >
-              <Edit3 size={14} style={{ marginRight: '4px' }} />
+              <Edit3 size={12} />
               {entry.note ? 'Edit Note' : 'Add Note'}
             </button>
           </div>
@@ -212,32 +143,22 @@ const DiaryEntry = ({ entry, onUpdate, onDelete, onDropItem, isDropTarget }) => 
 
       {/* Items Section with Drop Zone */}
       <div>
-        <h4 style={{ margin: '0 0 12px 0', color: '#495057', fontSize: '1rem' }}>
+        <h4 className="mb-3 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           Work Details
         </h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+        <div className="flex flex-col gap-2 mb-4">
           {entry.items.map(item => (
-            <div key={item.id} style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px',
-              background: 'white',
-              border: '1px solid #e9ecef',
-              borderRadius: '8px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  color: item.type === 'staff' ? '#4ecdc4' : item.type === 'equipment' ? '#f39c12' : '#9b59b6',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
+            <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className={`
+                  p-2 rounded-full 
+                  ${item.type === 'staff' ? 'bg-primary/10 text-primary' : item.type === 'equipment' ? 'bg-warning/10 text-warning' : 'bg-purple-500/10 text-purple-500'}
+                `}>
                   {item.type === 'staff' ? <Users size={16} /> : item.type === 'equipment' ? <Wrench size={16} /> : <DollarSign size={16} />}
                 </div>
                 <div>
-                  <div style={{ fontWeight: '500', color: '#495057' }}>{item.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+                  <div className="font-medium text-gray-800 dark:text-white">{item.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {item.duration}h × ${item.cost?.toFixed(2) || '0.00'}
                   </div>
                 </div>
@@ -248,9 +169,9 @@ const DiaryEntry = ({ entry, onUpdate, onDelete, onDropItem, isDropTarget }) => 
 
         {/* Drop Zone */}
         <DropZone entryId={entry.id} onDrop={onDropItem} isHighlighted={isDropTarget}>
-          <div style={{ textAlign: 'center' }}>
-            <Plus size={20} style={{ marginBottom: '4px' }} />
-            <div style={{ fontSize: '14px' }}>Drop items here</div>
+          <div className="text-center">
+            <Plus size={20} className="mb-1 mx-auto opacity-70" />
+            <div className="text-sm font-medium">Drop items here</div>
           </div>
         </DropZone>
       </div>
@@ -284,44 +205,25 @@ const DiaryToolbar = () => {
   }
 
   return (
-    <div style={{
-      width: '320px',
-      background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-      padding: '20px',
-      borderRadius: '12px',
-      border: '2px solid #dee2e6',
-      marginRight: '20px',
-      position: 'sticky',
-      top: '20px',
-      height: 'fit-content'
-    }}>
-      <h3 style={{ color: '#495057', marginBottom: '20px', fontSize: '1.2rem', textAlign: 'center' }}>
-        🎨 Drag to Diary
+    <div className="w-full md:w-80 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm sticky top-6 h-fit overflow-y-auto max-h-[calc(100vh-4rem)]">
+      <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-6 text-center flex items-center justify-center gap-2">
+        <Palette size={20} className="text-primary" />
+        Drag to Diary
       </h3>
 
       {/* Staff Section */}
-      <div style={{ marginBottom: '20px' }}>
-        <h4 style={{ color: '#4ecdc4', marginBottom: '10px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="mb-6">
+        <h4 className="text-sm font-bold text-primary mb-3 flex items-center gap-2 uppercase tracking-wider">
           <Users size={16} />
           Team Members
         </h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="flex flex-col gap-2">
           {staff.slice(0, 4).map(member => (
             <DraggableElement
               key={member.id}
               item={{ type: 'staff', id: member.id, name: member.name, data: member }}
             >
-              <div style={{
-                padding: '10px 12px',
-                background: '#4ecdc4',
-                borderRadius: '6px',
-                color: 'white',
-                fontSize: '14px',
-                cursor: 'grab',
-                textAlign: 'center',
-                transition: 'all 0.2s ease',
-                border: '2px solid transparent'
-              }}>
+              <div className="px-4 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-medium cursor-grab active:cursor-grabbing transition-colors text-center">
                 {member.name}
               </div>
             </DraggableElement>
@@ -330,28 +232,18 @@ const DiaryToolbar = () => {
       </div>
 
       {/* Equipment Section */}
-      <div style={{ marginBottom: '20px' }}>
-        <h4 style={{ color: '#f39c12', marginBottom: '10px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="mb-6">
+        <h4 className="text-sm font-bold text-warning mb-3 flex items-center gap-2 uppercase tracking-wider">
           <Wrench size={16} />
           Equipment
         </h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="flex flex-col gap-2">
           {equipment.slice(0, 4).map(item => (
             <DraggableElement
               key={item.id}
               item={{ type: 'equipment', id: item.id, name: item.name, data: item }}
             >
-              <div style={{
-                padding: '10px 12px',
-                background: '#f39c12',
-                borderRadius: '6px',
-                color: 'white',
-                fontSize: '14px',
-                cursor: 'grab',
-                textAlign: 'center',
-                transition: 'all 0.2s ease',
-                border: '2px solid transparent'
-              }}>
+              <div className="px-4 py-3 bg-warning/10 hover:bg-warning/20 text-warning rounded-lg font-medium cursor-grab active:cursor-grabbing transition-colors text-center">
                 {item.name}
               </div>
             </DraggableElement>
@@ -361,27 +253,17 @@ const DiaryToolbar = () => {
 
       {/* Materials Section */}
       <div>
-        <h4 style={{ color: '#9b59b6', marginBottom: '10px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <h4 className="text-sm font-bold text-purple-500 mb-3 flex items-center gap-2 uppercase tracking-wider">
           <DollarSign size={16} />
           Materials
         </h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="flex flex-col gap-2">
           {materials.slice(0, 4).map(item => (
             <DraggableElement
               key={item.id}
               item={{ type: 'material', id: item.id, name: item.name, data: item }}
             >
-              <div style={{
-                padding: '10px 12px',
-                background: '#9b59b6',
-                borderRadius: '6px',
-                color: 'white',
-                fontSize: '14px',
-                cursor: 'grab',
-                textAlign: 'center',
-                transition: 'all 0.2s ease',
-                border: '2px solid transparent'
-              }}>
+              <div className="px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 rounded-lg font-medium cursor-grab active:cursor-grabbing transition-colors text-center">
                 {item.name}
               </div>
             </DraggableElement>
@@ -400,10 +282,26 @@ const PaintDiary = () => {
   const [totalRevenue, setTotalRevenue] = useState(0)
   const [isSaved, setIsSaved] = useState(true)
   const [dropTargetEntry, setDropTargetEntry] = useState(null)
+  
+  // Map State
+  const [showMap, setShowMap] = useState(false)
+  const [sessionLocation, setSessionLocation] = useState(null)
+  const [showGeoModal, setShowGeoModal] = useState(false)
+  const [sitePlan, setSitePlan] = useState(null)
 
   useEffect(() => {
     calculateTotals()
   }, [diaryEntries])
+
+  const handleSitePlanSave = (planData) => {
+    setSitePlan(planData);
+    setShowMap(true);
+    if (planData.bounds) {
+       const centerLat = (planData.bounds.north + planData.bounds.south) / 2;
+       const centerLng = (planData.bounds.east + planData.bounds.west) / 2;
+       setSessionLocation({ lat: centerLat, lng: centerLng });
+    }
+  }
 
   const calculateTotals = () => {
     let cost = 0
@@ -497,7 +395,8 @@ const PaintDiary = () => {
         date: selectedDate.toISOString().split('T')[0],
         entries: diaryEntries,
         totalCost,
-        totalRevenue
+        totalRevenue,
+        gpsData: sessionLocation // Include GPS data in save
       }
 
       await api.post('/diaries', diaryData)
@@ -512,120 +411,90 @@ const PaintDiary = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #fefefe 0%, #f8f9fa 100%)',
-        padding: '20px',
-        fontFamily: "'Inter', sans-serif"
-      }}>
-        <style>{`
-          .diary-page {
-            background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
-            border-radius: 16px;
-            padding: 30px;
-            border: 2px solid #e9ecef;
-            boxShadow: 0 8px 32px rgba(0,0,0,0.1);
-            position: relative;
-            overflow: hidden;
-          }
-          .diary-page::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-            border-radius: 14px 14px 0 0;
-          }
-          .diary-content {
-            position: relative;
-            z-index: 1;
-          }
-        `}</style>
+      <div className="min-h-screen bg-gray-50 dark:bg-dark transition-colors duration-300 font-sans relative overflow-hidden">
+        
+        <GeoreferenceModal 
+          isOpen={showGeoModal} 
+          onClose={() => setShowGeoModal(false)}
+          onSave={handleSitePlanSave}
+        />
 
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '32px'
-          }}>
-            <div>
-              <h1 style={{
-                margin: '0 0 8px 0',
-                color: '#2c3e50',
-                fontSize: '3rem',
-                fontWeight: '700',
-                background: 'linear-gradient(135deg, #4ecdc4 0%, #667eea 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}>
-                🎨 Paint Your Day Diary
-              </h1>
-              <p style={{
-                margin: 0,
-                color: '#6c757d',
-                fontSize: '1.2rem'
-              }}>
-                Drag and drop to "paint" your workday with visual time-tracking
-              </p>
-            </div>
+        {/* Map Background Layer */}
+        {showMap && (
+          <div className="absolute inset-0 z-0 animate-fade-in">
+             <MapBackground 
+                activeLocation={sessionLocation} 
+                onLocationSelect={setSessionLocation} 
+                overlayImage={sitePlan}
+             />
+          </div>
+        )}
 
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <DatePicker
-                selected={selectedDate}
-                onChange={setSelectedDate}
-                dateFormat="EEEE, MMMM d, yyyy"
-                className="filter-input"
-                style={{
-                  background: '#f8f9fa',
-                  color: '#495057',
-                  border: '1px solid #ced4da',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '500'
-                }}
-              />
+        <div className={`relative z-10 p-6 min-h-screen transition-all duration-500 ${showMap ? 'bg-white/10 dark:bg-black/10 backdrop-blur-sm' : 'bg-gray-50 dark:bg-gray-900'}`}>
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-6">
+              <div className="text-center lg:text-left">
+                <h1 className={`text-4xl font-bold mb-2 ${showMap ? 'text-white drop-shadow-md' : 'bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent'}`}>
+                  🎨 Paint Your Day
+                </h1>
+                <p className={`${showMap ? 'text-gray-200' : 'text-gray-600 dark:text-gray-400'} text-lg`}>
+                  Drag and drop to "paint" your workday with visual time-tracking
+                </p>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-3 items-center">
+                
+                {/* Site Plan Upload */}
+                <button
+                  onClick={() => setShowGeoModal(true)}
+                  className="flex items-center gap-2 px-4 py-3 bg-stone-800 text-emerald-400 border border-white/10 hover:bg-stone-700 rounded-lg font-medium transition-all shadow-lg"
+                >
+                  <UploadCloud size={18} />
+                  Site Plan
+                </button>
+
+                {/* Map Toggle Button */}
+                <button
+                  onClick={() => setShowMap(!showMap)}
+                  className={`
+                    flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all shadow-lg border-2
+                    ${showMap 
+                      ? 'bg-indigo-600 border-indigo-400 text-white shadow-indigo-500/50' 
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                    }
+                  `}
+                >
+                  {showMap ? <EyeOff size={18} /> : <MapPin size={18} />}
+                  {showMap ? 'Hide Map' : 'Set Location'}
+                </button>
+
+                <div className="relative">
+                  <DatePicker
+                    selected={selectedDate}
+                  onChange={setSelectedDate}
+                  dateFormat="EEEE, MMMM d, yyyy"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-primary/50 outline-none cursor-pointer"
+                />
+              </div>
 
               <button
                 onClick={handleCreateEntry}
-                style={{
-                  background: '#17a2b8',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '14px'
-                }}
+                className="flex items-center gap-2 px-4 py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors shadow-lg shadow-cyan-500/30"
               >
-                <Plus size={16} />
+                <Plus size={18} />
                 New Entry
               </button>
 
               <button
                 onClick={handleSave}
-                style={{
-                  background: isSaved ? '#28a745' : '#4ecdc4',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '16px',
-                  fontWeight: '500',
-                  boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)'
-                }}
+                className={`
+                  flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all shadow-lg
+                  ${isSaved 
+                    ? 'bg-success hover:bg-success/90 shadow-success/30' 
+                    : 'bg-primary hover:bg-primary/90 shadow-primary/30'
+                  } text-white
+                `}
               >
                 <Save size={18} />
                 {isSaved ? 'Saved' : 'Save Diary'}
@@ -634,148 +503,90 @@ const PaintDiary = () => {
           </div>
 
           {/* Summary Cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '16px',
-            marginBottom: '32px'
-          }}>
-            <div style={{
-              background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
-              padding: '20px',
-              borderRadius: '12px',
-              color: 'white',
-              textAlign: 'center',
-              boxShadow: '0 4px 12px rgba(231, 76, 60, 0.3)'
-            }}>
-              <DollarSign size={24} style={{ marginBottom: '8px', opacity: 0.9 }} />
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>${totalCost.toFixed(2)}</div>
-              <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Total Cost</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="bg-gradient-to-br from-danger to-red-600 rounded-xl p-5 text-white shadow-lg">
+              <DollarSign size={24} className="mb-2 opacity-80" />
+              <div className="text-2xl font-bold">${totalCost.toFixed(2)}</div>
+              <div className="text-sm opacity-80">Total Cost</div>
             </div>
 
-            <div style={{
-              background: 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)',
-              padding: '20px',
-              borderRadius: '12px',
-              color: 'white',
-              textAlign: 'center',
-              boxShadow: '0 4px 12px rgba(78, 205, 196, 0.3)'
-            }}>
-              <TrendingUp size={24} style={{ marginBottom: '8px', opacity: 0.9 }} />
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>${totalRevenue.toFixed(2)}</div>
-              <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Revenue</div>
+            <div className="bg-gradient-to-br from-primary to-blue-600 rounded-xl p-5 text-white shadow-lg">
+              <TrendingUp size={24} className="mb-2 opacity-80" />
+              <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
+              <div className="text-sm opacity-80">Revenue</div>
             </div>
 
-            <div style={{
-              background: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
-              padding: '20px',
-              borderRadius: '12px',
-              color: 'white',
-              textAlign: 'center',
-              boxShadow: '0 4px 12px rgba(243, 156, 18, 0.3)'
-            }}>
-              <BarChart3 size={24} style={{ marginBottom: '8px', opacity: 0.9 }} />
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>${(totalRevenue - totalCost).toFixed(2)}</div>
-              <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Profit</div>
+            <div className="bg-gradient-to-br from-warning to-orange-500 rounded-xl p-5 text-white shadow-lg">
+              <BarChart3 size={24} className="mb-2 opacity-80" />
+              <div className="text-2xl font-bold">${(totalRevenue - totalCost).toFixed(2)}</div>
+              <div className="text-sm opacity-80">Profit</div>
             </div>
 
-            <div style={{
-              background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
-              padding: '20px',
-              borderRadius: '12px',
-              color: 'white',
-              textAlign: 'center',
-              boxShadow: '0 4px 12px rgba(155, 89, 182, 0.3)'
-            }}>
-              <FileText size={24} style={{ marginBottom: '8px', opacity: 0.9 }} />
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{diaryEntries.length}</div>
-              <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Entries</div>
+            <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl p-5 text-white shadow-lg">
+              <FileText size={24} className="mb-2 opacity-80" />
+              <div className="text-2xl font-bold">{diaryEntries.length}</div>
+              <div className="text-sm opacity-80">Entries</div>
             </div>
           </div>
 
           {/* Main Diary Area */}
-          <div style={{ display: 'flex', gap: '24px' }}>
-            <DiaryToolbar />
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="lg:order-1 order-2">
+              <DiaryToolbar />
+            </div>
 
-            <div style={{ flex: 1 }}>
-              <div className="diary-page">
-                <div className="diary-content">
-                  <div style={{
-                    textAlign: 'center',
-                    marginBottom: '24px',
-                    paddingTop: '20px'
-                  }}>
-                    <h2 style={{
-                      margin: '0 0 8px 0',
-                      color: 'white',
-                      fontSize: '2rem',
-                      fontWeight: '600',
-                      textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                    }}>
-                      {selectedDate.toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </h2>
-                    <p style={{
-                      margin: 0,
-                      color: 'rgba(255,255,255,0.9)',
-                      fontSize: '1.1rem'
-                    }}>
-                      Your construction work diary - drag items from the left to add them!
-                    </p>
-                  </div>
+            <div className="flex-1 lg:order-2 order-1">
+              <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm min-h-[600px] relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-purple-500"></div>
+                
+                <div className="text-center mb-8 mt-4">
+                  <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                    {selectedDate.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </h2>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Your construction work diary
+                  </p>
+                </div>
 
-                  {/* Diary Entries */}
-                  <div style={{ marginTop: '20px' }}>
-                    {diaryEntries.length === 0 ? (
-                      <div style={{
-                        textAlign: 'center',
-                        padding: '60px 20px',
-                        color: '#6c757d',
-                        border: '2px dashed #dee2e6',
-                        borderRadius: '12px',
-                        background: '#f8f9fa'
-                      }}>
-                        <FileText size={48} style={{ color: '#dee2e6', marginBottom: '16px' }} />
-                        <h3>Your diary is empty</h3>
-                        <p>Click "New Entry" to create your first diary entry, then drag items from the left toolbar!</p>
-                        <button
-                          onClick={handleCreateEntry}
-                          style={{
-                            marginTop: '16px',
-                            padding: '12px 24px',
-                            background: '#4ecdc4',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontSize: '16px'
-                          }}
-                        >
-                          Create First Entry
-                        </button>
-                      </div>
-                    ) : (
-                      diaryEntries.map(entry => (
-                        <DiaryEntry
-                          key={entry.id}
-                          entry={entry}
-                          onUpdate={handleUpdateEntry}
-                          onDelete={handleDeleteEntry}
-                          onDropItem={handleDropItem}
-                          isDropTarget={dropTargetEntry === entry.id}
-                        />
-                      ))
-                    )}
-                  </div>
+                {/* Diary Entries */}
+                <div className="space-y-4">
+                  {diaryEntries.length === 0 ? (
+                    <div className="text-center py-20 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/50">
+                      <FileText size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">Your diary is empty</h3>
+                      <p className="text-gray-400 dark:text-gray-500 max-w-sm mx-auto mb-6">
+                        Click "New Entry" to create your first diary entry, then drag items from the left toolbar!
+                      </p>
+                      <button
+                        onClick={handleCreateEntry}
+                        className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-all shadow-lg shadow-primary/30"
+                      >
+                        Create First Entry
+                      </button>
+                    </div>
+                  ) : (
+                    diaryEntries.map(entry => (
+                      <DiaryEntry
+                        key={entry.id}
+                        entry={entry}
+                        onUpdate={handleUpdateEntry}
+                        onDelete={handleDeleteEntry}
+                        onDropItem={handleDropItem}
+                        isDropTarget={dropTargetEntry === entry.id}
+                      />
+                    ))
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </DndProvider>
   )

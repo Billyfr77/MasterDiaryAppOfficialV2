@@ -46,6 +46,12 @@ fs
     db[model.name] = model;
   });
 
+// Manually register Notification if not picked up (sometimes dynamic requires fail with specific patterns)
+if (!db.Notification) {
+  const NotificationModel = require('./notification')(sequelize, Sequelize.DataTypes);
+  db[NotificationModel.name] = NotificationModel;
+}
+
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     db[modelName].associate(db);

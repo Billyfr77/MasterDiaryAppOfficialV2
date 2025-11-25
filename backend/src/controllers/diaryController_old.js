@@ -19,26 +19,7 @@ const moment = require('moment');
 const { sequelize } = require('../models');
 const { getSetting } = require('../utils/settingsCache');
 
-const diarySchema = Joi.object({
-  date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).required(),
-  projectId: Joi.string().uuid().required(),
-  workerId: Joi.string().uuid().optional(),
-  staff: Joi.string().uuid().optional(),
-  start: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).required(),
-  finish: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).required(),
-  breakMins: Joi.number().integer().min(0).optional(),
-  revenues: Joi.number().positive().optional()
-}).custom((value, helpers) => {
-  if (!value.workerId && !value.staff) {
-    return helpers.error('any.invalid', { message: 'workerId or staff is required' });
-  }
-  const start = moment(value.start, 'HH:mm');
-  const finish = moment(value.finish, 'HH:mm');
-  if (start.isSameOrAfter(finish)) {
-    return helpers.error('any.invalid', { message: 'Start time must be before finish time' });
-  }
-  return value;
-});
+  const diarySchema = Joi.any();
 
 const getAllDiaries = async (req, res) => {
   try {
@@ -50,12 +31,7 @@ const getAllDiaries = async (req, res) => {
     const diaries = await Diary.findAll({
       where,
       include: [
-        {
-          model: Project,
-          as: 'Project',
-          where: { userId: req.user.id },
-          required: true
-        },
+        { model: Project, as: 'Project' },
         { model: Staff, as: 'Staff' }
       ],
       order: [['date', 'DESC']]
@@ -70,12 +46,7 @@ const getDiaryById = async (req, res) => {
   try {
     const diary = await Diary.findByPk(req.params.id, {
       include: [
-        {
-          model: Project,
-          as: 'Project',
-          where: { userId: req.user.id },
-          required: true
-        },
+        { model: Project, as: 'Project' },
         { model: Staff, as: 'Staff' }
       ]
     });
@@ -98,24 +69,11 @@ const createDiary = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, workerId, staff, start, finish, breakMins, revenues } = req.body;
-
-    // Use workerId or staff
-    const workerIdToUse = workerId || staff;
-
-    // Check if project belongs to user
-    const project = await Project.findOne({
-      where: { id: projectId, userId: req.user.id },
-      transaction
-    });
-    if (!project) {
-      await transaction.rollback();
-      return res.status(403).json({ error: 'Project not found or access denied' });
-    }
+    const { date, projectId, workerId, start, finish, breakMins, revenues } = req.body;
 
     // Fetch staff
-    const staffMember = await Staff.findByPk(workerIdToUse, { transaction });
-    if (!staffMember) {
+    const staff = await Staff.findByPk(workerId, { transaction });
+    if (!staff) {
       await transaction.rollback();
       return res.status(404).json({ error: 'Staff not found' });
     }
@@ -138,15 +96,15 @@ const createDiary = async (req, res) => {
     const ot2Hours = Math.max(totalHours - ordinaryHours - 4, 0);
 
     // Calculate costs
-    const costs = ordinaryHoursCalc * staffMember.payRateBase +
-                  ot1Hours * (staffMember.payRateOT1 || staffMember.payRateBase) +
-                  ot2Hours * (staffMember.payRateOT2 || staffMember.payRateBase);
+    const costs = ordinaryHoursCalc * staff.payRateBase +
+                  ot1Hours * (staff.payRateOT1 || staff.payRateBase) +
+                  ot2Hours * (staff.payRateOT2 || staff.payRateBase);
 
     // Calculate revenues using charge out rates
     const revenuesCalc = revenues || (
-      ordinaryHoursCalc * staffMember.chargeOutBase +
-      ot1Hours * (staffMember.chargeOutOT1 || staffMember.chargeOutBase) +
-      ot2Hours * (staffMember.chargeOutOT2 || staffMember.chargeOutBase)
+      ordinaryHoursCalc * staff.chargeOutBase +
+      ot1Hours * (staff.chargeOutOT1 || staff.chargeOutBase) +
+      ot2Hours * (staff.chargeOutOT2 || staff.chargeOutBase)
     );
 
     const marginPct = revenuesCalc > 0 ? ((revenuesCalc - costs) / revenuesCalc) * 100 : 0;
@@ -154,7 +112,7 @@ const createDiary = async (req, res) => {
     const diaryData = {
       date,
       projectId,
-      workerId: workerIdToUse,
+      workerId,
       start,
       finish,
       breakMins: breakMins || 0,
@@ -187,19 +145,6 @@ const createDiary = async (req, res) => {
 
 const updateDiary = async (req, res) => {
   try {
-    // First check if diary exists and belongs to user's project
-    const existingDiary = await Diary.findByPk(req.params.id, {
-      include: [{
-        model: Project,
-        as: 'Project',
-        where: { userId: req.user.id }
-      }]
-    });
-
-    if (!existingDiary) {
-      return res.status(404).json({ error: 'Diary entry not found or access denied' });
-    }
-
     const [updated] = await Diary.update(req.body, { where: { id: req.params.id } });
     if (updated) {
       const updatedDiary = await Diary.findByPk(req.params.id);
@@ -214,19 +159,6 @@ const updateDiary = async (req, res) => {
 
 const deleteDiary = async (req, res) => {
   try {
-    // First check if diary exists and belongs to user's project
-    const existingDiary = await Diary.findByPk(req.params.id, {
-      include: [{
-        model: Project,
-        as: 'Project',
-        where: { userId: req.user.id }
-      }]
-    });
-
-    if (!existingDiary) {
-      return res.status(404).json({ error: 'Diary entry not found or access denied' });
-    }
-
     const deleted = await Diary.destroy({ where: { id: req.params.id } });
     if (deleted) {
       res.json({ message: 'Diary entry deleted' });

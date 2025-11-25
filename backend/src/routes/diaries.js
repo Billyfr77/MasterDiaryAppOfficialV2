@@ -15,6 +15,7 @@
  * Trade Secret: Real-time calculation algorithms and optimization techniques
  */const express = require('express');
 const router = express.Router();
+const { authenticateToken } = require('../middleware/auth');
 const {
   getAllDiaries,
   getDiaryById,
@@ -22,6 +23,8 @@ const {
   updateDiary,
   deleteDiary
 } = require('../controllers/diaryController');
+
+router.use(authenticateToken);
 
 router.get('/', getAllDiaries);
 router.get('/:id', getDiaryById);

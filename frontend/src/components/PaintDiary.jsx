@@ -1,28 +1,172 @@
 /*
  * MasterDiaryApp Official - Paint Your Day Diary (Enhanced Version)
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * Enhanced: Project data included in all diaries view
- * Correct data resolution for staff/equipment/materials items
- * Items now show current names and rates when viewing saved diaries
  */
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { DndProvider, useDrag, useDrop } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
 import { api } from '../utils/api'
 import {
   Calendar, Users, Wrench, DollarSign, Save, Trash2, Plus, Clock,
   TrendingUp, BarChart3, Edit3, FileText, Palette, Camera, Mic,
   MicOff, MapPin, Cloud, Download, Zap, Target, Award, Upload,
   Moon, Sun, Keyboard, Settings, RotateCcw, FileDown, FileSpreadsheet,
-  Package, Eye, List
+  Package, Eye, List, Image as ImageIcon, File, Folder, X
 } from 'lucide-react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import TimelineCanvas from './TimelineCanvas'
 
 // ================================
-// UTILITY FUNCTIONS
+// CONFIGURATION MODAL (Input on Drop)
+// ================================
+
+const ConfigModal = ({ isOpen, onClose, onConfirm, item }) => {
+  const [qty, setQty] = useState(1)
+  const [cost, setCost] = useState(0)
+  const [charge, setCharge] = useState(0)
+  const inputRef = React.useRef(null)
+
+  useEffect(() => {
+    if (isOpen && item) {
+      setQty(1)
+      setCost(item.payRateBase || item.costRateBase || item.pricePerUnit || item.rate || 0)
+      const baseCost = item.payRateBase || item.costRateBase || item.pricePerUnit || item.rate || 0
+      setCharge(item.chargeOutBase || item.chargeRate || (baseCost * 1.2))
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }, [isOpen, item])
+
+  // Calculate preview totals (MOVED HOOK UP before conditional return)
+  const financials = React.useMemo(() => {
+    if (!item) return { totalCost: 0, totalRevenue: 0 }
+
+    // We simulate the item to reuse the calculation logic
+    const tempItem = { ...item, duration: qty, quantity: qty, costRate: cost, chargeRate: charge }
+    const overtimeThreshold = 8
+    const overtimeMultiplier = 1.5
+    
+    let totalCost = 0
+    let totalRevenue = 0
+
+    if (item.type === 'staff') {
+      const regularHours = Math.min(qty, overtimeThreshold)
+      const overtimeHours = Math.max(0, qty - overtimeThreshold)
+      totalCost = (regularHours * cost) + (overtimeHours * cost * overtimeMultiplier)
+      totalRevenue = qty * charge
+    } else {
+      totalCost = qty * cost
+      totalRevenue = qty * charge
+    }
+    
+    return { totalCost, totalRevenue }
+  }, [qty, cost, charge, item])
+
+  if (!isOpen || !item) return null
+
+  const isTimeBased = item.type === 'staff' || item.type === 'equipment'
+  const label = isTimeBased ? 'Hours Worked' : 'Quantity'
+  const unit = isTimeBased ? 'hrs' : 'units'
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-stone-900 border border-white/10 rounded-3xl p-8 w-96 shadow-2xl transform transition-all scale-100">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
+            <Plus size={24} className="text-indigo-500" />
+            Add Item
+          </h3>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="mb-6 space-y-4">
+          <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
+            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{item.type}</div>
+            <div className="text-lg font-bold text-white">{item.name}</div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">
+              {label}
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                ref={inputRef}
+                type="number"
+                min="0.1"
+                step="0.5"
+                value={qty}
+                onChange={(e) => setQty(parseFloat(e.target.value) || 0)}
+                onKeyDown={(e) => e.key === 'Enter' && onConfirm(qty, cost, charge)}
+                className="flex-1 bg-black/30 border-2 border-indigo-500/50 rounded-xl px-4 py-3 text-2xl font-mono font-bold text-white focus:border-indigo-500 focus:outline-none text-center"
+              />
+              <span className="text-sm font-bold text-gray-500">{unit}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-red-400 uppercase tracking-wider mb-2">In-House Cost</label>
+              <input
+                type="number"
+                value={cost}
+                onChange={(e) => setCost(parseFloat(e.target.value) || 0)}
+                className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono font-bold text-white focus:border-red-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">Charge Out</label>
+              <input
+                type="number"
+                value={charge}
+                onChange={(e) => setCharge(parseFloat(e.target.value) || 0)}
+                className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono font-bold text-white focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Live Preview Totals */}
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+             <div>
+               <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total Cost</div>
+               <div className="text-lg font-black text-red-400">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(financials.totalCost)}</div>
+             </div>
+             <div className="text-right">
+               <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total Charge</div>
+               <div className="text-lg font-black text-emerald-400">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(financials.totalRevenue)}</div>
+             </div>
+          </div>
+          
+          {item.type === 'staff' && qty > 8 && (
+             <div className="flex items-center gap-2 text-xs font-bold text-amber-400 bg-amber-500/10 px-3 py-2 rounded-xl border border-amber-500/20">
+               <Clock size={14} />
+               <span>Includes {(qty - 8).toFixed(1)}h Overtime (1.5x Cost)</span>
+             </div>
+          )}
+        </div>
+
+        <div className="flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 px-6 py-3 rounded-xl font-bold text-gray-400 hover:bg-white/5 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => onConfirm(qty, cost, charge)}
+            className="flex-1 px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/30 transition-all hover:-translate-y-0.5"
+          >
+            Confirm & Add
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ================================
+// VISUAL NODE COMPONENT (Solid & Amazing)
 // ================================
 
 const formatCurrency = (amount) => {
@@ -32,17 +176,39 @@ const formatCurrency = (amount) => {
   }).format(amount || 0)
 }
 
-const calculateItemCost = (item, overtimeThreshold, overtimeMultiplier) => {
-  if (!item || item.type !== 'staff') {
-    return (item?.rate || 0) * (item?.quantity || 0)
+const calculateItemFinancials = (item, overtimeThreshold = 8, overtimeMultiplier = 1.5) => {
+  const qty = item.duration || item.quantity || 0;
+  const costRate = parseFloat(item.costRate) || 0;
+  const chargeRate = parseFloat(item.chargeRate) || 0;
+
+  let totalCost = 0;
+  let totalRevenue = 0;
+
+  if (item.type === 'staff' || item.type === 'equipment') {
+    // Time based calculations with potential overtime for Staff
+    // Note: Equipment usually doesn't get OT pay, but might have OT charge. 
+    // For simplicity here, we apply OT logic to Staff COST only.
+    
+    if (item.type === 'staff') {
+      const regularHours = Math.min(qty, overtimeThreshold);
+      const overtimeHours = Math.max(0, qty - overtimeThreshold);
+      totalCost = (regularHours * costRate) + (overtimeHours * costRate * overtimeMultiplier);
+      
+      // Charge out is usually flat hourly, but we can apply multiplier if desired. 
+      // Sticking to flat charge rate for simplicity unless specified.
+      totalRevenue = qty * chargeRate;
+    } else {
+      // Equipment (Simple multiplication)
+      totalCost = qty * costRate;
+      totalRevenue = qty * chargeRate;
+    }
+  } else {
+    // Materials (Simple multiplication)
+    totalCost = qty * costRate;
+    totalRevenue = qty * chargeRate;
   }
 
-  const regularHours = Math.min(item.quantity || 0, overtimeThreshold)
-  const overtimeHours = Math.max(0, (item.quantity || 0) - overtimeThreshold)
-  const regularCost = regularHours * (item.rate || 0)
-  const overtimeCost = overtimeHours * (item.rate || 0) * overtimeMultiplier
-
-  return regularCost + overtimeCost
+  return { totalCost, totalRevenue };
 }
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -52,70 +218,19 @@ const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9
 // ================================
 
 const DraggableElement = ({ item, children }) => {
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'diary-item',
-    item: item,
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  }))
-
-  const dragStyle = {
-    opacity: isDragging ? 0.5 : 1,
-    transform: isDragging ? 'scale(1.05) rotate(2deg)' : 'scale(1)',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    cursor: isDragging ? 'grabbing' : 'grab',
-    animation: isDragging ? 'none' : 'pulse 2s infinite'
-  }
+  const onDragStart = (event) => {
+    // Pass item data for React Flow
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(item));
+    event.dataTransfer.effectAllowed = 'move';
+  };
 
   return (
-    <div ref={drag} style={dragStyle}>
+    <div 
+      draggable
+      onDragStart={onDragStart}
+      className="transition-all duration-300 cursor-grab active:cursor-grabbing hover:scale-105 active:rotate-2"
+    >
       {children}
-    </div>
-  )
-}
-
-// ================================
-// DROP ZONE COMPONENT
-// ================================
-
-const DropZone = ({ onDrop, children, isHighlighted }) => {
-  const [{ isOver }, drop] = useDrop(() => ({
-    accept: 'diary-item',
-    drop: (item) => {
-      onDrop(item)
-      return undefined
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-    }),
-  }))
-
-  const zoneStyle = {
-    border: `2px ${isOver || isHighlighted ? 'solid' : 'dashed'} ${isOver || isHighlighted ? '#4ecdc4' : '#dee2e6'}`,
-    borderRadius: '12px',
-    background: isOver || isHighlighted
-      ? 'rgba(78, 205, 196, 0.1)'
-      : 'rgba(248, 249, 250, 0.8)',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    cursor: 'pointer',
-    minHeight: '120px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: isOver || isHighlighted ? '#4ecdc4' : '#6c757d',
-    padding: '20px'
-  }
-
-  return (
-    <div ref={drop} style={zoneStyle}>
-      {children || (
-        <div style={{ textAlign: 'center' }}>
-          <Plus size={24} style={{ marginBottom: '8px' }} />
-          <div style={{ fontSize: '14px', fontWeight: '500' }}>Drop items here</div>
-          <div style={{ fontSize: '12px', opacity: 0.7 }}>Drag from the toolbar</div>
-        </div>
-      )}
     </div>
   )
 }
@@ -124,236 +239,154 @@ const DropZone = ({ onDrop, children, isHighlighted }) => {
 // WORK ITEM COMPONENT
 // ================================
 
-const WorkItem = ({ item, onUpdate, onRemove, theme, formatCurrency, overtimeThreshold, overtimeMultiplier }) => {
-  const [editingQuantity, setEditingQuantity] = useState(false)
-  const [editingRate, setEditingRate] = useState(false)
-  const [tempQuantity, setTempQuantity] = useState('')
-  const [tempRate, setTempRate] = useState('')
+const WorkItem = ({ item, onUpdate, onRemove, formatCurrency, overtimeThreshold, overtimeMultiplier }) => {
+  const [editingQty, setEditingQty] = useState(false)
+  const [editingCost, setEditingCost] = useState(false)
+  const [editingCharge, setEditingCharge] = useState(false)
+  
+  const [tempQty, setTempQty] = useState('')
+  const [tempCost, setTempCost] = useState('')
+  const [tempCharge, setTempCharge] = useState('')
 
-  const handleQuantitySave = () => {
-    const newQuantity = parseFloat(tempQuantity) || 1
-    onUpdate(item.id, { quantity: newQuantity })
-    setEditingQuantity(false)
+  const { totalCost, totalRevenue } = calculateItemFinancials(item, overtimeThreshold, overtimeMultiplier);
+
+  // Quantity/Duration Handler
+  const handleQtySave = () => {
+    const val = parseFloat(tempQty) || 0;
+    onUpdate(item.id, { quantity: val, duration: val });
+    setEditingQty(false);
   }
 
-  const handleRateSave = () => {
-    const newRate = parseFloat(tempRate) || 0
-    onUpdate(item.id, { rate: newRate })
-    setEditingRate(false)
+  // Cost Rate Handler
+  const handleCostSave = () => {
+    const val = parseFloat(tempCost) || 0;
+    onUpdate(item.id, { costRate: val });
+    setEditingCost(false);
   }
 
-  const getOvertimeBreakdown = () => {
-    if (item.type !== 'staff') return null
-    const regularHours = Math.min(item.quantity || 0, overtimeThreshold)
-    const overtimeHours = Math.max(0, (item.quantity || 0) - overtimeThreshold)
-    return { regularHours, overtimeHours }
+  // Charge Rate Handler
+  const handleChargeSave = () => {
+    const val = parseFloat(tempCharge) || 0;
+    onUpdate(item.id, { chargeRate: val });
+    setEditingCharge(false);
   }
-
-  const overtimeBreakdown = getOvertimeBreakdown()
-  const itemCost = calculateItemCost(item, overtimeThreshold, overtimeMultiplier)
 
   return (
-    <div style={{
-      background: theme === 'dark' ? '#2d3748' : '#f8f9fa',
-      borderRadius: '8px',
-      padding: '16px',
-      border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
-      marginBottom: '12px'
-    }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {item.type === 'staff' && <Users size={16} style={{ color: '#4ecdc4' }} />}
-          {item.type === 'equipment' && <Wrench size={16} style={{ color: '#f39c12' }} />}
-          {item.type === 'material' && <Package size={16} style={{ color: '#e74c3c' }} />}
-          <span style={{
-            fontWeight: '600',
-            color: theme === 'dark' ? '#e2e8f0' : '#495057'
-          }}>
+    <div className="bg-stone-900/60 backdrop-blur-md rounded-xl p-4 border border-white/10 mb-3 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-2">
+          {item.type === 'staff' && <Users size={16} className="text-emerald-400" />}
+          {item.type === 'equipment' && <Wrench size={16} className="text-amber-400" />}
+          {item.type === 'material' && <Package size={16} className="text-indigo-400" />}
+          <span className="font-bold text-white truncate max-w-[150px]" title={item.name}>
             {item.name}
           </span>
         </div>
         <button
           onClick={() => onRemove(item.id)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#e74c3c',
-            cursor: 'pointer',
-            padding: '4px',
-            borderRadius: '4px'
-          }}
-          onMouseEnter={(e) => e.target.style.background = '#ffeaea'}
-          onMouseLeave={(e) => e.target.style.background = 'none'}
+          className="text-rose-400 hover:bg-rose-500/10 p-1 rounded transition-colors"
         >
           <Trash2 size={14} />
         </button>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '12px'
-      }}>
+      {/* Row 1: Quantity & Rates */}
+      <div className="grid grid-cols-3 gap-3 mb-3">
+        {/* Quantity / Hours */}
         <div>
-          <label style={{
-            display: 'block',
-            fontSize: '12px',
-            color: theme === 'dark' ? '#a0aec0' : '#6c757d',
-            marginBottom: '4px'
-          }}>
-            Quantity
+          <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+            {item.type === 'material' ? 'Qty' : 'Hours'}
           </label>
-          {editingQuantity ? (
+          {editingQty ? (
             <input
               type="number"
-              value={tempQuantity}
-              onChange={(e) => setTempQuantity(e.target.value)}
-              onBlur={handleQuantitySave}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') handleQuantitySave()
-              }}
-              style={{
-                width: '100%',
-                padding: '6px 8px',
-                border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
-                borderRadius: '4px',
-                background: theme === 'dark' ? '#1a202c' : '#ffffff',
-                color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                fontSize: '12px'
-              }}
+              value={tempQty}
+              onChange={(e) => setTempQty(e.target.value)}
+              onBlur={handleQtySave}
+              onKeyDown={(e) => e.key === 'Enter' && handleQtySave()}
+              className="w-full px-2 py-1 text-sm font-bold bg-black/40 border border-indigo-500 rounded text-white focus:outline-none"
               autoFocus
             />
           ) : (
             <div
-              onClick={() => {
-                setEditingQuantity(true)
-                setTempQuantity(item.quantity.toString())
-              }}
-              style={{
-                padding: '6px 8px',
-                border: `1px solid transparent`,
-                borderRadius: '4px',
-                background: 'transparent',
-                color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                cursor: 'pointer',
-                fontSize: '12px',
-                transition: 'border 0.2s'
-              }}
-              onMouseEnter={(e) => e.target.style.borderColor = '#4ecdc4'}
-              onMouseLeave={(e) => e.target.style.borderColor = 'transparent'}
+              onClick={() => { setEditingQty(true); setTempQty(item.duration || item.quantity); }}
+              className="px-2 py-1 text-sm font-bold border border-white/5 rounded hover:border-indigo-500/50 cursor-pointer text-white bg-black/20"
             >
-              {item.quantity} {item.type === 'staff' ? 'hrs' : 'units'}
+              {item.duration || item.quantity} <span className="text-[10px] text-gray-500 font-normal">{item.type === 'material' ? 'u' : 'h'}</span>
             </div>
           )}
         </div>
 
+        {/* In-House Cost Rate */}
         <div>
-          <label style={{
-            display: 'block',
-            fontSize: '12px',
-            color: theme === 'dark' ? '#a0aec0' : '#6c757d',
-            marginBottom: '4px'
-          }}>
-            Rate
+          <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+            In-House
           </label>
-          {editingRate ? (
+          {editingCost ? (
             <input
               type="number"
-              step="0.01"
-              value={tempRate}
-              onChange={(e) => setTempRate(e.target.value)}
-              onBlur={handleRateSave}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') handleRateSave()
-              }}
-              style={{
-                width: '100%',
-                padding: '6px 8px',
-                border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
-                borderRadius: '4px',
-                background: theme === 'dark' ? '#1a202c' : '#ffffff',
-                color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                fontSize: '12px'
-              }}
+              value={tempCost}
+              onChange={(e) => setTempCost(e.target.value)}
+              onBlur={handleCostSave}
+              onKeyDown={(e) => e.key === 'Enter' && handleCostSave()}
+              className="w-full px-2 py-1 text-sm font-bold bg-black/40 border border-red-500/50 rounded text-white focus:outline-none"
               autoFocus
             />
           ) : (
             <div
-              onClick={() => {
-                setEditingRate(true)
-                setTempRate(item.rate.toString())
-              }}
-              style={{
-                padding: '6px 8px',
-                border: `1px solid transparent`,
-                borderRadius: '4px',
-                background: 'transparent',
-                color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                cursor: 'pointer',
-                fontSize: '12px',
-                transition: 'border 0.2s'
-              }}
-              onMouseEnter={(e) => e.target.style.borderColor = '#4ecdc4'}
-              onMouseLeave={(e) => e.target.style.borderColor = 'transparent'}
+              onClick={() => { setEditingCost(true); setTempCost(item.costRate); }}
+              className="px-2 py-1 text-sm font-bold border border-white/5 rounded hover:border-red-500/50 cursor-pointer text-red-300 bg-black/20"
             >
-              {formatCurrency(item.rate || 0)}
+              {formatCurrency(item.costRate)}
+            </div>
+          )}
+        </div>
+
+        {/* Charge Out Rate */}
+        <div>
+          <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+            Charge Out
+          </label>
+          {editingCharge ? (
+            <input
+              type="number"
+              value={tempCharge}
+              onChange={(e) => setTempCharge(e.target.value)}
+              onBlur={handleChargeSave}
+              onKeyDown={(e) => e.key === 'Enter' && handleChargeSave()}
+              className="w-full px-2 py-1 text-sm font-bold bg-black/40 border border-emerald-500/50 rounded text-white focus:outline-none"
+              autoFocus
+            />
+          ) : (
+            <div
+              onClick={() => { setEditingCharge(true); setTempCharge(item.chargeRate); }}
+              className="px-2 py-1 text-sm font-bold border border-white/5 rounded hover:border-emerald-500/50 cursor-pointer text-emerald-300 bg-black/20"
+            >
+              {formatCurrency(item.chargeRate)}
             </div>
           )}
         </div>
       </div>
 
-      {overtimeBreakdown && overtimeBreakdown.overtimeHours > 0 && (
-        <div style={{
-          marginTop: '12px',
-          padding: '8px',
-          background: 'rgba(243, 156, 18, 0.1)',
-          borderRadius: '4px',
-          border: '1px solid #f39c12'
-        }}>
-          <div style={{
-            fontSize: '11px',
-            color: '#f39c12',
-            marginBottom: '4px',
-            fontWeight: '600'
-          }}>
-            Overtime: {overtimeBreakdown.overtimeHours}hrs × {formatCurrency((item.rate || 0) * overtimeMultiplier)}
-          </div>
-          <div style={{
-            fontSize: '10px',
-            color: theme === 'dark' ? '#a0aec0' : '#6c757d'
-          }}>
-            Regular: {overtimeBreakdown.regularHours}hrs × {formatCurrency(item.rate || 0)}
-          </div>
+      {/* Row 2: Totals */}
+      <div className="grid grid-cols-2 gap-4 pt-3 border-t border-white/10">
+         <div className="flex flex-col">
+           <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Total Cost</span>
+           <span className="text-sm font-black text-red-400">{formatCurrency(totalCost)}</span>
+         </div>
+         <div className="flex flex-col text-right">
+           <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Total Charge</span>
+           <span className="text-sm font-black text-emerald-400">{formatCurrency(totalRevenue)}</span>
+         </div>
+      </div>
+
+      {/* Overtime Indicator */}
+      {item.type === 'staff' && (item.duration > overtimeThreshold) && (
+        <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-1 rounded">
+          <Clock size={10} />
+          <span>Includes {(item.duration - overtimeThreshold).toFixed(1)}h Overtime</span>
         </div>
       )}
-
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: '12px',
-        marginTop: '12px',
-        borderTop: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`
-      }}>
-        <span style={{
-          fontSize: '12px',
-          color: theme === 'dark' ? '#a0aec0' : '#6c757d'
-        }}>
-          Total Cost
-        </span>
-        <span style={{
-          fontSize: '14px',
-          fontWeight: '600',
-          color: theme === 'dark' ? '#e2e8f0' : '#495057'
-        }}>
-          {formatCurrency(itemCost)}
-        </span>
-      </div>
     </div>
   )
 }
@@ -363,7 +396,7 @@ const WorkItem = ({ item, onUpdate, onRemove, theme, formatCurrency, overtimeThr
 // ================================
 
 const ConstructionToolbar = ({
-  staff, equipment, materials, theme, formatCurrency, searchTerm, setSearchTerm,
+  staff, equipment, materials, formatCurrency, searchTerm, setSearchTerm,
   filterType, setFilterType, weather
 }) => {
   const filteredItems = (items) => {
@@ -374,245 +407,125 @@ const ConstructionToolbar = ({
   }
 
   return (
-    <div style={{
-      background: theme === 'dark' ? '#1a202c' : '#ffffff',
-      borderRadius: '12px',
-      padding: '20px',
-      border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
-      boxShadow: theme === 'dark' ? '0 4px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-      height: 'fit-content'
-    }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '16px'
-      }}>
-        <h3 style={{
-          margin: '0 0 12px 0',
-          color: theme === 'dark' ? '#e2e8f0' : '#495057',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          fontSize: '14px'
-        }}>
-          <Palette size={16} style={{ color: '#4ecdc4' }} />
+    <div className="h-fit sticky top-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <Palette size={16} className="text-indigo-500" />
           Construction Tools
         </h3>
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '6px 10px',
-          background: theme === 'dark' ? '#2d3748' : '#f8f9fa',
-          borderRadius: '16px',
-          border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`
-        }}>
-          <Cloud size={14} style={{ color: '#87CEEB' }} />
-          <span style={{
-            fontSize: '11px',
-            color: theme === 'dark' ? '#a0aec0' : '#6c757d'
-          }}>
-            {weather.temp}°C, {weather.condition}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-stone-800 rounded-full border border-white/10">
+          <Cloud size={14} className="text-blue-400" />
+          <span className="text-xs font-bold text-gray-400">
+            {weather.temp}°C
           </span>
         </div>
       </div>
 
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        marginBottom: '20px',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ flex: 1, minWidth: '150px' }}>
+      <div className="flex gap-3 mb-5 flex-wrap">
+        <div className="flex-1 min-w-[140px]">
           <input
             type="text"
-            placeholder="Search tools..."
+            placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
-              borderRadius: '8px',
-              background: theme === 'dark' ? '#2d3748' : '#ffffff',
-              color: theme === 'dark' ? '#e2e8f0' : '#495057',
-              fontSize: '14px'
-            }}
+            className="w-full px-3 py-2 text-sm border border-white/10 rounded-lg bg-black/20 text-white focus:outline-none focus:border-indigo-500 placeholder-gray-600 font-medium"
           />
         </div>
 
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          style={{
-            padding: '10px 12px',
-            border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
-            borderRadius: '8px',
-            background: theme === 'dark' ? '#2d3748' : '#ffffff',
-            color: theme === 'dark' ? '#e2e8f0' : '#495057',
-            fontSize: '14px',
-            minWidth: '120px'
-          }}
+          className="px-3 py-2 text-sm border border-white/10 rounded-lg bg-black/20 text-white focus:outline-none cursor-pointer font-bold appearance-none"
         >
-          <option value="all">All Tools</option>
-          <option value="staff">Staff</option>
-          <option value="equipment">Equipment</option>
-          <option value="material">Materials</option>
+          <option value="all" className="bg-stone-900">All</option>
+          <option value="staff" className="bg-stone-900">Staff</option>
+          <option value="equipment" className="bg-stone-900">Equipment</option>
+          <option value="material" className="bg-stone-900">Materials</option>
         </select>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div className="flex flex-col gap-4 max-h-[calc(100vh-250px)] overflow-y-auto pr-2 custom-scrollbar">
         {/* Staff Section */}
-        <div>
-          <h4 style={{
-            margin: '0 0 12px 0',
-            color: theme === 'dark' ? '#e2e8f0' : '#495057',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '14px'
-          }}>
-            <Users size={16} style={{ color: '#4ecdc4' }} />
-            Team Members ({filteredItems(staff).length})
-          </h4>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            {filteredItems(staff).map(member => (
-              <DraggableElement key={member.id} item={{ type: 'staff', ...member }}>
-                <div style={{
-                  background: theme === 'dark' ? '#2d3748' : '#f8f9fa',
-                  border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
-                  borderRadius: '8px',
-                  padding: '10px',
-                  textAlign: 'center',
-                  cursor: 'grab',
-                  minWidth: '100px'
-                }}>
-                  <Users size={20} style={{ color: '#4ecdc4', marginBottom: '6px' }} />
-                  <div style={{
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                    marginBottom: '2px'
-                  }}>
-                    {member.name}
+        {(filterType === 'all' || filterType === 'staff') && (
+          <div>
+            <h4 className="text-[10px] font-black text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-widest">
+              <Users size={12} className="text-emerald-500" />
+              Team ({filteredItems(staff).length})
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {filteredItems(staff).map(member => (
+                <DraggableElement key={member.id} item={{ type: 'staff', ...member }}>
+                  <div className="bg-stone-800/50 border border-white/5 rounded-xl p-3 text-center cursor-grab hover:border-emerald-500/50 hover:bg-stone-800 transition-all group">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                       <Users size={16} className="text-emerald-500" />
+                    </div>
+                    <div className="text-xs font-bold text-gray-200 mb-0.5 truncate">
+                      {member.name}
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-mono">
+                      {formatCurrency(member.rate || 0)}/hr
+                    </div>
                   </div>
-                  <div style={{
-                    fontSize: '10px',
-                    color: theme === 'dark' ? '#a0aec0' : '#6c757d'
-                  }}>
-                    {formatCurrency(member.rate || 0)}/hr
-                  </div>
-                </div>
-              </DraggableElement>
-            ))}
+                </DraggableElement>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Equipment Section */}
-        <div>
-          <h4 style={{
-            margin: '0 0 12px 0',
-            color: theme === 'dark' ? '#e2e8f0' : '#495057',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '14px'
-          }}>
-            <Wrench size={16} style={{ color: '#f39c12' }} />
-            Equipment ({filteredItems(equipment).length})
-          </h4>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            {filteredItems(equipment).map(item => (
-              <DraggableElement key={item.id} item={{ type: 'equipment', ...item }}>
-                <div style={{
-                  background: theme === 'dark' ? '#2d3748' : '#f8f9fa',
-                  border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
-                  borderRadius: '8px',
-                  padding: '10px',
-                  textAlign: 'center',
-                  cursor: 'grab',
-                  minWidth: '100px'
-                }}>
-                  <Wrench size={20} style={{ color: '#f39c12', marginBottom: '6px' }} />
-                  <div style={{
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                    marginBottom: '2px'
-                  }}>
-                    {item.name}
+        {(filterType === 'all' || filterType === 'equipment') && (
+          <div>
+            <h4 className="text-[10px] font-black text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-widest mt-2">
+              <Wrench size={12} className="text-amber-500" />
+              Equipment ({filteredItems(equipment).length})
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {filteredItems(equipment).map(item => (
+                <DraggableElement key={item.id} item={{ type: 'equipment', ...item }}>
+                  <div className="bg-stone-800/50 border border-white/5 rounded-xl p-3 text-center cursor-grab hover:border-amber-500/50 hover:bg-stone-800 transition-all group">
+                    <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                      <Wrench size={16} className="text-amber-500" />
+                    </div>
+                    <div className="text-xs font-bold text-gray-200 mb-0.5 truncate">
+                      {item.name}
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-mono">
+                      {formatCurrency(item.rate || 0)}/day
+                    </div>
                   </div>
-                  <div style={{
-                    fontSize: '10px',
-                    color: theme === 'dark' ? '#a0aec0' : '#6c757d'
-                  }}>
-                    {formatCurrency(item.rate || 0)}/day
-                  </div>
-                </div>
-              </DraggableElement>
-            ))}
+                </DraggableElement>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Materials Section */}
-        <div>
-          <h4 style={{
-            margin: '0 0 12px 0',
-            color: theme === 'dark' ? '#e2e8f0' : '#495057',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '14px'
-          }}>
-            <Package size={16} style={{ color: '#e74c3c' }} />
-            Materials ({filteredItems(materials).length})
-          </h4>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            {filteredItems(materials).map(item => (
-              <DraggableElement key={item.id} item={{ type: 'material', ...item }}>
-                <div style={{
-                  background: theme === 'dark' ? '#2d3748' : '#f8f9fa',
-                  border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
-                  borderRadius: '8px',
-                  padding: '10px',
-                  textAlign: 'center',
-                  cursor: 'grab',
-                  minWidth: '100px'
-                }}>
-                  <Package size={20} style={{ color: '#e74c3c', marginBottom: '6px' }} />
-                  <div style={{
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                    marginBottom: '2px'
-                  }}>
-                    {item.name}
+        {(filterType === 'all' || filterType === 'material') && (
+          <div>
+            <h4 className="text-[10px] font-black text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-widest mt-2">
+              <Package size={12} className="text-indigo-500" />
+              Materials ({filteredItems(materials).length})
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {filteredItems(materials).map(item => (
+                <DraggableElement key={item.id} item={{ type: 'material', ...item }}>
+                  <div className="bg-stone-800/50 border border-white/5 rounded-xl p-3 text-center cursor-grab hover:border-indigo-500/50 hover:bg-stone-800 transition-all group">
+                    <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                      <Package size={16} className="text-indigo-500" />
+                    </div>
+                    <div className="text-xs font-bold text-gray-200 mb-0.5 truncate">
+                      {item.name}
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-mono">
+                      {formatCurrency(item.pricePerUnit || item.rate || 0)}
+                    </div>
                   </div>
-                  <div style={{
-                    fontSize: '10px',
-                    color: theme === 'dark' ? '#a0aec0' : '#6c757d'
-                  }}>
-                    {formatCurrency(item.pricePerUnit || item.rate || 0)}/{item.unit || 'unit'}
-                  </div>
-                </div>
-              </DraggableElement>
-            ))}
+                </DraggableElement>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
@@ -638,9 +551,9 @@ const PaintDiary = () => {
   const [selectedProject, setSelectedProject] = useState(null)
   const [isSaved, setIsSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [theme, setTheme] = useState('dark')
   const [viewMode, setViewMode] = useState('daily')
   const [allDiaries, setAllDiaries] = useState([])
+  const [pendingItem, setPendingItem] = useState(null)
 
   // Toolbar state
   const [staff, setStaff] = useState([])
@@ -650,99 +563,117 @@ const PaintDiary = () => {
   const [filterType, setFilterType] = useState('all')
   const [weather, setWeather] = useState({ temp: 22, condition: 'Sunny' })
 
+  const [productivityScore, setProductivityScore] = useState(0);
+  const [cost, setCost] = useState(0);
+  const [revenue, setRevenue] = useState(0);
+  const [profit, setProfit] = useState(0);
+
+  const loadData = async () => {
+    try {
+      const [projectsRes, staffRes, equipRes, nodesRes] = await Promise.all([
+        api.get('/projects'),
+        api.get('/staff'),
+        api.get('/equipment'),
+        api.get('/nodes')
+      ]);
+
+      setProjects(Array.isArray(projectsRes.data) ? projectsRes.data : (projectsRes.data?.data || []));
+      setStaff(Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data?.data || []));
+      setEquipment(Array.isArray(equipRes.data) ? equipRes.data : (equipRes.data?.data || []));
+      // Materials come from nodes
+      setMaterials(nodesRes.data.data || nodesRes.data || []);
+
+    } catch (err) {
+      console.error('Error loading data:', err);
+    }
+  };
+
   // Load data on mount
   useEffect(() => {
-    loadData()
+    loadData();
     setWeather({
       temp: Math.floor(Math.random() * 20) + 15,
       condition: 'Sunny'
-    })
-  }, [])
+    });
+  }, []);
 
   useEffect(() => {
     if (viewMode === 'all') {
-      fetchAllDiaries()
+      fetchAllDiaries();
     }
-  }, [viewMode])
+  }, [viewMode]);
 
-  // Load initial data - FIXED: Handle different API response formats
-  const loadData = async () => {
-    try {
-      const [staffRes, equipmentRes, nodesRes, projectsRes] = await Promise.all([
-        api.get('/staff'),
-        api.get('/equipment'),
-        api.get('/nodes'),
-        api.get('/projects')
-      ])
+  // Recalculate totals and productivity when items change
+  useEffect(() => {
+    const fetchCalculations = async () => {
+      try {
+        if (currentEntry.items.length === 0) {
+          setCost(0);
+          setRevenue(0);
+          setProfit(0);
+          setProductivityScore(0);
+          return;
+        }
+        const response = await api.post('/paint-diaries/calculate', { entries: currentEntry.items });
+        const { totalCost, totalRevenue, profit, productivityScore } = response.data;
+        setCost(totalCost);
+        setRevenue(totalRevenue);
+        setProfit(profit);
+        setProductivityScore(productivityScore);
+      } catch (err) {
+        console.error('Error fetching calculations:', err);
+      }
+    };
+    fetchCalculations();
+  }, [currentEntry.items]);
 
-      // Handle different response formats
-      setStaff(staffRes.data?.data || staffRes.data || [])
-      setEquipment(equipmentRes.data?.data || equipmentRes.data || [])
-      setMaterials(nodesRes.data?.data || nodesRes.data || [])
-      setProjects(projectsRes.data?.data || projectsRes.data || [])
-    } catch (err) {
-      console.error('Error loading data:', err)
-      // Fallback demo data
-      setStaff([
-        { id: 1, name: 'John Doe', type: 'staff', rate: 25, payRateBase: 25, payRateOT1: 37.5 },
-        { id: 2, name: 'Jane Smith', type: 'staff', rate: 28, payRateBase: 28, payRateOT1: 42 }
-      ])
-      setEquipment([
-        { id: 3, name: 'Excavator', type: 'equipment', rate: 150, costRateBase: 150 },
-        { id: 4, name: 'Truck', type: 'equipment', rate: 80, costRateBase: 80 }
-      ])
-      setMaterials([
-        { id: 5, name: 'Concrete', type: 'material', rate: 200, pricePerUnit: 200, unit: 'cubic yard' },
-        { id: 6, name: 'Steel', type: 'material', rate: 300, pricePerUnit: 300, unit: 'ton' }
-      ])
-      setProjects([
-        { id: 1, name: 'Downtown Office Building' },
-        { id: 2, name: 'Residential Complex' }
-      ])
-    }
-  }
-
-  // Calculate totals
-  const calculateTotals = useCallback(() => {
-    let cost = 0
-    currentEntry.items.forEach(item => {
-      cost += calculateItemCost(item, 8, 1.5)
-    })
-    const revenue = cost * 1.2 // Default 20% margin
-    return { cost, revenue, profit: revenue - cost }
-  }, [currentEntry.items])
-
-  const { cost, revenue, profit } = calculateTotals()
-
-  // Resolve items data from current loaded lists
+  // Resolve items data
   const resolveItems = useCallback((items) => {
     return items.map(item => {
       let resolved = { ...item };
+      // Default to existing values if present, otherwise lookup
       if (item.type === 'staff') {
         const staffItem = staff.find(s => s.id == item.dataId);
         if (staffItem) {
           resolved.name = staffItem.name;
-          resolved.rate = staffItem.payRateBase || staffItem.rate || resolved.rate;
+          if (!resolved.costRate) resolved.costRate = staffItem.payRateBase;
+          if (!resolved.chargeRate) resolved.chargeRate = staffItem.chargeOutBase || (staffItem.payRateBase * 1.5); // Fallback charge
         }
       } else if (item.type === 'equipment') {
         const equipItem = equipment.find(e => e.id == item.dataId);
         if (equipItem) {
           resolved.name = equipItem.name;
-          resolved.rate = equipItem.costRateBase || equipItem.rate || resolved.rate;
+          if (!resolved.costRate) resolved.costRate = equipItem.costRateBase;
+          if (!resolved.chargeRate) resolved.chargeRate = equipItem.chargeOutBase || (equipItem.costRateBase * 1.2); // Fallback charge
         }
       } else if (item.type === 'material') {
         const matItem = materials.find(m => m.id == item.dataId);
         if (matItem) {
           resolved.name = matItem.name;
-          resolved.rate = matItem.pricePerUnit || matItem.rate || resolved.rate;
+          if (!resolved.costRate) resolved.costRate = matItem.pricePerUnit;
+          if (!resolved.chargeRate) resolved.chargeRate = matItem.pricePerUnit * 1.2; // Default margin if no charge rate
         }
       }
+      
+      // Backward compatibility for old 'rate' field
+      if (!resolved.costRate && resolved.rate) resolved.costRate = resolved.rate;
+      if (!resolved.chargeRate && resolved.rate) resolved.chargeRate = resolved.rate * 1.2;
+
       return resolved;
     });
   }, [staff, equipment, materials]);
 
   // Event handlers
-  const handleDropItem = useCallback((item) => {
+  // MODIFIED: Accepts position from React Flow
+  const handleDropItem = useCallback((item, position) => {
+    setPendingItem({ item, position })
+  }, [])
+
+  const handleConfirmAddItem = (qty, cost, charge) => {
+    if (!pendingItem) return
+
+    const { item, position } = pendingItem
+    
     setCurrentEntry(prev => ({
       ...prev,
       items: [...prev.items, {
@@ -750,12 +681,17 @@ const PaintDiary = () => {
         dataId: item.id,
         type: item.type,
         name: item.name,
-        rate: item.payRateBase || item.costRateBase || item.pricePerUnit || item.rate || 0,
-        quantity: 1
+        costRate: cost,
+        chargeRate: charge,
+        quantity: qty,
+        duration: qty,
+        position: position // Store the {x, y} position
       }]
     }))
+    
     setIsSaved(false)
-  }, [])
+    setPendingItem(null)
+  }
 
   const handleUpdateItem = useCallback((itemId, updates) => {
     setCurrentEntry(prev => ({
@@ -781,19 +717,13 @@ const PaintDiary = () => {
       const diaryData = {
         date: selectedDate.toISOString().split('T')[0],
         projectId: selectedProject?.id,
-        canvasData: [currentEntry],
-        totalCost: cost,
-        totalRevenue: revenue,
-        margin: 20,
-        overtimeThreshold: 8,
-        overtimeMultiplier: 1.5
+        canvasData: { entries: [currentEntry] },
+        productivityScore: productivityScore
       }
 
       if (isSaved) {
-        // Update existing
         await api.put(`/paint-diaries/${currentEntry.id}`, diaryData)
       } else {
-        // Create new
         const response = await api.post('/paint-diaries', diaryData)
         setCurrentEntry(prev => ({ ...prev, id: response.data.id }))
       }
@@ -806,7 +736,6 @@ const PaintDiary = () => {
     }
   }, [selectedDate, selectedProject, currentEntry, cost, revenue, isSaved])
 
-  // Fetch all diaries with project relations
   const fetchAllDiaries = useCallback(async () => {
     try {
       const response = await api.get('/paint-diaries')
@@ -845,431 +774,361 @@ const PaintDiary = () => {
     setIsSaved(true)
   }, [resolveItems])
 
+  // NEW FUNCTIONALITY: Location
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser')
+      return
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        setCurrentEntry(prev => ({
+          ...prev,
+          location: { latitude, longitude }
+        }))
+        setIsSaved(false)
+        alert(`Location pinned: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
+      },
+      (error) => {
+        console.error('Error getting location:', error)
+        alert('Unable to retrieve your location')
+      }
+    )
+  }
+
+  // NEW FUNCTIONALITY: Photo Upload
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setCurrentEntry(prev => ({
+          ...prev,
+          photos: [...(prev.photos || []), reader.result]
+        }))
+        setIsSaved(false)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // NEW FUNCTIONALITY: Generate Invoice (Mock)
+  const handleGenerateInvoice = () => {
+    if (!selectedProject) {
+      alert('Please select a project first')
+      return
+    }
+    alert('Generating professional invoice for ' + selectedProject.name + '...\n\nThis feature will generate a PDF with itemized costs.')
+  }
+
   // Keyboard shortcuts
-   useEffect(() => {
-          const handleKeyPress = (e) => {
-            if (e.ctrlKey || e.metaKey) {
-              switch (e.key) {
-                case 's':
-                  e.preventDefault()
-                  if (!isSaving) {
-                    handleSave()
-                  }
-                  break
-              }
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 's':
+            e.preventDefault()
+            if (!isSaving) {
+              handleSave()
             }
-          }
-          document.addEventListener('keydown', handleKeyPress)
-          return () => document.removeEventListener('keydown', handleKeyPress)
-        }, [isSaving])
+            break
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyPress)
+    return () => document.removeEventListener('keydown', handleKeyPress)
+  }, [isSaving, handleSave])
 
   // Render daily view
   if (viewMode === 'daily') {
     return (
-      <DndProvider backend={HTML5Backend}>
-        <div style={{
-          minHeight: '100vh',
-          background: theme === 'dark'
-            ? 'linear-gradient(135deg, #0f1419 0%, #1a202c 100%)'
-            : 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
-          color: theme === 'dark' ? '#e2e8f0' : '#495057',
-          padding: '20px'
-        }}>
-          {/* Header */}
-          <div style={{
-            maxWidth: '1200px',
-            margin: '0 auto 32px auto',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
+      <div className="min-h-screen p-4 md:p-8 animate-fade-in font-sans bg-transparent">
+        {pendingItem && (
+          <ConfigModal 
+            isOpen={!!pendingItem} 
+            item={pendingItem.item} 
+            onClose={() => setPendingItem(null)} 
+            onConfirm={handleConfirmAddItem} 
+          />
+        )}
+        {/* Header */}
+        <div className="max-w-[1600px] mx-auto mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-              <h1 style={{
-                margin: '0 0 8px 0',
-                fontSize: '2.5rem',
-                fontWeight: '700',
-                background: 'linear-gradient(135deg, #4ecdc4 0%, #667eea 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}>
-                🎨 Paint Your Day
+              <h1 className="text-4xl font-black mb-2 text-white tracking-tight drop-shadow-md flex items-center gap-3">
+                <Palette size={32} className="text-indigo-500" />
+                Paint Your Day
               </h1>
-              <p style={{
-                margin: 0,
-                color: theme === 'dark' ? '#a0aec0' : '#6c757d',
-                fontSize: '1.1rem'
-              }}>
+              <p className="text-gray-400 text-lg font-medium">
                 Visual time tracking for construction professionals
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <DatePicker
-                selected={selectedDate}
-                onChange={(date) => {
-                  setSelectedDate(date)
-                  setIsSaved(false)
-                }}
-                dateFormat="MMMM d, yyyy"
-                className="date-picker"
-              />
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="relative">
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={(date) => {
+                    setSelectedDate(date)
+                    setIsSaved(false)
+                  }}
+                  dateFormat="MMMM d, yyyy"
+                  className="px-4 py-2.5 bg-stone-900/60 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 focus:outline-none cursor-pointer font-bold"
+                />
+                <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
 
               <select
                 value={selectedProject?.id || ''}
                 onChange={(e) => setSelectedProject(projects.find(p => p.id === e.target.value) || null)}
-                style={{
-                  padding: '8px 12px',
-                  border: `1px solid ${theme === 'dark' ? '#4a5568' : '#ced4da'}`,
-                  borderRadius: '6px',
-                  background: theme === 'dark' ? '#2d3748' : '#ffffff',
-                  color: theme === 'dark' ? '#e2e8f0' : '#495057'
-                }}
+                className="px-4 py-2.5 bg-stone-900/60 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 focus:outline-none cursor-pointer font-bold appearance-none min-w-[200px]"
               >
-                <option value="">Select Project</option>
+                <option value="" className="bg-stone-900">Select Project...</option>
                 {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id} className="bg-stone-900">{p.name}</option>
                 ))}
               </select>
 
               <button
                 onClick={() => setViewMode('all')}
-                style={{
-                  padding: '8px 16px',
-                  background: '#4ecdc4',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
+                className="flex items-center gap-2 px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded-xl transition-all font-bold border border-white/10 shadow-lg"
               >
-                <List size={16} />
-                All Diaries
-              </button>
-
-              <button
-                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                style={{
-                  padding: '8px',
-                  background: theme === 'dark' ? '#4ecdc4' : '#2d3748',
-                  border: 'none',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  width: '36px',
-                  height: '36px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {theme === 'dark' ? <Sun size={16} color="white" /> : <Moon size={16} color="white" />}
+                <List size={18} />
+                <span className="hidden sm:inline">All Diaries</span>
               </button>
             </div>
           </div>
 
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div className="max-w-[1600px] mx-auto">
             {/* Summary Cards */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px',
-              marginBottom: '32px'
-            }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
-                padding: '20px',
-                borderRadius: '12px',
-                color: 'white',
-                textAlign: 'center'
-              }}>
-                <DollarSign size={24} style={{ marginBottom: '8px', opacity: 0.9 }} />
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{formatCurrency(cost)}</div>
-                <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Total Cost</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-rose-600 to-red-700 p-6 rounded-3xl text-white shadow-lg shadow-rose-900/20 transform hover:-translate-y-1 transition-transform relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-20"><DollarSign size={64} /></div>
+                <div className="text-xs font-black uppercase tracking-widest mb-1 opacity-80">Total Cost</div>
+                <div className="text-4xl font-black tracking-tight">{formatCurrency(cost)}</div>
               </div>
 
-              <div style={{
-                background: 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)',
-                padding: '20px',
-                borderRadius: '12px',
-                color: 'white',
-                textAlign: 'center'
-              }}>
-                <TrendingUp size={24} style={{ marginBottom: '8px', opacity: 0.9 }} />
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{formatCurrency(revenue)}</div>
-                <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Revenue</div>
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-3xl text-white shadow-lg shadow-emerald-900/20 transform hover:-translate-y-1 transition-transform relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-20"><TrendingUp size={64} /></div>
+                <div className="text-xs font-black uppercase tracking-widest mb-1 opacity-80">Revenue</div>
+                <div className="text-4xl font-black tracking-tight">{formatCurrency(revenue)}</div>
               </div>
 
-              <div style={{
-                background: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
-                padding: '20px',
-                borderRadius: '12px',
-                color: 'white',
-                textAlign: 'center'
-              }}>
-                <Award size={24} style={{ marginBottom: '8px', opacity: 0.9 }} />
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{formatCurrency(profit)}</div>
-                <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Profit</div>
+              <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-3xl text-white shadow-lg shadow-amber-900/20 transform hover:-translate-y-1 transition-transform relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-20"><Award size={64} /></div>
+                <div className="text-xs font-black uppercase tracking-widest mb-1 opacity-80">Profit</div>
+                <div className="text-4xl font-black tracking-tight">{formatCurrency(profit)}</div>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-3xl text-white shadow-lg shadow-blue-900/20 transform hover:-translate-y-1 transition-transform relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-20"><Target size={64} /></div>
+                <div className="text-xs font-black uppercase tracking-widest mb-1 opacity-80">Productivity</div>
+                <div className="text-4xl font-black tracking-tight">{productivityScore}%</div>
               </div>
             </div>
 
             {/* Main Content Area */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '300px 1fr',
-              gap: '24px',
-              alignItems: 'start'
-            }}>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
               {/* Toolbar */}
-              <div>
-                <ConstructionToolbar
-                  staff={staff}
-                  equipment={equipment}
-                  materials={materials}
-                  theme={theme}
-                  formatCurrency={formatCurrency}
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  filterType={filterType}
-                  setFilterType={setFilterType}
-                  weather={weather}
-                />
+              <div className="lg:col-span-1">
+                <div className="bg-stone-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-5 sticky top-4 shadow-xl">
+                  <ConstructionToolbar
+                    staff={staff}
+                    equipment={equipment}
+                    materials={materials}
+                    formatCurrency={formatCurrency}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    filterType={filterType}
+                    setFilterType={setFilterType}
+                    weather={weather}
+                  />
+                </div>
               </div>
 
               {/* Main Canvas Area */}
-              <div>
-                {/* Save Button */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '20px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="lg:col-span-3">
+                {/* Action Buttons */}
+                <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+                  <div className="flex items-center gap-3">
                     <button
                       onClick={handleSave}
                       disabled={isSaving}
-                      style={{
-                        padding: '12px 24px',
-                        background: isSaved ? '#28a745' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: isSaved ? 'not-allowed' : 'pointer',
-                        fontWeight: '600',
-                        boxShadow: isSaved ? '0 4px 12px rgba(40, 167, 69, 0.3)' : '0 4px 15px rgba(102, 126, 234, 0.4)'
-                      }}
+                      className={`
+                        flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold shadow-lg transition-all
+                        ${isSaved 
+                          ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/30' 
+                          : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/30 hover:-translate-y-0.5'}
+                        ${isSaving ? 'opacity-75 cursor-wait' : ''}
+                      `}
                     >
-                      {isSaving ? 'Saving...' : isSaved ? '✓ Saved' : '💾 Save Entry'}
+                      <Save size={20} />
+                      {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save Entry'}
                     </button>
-                    {isSaved && (
-                      <span style={{
-                        color: '#28a745',
-                        fontSize: '14px',
-                        fontWeight: '500'
-                      }}>
-                        Entry saved successfully
-                      </span>
-                    )}
+                    
+                    <div className="flex items-center gap-2 p-1 bg-stone-900/60 rounded-xl border border-white/10">
+                      <button 
+                        onClick={handleGetLocation}
+                        className={`p-2.5 rounded-lg transition-all ${currentEntry.location ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                        title="Pin Location"
+                      >
+                        <MapPin size={20} />
+                      </button>
+
+                      <label className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 cursor-pointer transition-all">
+                        <Camera size={20} />
+                        <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      </label>
+
+                      <button 
+                        onClick={handleGenerateInvoice}
+                        className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                        title="Generate Invoice"
+                      >
+                        <FileDown size={20} />
+                      </button>
+                    </div>
                   </div>
 
-                  <div style={{
-                    fontSize: '14px',
-                    color: theme === 'dark' ? '#a0aec0' : '#6c757d'
-                  }}>
-                    {currentEntry.items.length} items • {selectedDate.toLocaleDateString()} {selectedProject ? `• ${selectedProject.name}` : ''}
+                  <div className="px-4 py-2 bg-stone-900/40 rounded-xl border border-white/5 text-xs font-mono font-bold text-gray-400">
+                    ID: {currentEntry.id.slice(-6)} • {currentEntry.items.length} ITEMS
                   </div>
                 </div>
 
                 {/* Work Canvas */}
-                <div style={{
-                  background: theme === 'dark' ? '#1a202c' : '#ffffff',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
-                  minHeight: '400px'
-                }}>
-                  <h2 style={{
-                    margin: '0 0 20px 0',
-                    color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                    fontSize: '1.5rem'
-                  }}>
-                    Today's Work Canvas
-                  </h2>
+                <div className="bg-stone-900/40 backdrop-blur-md border border-white/10 rounded-3xl p-6 min-h-[600px] shadow-2xl">
+                  <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                      <Clock size={24} className="text-indigo-500" />
+                      Timeline Canvas
+                    </h2>
+                    {currentEntry.photos?.length > 0 && (
+                       <div className="flex items-center gap-2 text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20">
+                         <ImageIcon size={14} />
+                         <span>{currentEntry.photos.length} Photos</span>
+                       </div>
+                    )}
+                  </div>
 
-                  {/* Work Items */}
+                  {/* Timeline Canvas */}
+                  <div className="bg-black/20 rounded-2xl p-4 border border-white/5 mb-8">
+                    <TimelineCanvas 
+                      items={currentEntry.items}
+                      onDrop={handleDropItem}
+                      onUpdateItem={handleUpdateItem}
+                      onRemoveItem={handleRemoveItem}
+                      formatCurrency={formatCurrency}
+                    />
+                  </div>
+
+                  {/* Work Items List */}
                   {currentEntry.items.length > 0 && (
-                    <div style={{ marginBottom: '24px' }}>
-                      <h3 style={{
-                        margin: '0 0 16px 0',
-                        color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                        fontSize: '1.1rem'
-                      }}>
-                        Work Items ({currentEntry.items.length})
+                    <div className="animate-fade-in">
+                      <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <List size={20} className="text-gray-400" />
+                        Item Details
                       </h3>
-                      {currentEntry.items.map(item => (
-                        <WorkItem
-                          key={item.id}
-                          item={item}
-                          onUpdate={handleUpdateItem}
-                          onRemove={handleRemoveItem}
-                          theme={theme}
-                          formatCurrency={formatCurrency}
-                          overtimeThreshold={8}
-                          overtimeMultiplier={1.5}
-                        />
-                      ))}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {currentEntry.items.map(item => (
+                          <WorkItem
+                            key={item.id}
+                            item={item}
+                            onUpdate={handleUpdateItem}
+                            onRemove={handleRemoveItem}
+                            formatCurrency={formatCurrency}
+                            overtimeThreshold={8}
+                            overtimeMultiplier={1.5}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
-
-                  {/* Drop Zone */}
-                  <DropZone onDrop={handleDropItem}>
-                    {currentEntry.items.length === 0 && (
-                      <div>
-                        <Plus size={32} style={{ marginBottom: '12px' }} />
-                        <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>
-                          Start Building Your Day
-                        </div>
-                        <div style={{ fontSize: '14px', opacity: 0.7 }}>
-                          Drag staff, equipment, and materials from the toolbar
-                        </div>
+                  
+                  {/* Photos Preview */}
+                  {currentEntry.photos?.length > 0 && (
+                    <div className="mt-8 pt-6 border-t border-white/10">
+                      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Attached Evidence</h3>
+                      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                        {currentEntry.photos.map((photo, idx) => (
+                          <div key={idx} className="relative group flex-shrink-0">
+                            <img src={photo} alt={`Evidence ${idx}`} className="h-24 w-24 object-cover rounded-xl border border-white/10 group-hover:scale-105 transition-transform" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                              <Eye size={20} className="text-white" />
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </DropZone>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </DndProvider>
-    )
-  }
+      )
+    }
 
   // Render all diaries view
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: theme === 'dark' ? '#1a1a2e' : '#f8f9fa',
-      color: theme === 'dark' ? '#e2e8f0' : '#495057',
-      padding: '20px'
-    }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '32px'
-        }}>
-          <div>
-            <h1 style={{
-              margin: '0 0 8px 0',
-              fontSize: '2.5rem',
-              fontWeight: '700'
-            }}>
-              📋 All Saved Diaries
-            </h1>
-            <p style={{
-              margin: 0,
-              color: theme === 'dark' ? '#a0aec0' : '#6c757d',
-              fontSize: '1.1rem'
-            }}>
-              View and manage all your construction diary entries
-            </p>
+    <>
+      <div className="min-h-screen p-6 animate-fade-in">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white flex items-center gap-3">
+                <Calendar size={32} className="text-primary" />
+                All Saved Diaries
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                View and manage all your construction diary entries
+              </p>
+            </div>
+
+            <button
+              onClick={() => setViewMode('daily')}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-success to-emerald-600 text-white rounded-xl hover:shadow-lg hover:-translate-y-0.5 transition-all font-semibold"
+            >
+              <Plus size={20} />
+              New Entry
+            </button>
           </div>
 
-          <button
-            onClick={() => setViewMode('daily')}
-            style={{
-              padding: '12px 24px',
-              background: 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <Plus size={16} />
-            New Entry
-          </button>
-        </div>
-
         {allDiaries.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '80px 20px',
-            background: theme === 'dark' ? '#1a202c' : '#ffffff',
-            borderRadius: '12px',
-            border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`
-          }}>
-            <Calendar size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-            <h3 style={{ color: theme === 'dark' ? '#e2e8f0' : '#495057' }}>No saved diaries yet</h3>
-            <p style={{ marginBottom: '24px', color: theme === 'dark' ? '#a0aec0' : '#6c757d' }}>
-              Create your first construction diary entry to get started
+          <div className="glass-card p-12 text-center">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Calendar size={40} className="text-gray-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">No saved diaries yet</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto">
+              Create your first construction diary entry to get started with visual time tracking
             </p>
             <button
               onClick={() => setViewMode('daily')}
-              style={{
-                padding: '12px 24px',
-                background: 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: '600'
-              }}
+              className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors font-semibold"
             >
               Create First Entry
             </button>
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-            gap: '20px'
-          }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {allDiaries.map(diary => (
-              <div key={diary.id} style={{
-                background: theme === 'dark' ? '#1a202c' : '#ffffff',
-                borderRadius: '12px',
-                padding: '24px',
-                border: `1px solid ${theme === 'dark' ? '#4a5568' : '#e9ecef'}`,
-                boxShadow: theme === 'dark' ? '0 4px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                transition: 'transform 0.2s ease',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+              <div 
+                key={diary.id} 
+                className="glass-card p-6 cursor-pointer group"
+                onClick={() => handleViewDiary(diary)}
               >
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: '16px'
-                }}>
+                <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 style={{
-                      margin: '0 0 4px 0',
-                      color: theme === 'dark' ? '#e2e8f0' : '#495057',
-                      fontSize: '1.2rem'
-                    }}>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">
                       {new Date(diary.date).toLocaleDateString('en-US', {
                         weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
+                        month: 'short',
                         day: 'numeric'
                       })}
                     </h3>
-                    <p style={{
-                      margin: 0,
-                      color: theme === 'dark' ? '#a0aec0' : '#6c757d',
-                      fontSize: '0.9rem'
-                    }}>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1">
+                      <Folder size={14} />
                       {diary.Project?.name || 'No Project'}
                     </p>
                   </div>
@@ -1279,96 +1138,49 @@ const PaintDiary = () => {
                       e.stopPropagation()
                       handleDeleteDiary(diary.id)
                     }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#e74c3c',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      borderRadius: '4px'
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = '#ffeaea'}
-                    onMouseLeave={(e) => e.target.style.background = 'none'}
+                    className="p-2 text-gray-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={18} />
                   </button>
                 </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '12px',
-                  marginBottom: '16px'
-                }}>
+                <div className="grid grid-cols-2 gap-4 mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
                   <div>
-                    <div style={{
-                      fontSize: '0.8rem',
-                      color: theme === 'dark' ? '#a0aec0' : '#6c757d',
-                      marginBottom: '2px'
-                    }}>
-                      Cost
-                    </div>
-                    <div style={{
-                      fontSize: '1.1rem',
-                      fontWeight: '600',
-                      color: theme === 'dark' ? '#e2e8f0' : '#495057'
-                    }}>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Cost</div>
+                    <div className="text-lg font-bold text-gray-800 dark:text-white">
                       {formatCurrency(diary.totalCost || 0)}
                     </div>
                   </div>
-
-                  <div>
-                    <div style={{
-                      fontSize: '0.8rem',
-                      color: theme === 'dark' ? '#a0aec0' : '#6c757d',
-                      marginBottom: '2px'
-                    }}>
-                      Revenue
-                    </div>
-                    <div style={{
-                      fontSize: '1.1rem',
-                      fontWeight: '600',
-                      color: theme === 'dark' ? '#e2e8f0' : '#495057'
-                    }}>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Revenue</div>
+                    <div className="text-lg font-bold text-success">
                       {formatCurrency(diary.totalRevenue || 0)}
                     </div>
                   </div>
                 </div>
 
-                <div style={{
-                  fontSize: '0.9rem',
-                  color: theme === 'dark' ? '#a0aec0' : '#6c757d',
-                  marginBottom: '16px'
-                }}>
-                  {diary.canvasData?.[0]?.items?.length || 0} work items
+                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  <span className="flex items-center gap-1">
+                    <List size={14} />
+                    {diary.canvasData?.[0]?.items?.length || 0} items
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock size={14} />
+                    {new Date(diary.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </span>
                 </div>
 
-                <button
-                  onClick={() => handleViewDiary(diary)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Eye size={14} />
+                <div className="w-full py-2 bg-primary/10 text-primary rounded-lg font-medium text-center group-hover:bg-primary group-hover:text-white transition-colors flex items-center justify-center gap-2">
+                  <Eye size={16} />
                   View Entry
-                </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
     </div>
+    </>
   )
 }
 

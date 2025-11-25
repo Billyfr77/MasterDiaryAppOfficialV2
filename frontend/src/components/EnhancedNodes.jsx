@@ -2,13 +2,6 @@
  * MasterDiaryApp Official - Construction SaaS Platform
  * Dark Theme Nodes (Materials) Page - Professional Version
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * This is the updated EnhancedNodes.jsx with:
- * - Dark theme matching the app's aesthetic
- * - Professional gradients and shadows
- * - Enhanced visual hierarchy
- * - Consistent color scheme
- * - No floating effects on hover
  */
 
 import React, { useState, useEffect } from 'react'
@@ -111,151 +104,32 @@ const EnhancedNodes = () => {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
-        color: 'white'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid rgba(255,255,255,0.3)',
-            borderTop: '4px solid white',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
+      <div className="flex justify-center items-center h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
           Loading Materials...
         </div>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
-      padding: '20px',
-      fontFamily: "'Inter', sans-serif"
-    }}>
-      <style>{`
-        .node-card {
-          transition: all 0.3s ease;
-          border-radius: 16px;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-          border: 1px solid rgba(78, 205, 196, 0.2);
-          overflow: hidden;
-          position: relative;
-        }
-        .action-button {
-          transition: all 0.2s ease;
-          border-radius: 8px;
-          border: none;
-          padding: 8px 16px;
-          font-weight: 500;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 14px;
-        }
-        .action-button:hover {
-          transform: none; /* Removed floating effect */
-        }
-        .edit-btn { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
-        .delete-btn { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
-        .create-btn {
-          background: linear-gradient(135deg, #28a745, #1e7e34);
-          color: white;
-          padding: 12px 24px;
-          font-size: 16px;
-          font-weight: 600;
-          border-radius: 12px;
-          box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-        }
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.8);
-          backdrop-filter: blur(8px);
-          display: flex;
-          alignItems: center;
-          justifyContent: center;
-          z-index: 1000;
-          animation: fadeIn 0.3s ease;
-        }
-        .modal-content {
-          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-          border-radius: 16px;
-          padding: 32px;
-          max-width: 600px;
-          width: 90%;
-          max-height: 80vh;
-          overflow-y: auto;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-          border: 1px solid rgba(78, 205, 196, 0.3);
-          animation: slideUp 0.3s ease;
-          color: #ecf0f1;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
-
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="min-h-screen bg-transparent p-6 animate-fade-in">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '32px'
-        }}>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
           <div>
-            <h1 style={{
-              margin: '0 0 8px 0',
-              color: '#ecf0f1',
-              fontSize: '3rem',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #4ecdc4 0%, #667eea 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               📦 Materials Library
             </h1>
-            <p style={{
-              margin: 0,
-              color: '#bdc3c7',
-              fontSize: '1.2rem'
-            }}>
+            <p className="text-gray-200 text-lg">
               Manage your construction materials and pricing with precision
             </p>
           </div>
 
           <button
             onClick={handleCreateNode}
-            className="create-btn"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              border: 'none',
-              cursor: 'pointer'
-            }}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-success to-emerald-600 text-white rounded-lg hover:opacity-90 transition-opacity font-semibold shadow-lg shadow-success/30 border border-white/10"
           >
             <Plus size={20} />
             Add Material
@@ -263,62 +137,36 @@ const EnhancedNodes = () => {
         </div>
 
         {/* Nodes Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-          gap: '24px'
-        }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {nodes.map(node => (
-            <div key={node.id} className="node-card" style={{
-              padding: '24px',
-              position: 'relative'
-            }}>
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{
-                  margin: '0 0 8px 0',
-                  color: '#ecf0f1',
-                  fontSize: '1.4rem',
-                  fontWeight: '600'
-                }}>
+            <div key={node.id} className="glass-card p-6 group relative overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-white mb-2 pr-16">
                   {node.name}
                 </h3>
 
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#bdc3c7',
-                  fontSize: '0.9rem',
-                  marginBottom: '12px'
-                }}>
-                  <Tag size={14} style={{ marginRight: '4px' }} />
+                <div className="flex items-center text-gray-300 text-sm mb-6">
+                  <Tag size={16} className="mr-2 text-primary" />
                   {node.category}
                 </div>
 
                 {/* Pricing */}
-                <div style={{ marginBottom: '16px' }}>
-                  <h4 style={{ margin: '0 0 8px 0', color: '#4ecdc4', fontSize: '1rem' }}>Pricing</h4>
-                  <div style={{ display: 'flex', alignItems: 'center', fontSize: '1.1rem' }}>
-                    <DollarSign size={16} style={{ color: '#4ecdc4', marginRight: '4px' }} />
-                    <span style={{ color: '#4ecdc4', fontWeight: '600' }}>
-                      ${node.pricePerUnit}
-                    </span>
-                    <span style={{ color: '#ecf0f1', marginLeft: '4px' }}>
-                      per {node.unit}
-                    </span>
-                  </div>
+                <div className="flex items-center text-lg">
+                  <DollarSign size={20} className="text-success mr-1" />
+                  <span className="font-bold text-success text-2xl">
+                    {node.pricePerUnit}
+                  </span>
+                  <span className="text-gray-400 ml-2 text-sm">
+                    per {node.unit}
+                  </span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                flexWrap: 'wrap'
-              }}>
+              <div className="flex gap-2 pt-4 border-t border-white/10">
                 <button
                   onClick={() => handleEditNode(node)}
-                  className="action-button edit-btn"
-                  title="Edit Material"
+                  className="flex-1 py-2 px-3 bg-warning/10 text-warning rounded-lg hover:bg-warning hover:text-white transition-colors flex items-center justify-center gap-2 font-medium text-sm"
                 >
                   <Edit size={16} />
                   Edit
@@ -326,25 +174,21 @@ const EnhancedNodes = () => {
 
                 <button
                   onClick={() => handleDeleteNode(node.id)}
-                  className="action-button delete-btn"
-                  title="Delete Material"
+                  className="p-2 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-colors"
+                  title="Delete"
                 >
                   <Trash2 size={16} />
-                  Delete
                 </button>
               </div>
             </div>
           ))}
 
           {nodes.length === 0 && (
-            <div style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '80px 20px',
-              color: '#bdc3c7'
-            }}>
-              <Package size={64} style={{ color: 'rgba(78, 205, 196, 0.3)', marginBottom: '16px' }} />
-              <h3>No materials found</h3>
+            <div className="col-span-full py-20 text-center text-gray-400">
+              <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package size={40} className="text-gray-500" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No materials found</h3>
               <p>Add your first material to get started!</p>
             </div>
           )}
@@ -352,72 +196,40 @@ const EnhancedNodes = () => {
 
         {/* Create/Edit Node Modal */}
         {showCreateForm && (
-          <div className="modal-overlay" onClick={() => { setShowCreateForm(false); setEditingNode(null) }}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '24px'
-              }}>
-                <h2 style={{
-                  margin: 0,
-                  color: '#ecf0f1',
-                  fontSize: '1.8rem',
-                  fontWeight: '700'
-                }}>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => { setShowCreateForm(false); setEditingNode(null) }}>
+            <div className="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-slide-up" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900/90 backdrop-blur-md z-10 rounded-t-2xl">
+                <h2 className="text-2xl font-bold text-white">
                   {editingNode ? 'Edit Material' : 'Add New Material'}
                 </h2>
                 <button
                   onClick={() => { setShowCreateForm(false); setEditingNode(null) }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '24px',
-                    cursor: 'pointer',
-                    color: '#7f8c8d'
-                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
-                  ×
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
 
-              <form onSubmit={handleFormSubmit}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: '500',
-                      color: '#ecf0f1'
-                    }}>
-                      Material Name:
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      Material Name
                     </label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '1px solid rgba(78, 205, 196, 0.3)',
-                        borderRadius: '8px',
-                        background: '#2c3e50',
-                        color: '#ecf0f1',
-                        fontSize: '16px'
-                      }}
+                      className="glass-input w-full px-4 py-2 rounded-lg text-white focus:ring-2 focus:ring-primary/50 outline-none"
                     />
                   </div>
 
                   <div>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: '500',
-                      color: '#ecf0f1'
-                    }}>
-                      Category:
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      Category
                     </label>
                     <input
                       type="text"
@@ -425,55 +237,29 @@ const EnhancedNodes = () => {
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       placeholder="e.g., Lumber, Concrete, Steel"
                       required
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '1px solid rgba(78, 205, 196, 0.3)',
-                        borderRadius: '8px',
-                        background: '#2c3e50',
-                        color: '#ecf0f1',
-                        fontSize: '16px'
-                      }}
+                      className="glass-input w-full px-4 py-2 rounded-lg text-white focus:ring-2 focus:ring-primary/50 outline-none"
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: '500',
-                      color: '#ecf0f1'
-                    }}>
-                      Unit:
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      Unit
                     </label>
                     <input
                       type="text"
                       value={formData.unit}
                       onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                      placeholder="e.g., sq ft, cubic yard, linear ft"
+                      placeholder="e.g., sq ft, cubic yard"
                       required
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '1px solid rgba(78, 205, 196, 0.3)',
-                        borderRadius: '8px',
-                        background: '#2c3e50',
-                        color: '#ecf0f1',
-                        fontSize: '16px'
-                      }}
+                      className="glass-input w-full px-4 py-2 rounded-lg text-white focus:ring-2 focus:ring-primary/50 outline-none"
                     />
                   </div>
 
                   <div>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: '500',
-                      color: '#ecf0f1'
-                    }}>
-                      Price per Unit ($):
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      Price per Unit ($)
                     </label>
                     <input
                       type="number"
@@ -481,50 +267,22 @@ const EnhancedNodes = () => {
                       onChange={(e) => setFormData({ ...formData, pricePerUnit: e.target.value })}
                       step="0.01"
                       required
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '1px solid rgba(78, 205, 196, 0.3)',
-                        borderRadius: '8px',
-                        background: '#2c3e50',
-                        color: '#ecf0f1',
-                        fontSize: '16px'
-                      }}
+                      className="glass-input w-full px-4 py-2 rounded-lg text-white focus:ring-2 focus:ring-primary/50 outline-none"
                     />
                   </div>
                 </div>
 
-                <div style={{
-                  display: 'flex',
-                  gap: '12px',
-                  justifyContent: 'flex-end'
-                }}>
+                <div className="flex gap-3 justify-end pt-4 border-t border-white/10">
                   <button
                     type="button"
                     onClick={() => { setShowCreateForm(false); setEditingNode(null) }}
-                    style={{
-                      padding: '12px 24px',
-                      background: '#34495e',
-                      color: '#ecf0f1',
-                      border: '1px solid rgba(78, 205, 196, 0.3)',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontWeight: '500'
-                    }}
+                    className="px-4 py-2 rounded-lg text-gray-300 hover:bg-white/10 transition-colors font-medium"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    style={{
-                      padding: '12px 24px',
-                      background: 'linear-gradient(135deg, #4ecdc4, #44a08d)',
-                      color: '#2c3e50',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontWeight: '500'
-                    }}
+                    className="px-6 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:opacity-90 transition-opacity font-medium shadow-lg shadow-primary/30"
                   >
                     {editingNode ? 'Update Material' : 'Add Material'}
                   </button>

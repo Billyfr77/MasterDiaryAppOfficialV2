@@ -1,19 +1,8 @@
 /*
  * MasterDiaryApp Official - Construction SaaS Platform
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * This software and associated documentation contain proprietary
- * and confidential information of Billy Fraser.
- *
- * Unauthorized copying, modification, distribution, or use of this
- * software, in whole or in part, is strictly prohibited without
- * prior written permission from the copyright holder.
- *
- * For licensing inquiries: billyfr77@example.com
- *
- * Patent Pending: Drag-and-drop construction quote builder system
- * Trade Secret: Real-time calculation algorithms and optimization techniques
- */import React, { useState, useEffect } from 'react'
+ */
+import React, { useState, useEffect } from 'react'
 import { api } from '../utils/api'
 import { Settings, Plus, Edit, Trash2, Sparkles, Volume2, VolumeX, CheckCircle, XCircle } from 'lucide-react'
 
@@ -22,15 +11,11 @@ const Confetti = ({ show }) => {
   const particles = Array.from({ length: 50 }, (_, i) => (
     <div
       key={i}
+      className="fixed w-2.5 h-2.5 z-[9999] animate-[confetti_2s_ease-in-out_forwards]"
       style={{
-        position: 'fixed',
         left: `${Math.random() * 100}%`,
         top: '-10px',
-        width: '10px',
-        height: '10px',
         backgroundColor: `hsl(${Math.random() * 360}, 100%, 50%)`,
-        animation: `confetti ${2 + Math.random() * 2}s ease-in-out forwards`,
-        zIndex: 9999,
       }}
     />
   ))
@@ -42,45 +27,23 @@ const Particles = ({ show }) => {
   const particles = Array.from({ length: 20 }, (_, i) => (
     <div
       key={i}
+      className="absolute w-1 h-1 rounded-full bg-primary animate-[particle_1s_ease-out_forwards] z-10"
       style={{
-        position: 'absolute',
         left: `${Math.random() * 100}%`,
         top: `${Math.random() * 100}%`,
-        width: '4px',
-        height: '4px',
-        backgroundColor: '#667eea',
-        borderRadius: '50%',
-        animation: `particle ${1 + Math.random() * 1}s ease-out forwards`,
-        zIndex: 10,
       }}
     />
   ))
-  return <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>{particles}</div>
+  return <div className="absolute inset-0 pointer-events-none">{particles}</div>
 }
 
 const SoundToggle = ({ enabled, onToggle }) => (
   <button
     onClick={onToggle}
-    style={{
-      position: 'fixed',
-      top: '20px',
-      right: '20px',
-      background: 'rgba(255,255,255,0.1)',
-      border: '1px solid rgba(255,255,255,0.3)',
-      borderRadius: '50%',
-      width: '40px',
-      height: '40px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: 'pointer',
-      zIndex: 1000,
-      backdropFilter: 'blur(10px)',
-      transition: 'all 0.3s ease'
-    }}
+    className="fixed top-5 right-5 bg-white/10 border border-white/30 rounded-full w-10 h-10 flex items-center justify-center cursor-pointer z-[1000] backdrop-blur-md transition-all hover:bg-white/20"
     aria-label={enabled ? 'Disable sound' : 'Enable sound'}
   >
-    {enabled ? <Volume2 size={20} color="white" /> : <VolumeX size={20} color="white" />}
+    {enabled ? <Volume2 size={20} className="text-white" /> : <VolumeX size={20} className="text-white" />}
   </button>
 )
 
@@ -158,266 +121,88 @@ const EnhancedSettings = () => {
 
   if (loading) {
     return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
-        color: 'white',
-        fontFamily: "'Inter', sans-serif"
-      }}>
-        <div style={{
-          width: '50px',
-          height: '50px',
-          border: '5px solid rgba(102, 126, 234, 0.3)',
-          borderTop: '5px solid #667eea',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: 'var(--spacing-md)'
-        }}></div>
-        <span style={{ fontSize: '1.2em', fontFamily: "'Poppins', sans-serif" }}>Loading Strategic Settings...</span>
+      <div className="h-screen flex flex-col items-center justify-center bg-transparent text-white font-sans">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <span className="text-xl font-bold">Loading Settings...</span>
       </div>
     )
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
-      position: 'relative',
-      fontFamily: "'Inter', sans-serif",
-      padding: 'var(--spacing-xl)',
-      overflow: 'hidden'
-    }}>
-      <style>{`
-        @keyframes confetti {
-          0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-        }
-        @keyframes particle {
-          0% { transform: scale(0); opacity: 1; }
-          100% { transform: scale(1); opacity: 0; }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes glow {
-          from { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
-          to { box-shadow: 0 0 40px rgba(102, 126, 234, 1); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-      `}</style>
-
-      {/* Parallax Layers */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'url(https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80) no-repeat center center',
-        backgroundSize: 'cover',
-        opacity: 0.05,
-        zIndex: -2,
-        transform: 'translateZ(-1px) scale(1.1)',
-        animation: 'parallax 20s ease-in-out infinite alternate'
-      }}></div>
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%)',
-        zIndex: -1,
-        animation: 'lighting 10s ease-in-out infinite alternate'
-      }}></div>
-
+    <div className="min-h-screen bg-transparent text-white relative font-sans p-8 overflow-hidden animate-fade-in">
+      
       <SoundToggle enabled={soundEnabled} onToggle={() => setSoundEnabled(!soundEnabled)} />
 
       <Particles show={showParticles} />
 
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--spacing-sm)',
-        marginBottom: 'var(--spacing-xl)',
-        paddingBottom: 'var(--spacing-md)',
-        borderBottom: '2px solid #667eea',
-        position: 'relative'
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '2px',
-          background: 'linear-gradient(90deg, #667eea, #764ba2, #f093fb)',
-          animation: 'glow 2s ease-in-out infinite alternate'
-        }}></div>
-        <Sparkles size={32} color="#667eea" style={{ filter: 'drop-shadow(0 0 10px #667eea)' }} />
-        <h2 style={{
-          margin: 0,
-          color: '#ffffff',
-          fontFamily: "'Poppins', sans-serif",
-          fontWeight: 700,
-          textShadow: '0 0 20px rgba(102, 126, 234, 0.5)',
-          fontSize: '2.5em',
-          animation: 'float 3s ease-in-out infinite'
-        }}>
-          Strategic Settings
-        </h2>
+      <div className="flex items-center gap-4 mb-10 pb-6 border-b border-white/10 relative max-w-[1600px] mx-auto">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 animate-pulse opacity-50"></div>
+        <div className="p-3 bg-indigo-600/20 rounded-2xl border border-indigo-500/30">
+          <Sparkles size={32} className="text-indigo-400" />
+        </div>
+        <div>
+          <h2 className="m-0 text-white font-black text-4xl tracking-tight drop-shadow-lg">
+            System Settings
+          </h2>
+          <p className="text-gray-400 font-medium mt-1">Configure global application parameters</p>
+        </div>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 2fr',
-        gap: 'var(--spacing-xl)'
-      }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8 max-w-[1600px] mx-auto">
         {/* Form */}
-        <div style={{
-          background: 'rgba(26, 26, 46, 0.95)',
-          borderRadius: '25px',
-          padding: 'var(--spacing-lg)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(102, 126, 234, 0.2)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(102, 126, 234, 0.5)',
-          animation: 'float 3s ease-in-out infinite'
-        }}>
-          <h3 style={{
-            margin: '0 0 var(--spacing-lg) 0',
-            color: 'white',
-            fontFamily: "'Poppins', sans-serif",
-            textAlign: 'center',
-            fontSize: '1.5em',
-            textShadow: '0 0 10px rgba(102, 126, 234, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--spacing-sm)',
-            justifyContent: 'center'
-          }}>
-            <Plus size={24} />
-            {isEditing ? 'Edit Setting' : 'Add Setting'}
+        <div className="bg-stone-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+          <h3 className="mb-8 text-white font-black text-2xl text-center drop-shadow-md flex items-center justify-center gap-3">
+            <div className="p-2 bg-white/5 rounded-xl">
+              <Plus size={24} className="text-indigo-400" />
+            </div>
+            {isEditing ? 'Edit Parameter' : 'New Parameter'}
           </h3>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-            <input
-              placeholder="Parameter"
-              value={form.parameter}
-              onChange={(e) => setForm({ ...form, parameter: e.target.value })}
-              required
-              style={{
-                padding: 'var(--spacing-sm)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
-                fontFamily: "'Inter', sans-serif",
-                backdropFilter: 'blur(10px)'
-              }}
-            />
-            <input
-              placeholder="Value"
-              value={form.value}
-              onChange={(e) => setForm({ ...form, value: e.target.value })}
-              required
-              style={{
-                padding: 'var(--spacing-sm)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
-                fontFamily: "'Inter', sans-serif",
-                backdropFilter: 'blur(10px)'
-              }}
-            />
-            <input
-              placeholder="Notes"
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              style={{
-                padding: 'var(--spacing-sm)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
-                fontFamily: "'Inter', sans-serif",
-                backdropFilter: 'blur(10px)'
-              }}
-            />
-            <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Parameter Name</label>
+              <input
+                placeholder="e.g. Default Tax Rate"
+                value={form.parameter}
+                onChange={(e) => setForm({ ...form, parameter: e.target.value })}
+                required
+                className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-600 font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Value</label>
+              <input
+                placeholder="e.g. 0.15"
+                value={form.value}
+                onChange={(e) => setForm({ ...form, value: e.target.value })}
+                required
+                className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Notes</label>
+              <input
+                placeholder="Optional description..."
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-600"
+              />
+            </div>
+            
+            <div className="flex gap-3 mt-4">
               <button
                 type="submit"
-                style={{
-                  flex: 1,
-                  padding: 'var(--spacing-md)',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-                  fontFamily: "'Poppins', sans-serif",
-                  textShadow: '0 0 10px rgba(255,255,255,0.5)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 'var(--spacing-sm)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.3)'
-                }}
+                className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5"
               >
-                <CheckCircle size={16} />
-                {isEditing ? 'Update Setting' : 'Add Setting'}
+                <CheckCircle size={20} />
+                {isEditing ? 'Update' : 'Add'}
               </button>
               {isEditing && (
                 <button
                   type="button"
                   onClick={handleCancel}
-                  style={{
-                    flex: 1,
-                    padding: 'var(--spacing-md)',
-                    background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 16px rgba(220, 53, 69, 0.3)',
-                    fontFamily: "'Poppins', sans-serif",
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 'var(--spacing-sm)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(220, 53, 69, 0.4)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(220, 53, 69, 0.3)'
-                  }}
+                  className="flex-1 py-3.5 bg-stone-800 hover:bg-stone-700 text-gray-300 rounded-xl font-bold shadow-lg border border-white/5 flex items-center justify-center gap-2 transition-all"
                 >
-                  <XCircle size={16} />
+                  <XCircle size={20} />
                   Cancel
                 </button>
               )}
@@ -426,101 +211,47 @@ const EnhancedSettings = () => {
         </div>
 
         {/* Settings List */}
-        <div style={{
-          background: 'rgba(26, 26, 46, 0.95)',
-          borderRadius: '25px',
-          padding: 'var(--spacing-lg)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(102, 126, 234, 0.2)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(102, 126, 234, 0.5)',
-          animation: 'float 3s ease-in-out infinite reverse'
-        }}>
-          <h3 style={{
-            margin: '0 0 var(--spacing-lg) 0',
-            color: 'white',
-            fontFamily: "'Poppins', sans-serif",
-            textAlign: 'center',
-            fontSize: '1.5em',
-            textShadow: '0 0 10px rgba(102, 126, 234, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--spacing-sm)',
-            justifyContent: 'center'
-          }}>
-            <Settings size={24} />
-            Settings List
+        <div className="bg-stone-900/40 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl">
+          <h3 className="mb-8 text-white font-black text-2xl flex items-center gap-3">
+            <Settings size={28} className="text-indigo-500" />
+            Configuration Registry
           </h3>
-          <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
+          <div className="grid gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {settings.map(setting => (
               <div
                 key={setting.id}
-                style={{
-                  padding: 'var(--spacing-md)',
-                  border: '1px solid rgba(102, 126, 234, 0.3)',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
+                className="bg-black/20 border border-white/5 rounded-2xl p-5 flex justify-between items-center transition-all hover:border-indigo-500/30 hover:bg-black/30 group"
               >
                 <div>
-                  <strong style={{ color: 'white', fontFamily: "'Poppins', sans-serif" }}>{setting.parameter}</strong>
-                  <br />
-                  <small style={{ color: '#ccc', fontFamily: "'Inter', sans-serif" }}>Value: {setting.value}</small>
-                  <br />
-                  <small style={{ color: '#4ecdc4', fontFamily: "'Inter', sans-serif" }}>{setting.notes}</small>
+                  <div className="flex items-center gap-3 mb-1">
+                    <strong className="text-white font-bold text-lg">{setting.parameter}</strong>
+                    <span className="bg-white/5 text-gray-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-white/5">Config</span>
+                  </div>
+                  <div className="text-indigo-300 font-mono text-sm bg-indigo-500/10 px-2 py-1 rounded w-fit mb-1">{setting.value}</div>
+                  {setting.notes && <div className="text-gray-500 text-xs italic">{setting.notes}</div>}
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleEdit(setting)}
-                    style={{
-                      background: 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: 'var(--spacing-sm)',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    className="p-2.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl hover:bg-amber-500 hover:text-white transition-all"
                   >
-                    <Edit size={16} />
+                    <Edit size={18} />
                   </button>
                   <button
                     onClick={() => handleDelete(setting.id)}
-                    style={{
-                      background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: 'var(--spacing-sm)',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={18} />
                   </button>
                 </div>
               </div>
             ))}
+            
+            {settings.length === 0 && (
+              <div className="text-center py-10 text-gray-500">
+                No settings configured yet.
+              </div>
+            )}
           </div>
         </div>
       </div>

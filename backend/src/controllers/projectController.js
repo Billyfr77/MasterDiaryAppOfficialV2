@@ -23,7 +23,9 @@ const Joi = require('joi');
           estimatedValue: Joi.number().min(0).optional(),
           description: Joi.string().allow('').optional(),
           startDate: Joi.date().iso().optional().allow(null),
-          endDate: Joi.date().iso().optional().allow(null)
+          endDate: Joi.date().iso().optional().allow(null),
+          latitude: Joi.number().min(-90).max(90).optional().allow(null),
+          longitude: Joi.number().min(-180).max(180).optional().allow(null)
         });
 
 const getAllProjects = async (req, res) => {
