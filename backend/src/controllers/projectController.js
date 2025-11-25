@@ -1,3 +1,4 @@
+require('dotenv').config();  
 /*
  * MasterDiaryApp Official - Construction SaaS Platform
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
