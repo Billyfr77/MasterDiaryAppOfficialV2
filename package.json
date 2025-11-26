@@ -9,6 +9,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "d3": "^7.9.0",
     "socket.io-client": "^4.8.1"
   }

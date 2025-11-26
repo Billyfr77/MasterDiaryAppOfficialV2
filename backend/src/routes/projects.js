@@ -21,7 +21,8 @@ const {
   getProjectById,
   createProject,
   updateProject,
-  deleteProject
+  deleteProject,
+  geocodeProject
 } = require('../controllers/projectController');
 
 
@@ -30,5 +31,6 @@ router.get('/:id', getProjectById);
 router.post('/', createProject);
 router.put('/:id', updateProject);
 router.delete('/:id', deleteProject);
+router.post('/:id/geocode', geocodeProject);
 
 module.exports = router;

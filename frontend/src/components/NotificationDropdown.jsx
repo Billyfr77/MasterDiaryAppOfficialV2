@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, Info, CheckCircle, X } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../utils/api';
 
 const NotificationDropdown = () => {
   const [notifications, setNotifications] = useState([]);
@@ -16,7 +16,7 @@ const NotificationDropdown = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await axios.get('/api/notifications'); // We will create this endpoint
+      const response = await api.get('/notifications'); // We will create this endpoint
       setNotifications(response.data);
       setUnreadCount(response.data.filter(n => !n.isRead).length);
     } catch (error) {
@@ -31,7 +31,7 @@ const NotificationDropdown = () => {
 
   const markAsRead = async (id) => {
     try {
-      await axios.put(`/api/notifications/${id}/read`);
+      await api.put(`/notifications/${id}/read`);
       setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {

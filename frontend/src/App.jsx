@@ -24,6 +24,7 @@ import NodesLibrary from './components/NodesLibrary'
 import QuoteBuilder from './components/QuoteBuilder'
 import PaintDiary from './components/PaintDiary'
 import VisualMapBuilder from './components/VisualMapBuilder'
+import FleetCommand from './components/FleetCommand'
 import { NotificationProvider } from './context/NotificationContext'
 import CommandPalette from './components/Shell/CommandPalette'
 import AIAssistantFAB from './components/Shell/AIAssistantFAB'
@@ -138,7 +139,7 @@ function App() {
               <Route path="/staff" element={<EnhancedStaff />} />
               <Route path="/diary" element={<PaintDiary />} />
               <Route path="/settings" element={<EnhancedSettings />} />
-              <Route path="/equipment" element={<EnhancedEquipment />} />
+              <Route path="/equipment" element={<FleetCommand />} />
               <Route path="/nodes" element={<EnhancedNodes />} />
               <Route path="/quotes" element={<Quotes />} />
               <Route path="/quotes/library" element={<NodesLibrary />} />

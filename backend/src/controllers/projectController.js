@@ -14,11 +14,14 @@ require('dotenv').config();
  *
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
- */const { Project } = require('../models');
+ */
+const { Project } = require('../models');
 const Joi = require('joi');
+const axios = require('axios');
 
   const projectSchema = Joi.object({
           name: Joi.string().min(1).required(),
+          client: Joi.string().allow('').optional(),
           site: Joi.string().min(1).required(),
           status: Joi.string().valid('active', 'completed', 'on-hold', 'cancelled').optional(),
           estimatedValue: Joi.number().min(0).optional(),
@@ -155,10 +158,45 @@ const deleteProject = async (req, res) => {
   }
 };
 
+const geocodeProject = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Geocoding project ${req.params.id} for user: ${req.user?.id}`);
+  try {
+    const project = await Project.findOne({ where: { id: req.params.id, userId: req.user?.id || null } });
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    if (!project.site) {
+      return res.status(400).json({ error: 'Project has no site address to geocode' });
+    }
+
+    const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+      params: {
+        address: project.site,
+        key: process.env.GOOGLE_API_KEY
+      }
+    });
+
+    if (response.data.status === 'OK') {
+      const location = response.data.results[0].geometry.location;
+      await project.update({
+        latitude: location.lat,
+        longitude: location.lng
+      });
+      res.json(project);
+    } else {
+      res.status(400).json({ error: `Geocoding failed: ${response.data.status}` });
+    }
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in geocoding project ${req.params.id}:`, error);
+    res.status(500).json({ error: 'Internal server error during geocoding' });
+  }
+};
+
 module.exports = {
   getAllProjects,
   getProjectById,
   createProject,
   updateProject,
-  deleteProject
+  deleteProject,
+  geocodeProject
 };

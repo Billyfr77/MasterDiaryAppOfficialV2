@@ -60,6 +60,38 @@ module.exports = (sequelize, DataTypes) => {
     costRateOT2: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true
+    },
+    status: {
+      type: DataTypes.STRING,
+      defaultValue: 'available'
+    },
+    hoursUsed: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    },
+    serviceInterval: {
+      type: DataTypes.INTEGER,
+      defaultValue: 500
+    },
+    lastServiceDate: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    fuelLevel: {
+      type: DataTypes.INTEGER,
+      defaultValue: 100
+    },
+    assignedDriverId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    value: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   }, {
     sequelize,

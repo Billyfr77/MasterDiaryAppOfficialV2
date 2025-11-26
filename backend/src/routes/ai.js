@@ -8,5 +8,7 @@ router.post('/chat', authenticateToken, aiController.chatWithAI);
 router.post('/generate', authenticateToken, aiController.generateContent);
 router.post('/summarize', authenticateToken, aiController.summarizeText);
 router.post('/analyze-quote', authenticateToken, aiController.analyzeQuote);
+router.post('/analyze-business', authenticateToken, aiController.analyzeBusinessHealth);
+router.post('/cloud-assist', authenticateToken, aiController.getCloudAssistInsight);
 
 module.exports = router;

@@ -5,19 +5,22 @@
  */
 
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
 import { Folder, Plus, Edit, Trash2, Calendar, User, Search, Filter, Download, BarChart3, TrendingUp, MapPin, DollarSign,
-    Clock, Wrench } from 'lucide-react'
+    Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer } from 'lucide-react'
 import Papa from 'papaparse'
 
 const EnhancedProjects = () => {
+  const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedProject, setSelectedProject] = useState(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingProject, setEditingProject] = useState(null)
+  const [weatherData, setWeatherData] = useState(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -29,6 +32,24 @@ const EnhancedProjects = () => {
     startDate: null,
     endDate: null
   })
+
+  useEffect(() => {
+    if (selectedProject && selectedProject.latitude && selectedProject.longitude) {
+        fetchWeather(selectedProject.latitude, selectedProject.longitude);
+    } else {
+        setWeatherData(null);
+    }
+  }, [selectedProject]);
+
+  const fetchWeather = async (lat, lng) => {
+      try {
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
+          const data = await res.json();
+          setWeatherData(data.current_weather);
+      } catch (e) {
+          console.error("Weather fetch failed", e);
+      }
+  };
 
   // Advanced filtering and search
   const [filters, setFilters] = useState({
@@ -414,6 +435,14 @@ const EnhancedProjects = () => {
                   <Folder size={16} />
                   View
                 </button>
+
+                <button
+                  onClick={() => navigate('/map-builder')}
+                  className="p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl hover:bg-emerald-500 hover:text-white transition-all"
+                  title="View on Map"
+                >
+                  <MapIcon size={16} />
+                </button>
                 
                 <button
                   onClick={() => handleEditProject(project)}
@@ -643,6 +672,29 @@ const EnhancedProjects = () => {
                   {/* Background decoration */}
                   <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
                 </div>
+
+                {/* Weather Intelligence */}
+                {weatherData && (
+                    <div className="md:col-span-2 bg-sky-500/5 border border-sky-500/20 rounded-2xl p-6 relative overflow-hidden">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h4 className="text-sky-400 font-bold mb-1 flex items-center gap-2 uppercase tracking-wider text-xs">
+                                    <Cloud size={16} /> Site Conditions
+                                </h4>
+                                <div className="text-3xl font-black text-white flex items-center gap-2">
+                                    {weatherData.temperature}°C <span className="text-sm font-medium text-sky-300/50">Current</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="bg-black/20 p-3 rounded-xl text-center min-w-[80px]">
+                                    <Wind size={16} className="mx-auto mb-1 text-sky-300"/>
+                                    <div className="text-xs font-bold text-white">{weatherData.windspeed} km/h</div>
+                                    <div className="text-[10px] text-sky-500/70">WIND</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
               </div>
 
               {selectedProject.description && (

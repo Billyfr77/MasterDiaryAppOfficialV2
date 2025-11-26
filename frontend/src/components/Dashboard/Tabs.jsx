@@ -9,6 +9,7 @@ import {
   TrendingUp,
   AlertTriangle,
   Sparkles,
+  Map,
 } from 'lucide-react';
 
 const Tabs = ({ activeTab, setActiveTab, metrics }) => {
@@ -16,6 +17,7 @@ const Tabs = ({ activeTab, setActiveTab, metrics }) => {
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'gemini', label: 'Gemini AI', icon: Sparkles },
     { id: 'projects', label: 'Projects', icon: Folder },
+    { id: 'map', label: 'Map', icon: Map },
     { id: 'staff', label: 'Staff', icon: Users },
     { id: 'equipment', label: 'Equipment', icon: Wrench },
     { id: 'materials', label: 'Materials', icon: Package },
@@ -43,7 +45,7 @@ const Tabs = ({ activeTab, setActiveTab, metrics }) => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`
-              px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all duration-300 relative whitespace-nowrap border
+              px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all duration-300 relative whitespace-nowrap border flex-shrink-0
               ${isActive 
                 ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] scale-105 z-10' 
                 : 'bg-black/20 border-white/5 text-gray-400 hover:bg-black/40 hover:text-white hover:border-white/10'}

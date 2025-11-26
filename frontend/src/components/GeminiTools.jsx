@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../utils/api';
-import { MessageSquare, FileText, Scissors, Send, Loader, Copy, Check, Sparkles } from 'lucide-react';
+import { MessageSquare, FileText, Scissors, Send, Loader, Copy, Check, Sparkles, Cloud } from 'lucide-react';
 
 const GeminiTools = () => {
   const [activeTab, setActiveTab] = useState('chat');
@@ -20,6 +20,10 @@ const GeminiTools = () => {
   // Summarize State
   const [sumText, setSumText] = useState('');
   const [summary, setSummary] = useState('');
+
+  // Cloud Assist State
+  const [cloudAssistMessage, setCloudAssistMessage] = useState('');
+  const [cloudAssistResponse, setCloudAssistResponse] = useState('');
 
   const handleChat = async (e) => {
     e.preventDefault();
@@ -84,6 +88,24 @@ const GeminiTools = () => {
     }
   };
 
+  const handleCloudAssist = async () => {
+    if (!cloudAssistMessage.trim()) return;
+    setLoading(true);
+    setCloudAssistResponse('');
+
+    try {
+      const response = await api.post('/ai/cloud-assist', {
+        message: cloudAssistMessage
+      });
+      setCloudAssistResponse(response.data.insight);
+    } catch (error) {
+      console.error('Cloud Assist Error:', error);
+      setCloudAssistResponse('Error getting cloud assist insight.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
   };
@@ -131,6 +153,17 @@ const GeminiTools = () => {
             `}
           >
             <Scissors size={16} /> Summarize
+          </button>
+          <button 
+            onClick={() => setActiveTab('cloud-assist')}
+            className={`
+              px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all
+              ${activeTab === 'cloud-assist' 
+                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                 : 'bg-black/20 text-gray-400 hover:bg-black/40 hover:text-white'}
+            `}
+          >
+            <Cloud size={16} /> Cloud Assist
           </button>
         </div>
       </div>
@@ -253,6 +286,40 @@ const GeminiTools = () => {
               </div>
               <div className="bg-black/20 border border-white/10 rounded-xl p-4 text-gray-200 whitespace-pre-wrap text-sm leading-relaxed">
                 {summary}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CLOUD ASSIST TAB */}
+      {activeTab === 'cloud-assist' && (
+        <div className="flex flex-col gap-4 h-full overflow-y-auto">
+          <textarea
+            value={cloudAssistMessage}
+            onChange={(e) => setCloudAssistMessage(e.target.value)}
+            placeholder="Ask for insights on cloud costs, performance, or deployment strategies..."
+            className="w-full h-48 bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors resize-none"
+          />
+          <button 
+            onClick={handleCloudAssist} 
+            disabled={loading}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader size={20} className="animate-spin" /> : <Cloud size={20} />} 
+            Get Cloud Insight
+          </button>
+          
+          {cloudAssistResponse && (
+            <div className="mt-4 animate-fade-in">
+               <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-bold text-gray-400 uppercase tracking-wider">Insight</label>
+                <button onClick={() => copyToClipboard(cloudAssistResponse)} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center gap-1">
+                  <Copy size={14} /> Copy
+                </button>
+              </div>
+              <div className="bg-black/20 border border-white/10 rounded-xl p-4 text-gray-200 whitespace-pre-wrap text-sm leading-relaxed">
+                {cloudAssistResponse}
               </div>
             </div>
           )}

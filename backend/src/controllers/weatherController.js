@@ -1,17 +1,37 @@
 const getWeather = async (req, res) => {
   try {
     const { lat, lng } = req.query;
-    // Note: Google does not provide a direct Weather API. This is a placeholder.
-    // You may need to use a third-party weather API or Google Cloud Weather API if available.
-    // For example, integrate with OpenWeatherMap or similar.
-    // Assuming a hypothetical Google Weather API endpoint for demonstration.
-    const apiKey = process.env.GOOGLE_API_KEY;
-    const url = `https://maps.googleapis.com/maps/api/weather/json?lat=${lat}&lng=${lng}&key=${apiKey}`;
+    
+    if (!lat || !lng) {
+      return res.status(400).json({ error: "Latitude and Longitude are required" });
+    }
+
+    // Using Open-Meteo API (Free, No Key, High Reliability for Lat/Lon)
+    // Asking for current weather: temp, wind speed, weather code
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`;
+    
+    console.log(`[Weather] Fetching from: ${url}`);
+    
     const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Weather API Error: ${response.statusText}`);
+    }
+    
     const data = await response.json();
-    res.json(data);
+    
+    // Transform to our standard format
+    const weather = {
+        temp: data.current_weather.temperature,
+        conditionCode: data.current_weather.weathercode,
+        windSpeed: data.current_weather.windspeed,
+        unit: 'Celsius' // Open-Meteo defaults to Celsius
+    };
+    
+    res.json(weather);
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[Weather] Error:', error.message);
+    res.status(500).json({ error: "Failed to fetch weather data" });
   }
 };
 

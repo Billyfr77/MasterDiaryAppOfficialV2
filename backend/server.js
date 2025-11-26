@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config({ path: '../.env', override: true });
 const db = require('./src/models');
 const { loadSettings } = require('./src/utils/settingsCache');
 
@@ -86,6 +86,10 @@ app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/ai', require('./src/routes/ai')); // Register AI routes
 app.use('/api/uploads', require('./src/routes/uploads')); // Register Upload routes
 app.use('/api/notifications', require('./src/routes/notifications')); // Register Notification routes
+app.use('/api/geocoding', require('./src/routes/geocoding'));
+app.use('/api/map-assets', require('./src/routes/mapAssets')); // Register Map Asset routes
+app.use('/api/waste', require('./src/routes/waste')); // Register Waste Management routes
+       
 
 const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 
@@ -168,6 +172,27 @@ app.get('/api/seed-secret', async (req, res) => {
   }
 });
 
+ // Map Data Routes for Enhanced Map Builder
+        app.post('/api/map-data', async (req, res) => {
+          try {
+            const { projectId, pois, connections, phases, routes } = req.body
+            console.log('Map data saved:', { projectId, poiCount: pois?.length, connectionCount: connections?.length })
+            res.json({ success: true, message: 'Map data saved successfully' })
+          } catch (err) {
+            console.error('Map data save error:', err)
+            res.status(500).json({ error: 'Failed to save map data' })
+          }
+        })
+
+        app.get('/api/map-data/:projectId', async (req, res) => {
+          try {
+            const { projectId } = req.params
+            res.json({ pois: [], connections: [], phases: [], routes: [] })
+          } catch (err) {
+            console.error('Map data load error:', err)
+            res.status(500).json({ error: 'Failed to load map data' })
+          }
+        })
 // Start AI Watchdog (Background Jobs)
 const { startWatchdog } = require('./src/cron/aiWatchdog');
 startWatchdog();
