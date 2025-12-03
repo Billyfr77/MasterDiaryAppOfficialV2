@@ -38,7 +38,12 @@ const equipmentSchema = Joi.object({
   lastServiceDate: Joi.date().allow(null).optional(),
   fuelLevel: Joi.number().min(0).max(100).allow(null).optional(),
   assignedDriverId: Joi.string().uuid().allow(null).optional(),
-  serviceHistory: Joi.array().items(Joi.object()).optional()
+  serviceHistory: Joi.array().items(Joi.object({
+    id: Joi.string().required(), // Changed to string as Date.now() returns number, but IDs are often stringified
+    date: Joi.date().required(),
+    description: Joi.string().required(),
+    cost: Joi.number().min(0).required()
+  })).optional()
 });
 
 const getAllEquipment = async (req, res) => {
@@ -107,7 +112,7 @@ const createEquipment = async (req, res) => {
       return isNaN(num) ? defaultVal : num;
     };
 
-    // Preprocess fields
+    // Preprocess fields, explicitly excluding userId from this object for Joi validation
     const processedBody = {
       name: req.body.name,
       category: req.body.category,
@@ -121,7 +126,7 @@ const createEquipment = async (req, res) => {
       fuelLevel: safeNumber(req.body.fuelLevel, 100),
       notes: req.body.notes || null,
       assignedDriverId: req.body.assignedDriverId || null,
-      serviceHistory: req.body.serviceHistory
+      serviceHistory: req.body.serviceHistory || [] // Ensure serviceHistory is an array
     };
 
     console.log(`[${new Date().toISOString()}] Processed Body for Validation:`, JSON.stringify(processedBody, null, 2));
@@ -152,15 +157,120 @@ const createEquipment = async (req, res) => {
 const updateEquipment = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Updating equipment ${req.params.id}:`, req.body, 'for user:', req.user?.id);
   try {
-    // Preprocess overtime fields to convert empty strings to null
+    // Helper to safely parse numbers
+    const safeNumber = (val, defaultVal = null) => {
+      if (val === undefined || val === null || val === '') return defaultVal;
+      const num = Number(val);
+      return isNaN(num) ? defaultVal : num;
+    };
+
+    // Preprocess fields, explicitly excluding userId from this object for Joi validation
     const processedBody = {
-      ...req.body,
-      costRateOT1: req.body.costRateOT1 === '' || req.body.costRateOT1 === null ? null : Number(req.body.costRateOT1),
-      costRateOT2: req.body.costRateOT2 === '' || req.body.costRateOT2 === null ? null : Number(req.body.costRateOT2)
+      name: req.body.name,
+      category: req.body.category,
+      ownership: req.body.ownership,
+      status: req.body.status,
+      costRateBase: safeNumber(req.body.costRateBase, 0),
+      costRateOT1: safeNumber(req.body.costRateOT1),
+      costRateOT2: safeNumber(req.body.costRateOT2),
+      value: safeNumber(req.body.value),
+      serviceInterval: safeNumber(req.body.serviceInterval, 500),
+      fuelLevel: safeNumber(req.body.fuelLevel, 100),
+      notes: req.body.notes || null,
+      assignedDriverId: req.body.assignedDriverId || null,
+      serviceHistory: req.body.serviceHistory || [] // Ensure serviceHistory is included
     };
 
     const { error } = equipmentSchema.validate(processedBody);
     if (error) {
+      console.error(`[${new Date().toISOString()}] Validation Error:`, error.details[0].message);
+      return res.status(400).json({ error: error.details[0].message });
+    }
+    const [updated] = await Equipment.update(processedBody, {
+      where: { id: req.params.id, userId: req.user?.id || null }
+    });
+    if (updated) {
+      const updatedEquipment = await Equipment.findByPk(req.params.id);
+      res.json(updatedEquipment);
+    } else {
+      res.status(404).json({ error: 'Equipment not found' });
+    }
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in PUT /api/equipment/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(400).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `PUT /api/equipment/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const deleteEquipment = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Deleting equipment ${req.params.id} for user: ${req.user?.id}`);
+  try {
+    const deleted = await Equipment.destroy({
+      where: { id: req.params.id, userId: req.user?.id || null }
+    });
+    if (deleted) {
+      res.json({ message: 'Equipment deleted' });
+    } else {
+      res.status(404).json({ error: 'Equipment not found' });
+    }
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in DELETE /api/equipment/${req.params.id}:`, error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+      endpoint: `DELETE /api/equipment/${req.params.id}`,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+module.exports = {
+  getAllEquipment,
+  getEquipmentById,
+  createEquipment,
+  updateEquipment,
+  deleteEquipment
+};
+
+
+const updateEquipment = async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Updating equipment ${req.params.id}:`, req.body, 'for user:', req.user?.id);
+  try {
+    // Helper to safely parse numbers
+    const safeNumber = (val, defaultVal = null) => {
+      if (val === undefined || val === null || val === '') return defaultVal;
+      const num = Number(val);
+      return isNaN(num) ? defaultVal : num;
+    };
+
+    // Preprocess fields, explicitly excluding userId from this object for Joi validation
+    const processedBody = {
+      name: req.body.name,
+      category: req.body.category,
+      ownership: req.body.ownership,
+      status: req.body.status,
+      costRateBase: safeNumber(req.body.costRateBase, 0),
+      costRateOT1: safeNumber(req.body.costRateOT1),
+      costRateOT2: safeNumber(req.body.costRateOT2),
+      value: safeNumber(req.body.value),
+      serviceInterval: safeNumber(req.body.serviceInterval, 500),
+      fuelLevel: safeNumber(req.body.fuelLevel, 100),
+      notes: req.body.notes || null,
+      assignedDriverId: req.body.assignedDriverId || null,
+      serviceHistory: req.body.serviceHistory || [] // Ensure serviceHistory is an array
+    };
+
+    console.log(`[${new Date().toISOString()}] Processed Body for Update Validation:`, JSON.stringify(processedBody, null, 2));
+
+    const { error } = equipmentSchema.validate(processedBody);
+    if (error) {
+      console.error(`[${new Date().toISOString()}] Validation Error (Update):`, error.details[0].message);
       return res.status(400).json({ error: error.details[0].message });
     }
     const [updated] = await Equipment.update(processedBody, {

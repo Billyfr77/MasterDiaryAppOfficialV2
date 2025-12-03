@@ -245,6 +245,26 @@ const FleetCommand = () => {
                                 />
                             </div>
                             <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Overtime 1 Rate ($/hr)</label>
+                                <input 
+                                    type="number"
+                                    className="w-full bg-stone-800 p-3 rounded-lg text-white mt-1" 
+                                    placeholder="0.00"
+                                    value={newUnitData.costRateOT1}
+                                    onChange={e => setNewUnitData({...newUnitData, costRateOT1: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Overtime 2 Rate ($/hr)</label>
+                                <input 
+                                    type="number"
+                                    className="w-full bg-stone-800 p-3 rounded-lg text-white mt-1" 
+                                    placeholder="0.00"
+                                    value={newUnitData.costRateOT2}
+                                    onChange={e => setNewUnitData({...newUnitData, costRateOT2: e.target.value})}
+                                />
+                            </div>
+                            <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase">Asset Value ($)</label>
                                 <input 
                                     type="number"
@@ -256,15 +276,29 @@ const FleetCommand = () => {
                             </div>
                         </div>
 
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">Service Interval (Hrs)</label>
-                            <input 
-                                type="number"
-                                className="w-full bg-stone-800 p-3 rounded-lg text-white mt-1" 
-                                placeholder="500"
-                                value={newUnitData.serviceInterval}
-                                onChange={e => setNewUnitData({...newUnitData, serviceInterval: e.target.value})}
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Service Interval (Hrs)</label>
+                                <input 
+                                    type="number"
+                                    className="w-full bg-stone-800 p-3 rounded-lg text-white mt-1" 
+                                    placeholder="500"
+                                    value={newUnitData.serviceInterval}
+                                    onChange={e => setNewUnitData({...newUnitData, serviceInterval: e.target.value})}
+                                />
+                            </div>
+                             <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Fuel Level (%)</label>
+                                <input 
+                                    type="number"
+                                    className="w-full bg-stone-800 p-3 rounded-lg text-white mt-1" 
+                                    placeholder="100"
+                                    value={newUnitData.fuelLevel}
+                                    onChange={e => setNewUnitData({...newUnitData, fuelLevel: e.target.value})}
+                                    min="0"
+                                    max="100"
+                                />
+                            </div>
                         </div>
 
                         <div>
