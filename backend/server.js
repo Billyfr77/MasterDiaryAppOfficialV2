@@ -92,6 +92,7 @@ app.use('/api/geocoding', require('./src/routes/geocoding'));
 app.use('/api/map-assets', require('./src/routes/mapAssets')); // Register Map Asset routes
 app.use('/api/waste', require('./src/routes/waste')); // Register Waste Management routes
 app.use('/api/google', require('./src/routes/google')); // Register Google Integration routes
+app.use('/api/xero', require('./src/routes/xero')); // Register Xero Integration routes
 
 const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 

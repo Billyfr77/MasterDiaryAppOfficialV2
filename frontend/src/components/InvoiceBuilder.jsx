@@ -59,10 +59,12 @@ const InvoiceBuilder = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await api.post('/invoices', {
+      const res = await api.post('/invoices', {
         ...invoice,
         totalAmount: calculateTotal()
       });
+      // Store the ID for Xero push
+      setInvoice(prev => ({ ...prev, id: res.data.id }));
       alert('Invoice saved successfully!');
     } catch (error) {
       console.error('Error saving invoice:', error);
@@ -71,6 +73,20 @@ const InvoiceBuilder = () => {
       setLoading(false);
     }
   };
+
+  const handlePushToXero = async () => {
+    if (!invoice.id) return alert('Please save the invoice first.');
+    setLoading(true);
+    try {
+      await api.post('/xero/sync-invoice', { invoiceId: invoice.id });
+      alert('Invoice successfully pushed to Xero!');
+    } catch (error) {
+      console.error('Xero Sync Error:', error);
+      alert('Failed to push to Xero. check settings connection.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
@@ -120,6 +136,9 @@ const InvoiceBuilder = () => {
           </button>
           <button onClick={handleSave} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
             <Save size={18} /> {loading ? 'Saving...' : 'Save Invoice'}
+          </button>
+          <button onClick={handlePushToXero} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-[#13b5ea] hover:bg-[#11a4d4] text-white rounded-lg transition-colors">
+            <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center text-[#13b5ea] font-black text-[8px]">X</div> Push to Xero
           </button>
         </div>
       </div>

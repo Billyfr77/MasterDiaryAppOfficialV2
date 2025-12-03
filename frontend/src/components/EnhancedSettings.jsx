@@ -119,6 +119,18 @@ const EnhancedSettings = () => {
     }
   }
 
+  const handleConnectXero = async () => {
+    try {
+      const response = await api.get('/xero/connect');
+      window.location.href = response.data.url;
+    } catch (error) {
+      alert('Failed to initiate Xero connection');
+      console.error(error);
+    }
+  }
+
+  const isXeroConnected = settings.some(s => s.parameter === 'xeroTenantId');
+
   if (loading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-transparent text-white font-sans">
@@ -140,11 +152,25 @@ const EnhancedSettings = () => {
         <div className="p-3 bg-indigo-600/20 rounded-2xl border border-indigo-500/30">
           <Sparkles size={32} className="text-indigo-400" />
         </div>
-        <div>
+        <div className="flex-1">
           <h2 className="m-0 text-white font-black text-4xl tracking-tight drop-shadow-lg">
             System Settings
           </h2>
           <p className="text-gray-400 font-medium mt-1">Configure global application parameters</p>
+        </div>
+        <div>
+          <button
+            onClick={handleConnectXero}
+            className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all ${
+              isXeroConnected 
+                ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 cursor-default' 
+                : 'bg-[#13b5ea] hover:bg-[#11a4d4] text-white'
+            }`}
+            disabled={isXeroConnected}
+          >
+            {isXeroConnected ? <CheckCircle size={20} /> : <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center text-[#13b5ea] font-black text-xs">X</div>}
+            {isXeroConnected ? 'Xero Connected' : 'Connect Xero'}
+          </button>
         </div>
       </div>
 

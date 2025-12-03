@@ -25,6 +25,8 @@ import QuoteBuilder from './components/QuoteBuilder'
 import PaintDiary from './components/PaintDiary'
 import VisualMapBuilder from './components/VisualMapBuilder'
 import FleetCommand from './components/FleetCommand'
+import InvoiceBuilder from './components/InvoiceBuilder'
+import XeroCallback from './components/XeroCallback'
 import { NotificationProvider } from './context/NotificationContext'
 import CommandPalette from './components/Shell/CommandPalette'
 import './App.css'
@@ -144,6 +146,8 @@ function App() {
               <Route path="/quotes/new" element={<QuoteBuilder />} />
               <Route path="/map-builder" element={<VisualMapBuilder />} />
               <Route path="/reports" element={<ReportsSimple />} />
+              <Route path="/invoices" element={<InvoiceBuilder />} />
+              <Route path="/xero/callback" element={<XeroCallback />} />
             </Routes>
           </main>
         </div>
