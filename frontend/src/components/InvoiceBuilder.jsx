@@ -16,7 +16,7 @@ const InvoiceBuilder = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Load Invoice Data from PaintDiary if available
+  // Load Invoice Data from PaintDiary or QuoteBuilder if available
   useEffect(() => {
     if (location.state?.diaryItems) {
       const newItems = location.state.diaryItems.map(item => ({
@@ -25,6 +25,21 @@ const InvoiceBuilder = () => {
         rate: item.chargeRate || 0,
         amount: (item.quantity || item.duration || 1) * (item.chargeRate || 0)
       }));
+      setInvoice(prev => ({ ...prev, items: newItems }));
+    } else if (location.state?.quoteItems) {
+      const newItems = location.state.quoteItems.map(item => {
+        let rate = 0;
+        if (item.type === 'staff') rate = item.material.chargeRate;
+        else if (item.type === 'equipment') rate = item.material.costRate; // potentially apply margin here if available
+        else rate = item.material.pricePerUnit;
+
+        return {
+          description: item.material.name,
+          quantity: item.quantity,
+          rate: rate,
+          amount: item.quantity * rate
+        };
+      });
       setInvoice(prev => ({ ...prev, items: newItems }));
     }
   }, [location.state]);

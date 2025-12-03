@@ -599,6 +599,7 @@ const initialNodes = []
 const initialEdges = []
 
 const QuoteBuilderContent = () => {
+  const navigate = useNavigate()
   const location = useLocation()
   const nodeTypes = useMemo(() => ({ glass: GlassNode, dimension: DimensionNode, zone: ZoneNode }), [])
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
@@ -919,6 +920,7 @@ const QuoteBuilderContent = () => {
             <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-300 hover:text-white" title="Settings"><Settings size={20} /></button>
             <button onClick={() => setShowSuggestions(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-amber-400 hover:text-white hover:bg-amber-500/20" title="Google Integrations"><Zap size={20} /></button>
             
+            <button onClick={() => navigate('/invoices', { state: { quoteItems: quoteItems, projectId: selectedProject } })} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-purple-400 hover:text-white transition-colors" title="Convert to Invoice"><FileText size={20} /></button>
             <button onClick={() => generateQuotePDF({ id: 'DRAFT', name: 'Quote', items: quoteItems.map(i => ({ name: i.material.name, type: i.type, quantity: i.quantity, rate: i.type==='staff'?i.material.chargeRate:i.type==='equipment'?i.material.costRate:i.material.pricePerUnit })), totalRevenue, marginPct }, projects.find(p=>p.id===selectedProject), quoteSettings)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-300 hover:text-white"><Download size={20} /></button>
             <button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg border border-indigo-400/50 flex items-center gap-2 active:scale-95"><Save size={16} /> Save</button>
           </div>
