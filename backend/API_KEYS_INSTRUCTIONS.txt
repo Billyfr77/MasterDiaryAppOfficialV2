@@ -1,0 +1,9 @@
+To enable the AI Chatbot:
+
+1. Open the file: MasterDiaryAppOfficialV2/.env (this is in the main folder, NOT the backend folder)
+2. Find the line: GEMINI_API_KEY=YOUR_VALID_GEMINI_API_KEY_HERE
+3. Replace 'YOUR_VALID_GEMINI_API_KEY_HERE' with your actual Gemini API Key (starting with AIza...).
+4. Save the file.
+5. Restart the backend server (Ctrl+C, then 'npm run dev' inside the backend folder).
+
+Note: Google Maps is already configured and working with the key found in your system.
