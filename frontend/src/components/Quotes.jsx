@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import jsPDF from 'jspdf'
 import { 
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 
 const Quotes = () => {
+  const navigate = useNavigate()
   const [quotes, setQuotes] = useState([])
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -189,7 +190,7 @@ const Quotes = () => {
 
           <div className="flex gap-4">
             <Link
-              to="/quotes/new"
+              to="/quotes/builder"
               className="glass-btn glass-btn-primary flex items-center gap-2"
             >
               <Sparkles size={18} />
@@ -281,7 +282,7 @@ const Quotes = () => {
                         <button onClick={() => handleViewQuote(quote)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors" title="View">
                           <Eye size={18} />
                         </button>
-                        <button onClick={() => handleEditQuote(quote)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-indigo-400 transition-colors" title="Edit">
+                        <button onClick={() => navigate(`/quotes/builder/${quote.id}`)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-indigo-400 transition-colors" title="Edit">
                           <Edit size={18} />
                         </button>
                         <button onClick={() => generateProfessionalPDF(quote)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-emerald-400 transition-colors" title="Download PDF">

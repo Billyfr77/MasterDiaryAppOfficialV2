@@ -143,7 +143,8 @@ function App() {
               <Route path="/nodes" element={<EnhancedNodes />} />
               <Route path="/quotes" element={<Quotes />} />
               <Route path="/quotes/library" element={<NodesLibrary />} />
-              <Route path="/quotes/new" element={<QuoteBuilder />} />
+              <Route path="/quotes/builder" element={<QuoteBuilder />} />
+              <Route path="/quotes/builder/:id" element={<QuoteBuilder />} />
               <Route path="/map-builder" element={<VisualMapBuilder />} />
               <Route path="/reports" element={<ReportsSimple />} />
               <Route path="/invoices" element={<InvoiceBuilder />} />

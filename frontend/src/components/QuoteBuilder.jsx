@@ -6,7 +6,7 @@
  * ENHANCED: Enterprise Quote Features + AI Copilot + Visual Takeoff + Infinite Canvas
  */
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { 
   ReactFlow, 
   MiniMap, 
@@ -26,7 +26,7 @@ import {
   User, Wrench, Package, Plus, Save, Search, Trash2,
   Crown, List, GripVertical, CheckCircle2, X, Sparkles, MapPin, Eye, EyeOff, UploadCloud,
   Settings, FileText, Download, Calendar, FileType, Ruler, PenTool, MessageSquare, Send, Calculator, Maximize, Minimize,
-  Layout, Focus, Image as ImageIcon, Zap
+  Layout, Focus, Image as ImageIcon, Zap, DollarSign
 } from 'lucide-react'
 import { api } from '../utils/api'
 import CountUp from 'react-countup'
@@ -462,7 +462,7 @@ const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
         <div className={`w-1.5 h-10 rounded-full ${barColor} shadow-[0_0_12px_currentColor]`} />
         <div className="space-y-1">
           <div className="bg-stone-900/80 border border-white/10 px-2 py-0.5 rounded-lg">
-            <div className="text-sm font-bold text-white truncate w-32 lg:w-48">{item.material.name}</div>
+            <div className="text-sm font-bold text-white truncate flex-1 min-w-[80px]">{item.material.name}</div>
           </div>
           <div className="inline-block bg-stone-900/50 border border-white/5 px-2 py-0.5 rounded-md">
             <div className="text-[10px] text-gray-300 font-mono">{formatCurrency(getRate())} / unit</div>
@@ -497,7 +497,7 @@ const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
             </div>
           )}
         </div>
-        <div className="flex flex-col items-end w-24 gap-1">
+        <div className="flex flex-col items-end w-20 sm:w-24 gap-1">
           <span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">Total</span>
           <div className="bg-stone-900/80 border border-white/10 px-2 py-1 rounded-lg w-full text-right">
             <div className="text-sm font-bold text-emerald-400">{formatCurrency(getRate() * item.quantity)}</div>
@@ -601,6 +601,7 @@ const initialEdges = []
 const QuoteBuilderContent = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { id } = useParams()
   const nodeTypes = useMemo(() => ({ glass: GlassNode, dimension: DimensionNode, zone: ZoneNode }), [])
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
@@ -622,6 +623,8 @@ const QuoteBuilderContent = () => {
   const [showSettings, setShowSettings] = useState(false)
   const [quoteSettings, setQuoteSettings] = useState({ clientName: '', validUntil: '', terms: '', status: 'DRAFT' })
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [showFinancials, setShowFinancials] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(true)
 
   // Feature State
   const [showMap, setShowMap] = useState(false)
@@ -653,6 +656,73 @@ const QuoteBuilderContent = () => {
     }
     fetchData()
   }, [])
+
+  // --- LOAD EXISTING QUOTE ---
+  useEffect(() => {
+    if (!id || materials.length === 0) return
+
+    const loadQuote = async () => {
+      try {
+        const res = await api.get(`/quotes/${id}`)
+        const quote = res.data
+
+        setSelectedProject(quote.projectId)
+        setMarginPct(quote.marginPct)
+        setQuoteSettings({
+           clientName: quote.clientName || '', // assuming these might be saved
+           validUntil: quote.validUntil || '',
+           terms: quote.terms || '',
+           status: quote.status || 'DRAFT'
+        })
+
+        const loadedItems = []
+        const loadedNodes = []
+
+        // Helper to process items
+        const processItem = (item, type, list) => {
+           const refItem = list.find(x => x.id === (item.nodeId || item.staffId || item.equipmentId))
+           if (!refItem) return
+
+           const tempId = `${type}-${refItem.id}-${Date.now()}-${Math.random()}`
+           
+           // Visual Node
+           loadedNodes.push({
+              id: tempId,
+              type: 'glass',
+              position: { x: Math.random() * 800, y: Math.random() * 600 }, // Random position as coordinates aren't saved yet
+              data: {
+                 label: refItem.name,
+                 subLabel: type,
+                 quantity: item.quantity || item.hours,
+                 type: type,
+                 onDelete: () => deleteNode(tempId)
+              }
+           })
+
+           // Data Item
+           loadedItems.push({
+              nodeId: refItem.id,
+              tempId: tempId,
+              quantity: item.quantity || item.hours,
+              material: refItem,
+              type: type
+           })
+        }
+
+        quote.nodes?.forEach(i => processItem(i, 'material', materials))
+        quote.staff?.forEach(i => processItem(i, 'staff', staff))
+        quote.equipment?.forEach(i => processItem(i, 'equipment', equipment))
+
+        setNodes(loadedNodes)
+        setQuoteItems(loadedItems)
+
+      } catch (err) {
+        console.error('Error loading quote:', err)
+        alert('Failed to load quote details.')
+      }
+    }
+    loadQuote()
+  }, [id, materials, staff, equipment])
 
   // --- AI ACTIONS ---
   const handleAIChat = async (message) => {
@@ -881,30 +951,39 @@ const QuoteBuilderContent = () => {
         )}
 
         {/* --- TOP BAR --- */}
-        <div className={`h-16 px-6 border-b border-white/10 ${showMap ? 'bg-stone-900/60' : 'bg-stone-900/80'} backdrop-blur-md z-30 flex justify-between items-center shadow-lg transition-colors`}>
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.4)] ring-1 ring-white/20">
-              <Crown className="text-white" size={20} />
+        <div className={`h-auto py-3 px-4 md:px-6 border-b border-white/10 ${showMap ? 'bg-stone-900/60' : 'bg-stone-900/80'} backdrop-blur-md z-30 flex flex-wrap justify-between items-center shadow-lg transition-colors gap-2`}>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.4)] ring-1 ring-white/20">
+              <Crown className="text-white" size={16} />
             </div>
             <div>
-              <div className="bg-stone-900/80 px-2 py-0.5 rounded border border-white/10 inline-block mb-0.5">
-                <h1 className="text-sm font-black text-white tracking-tight">QUOTE BUILDER</h1>
+              <div className="bg-stone-900/80 px-1.5 py-0.5 rounded border border-white/10 inline-block mb-0.5">
+                <h1 className="text-xs font-black text-white tracking-tight">QUOTE BUILDER</h1>
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 bg-stone-900/60 px-2 py-0.5 rounded border border-white/5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />
+              <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-gray-400 bg-stone-900/60 px-1.5 py-0.5 rounded border border-white/5">
+                <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />
                 Enterprise Edition
               </div>
             </div>
           </div>
 
-          <div className={`hidden md:flex items-center gap-4 ${showMap ? 'bg-stone-900/80' : 'bg-stone-900/90'} p-2 rounded-2xl border border-white/10 shadow-2xl transition-colors`}>
-             <div className="px-4"><div className="text-[9px] font-bold text-gray-400 uppercase">Revenue</div><div className="text-sm font-mono font-bold text-emerald-400"><CountUp end={totalRevenue} prefix="$" separator="," /></div></div>
-             <div className="w-px h-8 bg-white/10" />
-             <div className="px-4 flex items-center gap-2"><span className="text-[9px] font-bold text-indigo-300">Margin {marginPct}%</span><input type="range" min="0" max="100" value={marginPct} onChange={(e) => setMarginPct(Number(e.target.value))} className="w-20 h-1.5 bg-stone-800 rounded-lg accent-indigo-500" /></div>
-          </div>
+          {/* Revenue/Margin Display - Conditionally visible */}
+          {showFinancials && (
+            <div className={`flex items-center gap-4 ${showMap ? 'bg-stone-900/80' : 'bg-stone-900/90'} p-2 rounded-xl border border-white/10 shadow-2xl transition-colors`}>
+               <div className="px-2"><div className="text-[9px] font-bold text-gray-400 uppercase">Revenue</div><div className="text-sm font-mono font-bold text-emerald-400"><CountUp end={totalRevenue} prefix="$" separator="," /></div></div>
+               <div className="w-px h-6 bg-white/10" />
+               <div className="px-2 flex items-center gap-1.5"><span className="text-[9px] font-bold text-indigo-300">Margin {marginPct}%</span><input type="range" min="0" max="100" value={marginPct} onChange={(e) => setMarginPct(Number(e.target.value))} className="w-16 h-1 bg-stone-800 rounded-lg accent-indigo-500" /></div>
+            </div>
+          )}
+          
+          {/* Toggle for financials on small screens */}
+          <button onClick={() => setShowFinancials(!showFinancials)} className="md:hidden p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-400 hover:text-white" title="Toggle Financials">
+            <DollarSign size={20} />
+          </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* TOOLBAR */}
+            <button onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-400 hover:text-white" title="Toggle Sidebar"><List size={20} /></button>
             <button onClick={addDimensionNode} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-blue-400 hover:text-white hover:bg-blue-600/50 transition-colors" title="Add Room/Area"><Ruler size={20} /></button>
             <button onClick={addZoneNode} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-purple-400 hover:text-white hover:bg-purple-600/50 transition-colors" title="Add Zone"><Layout size={20} /></button>
             <button onClick={() => setShowGeoModal(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-emerald-400 hover:text-white transition-colors" title="Upload Site Plan"><UploadCloud size={20} /></button>
@@ -929,7 +1008,7 @@ const QuoteBuilderContent = () => {
         {/* --- MAIN AREA --- */}
         <div className="flex-1 flex overflow-hidden">
           {/* SIDEBAR */}
-          <div className="w-80 bg-stone-900/95 border-r border-white/5 flex flex-col z-20 shadow-2xl">
+          <div className={`flex-shrink-0 ${showSidebar ? 'w-64 md:w-80' : 'w-0 -ml-64 md:-ml-80'} lg:w-80 bg-stone-900/95 border-r border-white/5 flex flex-col z-20 shadow-2xl transition-all duration-300 overflow-hidden`}>
             <div className="p-4 border-b border-white/5 bg-stone-900/50">
               <div className="relative"><Search className="absolute left-3 top-2.5 text-gray-500" size={16} /><input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-stone-800 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white focus:border-indigo-500 outline-none" /></div>
             </div>
