@@ -427,7 +427,7 @@ const DraggableElement = ({ item, children }) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify(item));
     event.dataTransfer.effectAllowed = 'move';
   };
-  return <div draggable onDragStart={onDragStart} className="transition-all duration-300 cursor-grab active:cursor-grabbing hover:scale-105 active:rotate-2">{children}</div>
+  return <div draggable onDragStart={onDragStart} className="transition-all duration-300 cursor-grab active:cursor-grabbing hover:scale-105 active:rotate-2 dnd-touch-handler" style={{ touchAction: 'none' }}>{children}</div>
 }
 
 // ================================
@@ -495,6 +495,7 @@ const PaintDiary = () => {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showGeoModal, setShowGeoModal] = useState(false)
   const [sitePlan, setSitePlan] = useState(null)
+  const [showTools, setShowTools] = useState(false)
 
   // Load Data
   useEffect(() => {
@@ -652,6 +653,7 @@ const PaintDiary = () => {
             <div className="flex flex-wrap items-center gap-4">
               <div className="relative"><DatePicker selected={selectedDate} onChange={(date) => { setSelectedDate(date); setIsSaved(false); }} dateFormat="MMMM d, yyyy" className="px-4 py-2.5 bg-stone-900/60 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 focus:outline-none cursor-pointer font-bold" /><Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" /></div>
               <select value={selectedProject?.id || ''} onChange={(e) => setSelectedProject(projects.find(p => p.id === e.target.value) || null)} className="px-4 py-2.5 bg-stone-900/60 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 focus:outline-none cursor-pointer font-bold appearance-none min-w-[200px]"><option value="" className="bg-stone-900">Select Project...</option>{projects.map(p => (<option key={p.id} value={p.id} className="bg-stone-900">{p.name}</option>))}</select>
+              <button onClick={() => setShowTools(!showTools)} className={`lg:hidden flex items-center gap-2 px-5 py-2.5 ${showTools ? 'bg-indigo-600' : 'bg-stone-800'} text-white rounded-xl transition-all font-bold border border-white/10 shadow-lg`}><Wrench size={18} /> Tools</button>
               <button onClick={() => setViewMode('all')} className="flex items-center gap-2 px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded-xl transition-all font-bold border border-white/10 shadow-lg"><List size={18} /><span className="hidden sm:inline">All Diaries</span></button>
             </div>
           </div>
@@ -667,12 +669,13 @@ const PaintDiary = () => {
 
             {/* Content */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-              <div className="lg:col-span-1"><div className="bg-stone-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-5 sticky top-4 shadow-xl"><ConstructionToolbar staff={staff} equipment={equipment} materials={materials} formatCurrency={formatCurrency} searchTerm={searchTerm} setSearchTerm={setSearchTerm} filterType={filterType} setFilterType={setFilterType} weather={weather} /></div></div>
+              <div className={`lg:col-span-1 ${showTools ? 'block' : 'hidden lg:block'}`}><div className="bg-stone-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-5 sticky top-4 shadow-xl"><ConstructionToolbar staff={staff} equipment={equipment} materials={materials} formatCurrency={formatCurrency} searchTerm={searchTerm} setSearchTerm={setSearchTerm} filterType={filterType} setFilterType={setFilterType} weather={weather} /></div></div>
               
               <div className="lg:col-span-3">
                 <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
                   <div className="flex items-center gap-3">
                     <button onClick={handleSave} disabled={isSaving} className={`flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold shadow-lg transition-all ${isSaved ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-indigo-600 hover:bg-indigo-500 hover:-translate-y-0.5'} ${isSaving ? 'opacity-75 cursor-wait' : ''}`}><Save size={20} />{isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save Entry'}</button>
+                    <button onClick={() => navigate('/invoices', { state: { diaryItems: currentEntry.items, projectId: selectedProject?.id } })} className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold shadow-lg transition-all hover:-translate-y-0.5"><FileText size={20} /> Invoice</button>
                     <div className="flex items-center gap-2 p-1 bg-stone-900/60 rounded-xl border border-white/10">
                       <button onClick={handleGetLocation} className={`p-2.5 rounded-lg transition-all ${currentEntry.location ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:text-white hover:bg-white/10'}`} title="Pin Location"><MapPin size={20} /></button>
                       <label className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 cursor-pointer transition-all"><Camera size={20} /><input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} /></label>

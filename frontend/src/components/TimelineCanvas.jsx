@@ -181,7 +181,7 @@ const TimelineCanvasContent = ({ items, onDrop, onUpdateItem, onRemoveItem }) =>
   }, [onUpdateItem]);
 
   return (
-    <div className="w-full h-[600px] bg-stone-950/50 rounded-2xl overflow-hidden relative">
+    <div className="w-full h-[50vh] min-h-[400px] md:h-[600px] bg-stone-950/50 rounded-2xl overflow-hidden relative">
       <div className="absolute inset-0 opacity-20 pointer-events-none bg-[size:40px_40px] bg-[linear-gradient(to_right,#4f46e5_1px,transparent_1px),linear-gradient(to_bottom,#4f46e5_1px,transparent_1px)]" />
       <ReactFlow
         nodes={nodes}

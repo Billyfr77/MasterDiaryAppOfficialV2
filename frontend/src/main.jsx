@@ -19,6 +19,22 @@ import { BrowserRouter as Router } from 'react-router-dom'
 import { SettingsProvider } from './context/SettingsContext'
 import App from './App.jsx'
 
+// Mobile Drag and Drop Polyfill
+import { polyfill } from "mobile-drag-drop";
+import { scrollBehaviourDragImageTranslateOverride } from "mobile-drag-drop/scroll-behaviour";
+import "mobile-drag-drop/default.css";
+
+polyfill({
+  dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride
+});
+
+// Fix for iOS to prevent scrolling while dragging
+document.addEventListener("touchmove", (e) => {
+  if (e.target.closest('.dnd-touch-handler')) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Router>
