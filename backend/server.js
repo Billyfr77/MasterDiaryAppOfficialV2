@@ -3,7 +3,7 @@ const path = require('path');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config({ path: '../.env', override: true });
+require('dotenv').config({ override: true }); // Force override system env vars
 const db = require('./src/models');
 const { loadSettings } = require('./src/utils/settingsCache');
 
@@ -86,7 +86,6 @@ app.use('/api/quotes', require('./src/routes/quotes'));
 app.use('/api/quote-templates', require('./src/routes/quoteTemplates'));
 app.use('/api/subscriptions', require('./src/routes/subscriptions'));
 app.use('/api/auth', require('./src/routes/auth'));
-app.use('/api/ai', require('./src/routes/ai')); // Register AI routes
 app.use('/api/uploads', require('./src/routes/uploads')); // Register Upload routes
 app.use('/api/notifications', require('./src/routes/notifications')); // Register Notification routes
 app.use('/api/geocoding', require('./src/routes/geocoding'));
@@ -215,11 +214,8 @@ const PORT = process.env.PORT || 5003;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`Loaded GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 10) + '...' : 'UNDEFINED'}`);
 });
-
-// Start AI Watchdog (Background Jobs)
-const { startWatchdog } = require('./src/cron/aiWatchdog');
-startWatchdog();
 
 // Database connection (Background)
 db.sequelize.authenticate()

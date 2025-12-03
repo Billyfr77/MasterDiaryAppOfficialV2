@@ -30,59 +30,44 @@ const calculateTotals = async (nodes, staff, equipment, userId, transaction = nu
 
           // Calculate materials cost
           for (const item of nodes || []) {
-            // Skip metadata or invalid items
-            if (item.type === 'metadata' || item.nodeId === 'METADATA' || !item.nodeId) continue;
+            if (item.type === 'metadata' || item.nodeId === 'METADATA') continue;
 
-            try {
-              const node = await Node.findOne({
-                where: userId ? { id: item.nodeId, userId: userId } : { id: item.nodeId }
-              });
-              if (!node) {
-                console.warn(`Material ${item.nodeId} not found, skipping`);
-                continue; 
-              }
-              totalCost += parseFloat(node.pricePerUnit) * item.quantity;
-            } catch (err) {
-              console.warn(`Error looking up material ${item.nodeId}:`, err.message);
-              continue;
+            // Use provided price if available, otherwise lookup
+            let price = item.pricePerUnit || item.price || 0;
+            
+            if (!price && item.nodeId) {
+                try {
+                  const node = await Node.findOne({ where: { id: item.nodeId } }); // Relaxed userId check
+                  if (node) price = parseFloat(node.pricePerUnit);
+                } catch (err) { console.warn(`Material lookup failed: ${err.message}`); }
             }
+            totalCost += parseFloat(price || 0) * (parseFloat(item.quantity) || 0);
           }
 
           // Calculate staff cost
           for (const item of staff || []) {
-            if (!item.staffId) continue;
-            try {
-              const staffMember = await Staff.findOne({
-                where: userId ? { id: item.staffId, userId: userId } : { id: item.staffId }
-              });
-              if (!staffMember) {
-                console.warn(`Staff member ${item.staffId} not found, skipping`);
-                continue; 
-              }
-              const chargeRate = staffMember.chargeRates?.base || staffMember.payRates?.base || 0;
-              totalCost += parseFloat(chargeRate) * item.hours;
-            } catch (err) {
-               console.warn(`Error looking up staff ${item.staffId}:`, err.message);
-               continue;
+            let rate = item.chargeRate || item.rate || 0;
+
+            if (!rate && item.staffId) {
+                try {
+                  const staffMember = await Staff.findOne({ where: { id: item.staffId } });
+                  if (staffMember) rate = staffMember.chargeRates?.base || staffMember.payRates?.base || 0;
+                } catch (err) { console.warn(`Staff lookup failed: ${err.message}`); }
             }
+            totalCost += parseFloat(rate || 0) * (parseFloat(item.hours) || 0);
           }
 
           // Calculate equipment cost
           for (const item of equipment || []) {
-            if (!item.equipmentId) continue;
-            try {
-              const equipmentItem = await Equipment.findOne({
-                where: userId ? { id: item.equipmentId, userId: userId } : { id: item.equipmentId }
-              });
-              if (!equipmentItem) {
-                console.warn(`Equipment ${item.equipmentId} not found, skipping`);
-                continue; 
-              }
-              totalCost += parseFloat(equipmentItem.costRates?.base || 0) * item.hours;
-            } catch (err) {
-               console.warn(`Error looking up equipment ${item.equipmentId}:`, err.message);
-               continue;
-            }
+             let rate = item.costRate || item.rate || 0;
+
+             if (!rate && item.equipmentId) {
+                try {
+                  const equipmentItem = await Equipment.findOne({ where: { id: item.equipmentId } });
+                  if (equipmentItem) rate = equipmentItem.costRates?.base || 0;
+                } catch (err) { console.warn(`Equipment lookup failed: ${err.message}`); }
+             }
+             totalCost += parseFloat(rate || 0) * (parseFloat(item.hours) || 0);
           }
 
           return totalCost;

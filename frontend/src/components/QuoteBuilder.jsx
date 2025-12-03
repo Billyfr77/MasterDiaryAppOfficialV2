@@ -6,6 +6,7 @@
  * ENHANCED: Enterprise Quote Features + AI Copilot + Visual Takeoff + Infinite Canvas
  */
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { 
   ReactFlow, 
   MiniMap, 
@@ -598,6 +599,7 @@ const initialNodes = []
 const initialEdges = []
 
 const QuoteBuilderContent = () => {
+  const location = useLocation()
   const nodeTypes = useMemo(() => ({ glass: GlassNode, dimension: DimensionNode, zone: ZoneNode }), [])
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
@@ -608,7 +610,7 @@ const QuoteBuilderContent = () => {
   const [equipment, setEquipment] = useState([])
   const [projects, setProjects] = useState([])
   const [quoteItems, setQuoteItems] = useState([])
-  const [selectedProject, setSelectedProject] = useState('')
+  const [selectedProject, setSelectedProject] = useState(location.state?.projectId || '')
   const [marginPct, setMarginPct] = useState(20)
   
   // UI State
@@ -822,9 +824,27 @@ const QuoteBuilderContent = () => {
       if (projectLocation) await api.put(`/projects/${selectedProject}`, { latitude: projectLocation.lat, longitude: projectLocation.lng })
 
       const metadataNode = { nodeId: 'METADATA', quantity: 0, type: 'metadata', ...quoteSettings }
-      const nodesData = [...quoteItems.filter(i => i.type !== 'staff' && i.type !== 'equipment').map(i => ({ nodeId: i.nodeId, quantity: i.quantity })), metadataNode]
-      const staffData = quoteItems.filter(i => i.type === 'staff').map(i => ({ staffId: i.nodeId, hours: i.quantity }))
-      const equipmentData = quoteItems.filter(i => i.type === 'equipment').map(i => ({ equipmentId: i.nodeId, hours: i.quantity }))
+      
+      const nodesData = [
+          ...quoteItems.filter(i => i.type !== 'staff' && i.type !== 'equipment').map(i => ({ 
+              nodeId: i.nodeId, 
+              quantity: i.quantity,
+              pricePerUnit: i.material.pricePerUnit // Explicit price
+          })), 
+          metadataNode
+      ]
+      
+      const staffData = quoteItems.filter(i => i.type === 'staff').map(i => ({ 
+          staffId: i.nodeId, 
+          hours: i.quantity,
+          chargeRate: i.material.chargeRate // Explicit rate
+      }))
+      
+      const equipmentData = quoteItems.filter(i => i.type === 'equipment').map(i => ({ 
+          equipmentId: i.nodeId, 
+          hours: i.quantity,
+          costRate: i.material.costRate // Explicit rate
+      }))
 
       await api.post('/quotes', {
         name: `Quote for ${projects.find(p => p.id === selectedProject)?.name} - ${new Date().toLocaleDateString()}`,

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { Truck, Wrench, Activity, Fuel, Gauge, AlertTriangle, User, CheckCircle, Plus, Search, Filter } from 'lucide-react';
+import { Truck, Wrench, Activity, Fuel, Gauge, AlertTriangle, User, CheckCircle, Plus, Search, Filter, Edit, Trash2, X } from 'lucide-react';
 
 const FleetCommand = () => {
   const [fleet, setFleet] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState(null); // Track if we are editing
+
   const [newUnitData, setNewUnitData] = useState({ 
     name: '', 
     category: 'Truck', 
@@ -16,6 +18,7 @@ const FleetCommand = () => {
     costRateOT2: '',
     value: '',
     serviceInterval: 500,
+    fuelLevel: 100,
     notes: ''
   });
 
@@ -31,7 +34,24 @@ const FleetCommand = () => {
     } catch (e) { console.error("Fleet Load Error", e); }
   };
 
-  const createUnit = async () => {
+  const resetForm = () => {
+      setNewUnitData({ 
+        name: '', 
+        category: 'Truck', 
+        status: 'available',
+        costRateBase: '',
+        costRateOT1: '',
+        costRateOT2: '',
+        value: '',
+        serviceInterval: 500,
+        fuelLevel: 100,
+        notes: ''
+      });
+      setEditingId(null);
+      setShowCreate(false);
+  };
+
+  const handleSave = async () => {
       try {
           const payload = {
               ...newUnitData,
@@ -41,27 +61,52 @@ const FleetCommand = () => {
               costRateOT2: Number(newUnitData.costRateOT2) || 0,
               value: Number(newUnitData.value) || 0,
               serviceInterval: Number(newUnitData.serviceInterval) || 500,
-              userId: '1' // Placeholder or derive from context
+              fuelLevel: Number(newUnitData.fuelLevel) || 100,
+              userId: '1' // Placeholder
           };
           
-          console.log("Sending payload:", payload);
-          const res = await api.post('/equipment', payload);
-          setFleet(prev => [...prev, res.data]);
-          setShowCreate(false);
-          setNewUnitData({ 
-            name: '', 
-            category: 'Truck', 
-            status: 'available',
-            costRateBase: '',
-            costRateOT1: '',
-            costRateOT2: '',
-            value: '',
-            serviceInterval: 500,
-            notes: ''
-          });
+          if (editingId) {
+              const res = await api.put(`/equipment/${editingId}`, payload);
+              setFleet(prev => prev.map(item => item.id === editingId ? res.data : item));
+          } else {
+              const res = await api.post('/equipment', payload);
+              setFleet(prev => [res.data, ...prev]);
+          }
+          
+          resetForm();
       } catch(e) { 
-          console.error("Create Unit Failed:", e.response?.data || e);
-          alert('Failed to add unit: ' + (e.response?.data?.error || e.message)); 
+          console.error("Save Failed:", e.response?.data || e);
+          alert('Failed to save unit: ' + (e.response?.data?.error || e.message)); 
+      }
+  };
+
+  const handleEdit = (unit, e) => {
+      e.stopPropagation(); // Prevent opening telemetry modal
+      setEditingId(unit.id);
+      setNewUnitData({
+          name: unit.name,
+          category: unit.category,
+          status: unit.status || 'available',
+          costRateBase: unit.costRateBase,
+          costRateOT1: unit.costRateOT1,
+          costRateOT2: unit.costRateOT2,
+          value: unit.value,
+          serviceInterval: unit.serviceInterval,
+          fuelLevel: unit.fuelLevel,
+          notes: unit.notes || ''
+      });
+      setShowCreate(true);
+  };
+
+  const handleDelete = async (id, e) => {
+      e.stopPropagation();
+      if (!window.confirm("Are you sure you want to delete this unit?")) return;
+
+      try {
+          await api.delete(`/equipment/${id}`);
+          setFleet(prev => prev.filter(item => item.id !== id));
+      } catch (e) {
+          alert("Failed to delete unit");
       }
   };
 
@@ -91,7 +136,7 @@ const FleetCommand = () => {
                 <p className="text-gray-400 mt-2 font-medium">Live Logistics & Asset Intelligence</p>
             </div>
             <button 
-                onClick={() => setShowCreate(true)}
+                onClick={() => { resetForm(); setShowCreate(true); }}
                 className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-900/30 transition-all flex items-center gap-2"
             >
                 <Plus size={20}/> Add Unit
@@ -112,9 +157,11 @@ const FleetCommand = () => {
                         <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20 group-hover:scale-110 transition-transform">
                             <Truck size={24} />
                         </div>
-                        <span className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-wider ${unit.status === 'available' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                            {unit.status}
-                        </span>
+                        <div className="flex gap-2">
+                            <span className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-wider ${unit.status === 'available' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                {unit.status}
+                            </span>
+                        </div>
                     </div>
 
                     <h3 className="text-xl font-bold text-white mb-1">{unit.name}</h3>
@@ -129,6 +176,24 @@ const FleetCommand = () => {
                             <div className="text-[10px] text-gray-500 uppercase">Fuel</div>
                             <div className="font-mono text-sm text-emerald-400">{unit.fuelLevel || 100}%</div>
                         </div>
+                    </div>
+
+                    {/* Quick Actions Overlay (Visible on Hover) */}
+                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                            onClick={(e) => handleEdit(unit, e)}
+                            className="p-2 bg-stone-800 hover:bg-indigo-600 rounded-lg text-white transition-colors shadow-lg"
+                            title="Edit"
+                        >
+                            <Edit size={14} />
+                        </button>
+                        <button 
+                            onClick={(e) => handleDelete(unit.id, e)}
+                            className="p-2 bg-stone-800 hover:bg-rose-600 rounded-lg text-white transition-colors shadow-lg"
+                            title="Delete"
+                        >
+                            <Trash2 size={14} />
+                        </button>
                     </div>
                 </div>
             ))}
@@ -146,6 +211,7 @@ const FleetCommand = () => {
                         <div className="flex gap-3">
                             <button className="px-4 py-2 bg-stone-800 hover:bg-stone-700 rounded-lg text-sm font-bold border border-white/5">History</button>
                             <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold shadow-lg">Dispatch</button>
+                            <button onClick={() => setSelectedUnit(null)} className="p-2 text-gray-400 hover:text-white"><X size={24}/></button>
                         </div>
                     </div>
 
@@ -186,11 +252,11 @@ const FleetCommand = () => {
             </div>
         )}
 
-        {/* CREATE MODAL */}
+        {/* CREATE/EDIT MODAL */}
         {showCreate && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
                 <div className="bg-stone-900 p-8 rounded-2xl border border-white/10 w-[500px] max-h-[90vh] overflow-y-auto">
-                    <h2 className="text-xl font-bold text-white mb-6">Add New Unit</h2>
+                    <h2 className="text-xl font-bold text-white mb-6">{editingId ? 'Edit Unit' : 'Add New Unit'}</h2>
                     
                     <div className="space-y-4">
                         <div>
@@ -313,10 +379,10 @@ const FleetCommand = () => {
                     </div>
 
                     <div className="mt-8 flex gap-3">
-                        <button onClick={createUnit} className="flex-1 bg-indigo-600 py-3 rounded-lg text-white font-bold hover:bg-indigo-500 transition-colors">
-                            Deploy Unit
+                        <button onClick={handleSave} className="flex-1 bg-indigo-600 py-3 rounded-lg text-white font-bold hover:bg-indigo-500 transition-colors">
+                            {editingId ? 'Update Unit' : 'Deploy Unit'}
                         </button>
-                        <button onClick={() => setShowCreate(false)} className="px-6 bg-stone-800 py-3 rounded-lg text-gray-400 font-bold hover:bg-stone-700 transition-colors">
+                        <button onClick={resetForm} className="px-6 bg-stone-800 py-3 rounded-lg text-gray-400 font-bold hover:bg-stone-700 transition-colors">
                             Cancel
                         </button>
                     </div>

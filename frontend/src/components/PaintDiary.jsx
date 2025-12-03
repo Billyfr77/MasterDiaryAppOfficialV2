@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import {
   Calendar, Users, Wrench, DollarSign, Save, Trash2, Plus, Clock,
@@ -448,9 +449,11 @@ const ConstructionToolbar = ({ staff, equipment, materials, formatCurrency, sear
       </div>
 
       <div className="flex flex-col gap-4 max-h-[calc(100vh-250px)] overflow-y-auto pr-2 custom-scrollbar">
-        {(filterType === 'all' || filterType === 'staff') && (<div><h4 className="text-[10px] font-black text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-widest"><Users size={12} className="text-emerald-500" /> Team ({filteredItems(staff).length})</h4><div className="grid grid-cols-2 gap-2">{filteredItems(staff).map(member => (<DraggableElement key={member.id} item={{ type: 'staff', ...member }}><div className="bg-stone-800/50 border border-white/5 rounded-xl p-3 text-center cursor-grab hover:border-emerald-500/50 hover:bg-stone-800 transition-all group"><div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform"><Users size={16} className="text-emerald-500" /></div><div className="text-xs font-bold text-gray-200 mb-0.5 truncate">{member.name}</div><div className="text-[10px] text-gray-500 font-mono">{formatCurrency(member.rate || 0)}/hr</div></div></DraggableElement>))}</div></div>)}
-        {(filterType === 'all' || filterType === 'equipment') && (<div><h4 className="text-[10px] font-black text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-widest mt-2"><Wrench size={12} className="text-amber-500" /> Equipment ({filteredItems(equipment).length})</h4><div className="grid grid-cols-2 gap-2">{filteredItems(equipment).map(item => (<DraggableElement key={item.id} item={{ type: 'equipment', ...item }}><div className="bg-stone-800/50 border border-white/5 rounded-xl p-3 text-center cursor-grab hover:border-amber-500/50 hover:bg-stone-800 transition-all group"><div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform"><Wrench size={16} className="text-amber-500" /></div><div className="text-xs font-bold text-gray-200 mb-0.5 truncate">{item.name}</div><div className="text-[10px] text-gray-500 font-mono">{formatCurrency(item.rate || 0)}/day</div></div></DraggableElement>))}</div></div>)}
-        {(filterType === 'all' || filterType === 'material') && (<div><h4 className="text-[10px] font-black text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-widest mt-2"><Package size={12} className="text-indigo-500" /> Materials ({filteredItems(materials).length})</h4><div className="grid grid-cols-2 gap-2">{filteredItems(materials).map(item => (<DraggableElement key={item.id} item={{ type: 'material', ...item }}><div className="bg-stone-800/50 border border-white/5 rounded-xl p-3 text-center cursor-grab hover:border-indigo-500/50 hover:bg-stone-800 transition-all group"><div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform"><Package size={16} className="text-indigo-500" /></div><div className="text-xs font-bold text-gray-200 mb-0.5 truncate">{item.name}</div><div className="text-[10px] text-gray-500 font-mono">{formatCurrency(item.pricePerUnit || item.rate || 0)}</div></div></DraggableElement>))}</div></div>)}
+        <div className="space-y-4">
+          {(filterType === 'all' || filterType === 'staff') && (<div><h4 className="text-[10px] font-black text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-widest"><Users size={12} className="text-emerald-500" /> Team ({filteredItems(staff).length})</h4><div className="grid grid-cols-2 gap-2">{filteredItems(staff).map(member => (<DraggableElement key={member.id} item={{ type: 'staff', ...member }}><div className="bg-stone-800/50 border border-white/5 rounded-xl p-3 text-center cursor-grab hover:border-emerald-500/50 hover:bg-stone-800 transition-all group"><div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform"><Users size={16} className="text-emerald-500" /></div><div className="text-xs font-bold text-gray-200 mb-0.5 truncate">{member.name}</div><div className="text-[10px] text-gray-500 font-mono">{formatCurrency(member.rate || 0)}/hr</div></div></DraggableElement>))}</div></div>)}
+          {(filterType === 'all' || filterType === 'equipment') && (<div><h4 className="text-[10px] font-black text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-widest mt-2"><Wrench size={12} className="text-amber-500" /> Equipment ({filteredItems(equipment).length})</h4><div className="grid grid-cols-2 gap-2">{filteredItems(equipment).map(item => (<DraggableElement key={item.id} item={{ type: 'equipment', ...item }}><div className="bg-stone-800/50 border border-white/5 rounded-xl p-3 text-center cursor-grab hover:border-amber-500/50 hover:bg-stone-800 transition-all group"><div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform"><Wrench size={16} className="text-amber-500" /></div><div className="text-xs font-bold text-gray-200 mb-0.5 truncate">{item.name}</div><div className="text-[10px] text-gray-500 font-mono">{formatCurrency(item.rate || 0)}/day</div></div></DraggableElement>))}</div></div>)}
+          {(filterType === 'all' || filterType === 'material') && (<div><h4 className="text-[10px] font-black text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-widest mt-2"><Package size={12} className="text-indigo-500" /> Materials ({filteredItems(materials).length})</h4><div className="grid grid-cols-2 gap-2">{filteredItems(materials).map(item => (<DraggableElement key={item.id} item={{ type: 'material', ...item }}><div className="bg-stone-800/50 border border-white/5 rounded-xl p-3 text-center cursor-grab hover:border-indigo-500/50 hover:bg-stone-800 transition-all group"><div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform"><Package size={16} className="text-indigo-500" /></div><div className="text-xs font-bold text-gray-200 mb-0.5 truncate">{item.name}</div><div className="text-[10px] text-gray-500 font-mono">{formatCurrency(item.pricePerUnit || item.rate || 0)}</div></div></DraggableElement>))}</div></div>)}
+        </div>
       </div>
     </div>
   )
@@ -460,6 +463,8 @@ const ConstructionToolbar = ({ staff, equipment, materials, formatCurrency, sear
 // MAIN PAINT DIARY COMPONENT
 // ================================
 const PaintDiary = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [currentEntry, setCurrentEntry] = useState({ id: generateId(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), items: [], photos: [], voiceNotes: [], location: null, note: '' })
   const [projects, setProjects] = useState([])
@@ -496,10 +501,17 @@ const PaintDiary = () => {
     const loadData = async () => {
       try {
         const [projectsRes, staffRes, equipRes, nodesRes] = await Promise.all([api.get('/projects'), api.get('/staff'), api.get('/equipment'), api.get('/nodes')]);
-        setProjects(Array.isArray(projectsRes.data) ? projectsRes.data : (projectsRes.data?.data || []));
+        const loadedProjects = Array.isArray(projectsRes.data) ? projectsRes.data : (projectsRes.data?.data || []);
+        setProjects(loadedProjects);
         setStaff(Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data?.data || []));
         setEquipment(Array.isArray(equipRes.data) ? equipRes.data : (equipRes.data?.data || []));
         setMaterials(nodesRes.data.data || nodesRes.data || []);
+
+        // Auto-select project from navigation state
+        if (location.state?.projectId) {
+            const preSelected = loadedProjects.find(p => p.id === location.state.projectId);
+            if (preSelected) setSelectedProject(preSelected);
+        }
       } catch (err) { console.error('Error loading data:', err); }
     };
     loadData();
@@ -534,6 +546,7 @@ const PaintDiary = () => {
   }, [currentEntry.items]);
 
   const resolveItems = useCallback((items) => {
+    if (!items || !Array.isArray(items)) return [];
     return items.map(item => {
       let resolved = { ...item };
       if (item.type === 'staff') {
@@ -544,7 +557,7 @@ const PaintDiary = () => {
         if (equipItem) { resolved.name = equipItem.name; if (!resolved.costRate) resolved.costRate = equipItem.costRateBase; if (!resolved.chargeRate) resolved.chargeRate = equipItem.chargeOutBase; }
       } else if (item.type === 'material') {
         const matItem = materials.find(m => m.id == item.dataId);
-        if (matItem) { resolved.name = matItem.name; if (!resolved.costRate) resolved.costRate = matItem.pricePerUnit; if (!resolved.chargeRate) resolved.chargeRate = matItem.pricePerUnit * 1.2; }
+        if (matItem) { resolved.name = matItem.name; if (!resolved.costRate) resolved.costRate = matItem.pricePerUnit; if (!resolved.chargeRate) resolved.costRate = matItem.pricePerUnit * 1.2; }
       }
       return resolved;
     });
@@ -575,7 +588,7 @@ const PaintDiary = () => {
   const handleViewDiary = useCallback((diary) => {
     setSelectedDate(new Date(diary.date)); setSelectedProject(diary.Project || null);
     let entry = diary.canvasData?.[0] || { id: generateId(), time: new Date().toLocaleTimeString(), items: [], photos: [], voiceNotes: [], location: null, note: '' };
-    entry.items = resolveItems(entry.items); setCurrentEntry(entry); setViewMode('daily'); setIsSaved(true);
+    entry.items = resolveItems(entry.items || []); setCurrentEntry(entry); setViewMode('daily'); setIsSaved(true);
   }, [resolveItems])
 
   const handleGetLocation = () => {
@@ -691,19 +704,49 @@ const PaintDiary = () => {
   }
 
   return (
-    <div className="min-h-screen p-6 animate-fade-in">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div><h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white flex items-center gap-3"><Calendar size={32} className="text-primary" /> All Saved Diaries</h1><p className="text-gray-600 dark:text-gray-400">View and manage all your construction diary entries</p></div>
-          <button onClick={() => setViewMode('daily')} className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-success to-emerald-600 text-white rounded-xl hover:shadow-lg hover:-translate-y-0.5 transition-all font-semibold"><Plus size={20} /> New Entry</button>
+    <>
+      <div className="min-h-screen p-6 animate-fade-in">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <div><h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white flex items-center gap-3"><Calendar size={32} className="text-primary" /> All Saved Diaries</h1><p className="text-gray-600 dark:text-gray-400">View and manage all your construction diary entries</p></div>
+            <button onClick={() => setViewMode('daily')} className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-success to-emerald-600 text-white rounded-xl hover:shadow-lg hover:-translate-y-0.5 transition-all font-semibold"><Plus size={20} /> New Entry</button>
+          </div>
+          {allDiaries.length === 0 ? (
+            <div className="glass-card p-12 text-center"><div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6"><Calendar size={40} className="text-gray-400" /></div><h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">No saved diaries yet</h3><p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto">Create your first construction diary entry to get started with visual time tracking</p><button onClick={() => setViewMode('daily')} className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors font-semibold">Create First Entry</button></div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{allDiaries.map(diary => (
+              <div key={diary.id} className="glass-card p-6 cursor-pointer group" onClick={() => handleViewDiary(diary)}>
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">{new Date(diary.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1"><Folder size={14} />{diary.Project?.name || 'No Project'}</p>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteDiary(diary.id) }} className="p-2 text-gray-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={18} /></button>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Cost</div>
+                    <div className="text-lg font-bold text-gray-800 dark:text-white">{formatCurrency(diary.totalCost || 0)}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Revenue</div>
+                    <div className="text-lg font-bold text-emerald-400">{formatCurrency(diary.totalRevenue || 0)}</div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  <span className="flex items-center gap-1"><List size={14} />{diary.canvasData?.[0]?.items?.length || 0} items</span>
+                  <span className="flex items-center gap-1"><Clock size={14} />{new Date(diary.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div className="w-full py-2 bg-indigo-600/10 text-indigo-400 rounded-lg font-medium text-center group-hover:bg-indigo-600 group-hover:text-white transition-colors flex items-center justify-center gap-2">
+                  <Eye size={16} /> View Entry
+                </div>
+              </div>
+            ))}
+            </div>
+          )}
         </div>
-        {allDiaries.length === 0 ? (
-          <div className="glass-card p-12 text-center"><div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6"><Calendar size={40} className="text-gray-400" /></div><h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">No saved diaries yet</h3><p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto">Create your first construction diary entry to get started with visual time tracking</p><button onClick={() => setViewMode('daily')} className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors font-semibold">Create First Entry</button></div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{allDiaries.map(diary => (<div key={diary.id} className="glass-card p-6 cursor-pointer group" onClick={() => handleViewDiary(diary)}><div className="flex justify-between items-start mb-4"><div><h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">{new Date(diary.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</h3><p className="text-sm text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1"><Folder size={14} />{diary.Project?.name || 'No Project'}</p></div><button onClick={(e) => { e.stopPropagation(); handleDeleteDiary(diary.id) }} className="p-2 text-gray-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={18} /></button></div><div className="grid grid-cols-2 gap-4 mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg"><div><div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Cost</div><div className="text-lg font-bold text-gray-800 dark:text-white">{formatCurrency(diary.totalCost || 0)}</div></div><div className="text-right"><div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Revenue</div><div className="text-lg font-bold text-success">{formatCurrency(diary.totalRevenue || 0)}</div></div></div><div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4"><span className="flex items-center gap-1"><List size={14} />{diary.canvasData?.[0]?.items?.length || 0} items</span><span className="flex items-center gap-1"><Clock size={14} />{new Date(diary.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div><div className="w-full py-2 bg-primary/10 text-primary rounded-lg font-medium text-center group-hover:bg-primary group-hover:text-white transition-colors flex items-center justify-center gap-2"><Eye size={16} /> View Entry</div></div>))}</div>
-        )}
       </div>
-    </div>
+    </>
   )
 }
 

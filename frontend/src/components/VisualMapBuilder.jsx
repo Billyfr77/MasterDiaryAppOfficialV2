@@ -1,665 +1,599 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, Polygon, Polyline, DirectionsRenderer, StandaloneSearchBox, TrafficLayer, DrawingManager, StreetViewPanorama } from '@react-google-maps/api';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { GoogleMap, useJsApiLoader, Polygon, Marker, DrawingManager, StreetViewPanorama } from '@react-google-maps/api';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Map as MapIcon, Layers, Search, Navigation, Box, AlertTriangle, Truck, 
-  FileText, X, Target, Zap, Clock, Camera, Globe, ChevronRight, PlayCircle,
-  Radar, Eye, RotateCw, ShoppingCart, Coffee, Fuel
+  Map as MapIcon, X, Building2, Briefcase, DollarSign, TrendingUp, 
+  Calendar, FileText, Plus, ArrowRight, LayoutDashboard, Navigation, 
+  Locate, Layers, Globe, Camera, Zap, Settings, Upload, Trash2, Edit, Image as ImageIcon
 } from 'lucide-react';
 import { api } from '../utils/api';
 
 // --- CONFIGURATION ---
-const LIBRARIES = ['places', 'drawing', 'geometry'];
-
-const ASSET_CATALOG = {
-    'LOGISTICS': [
-        { id: 'dump_truck', label: 'Dump Truck', icon: 'M -4,-2 L 4,-2 L 4,2 L -4,2 Z', color: '#3b82f6', type: 'vehicle' },
-        { id: 'mixer', label: 'Concrete Mixer', icon: 'M -3,-3 L 3,-3 L 3,3 L -3,3 Z', color: '#8b5cf6', type: 'vehicle' },
-    ],
-    'HEAVY OPS': [
-        { id: 'crane', label: 'Tower Crane', icon: 'M 0,0 L -5,-15 L 5,-15 Z', color: '#f59e0b', type: 'equipment' },
-        { id: 'excavator', label: 'Excavator', icon: 'M -5,-5 L 5,-5 L 5,5 L -5,5 Z', color: '#f59e0b', type: 'equipment' },
-    ],
-    'SAFETY': [
-        { id: 'cone', label: 'Hazard Zone', icon: 'M 0,-10 L -5,0 L 5,0 Z', color: '#ef4444', type: 'marker' },
-    ]
-};
+const LIBRARIES = ['drawing', 'geometry', 'places'];
 
 const MIDNIGHT_STYLE = [
   { elementType: "geometry", stylers: [{ color: "#0f172a" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#0f172a" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
-  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#f8fafc" }] },
   { featureType: "road", elementType: "geometry", stylers: [{ color: "#334155" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#1e293b" }] },
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#1e3a8a" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#93c5fd" }] },
+  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#0f172a" }] },
 ];
 
+const HUB_COLORS = {
+    'active': '#10b981',   // Emerald
+    'pending': '#f59e0b',  // Amber
+    'office': '#6366f1',   // Indigo
+    'archive': '#64748b'   // Slate
+};
+
+// --- COMPONENT: PROJECT HUB DRAWER ---
+const ProjectHubDrawer = ({ project, onClose, onUpdate, onDelete }) => {
+    const navigate = useNavigate();
+    const [stats, setStats] = useState({ revenue: 0, cost: 0, margin: 0 });
+    const [diaries, setDiaries] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [viewMode, setViewMode] = useState('overview'); // overview, streetview, custom
+    const fileInputRef = useRef(null);
+
+    useEffect(() => {
+        if (project?.id) loadProjectData();
+    }, [project]);
+
+    const loadProjectData = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get(`/diaries`); 
+            const allEntries = Array.isArray(res.data.data) ? res.data.data : [];
+            // Filter by project ID strictly if possible, or by name match fallback
+            const entries = allEntries.filter(d => d.projectId === project.id || (d.Project && d.Project.id === project.id));
+            
+            const revenue = entries.reduce((sum, d) => sum + (parseFloat(d.totalRevenue) || 0), 0);
+            const cost = entries.reduce((sum, d) => sum + (parseFloat(d.totalCost) || 0), 0);
+            
+            setStats({ revenue, cost, margin: revenue - cost });
+            setDiaries(entries.slice(0, 5)); 
+            
+            // Check if project has a custom cover image (stored in map asset properties or project description/metadata)
+            if (project.properties?.coverImage) {
+                setViewMode('custom');
+            }
+        } catch (e) { console.error("Hub Data Error", e); }
+        setLoading(false);
+    };
+
+    const handleUploadCover = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const res = await api.post('/uploads', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            
+            // Update the Map Asset with the new image URL
+            // We assume 'project' prop includes the MapAsset ID or we can find it.
+            // Actually 'project' here is a hybrid object. We need the MapAsset ID to update the zone properties.
+            if (project.assetId) {
+                 const updatedProps = { ...project.properties, coverImage: res.data.url };
+                 await api.put(`/map-assets/${project.assetId}`, {
+                     properties: updatedProps
+                 });
+                 onUpdate({ ...project, properties: updatedProps }); // Notify parent
+                 setViewMode('custom');
+            }
+        } catch (err) {
+            alert("Upload failed");
+        }
+    };
+
+    const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+
+    // Calculate center for StreetView
+    const center = project.coordinates && project.coordinates[0] ? project.coordinates[0] : null;
+    const coverImage = project.properties?.coverImage;
+
+    return (
+        <div className="absolute top-0 right-0 bottom-0 w-[480px] bg-slate-950 border-l border-white/10 shadow-2xl flex flex-col animate-slide-left z-50 font-sans">
+            
+            {/* Dynamic Header Background */}
+            <div className="relative h-64 bg-slate-900 group overflow-hidden">
+                {viewMode === 'streetview' && center ? (
+                     <GoogleMap
+                        mapContainerStyle={{ width: '100%', height: '100%' }}
+                        zoom={1}
+                        options={{ disableDefaultUI: true }}
+                     >
+                        <StreetViewPanorama
+                            position={center}
+                            visible={true}
+                            options={{ disableDefaultUI: true, zoomControl: false, addressControl: false }}
+                        />
+                     </GoogleMap>
+                ) : viewMode === 'custom' && coverImage ? (
+                    <img src={coverImage} alt="Project Cover" className="w-full h-full object-cover" />
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 to-slate-900 flex items-center justify-center">
+                        <Building2 size={80} className="text-white/5" />
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                    </div>
+                )}
+                
+                {/* Overlay Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/50 to-transparent pointer-events-none" />
+
+                {/* Header Actions */}
+                <div className="absolute top-4 right-4 z-20 flex gap-2">
+                     <input type="file" ref={fileInputRef} className="hidden" onChange={handleUploadCover} accept="image/*" />
+                     <button 
+                        onClick={() => fileInputRef.current.click()}
+                        className="p-2 bg-black/40 hover:bg-indigo-600 rounded-full text-white backdrop-blur-md transition-all"
+                        title="Upload Cover Image"
+                     >
+                        <ImageIcon size={16} />
+                     </button>
+                     <button onClick={() => onDelete(project)} className="p-2 bg-black/40 hover:bg-rose-600 rounded-full text-white backdrop-blur-md transition-all" title="Delete Zone">
+                        <Trash2 size={16} />
+                     </button>
+                     <button onClick={onClose} className="p-2 bg-black/40 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-all">
+                        <X size={16} />
+                     </button>
+                </div>
+
+                <div className="absolute bottom-6 left-8 z-20 right-8">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg border border-white/10 ${project.status === 'office' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'}`}>
+                            {project.status === 'office' ? 'HQ Node' : 'Active Project'}
+                        </span>
+                    </div>
+                    <h2 className="text-3xl font-black text-white leading-none mb-2 drop-shadow-lg">{project.name}</h2>
+                    <div className="flex items-center gap-2 text-xs font-bold text-indigo-300 bg-black/30 w-fit px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/5">
+                        <Navigation size={12} /> 
+                        {project.site || 'Geo-Tagged Zone'}
+                    </div>
+                </div>
+            </div>
+
+            {/* View Toggles */}
+            <div className="flex border-b border-white/5 bg-slate-900/50 p-1">
+                <button onClick={() => setViewMode('overview')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${viewMode==='overview' ? 'border-indigo-500 text-white bg-white/5' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Overview</button>
+                <button onClick={() => setViewMode('streetview')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${viewMode==='streetview' ? 'border-indigo-500 text-white bg-white/5' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Street View</button>
+                {coverImage && <button onClick={() => setViewMode('custom')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${viewMode==='custom' ? 'border-indigo-500 text-white bg-white/5' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Photo</button>}
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8 bg-slate-950">
+                
+                {/* Financial Cards */}
+                {project.status !== 'office' && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-900 border border-white/5 p-5 rounded-2xl hover:border-indigo-500/30 transition-all group">
+                            <div className="flex justify-between items-start mb-3">
+                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Revenue</span>
+                                <div className="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-500 group-hover:scale-110 transition-transform"><TrendingUp size={14}/></div>
+                            </div>
+                            <div className="text-2xl font-black text-white tracking-tight">{loading ? '...' : formatMoney(stats.revenue)}</div>
+                        </div>
+                        <div className="bg-slate-900 border border-white/5 p-5 rounded-2xl hover:border-rose-500/30 transition-all group">
+                            <div className="flex justify-between items-start mb-3">
+                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Cost</span>
+                                <div className="p-1.5 bg-rose-500/10 rounded-lg text-rose-500 group-hover:scale-110 transition-transform"><DollarSign size={14}/></div>
+                            </div>
+                            <div className="text-2xl font-black text-white tracking-tight">{loading ? '...' : formatMoney(stats.cost)}</div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Command Actions */}
+                <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 block flex items-center gap-2"><Zap size={12}/> Command Center</label>
+                    <div className="grid grid-cols-2 gap-4">
+                        <button 
+                            onClick={() => navigate('/quotes/new', { state: { projectId: project.id } })}
+                            className="p-4 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-bold text-sm flex flex-col items-center gap-3 transition-all shadow-lg shadow-emerald-900/20 hover:-translate-y-1"
+                        >
+                            <div className="p-2 bg-white/20 rounded-full"><DollarSign size={18} /></div>
+                            Build Quote
+                        </button>
+                        <button 
+                            onClick={() => navigate('/diary', { state: { projectId: project.id } })}
+                            className="p-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white font-bold text-sm flex flex-col items-center gap-3 transition-all shadow-lg shadow-indigo-900/30 hover:-translate-y-1"
+                        >
+                            <div className="p-2 bg-white/20 rounded-full"><Plus size={18} /></div>
+                            Log Diary Entry
+                        </button>
+                        <button 
+                            onClick={() => navigate('/dashboard')}
+                            className="p-4 bg-slate-800 hover:bg-slate-700 rounded-2xl text-white font-bold text-sm flex flex-col items-center gap-3 transition-all border border-white/5 hover:border-white/20 hover:-translate-y-1"
+                        >
+                            <div className="p-2 bg-black/20 rounded-full"><LayoutDashboard size={18} /></div>
+                            View Analytics
+                        </button>
+                    </div>
+                </div>
+
+                {/* Diary Feed */}
+                {project.status !== 'office' && (
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2"><Calendar size={12}/> Recent Logs</label>
+                             <span className="text-[10px] font-bold bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded">{diaries.length} entries</span>
+                        </div>
+                        <div className="space-y-3">
+                            {loading ? <div className="text-center text-gray-600 text-xs italic">Syncing data...</div> : 
+                             diaries.length === 0 ? <div className="text-center text-gray-600 text-xs py-6 border border-dashed border-white/10 rounded-2xl bg-white/5">No activity recorded yet.</div> :
+                             diaries.map(d => (
+                                <div key={d.id} className="p-4 bg-slate-900 rounded-2xl border border-white/5 hover:border-indigo-500/50 transition-all cursor-pointer flex items-center justify-between group hover:bg-slate-800">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-black/30 flex items-center justify-center text-gray-400 group-hover:text-white border border-white/5">
+                                            <FileText size={16} />
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-bold text-white mb-0.5">{new Date(d.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric'})}</div>
+                                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{d.weather || 'Sunny'} • {d.totalHours || 0} hrs</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xs font-black text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-lg">{formatMoney(d.totalRevenue)}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT ---
 const VisualMapBuilder = () => {
-  // --- CORE STATE ---
   const [map, setMap] = useState(null);
-  const [isLoadedState, setIsLoadedState] = useState(false);
+  const [drawingMode, setDrawingMode] = useState(null); 
   const [mapTypeId, setMapTypeId] = useState('roadmap'); 
-  const [mapStyles, setMapStyles] = useState(MIDNIGHT_STYLE);
-  const [cinematicMode, setCinematicMode] = useState(false);
-  const [heading, setHeading] = useState(0); // Map Rotation
-
-  // --- DATA LAYERS ---
   const [projects, setProjects] = useState([]);
-  const [assets, setAssets] = useState([]);
-  const [nearbyPlaces, setNearbyPlaces] = useState([]); // Radar Results
-  const [activeRoute, setActiveRoute] = useState(null);
-  const [routeStats, setRouteStats] = useState(null);
-
-  // --- INTERACTION STATE ---
-  const [mode, setMode] = useState('view'); 
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [routingSource, setRoutingSource] = useState(null);
-  const [showStreetView, setShowStreetView] = useState(false); // Toggle Split View
+  const [zones, setZones] = useState([]); 
+  const [selectedHub, setSelectedHub] = useState(null); 
   
-  // --- MODALS ---
-  const [notifications, setNotifications] = useState([]);
-  const [showProjectModal, setShowProjectModal] = useState(false);
-  const [showWasteModal, setShowWasteModal] = useState(false);
-  const [newZonePoly, setNewZonePoly] = useState(null);
-  const [newProjectData, setNewProjectData] = useState({ name: '', client: '', address: '' });
-  const [wasteFormData, setWasteFormData] = useState({ wasteType: 'General', quantity: '', destination: '', truckId: '' });
+  // Creation Modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newZonePath, setNewZonePath] = useState(null);
+  const [newHubData, setNewHubData] = useState({ name: '', type: 'project' }); 
 
-  const { isLoaded, loadError } = useJsApiLoader({
+  const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries: LIBRARIES
   });
 
-  // --- INIT ---
   useEffect(() => {
-    if (isLoaded) {
-      setTimeout(() => setIsLoadedState(true), 500);
-      loadBackendData();
-    }
-  }, [isLoaded]);
-
-  // --- MAP ENGINE ---
-  const onMapLoad = useCallback((mapInstance) => {
-    setMap(mapInstance);
-    mapInstance.setTilt(45);
+      loadData();
   }, []);
 
-  const loadBackendData = async () => {
-    try {
-        const [p, a] = await Promise.all([api.get('/projects'), api.get('/map-assets')]);
-        setProjects(Array.isArray(p.data) ? p.data : []);
-        setAssets(Array.isArray(a.data) ? a.data : []);
-        notify("GeoCore Omega Online", "success");
-    } catch(e) { notify("Offline Mode Active", "error"); }
+  const loadData = async () => {
+      try {
+          const [pRes, aRes] = await Promise.all([api.get('/projects'), api.get('/map-assets')]);
+          setProjects(Array.isArray(pRes.data) ? pRes.data : []);
+          setZones(Array.isArray(aRes.data) ? aRes.data.filter(a => a.geometryType === 'POLYGON') : []);
+      } catch(e) { console.error("Data Load Error", e); }
   };
 
-  const notify = (msg, type) => {
-    const id = Date.now();
-    setNotifications(p => [...p, {id, msg, type}]);
-    setTimeout(() => setNotifications(p => p.filter(n => n.id !== id)), 4000);
-  };
+  const onMapLoad = useCallback((mapInstance) => {
+      setMap(mapInstance);
+      mapInstance.setTilt(45);
+  }, []);
 
-  // --- INTELLIGENT FEATURES ---
-
-  // 0. SMART DISPATCH (Distance Matrix API)
-  const findNearestAsset = (projectZone) => {
-      if (!map || assets.length === 0) return;
-      
-      // Filter for vehicles
-      const fleet = assets.filter(a => a.properties.type === 'vehicle');
-      if (fleet.length === 0) { notify("No Fleet Assets Available", "error"); return; }
-
-      notify("Calculating Fleet Logistics...", "info");
-
-      const service = new window.google.maps.DistanceMatrixService();
-      const dest = projectZone.geometryType === 'POLYGON' ? projectZone.coordinates[0] : projectZone.coordinates;
-      const origins = fleet.map(a => a.coordinates);
-
-      service.getDistanceMatrix({
-          origins: origins,
-          destinations: [dest],
-          travelMode: window.google.maps.TravelMode.DRIVING,
-      }, (response, status) => {
-          if (status === 'OK') {
-              let bestIdx = -1;
-              let minDuration = Infinity;
-
-              const results = response.rows;
-              results.forEach((row, i) => {
-                  const element = row.elements[0];
-                  if (element.status === 'OK' && element.duration.value < minDuration) {
-                      minDuration = element.duration.value;
-                      bestIdx = i;
-                  }
-              });
-
-              if (bestIdx !== -1) {
-                  const bestTruck = fleet[bestIdx];
-                  const eta = response.rows[bestIdx].elements[0].duration.text;
-                  
-                  notify(`Nearest: ${bestTruck.name} (${eta})`, "success");
-                  
-                  // Auto-select and route
-                  setSelectedItem(bestTruck);
-                  setRoutingSource(bestTruck);
-                  setMode('routing_select_dest'); // Ready to confirm
-                  
-                  // Visual Cue: Draw line immediately?
-                  // For now, just center on truck and pulse it
-                  map.panTo(bestTruck.coordinates);
-                  map.setZoom(16);
-              } else {
-                  notify("No reachable units found.", "error");
-              }
-          } else {
-              notify("Matrix API Error", "error");
-          }
-      });
-  };
-
-  // 1. RESOURCE RADAR (Places API)
-  const runRadar = (type) => {
-      if (!map) return;
-      const service = new window.google.maps.places.PlacesService(map);
-      const center = map.getCenter();
-      
-      notify(`Scanning Sector for ${type}...`, "info");
-      
-      service.nearbySearch({
-          location: center,
-          radius: 2000, // 2km
-          type: [type] // 'hardware_store', 'gas_station', 'restaurant'
-      }, (results, status) => {
-          if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-              setNearbyPlaces(results.map(place => ({
-                  id: place.place_id,
-                  name: place.name,
-                  lat: place.geometry.location.lat(),
-                  lng: place.geometry.location.lng(),
-                  type: type,
-                  vicinity: place.vicinity
-              })));
-              notify(`${results.length} Locations Found`, "success");
-          } else {
-              notify("No resources found in sector", "error");
-          }
-      });
-  };
-
-  // 2. AUTO-ADDRESS (Geocoding API)
-  const reverseGeocodeZone = (lat, lng) => {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-          if (status === 'OK' && results[0]) {
-              setNewProjectData(prev => ({ ...prev, address: results[0].formatted_address }));
-              notify("Address Detected", "success");
-          }
-      });
-  };
-
-  // 3. ROUTING
-  const startRouting = (truck) => {
-      setRoutingSource(truck);
-      setMode('routing_select_dest');
-      setSelectedItem(null);
-      notify("Select Destination Zone", "info");
-  };
-
-  const calculateRoute = (destination) => {
-      if (!routingSource || !map) return;
-      const directionsService = new window.google.maps.DirectionsService();
-      
-      // Determine destination point (Zone center or asset loc)
-      const dest = destination.geometryType === 'POLYGON' ? destination.coordinates[0] : destination.coordinates;
-
-      directionsService.route({
-          origin: routingSource.coordinates,
-          destination: dest,
-          travelMode: window.google.maps.TravelMode.DRIVING,
-      }, (result, status) => {
-          if (status === window.google.maps.DirectionsStatus.OK) {
-              setActiveRoute(result);
-              const leg = result.routes[0].legs[0];
-              setRouteStats({ duration: leg.duration.text, distance: leg.distance.text });
-              setMode('view');
-              setRoutingSource(null);
-              notify(`Route: ${leg.duration.text} / ${leg.distance.text}`, "success");
-          } else { notify("Route Calculation Failed", "error"); }
-      });
-  };
-
-  // --- INTERACTION ---
-  const handleMapClick = async (e) => {
-      if (mode.startsWith('place_')) {
-          // Place Asset logic
-          const typeId = mode.split('place_')[1];
-          const def = Object.values(ASSET_CATALOG).flat().find(a => a.id === typeId);
-          const newAsset = {
-              type: def.label, geometryType: 'POINT',
-              coordinates: { lat: e.latLng.lat(), lng: e.latLng.lng() },
-              properties: { ...def, status: 'Active' },
-              name: `${def.label} ${assets.length + 1}`
-          };
-          
-          setAssets(p => [...p, { ...newAsset, id: Date.now() }]); 
-          try { await api.post('/map-assets', newAsset); } catch(e) {}
-          if(!e.domEvent.shiftKey) setMode('view');
-      } else {
-          setSelectedItem(null);
-          setActiveRoute(null);
-          // If searching nearby, clear results on click? No, keep them for reference.
-      }
-  };
-
-  const handleZoneComplete = (polygon) => {
-      setNewZonePoly(polygon);
-      setShowProjectModal(true);
-      setMode('view');
-      
-      // Trigger Geocoding
+  const handlePolygonComplete = (polygon) => {
       const path = polygon.getPath();
-      const lat = path.getAt(0).lat();
-      const lng = path.getAt(0).lng();
-      reverseGeocodeZone(lat, lng);
-  };
-
-  const finalizeProject = async () => {
-      if(!newZonePoly) return;
-      const path = newZonePoly.getPath();
       const coords = [];
-      let latSum=0, lngSum=0;
       for(let i=0; i<path.getLength(); i++) {
-         coords.push({ lat: path.getAt(i).lat(), lng: path.getAt(i).lng() });
-         latSum += path.getAt(i).lat();
-         lngSum += path.getAt(i).lng();
+          coords.push({ lat: path.getAt(i).lat(), lng: path.getAt(i).lng() });
       }
-      const center = { lat: latSum/path.getLength(), lng: lngSum/path.getLength() };
-      newZonePoly.setMap(null);
+      
+      polygon.setMap(null); // Remove overlay
+      setNewZonePath(coords);
+      setDrawingMode(null); // Stop drawing
+      setShowCreateModal(true);
+  };
+
+  const createHub = async () => {
+      if (!newZonePath) return;
       
       try {
-          const pRes = await api.post('/projects', {
-              name: newProjectData.name,
-              client: newProjectData.client,
-              site: newProjectData.address || 'GeoCore Location',
-              status: 'active',
-              latitude: center.lat,
-              longitude: center.lng
-          });
-          const aRes = await api.post('/map-assets', {
-              projectId: pRes.data.id,
-              type: 'ProjectBoundary',
-              name: `${newProjectData.name} Zone`,
+          let projectId = null;
+
+          // Auto-detect address center
+          const centerLat = newZonePath.reduce((sum, p) => sum + p.lat, 0) / newZonePath.length;
+          const centerLng = newZonePath.reduce((sum, p) => sum + p.lng, 0) / newZonePath.length;
+
+          if (newHubData.type === 'project') {
+              const pRes = await api.post('/projects', {
+                  name: newHubData.name,
+                  status: 'active',
+                  site: 'Geofenced Zone', 
+                  latitude: centerLat,
+                  longitude: centerLng
+              });
+              setProjects(prev => [...prev, pRes.data]);
+              projectId = pRes.data.id;
+          }
+
+          const assetPayload = {
+              type: newHubData.type === 'office' ? 'OfficeZone' : 'ProjectZone',
+              name: newHubData.name,
               geometryType: 'POLYGON',
-              coordinates: coords,
-              properties: { color: '#10b981', wasteTotal: 0 }
-          });
-          setProjects(p => [...p, pRes.data]);
-          setAssets(p => [...p, aRes.data]);
-          notify("Hub Established", "success");
-      } catch(e) { notify("Creation Failed", "error"); }
-      
-      setShowProjectModal(false);
-      setNewProjectData({ name: '', client: '', address: '' });
-  };
+              coordinates: newZonePath,
+              projectId: projectId,
+              properties: { 
+                  color: newHubData.type === 'office' ? HUB_COLORS.office : HUB_COLORS.active,
+                  type: newHubData.type 
+              }
+          };
 
-  // --- WASTE LOGISTICS ---
-  const handleOpenWasteModal = (project) => {
-      setSelectedItem(project);
-      setShowWasteModal(true);
-  };
+          const aRes = await api.post('/map-assets', assetPayload);
+          setZones(prev => [...prev, aRes.data]);
+          
+          setShowCreateModal(false);
+          setNewHubData({ name: '', type: 'project' });
+          setNewZonePath(null);
+          setDrawingMode(null);
 
-  const submitManifest = async () => {
-      try {
-          await api.post('/waste', {
-              projectId: selectedItem.projectData.id,
-              wasteType: wasteFormData.wasteType,
-              quantity: parseFloat(wasteFormData.quantity),
-              destinationSite: wasteFormData.destination,
-              truckId: wasteFormData.truckId,
-              status: 'Loaded'
-          });
-          notify("Manifest Created", "success");
-          setShowWasteModal(false);
-          setWasteFormData({ wasteType: 'General', quantity: '', destination: '', truckId: '' });
-      } catch (e) { notify("Manifest Failed", "error"); }
-  };
-
-  // --- CONTROLS ---
-  const rotateMap = () => {
-      if(map) {
-          const newHeading = heading + 90;
-          setHeading(newHeading);
-          map.setHeading(newHeading);
+      } catch (e) {
+          alert("Failed to create hub: " + e.message);
       }
   };
 
-  if (loadError || !isLoadedState) return <div className="h-screen bg-slate-950 flex items-center justify-center text-indigo-500 font-mono animate-pulse">INITIALIZING GEOCORE OMEGA...</div>;
+  const handleDeleteHub = async (hub) => {
+      if(!confirm("Are you sure you want to delete this zone? The project data will remain.")) return;
+      try {
+          // Delete the MapAsset
+          if(hub.assetId) await api.delete(`/map-assets/${hub.assetId}`);
+          setZones(prev => prev.filter(z => z.id !== hub.assetId));
+          setSelectedHub(null);
+      } catch(e) { alert("Delete failed"); }
+  };
+
+  const handleHubUpdate = (updatedHub) => {
+      // Update local state to reflect changes (like new cover image)
+      setZones(prev => prev.map(z => z.id === updatedHub.assetId ? { ...z, properties: updatedHub.properties } : z));
+      setSelectedHub(updatedHub);
+  };
+
+  const handleZoneClick = (zone) => {
+      if (drawingMode) return; 
+
+      const linkedProject = projects.find(p => p.id === zone.projectId);
+      
+      const hub = {
+          id: linkedProject?.id || zone.id, 
+          assetId: zone.id, // Key for MapAsset updates
+          name: linkedProject?.name || zone.name,
+          status: zone.properties?.type === 'office' ? 'office' : 'active',
+          site: linkedProject?.site || 'Map Zone',
+          isProject: !!linkedProject,
+          coordinates: zone.coordinates,
+          properties: zone.properties || {}
+      };
+      
+      setSelectedHub(hub);
+  };
+
+  if (!isLoaded) return <div className="h-screen bg-slate-950 flex items-center justify-center text-indigo-500 font-mono">INITIALIZING MAP SYSTEM...</div>;
 
   return (
-    <div className="relative w-full h-[calc(100vh-64px)] bg-slate-950 overflow-hidden text-slate-100 flex">
+    <div className="relative w-full h-[calc(100vh-64px)] bg-slate-950 overflow-hidden flex">
       
-      {/* --- SPLIT VIEW (STREET VIEW) --- */}
-      {showStreetView && selectedItem && (
-          <div className="absolute top-0 right-0 w-1/2 h-full z-40 border-l-4 border-indigo-500 shadow-2xl animate-slide-left">
-              <button onClick={() => setShowStreetView(false)} className="absolute top-4 right-4 z-50 p-2 bg-black/50 text-white rounded hover:bg-rose-500"><X/></button>
-              <GoogleMap
-                  mapContainerStyle={{ width: '100%', height: '100%' }}
-              >
-                  <StreetViewPanorama
-                      position={selectedItem.coordinates[0] || selectedItem.coordinates}
-                      visible={true}
-                  />
-              </GoogleMap>
+      {/* SIDEBAR */}
+      <div className="w-72 bg-slate-900/95 border-r border-white/5 flex flex-col z-10 backdrop-blur-xl shadow-2xl">
+          <div className="p-8 border-b border-white/5">
+              <h1 className="text-xl font-black italic text-white tracking-tighter flex items-center gap-2">
+                 <MapIcon className="text-indigo-500" /> GEOCORE <span className="text-indigo-500">ULTRA</span>
+              </h1>
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-2">Spatial Intelligence Platform</p>
           </div>
-      )}
-
-      {/* --- HUD NOTIFICATIONS --- */}
-      <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none">
-          {notifications.map(n => (
-              <div key={n.id} className={`px-6 py-2 rounded-full backdrop-blur-xl border shadow-2xl flex items-center gap-3 animate-slide-down ${n.type === 'success' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : n.type === 'error' ? 'bg-rose-500/10 border-rose-500 text-rose-400' : 'bg-indigo-500/10 border-indigo-500 text-indigo-400'}`}>
-                  {n.type === 'success' ? <Zap size={14}/> : <AlertTriangle size={14}/>}
-                  <span className="text-xs font-bold uppercase tracking-wider">{n.msg}</span>
-              </div>
-          ))}
-      </div>
-
-      {/* --- ORBIT & CINEMATIC --- */}
-      <div className="absolute top-6 right-6 z-30 flex gap-2">
-           <button onClick={rotateMap} className="p-3 rounded-xl bg-slate-900/80 border border-white/10 hover:text-indigo-400 backdrop-blur-xl transition-all" title="Rotate 90°">
-              <RotateCw size={20} />
-           </button>
-           <button onClick={() => setCinematicMode(!cinematicMode)} className={`p-3 rounded-xl border backdrop-blur-xl transition-all ${cinematicMode ? 'bg-rose-500 border-rose-400 text-white animate-pulse' : 'bg-slate-900/80 border-white/10 text-slate-400 hover:text-white'}`} title="Cinematic Mode">
-              <Camera size={20} />
-           </button>
-      </div>
-
-      {/* --- SIDEBAR COMMAND --- */}
-      {!cinematicMode && (
-          <div className="relative z-30 w-72 bg-slate-900/95 backdrop-blur-xl border-r border-white/5 flex flex-col transition-all">
-              <div className="p-6 border-b border-white/5">
-                  <h1 className="text-xl font-black tracking-tighter italic">GEOCORE <span className="text-indigo-500">OMEGA</span></h1>
-                  <div className="flex gap-2 mt-4">
-                      <button onClick={() => { setMapTypeId('roadmap'); setMapStyles(MIDNIGHT_STYLE); }} className={`flex-1 py-1 text-[10px] font-bold rounded border ${mapTypeId==='roadmap' ? 'bg-indigo-600 border-indigo-500 text-white' : 'border-slate-700 text-slate-500'}`}>MAP</button>
-                      <button onClick={() => { setMapTypeId('hybrid'); setMapStyles(null); }} className={`flex-1 py-1 text-[10px] font-bold rounded border ${mapTypeId==='hybrid' ? 'bg-indigo-600 border-indigo-500 text-white' : 'border-slate-700 text-slate-500'}`}>SAT</button>
-                  </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                  {/* Radar Toolkit */}
-                  <div className="bg-indigo-900/20 rounded-xl p-3 border border-indigo-500/20">
-                      <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Radar size={12}/> Resource Radar</label>
-                      <div className="grid grid-cols-3 gap-2">
-                          <button onClick={() => runRadar('hardware_store')} className="p-2 bg-slate-800 hover:bg-indigo-600 rounded-lg flex flex-col items-center gap-1 text-[9px] text-slate-400 hover:text-white transition-all">
-                              <Box size={14}/> Supplies
-                          </button>
-                          <button onClick={() => runRadar('gas_station')} className="p-2 bg-slate-800 hover:bg-indigo-600 rounded-lg flex flex-col items-center gap-1 text-[9px] text-slate-400 hover:text-white transition-all">
-                              <Fuel size={14}/> Fuel
-                          </button>
-                          <button onClick={() => runRadar('restaurant')} className="p-2 bg-slate-800 hover:bg-indigo-600 rounded-lg flex flex-col items-center gap-1 text-[9px] text-slate-400 hover:text-white transition-all">
-                              <Coffee size={14}/> Food
-                          </button>
-                      </div>
-                  </div>
-
-                  {/* Tools */}
-                  <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Site Ops</label>
+          
+          <div className="p-6 space-y-8">
+              {/* Map Controls */}
+              <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 block">Map Layer</label>
+                  <div className="grid grid-cols-2 gap-3">
                       <button 
-                          onClick={() => setMode(mode === 'draw_zone' ? 'view' : 'draw_zone')}
-                          className={`w-full p-3 rounded-xl border flex items-center gap-3 transition-all ${mode === 'draw_zone' ? 'bg-emerald-600 border-emerald-400 shadow-lg' : 'bg-slate-800/50 border-slate-700 hover:border-emerald-500'}`}
+                          onClick={() => setMapTypeId('roadmap')} 
+                          className={`p-3 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-2 ${mapTypeId === 'roadmap' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-800 border-white/5 text-gray-400 hover:text-white hover:bg-slate-700'}`}
                       >
-                          <Target size={18} className="text-white"/> <span className="text-sm font-bold">New Project Zone</span>
+                          <MapIcon size={16} /> Standard
+                      </button>
+                      <button 
+                          onClick={() => setMapTypeId('hybrid')} 
+                          className={`p-3 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-2 ${mapTypeId === 'hybrid' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-800 border-white/5 text-gray-400 hover:text-white hover:bg-slate-700'}`}
+                      >
+                          <Globe size={16} /> Satellite
                       </button>
                   </div>
+              </div>
 
-                  {/* Assets */}
-                  {Object.entries(ASSET_CATALOG).map(([cat, items]) => (
-                      <div key={cat} className="space-y-2">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{cat}</label>
-                          <div className="grid grid-cols-2 gap-2">
-                              {items.map(item => (
-                                  <button
-                                      key={item.id}
-                                      onClick={() => setMode(`place_${item.id}`)}
-                                      className={`p-2 rounded-lg border text-left transition-all ${mode === `place_${item.id}` ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-800/30 border-slate-700 hover:bg-slate-700'}`}
-                                  >
-                                      <div className="text-xs font-bold text-slate-200">{item.label}</div>
-                                  </button>
-                              ))}
-                          </div>
+              {/* Tools */}
+              <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 block">Construction Ops</label>
+                  <button 
+                      onClick={() => setDrawingMode('polygon')}
+                      className={`w-full p-5 rounded-2xl border flex items-center gap-4 transition-all group ${drawingMode === 'polygon' ? 'bg-emerald-600 border-emerald-500 text-white shadow-xl shadow-emerald-900/40 scale-[1.02]' : 'bg-slate-800 border-white/5 text-gray-300 hover:bg-slate-700 hover:border-white/10'}`}
+                  >
+                      <div className="p-2 bg-black/20 rounded-lg group-hover:bg-black/40 transition-colors">
+                          <Layers size={24} />
                       </div>
-                  ))}
+                      <div className="text-left">
+                          <div className="text-sm font-black uppercase tracking-wide">Draw Zone</div>
+                          <div className="text-[10px] font-medium opacity-60">Define New Project Site</div>
+                      </div>
+                  </button>
+              </div>
+
+              {/* Stats */}
+              <div className="bg-black/20 p-5 rounded-2xl border border-white/5">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 block">Active Sectors</label>
+                  <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm group cursor-default">
+                          <span className="flex items-center gap-3 text-gray-300 font-bold"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div> Project Sites</span>
+                          <span className="font-black text-white bg-white/5 px-2 py-0.5 rounded">{zones.filter(z => z.properties?.type !== 'office').length}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm group cursor-default">
+                          <span className="flex items-center gap-3 text-gray-300 font-bold"><div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_10px_#6366f1]"></div> HQ Offices</span>
+                          <span className="font-black text-white bg-white/5 px-2 py-0.5 rounded">{zones.filter(z => z.properties?.type === 'office').length}</span>
+                      </div>
+                  </div>
               </div>
           </div>
-      )}
+      </div>
 
-      {/* --- MAP SURFACE --- */}
+      {/* MAP SURFACE */}
       <div className="flex-1 relative">
-          
-          {/* Mode Overlay */}
-          {!cinematicMode && mode !== 'view' && (
-              <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 bg-black/80 backdrop-blur border border-indigo-500/50 text-indigo-200 px-6 py-2 rounded-full font-mono text-xs font-bold animate-pulse shadow-2xl">
-                  {mode === 'draw_zone' ? "DRAWING MODE: CLICK TO DEFINE PERIMETER" : mode === 'routing_select_dest' ? "SELECT DESTINATION ZONE" : "ASSET DEPLOYMENT: CLICK TO PLACE"}
-              </div>
-          )}
-
           <GoogleMap
-             mapContainerStyle={{ width: '100%', height: '100%' }}
-             options={{
-                 styles: mapStyles,
-                 mapTypeId: mapTypeId,
-                 disableDefaultUI: true,
-                 tilt: 45,
-                 zoom: 16,
-                 center: { lat: -33.8688, lng: 151.2093 }
-             }}
-             onLoad={onMapLoad}
-             onClick={handleMapClick}
+            mapContainerStyle={{ width: '100%', height: '100%' }}
+            center={{ lat: -33.8688, lng: 151.2093 }}
+            zoom={13}
+            options={{
+                styles: mapTypeId === 'roadmap' ? MIDNIGHT_STYLE : null, 
+                disableDefaultUI: true,
+                mapTypeControl: false,
+                tilt: 45,
+                clickableIcons: false 
+            }}
+            onLoad={onMapLoad}
+            onClick={() => {
+                if (!drawingMode) setSelectedHub(null);
+            }}
           >
-              <TrafficLayer />
-
-              {/* Drawing */}
-              {mode === 'draw_zone' && (
+              {/* Drawing Manager */}
+              {drawingMode && (
                   <DrawingManager
-                      onPolygonComplete={handleZoneComplete}
+                      onPolygonComplete={handlePolygonComplete}
                       options={{
                           drawingControl: false,
-                          polygonOptions: { fillColor: '#10b981', fillOpacity: 0.4, strokeWeight: 2, strokeColor: '#fff', editable: true, zIndex: 10 },
+                          polygonOptions: {
+                              fillColor: '#10b981',
+                              fillOpacity: 0.4,
+                              strokeWeight: 3,
+                              strokeColor: '#fff',
+                              clickable: false,
+                              editable: true,
+                              zIndex: 10
+                          },
                           drawingMode: window.google.maps.drawing.OverlayType.POLYGON
                       }}
                   />
               )}
 
-              {/* Routes */}
-              {activeRoute && <DirectionsRenderer directions={activeRoute} options={{ polylineOptions: { strokeColor: '#6366f1', strokeWeight: 6 }, suppressMarkers: true }} />}
-
-              {/* Assets & Zones */}
-              {assets.map(asset => {
-                  const isSource = routingSource?.id === asset.id;
-                  if (asset.geometryType === 'POLYGON') {
-                      return (
-                          <Polygon
-                              key={asset.id}
-                              paths={asset.coordinates}
-                              options={{ fillColor: asset.properties.color, fillOpacity: 0.2, strokeColor: asset.properties.color, strokeWeight: 2 }}
-                              onClick={() => {
-                                  if (mode === 'routing_select_dest') calculateRoute(asset);
-                                  else {
-                                      const proj = projects.find(p => p.id === asset.projectId);
-                                      setSelectedItem({ ...asset, projectData: proj });
-                                  }
-                              }}
-                          />
-                      );
-                  }
-                  return (
-                      <Marker
-                          key={asset.id}
-                          position={asset.coordinates}
-                          icon={{ path: asset.properties.icon || window.google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: isSource ? '#fff' : asset.properties.color, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 1 }}
-                          onClick={() => setSelectedItem(asset)}
-                          animation={isSource ? window.google.maps.Animation.BOUNCE : null}
-                      />
-                  );
-              })}
-
-              {/* Radar Results */}
-              {nearbyPlaces.map(place => (
-                  <Marker
-                      key={place.id}
-                      position={{ lat: place.lat, lng: place.lng }}
-                      title={place.name}
-                      icon={{
-                          path: window.google.maps.SymbolPath.CIRCLE,
-                          scale: 5,
-                          fillColor: '#f472b6',
-                          fillOpacity: 0.8,
-                          strokeColor: '#fff',
-                          strokeWeight: 1
+              {/* Render Zones */}
+              {zones.map(zone => (
+                  <Polygon
+                      key={zone.id}
+                      paths={zone.coordinates}
+                      options={{
+                          fillColor: zone.properties?.color || HUB_COLORS.active,
+                          fillOpacity: 0.3,
+                          strokeColor: zone.properties?.color || HUB_COLORS.active,
+                          strokeWeight: 2,
+                          zIndex: 1
                       }}
-                      onClick={() => notify(place.name, "info")}
+                      onClick={() => handleZoneClick(zone)}
                   />
               ))}
+
+              {/* Labels */}
+              {zones.map(zone => {
+                  const center = zone.coordinates[0]; 
+                  return (
+                    <Marker
+                        key={`marker-${zone.id}`}
+                        position={center}
+                        icon={{
+                            path: window.google.maps.SymbolPath.CIRCLE,
+                            scale: 0, 
+                        }}
+                        label={{
+                            text: zone.name,
+                            color: '#fff',
+                            fontSize: '11px',
+                            fontWeight: '900',
+                            className: 'map-label-chip' 
+                        }}
+                        onClick={() => handleZoneClick(zone)}
+                    />
+                  )
+              })}
           </GoogleMap>
-
-          {/* --- COMMAND DASHBOARD --- */}
-          {!cinematicMode && (selectedItem || activeRoute) && (
-              <div className="absolute bottom-6 left-6 right-6 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-6 flex items-center justify-between animate-slide-up z-30">
-                  
-                  {activeRoute && (
-                      <div className="flex items-center gap-6">
-                          <div className="w-16 h-16 bg-indigo-600 rounded-xl flex flex-col items-center justify-center">
-                              <span className="text-2xl font-black text-white">{routeStats?.duration.split(' ')[0]}</span>
-                              <span className="text-[10px] font-bold uppercase">{routeStats?.duration.split(' ')[1]}</span>
-                          </div>
-                          <div>
-                              <div className="text-indigo-400 text-xs font-bold uppercase mb-1">Logistics Route Active</div>
-                              <div className="text-white font-bold text-lg">{routeStats?.distance}</div>
-                          </div>
-                          <button onClick={() => { setActiveRoute(null); setRouteStats(null); }} className="p-2 bg-slate-800 rounded hover:text-white text-slate-400"><X size={16}/></button>
-                      </div>
-                  )}
-
-                  {selectedItem && !activeRoute && (
-                      <div className="flex w-full justify-between items-center">
-                          <div>
-                              <h2 className="text-2xl font-black text-white">{selectedItem.name}</h2>
-                              <p className="text-xs text-slate-400 font-bold uppercase">{selectedItem.type} • {selectedItem.projectData?.site || 'No Address'}</p>
-                          </div>
-                          <div className="flex gap-3">
-                              {selectedItem.projectData && (
-                                  <>
-                                    <button 
-                                        onClick={() => findNearestAsset(selectedItem)}
-                                        className="px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-2"
-                                        title="Auto-Dispatch Closest Truck"
-                                    >
-                                        <Zap size={18} /> FIND UNIT
-                                    </button>
-                                    <button 
-                                        onClick={() => setShowStreetView(true)}
-                                        className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl border border-white/5 flex items-center gap-2"
-                                    >
-                                        <Eye size={18} /> INSPECT
-                                    </button>
-                                  </>
-                              )}
-                              {selectedItem.properties.type === 'vehicle' && (
-                                  <button 
-                                     onClick={() => startRouting(selectedItem)}
-                                     className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-2"
-                                  >
-                                      <Navigation size={18} /> DISPATCH
-                                  </button>
-                              )}
-                              <button onClick={() => setSelectedItem(null)} className="p-3 bg-slate-800 rounded-xl text-slate-400 hover:text-white"><X size={18}/></button>
-                          </div>
-                      </div>
-                  )}
+          
+          {/* Overlay Hint */}
+          {drawingMode && (
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-8 py-3 rounded-full font-black shadow-2xl animate-bounce z-30 flex items-center gap-3 border border-white/20 backdrop-blur-lg">
+                  <Layers size={20} className="animate-pulse"/> CLICK MAP TO DEFINE PERIMETER
               </div>
           )}
-
       </div>
-      
-      {/* --- MODAL: PROJECT --- */}
-      {showProjectModal && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-              <div className="bg-slate-900 border border-white/10 p-6 rounded-2xl w-96 shadow-2xl">
-                  <h3 className="text-white font-bold text-lg mb-4">Initialize Hub</h3>
-                  <div className="mb-3">
-                      <label className="text-[10px] text-slate-500 font-bold uppercase">Detected Address</label>
-                      <div className="text-emerald-400 text-xs font-mono truncate">{newProjectData.address || 'Scanning...'}</div>
+
+      {/* CREATE HUB MODAL */}
+      {showCreateModal && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
+              <div className="bg-stone-900 border border-white/10 p-10 rounded-[2rem] w-[450px] shadow-2xl transform transition-all scale-100">
+                  <h2 className="text-3xl font-black text-white mb-8 text-center">Initialize Zone</h2>
+                  
+                  <div className="space-y-6">
+                      <div>
+                          <label className="text-xs font-black text-gray-500 uppercase block mb-2 tracking-widest">Zone Designation</label>
+                          <input 
+                            autoFocus
+                            className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-lg text-white font-bold focus:border-indigo-500 outline-none transition-colors placeholder-gray-700"
+                            placeholder="e.g. Site Alpha"
+                            value={newHubData.name}
+                            onChange={e => setNewHubData({...newHubData, name: e.target.value})}
+                          />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                          <div 
+                            onClick={() => setNewHubData({...newHubData, type: 'project'})}
+                            className={`p-6 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center gap-3 group ${newHubData.type === 'project' ? 'bg-emerald-600/10 border-emerald-500 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)]' : 'bg-stone-800/50 border-transparent text-gray-500 hover:bg-stone-800 hover:border-white/10'}`}
+                          >
+                              <div className={`p-3 rounded-full ${newHubData.type === 'project' ? 'bg-emerald-500 text-white' : 'bg-stone-700 text-gray-400'} transition-colors`}>
+                                  <Briefcase size={24} />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-wide">Active Project</span>
+                          </div>
+                          <div 
+                            onClick={() => setNewHubData({...newHubData, type: 'office'})}
+                            className={`p-6 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center gap-3 group ${newHubData.type === 'office' ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : 'bg-stone-800/50 border-transparent text-gray-500 hover:bg-stone-800 hover:border-white/10'}`}
+                          >
+                              <div className={`p-3 rounded-full ${newHubData.type === 'office' ? 'bg-indigo-500 text-white' : 'bg-stone-700 text-gray-400'} transition-colors`}>
+                                  <Building2 size={24} />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-wide">HQ / Office</span>
+                          </div>
+                      </div>
                   </div>
-                  <input className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white mb-3" placeholder="Project Name" value={newProjectData.name} onChange={e=>setNewProjectData({...newProjectData, name: e.target.value})}/>
-                  <input className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white mb-6" placeholder="Client" value={newProjectData.client} onChange={e=>setNewProjectData({...newProjectData, client: e.target.value})}/>
-                  <div className="flex gap-3">
-                      <button onClick={finalizeProject} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl">Create Hub</button>
+
+                  <div className="flex gap-3 mt-10">
+                      <button onClick={() => { setShowCreateModal(false); setNewZonePath(null); }} className="flex-1 py-4 rounded-2xl font-bold text-gray-400 hover:bg-white/5 transition-colors">Cancel</button>
+                      <button onClick={createHub} className="flex-1 py-4 rounded-2xl font-bold bg-white text-black hover:bg-gray-200 shadow-xl hover:scale-[1.02] transition-all">
+                          Confirm Initialization
+                      </button>
                   </div>
               </div>
           </div>
       )}
 
-      {/* --- MODAL: WASTE MANIFEST --- */}
-      {showWasteModal && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-              <div className="bg-slate-900 border border-white/10 p-6 rounded-2xl w-96 shadow-2xl animate-scale-in">
-                  <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-white font-bold text-lg flex items-center gap-2"><FileText size={18} className="text-indigo-500"/> Digital Manifest</h3>
-                      <button onClick={() => setShowWasteModal(false)} className="text-gray-500 hover:text-white"><X size={18}/></button>
-                  </div>
-                  
-                  <div className="space-y-3">
-                      <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase">Waste Type</label>
-                          <select 
-                              value={wasteFormData.wasteType}
-                              onChange={e => setWasteFormData({...wasteFormData, wasteType: e.target.value})}
-                              className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-sm mt-1"
-                          >
-                              <option>General Waste</option>
-                              <option>Concrete</option>
-                              <option>Clean Fill</option>
-                              <option>Asbestos (Hazmat)</option>
-                          </select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                          <div>
-                              <label className="text-[10px] font-bold text-slate-500 uppercase">Quantity (T)</label>
-                              <input 
-                                type="number" 
-                                value={wasteFormData.quantity}
-                                onChange={e => setWasteFormData({...wasteFormData, quantity: e.target.value})}
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-sm mt-1"
-                              />
-                          </div>
-                          <div>
-                              <label className="text-[10px] font-bold text-slate-500 uppercase">Truck ID</label>
-                              <input 
-                                type="text" 
-                                value={wasteFormData.truckId}
-                                onChange={e => setWasteFormData({...wasteFormData, truckId: e.target.value})}
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-sm mt-1"
-                              />
-                          </div>
-                      </div>
-                      <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase">Disposal Site</label>
-                          <input 
-                            type="text" 
-                            value={wasteFormData.destination}
-                            onChange={e => setWasteFormData({...wasteFormData, destination: e.target.value})}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-sm mt-1"
-                            placeholder="e.g. City Tip A"
-                          />
-                      </div>
-                  </div>
-
-                  <button onClick={submitManifest} className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all">
-                      Issue Docket
-                  </button>
-              </div>
-          </div>
+      {/* PROJECT HUB DRAWER */}
+      {selectedHub && (
+          <ProjectHubDrawer 
+            project={selectedHub} 
+            map={map}
+            onClose={() => setSelectedHub(null)} 
+            onDelete={handleDeleteHub}
+            onUpdate={handleHubUpdate}
+          />
       )}
 
     </div>

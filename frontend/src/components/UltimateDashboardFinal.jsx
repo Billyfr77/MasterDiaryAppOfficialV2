@@ -51,6 +51,7 @@ const MasterDashboard = () => {
   const [recentActivity, setRecentActivity] = useState([]);
   const [projectHealth, setProjectHealth] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [chartData, setChartData] = useState({ labels: [], revenue: [], cost: [] });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,6 +71,31 @@ const MasterDashboard = () => {
         const totalCost = diaries.reduce((acc, d) => acc + (parseFloat(d.totalCost) || 0), 0);
         const profit = totalRevenue - totalCost;
 
+        // Process Chart Data (Last 7 Days)
+        const last7Days = [...Array(7)].map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            return d.toISOString().split('T')[0];
+        });
+
+        const dailyRevenue = last7Days.map(date => {
+            return diaries
+                .filter(d => d.date && d.date.startsWith(date))
+                .reduce((sum, d) => sum + (parseFloat(d.totalRevenue) || 0), 0);
+        });
+
+        const dailyCost = last7Days.map(date => {
+            return diaries
+                .filter(d => d.date && d.date.startsWith(date))
+                .reduce((sum, d) => sum + (parseFloat(d.totalCost) || 0), 0);
+        });
+
+        setChartData({
+            labels: last7Days.map(d => new Date(d).toLocaleDateString('en-US', { weekday: 'short' })),
+            revenue: dailyRevenue,
+            cost: dailyCost
+        });
+
         // Recent Activity Feed
         const activities = [
           ...quotes.map(q => ({ type: 'quote', date: q.createdAt, title: `Quote created: ${q.name}`, value: q.totalRevenue })),
@@ -82,11 +108,11 @@ const MasterDashboard = () => {
           profit: profit,
           activeProjects: projects.filter(p => p.status === 'active').length,
           pendingQuotes: quotes.length,
-          diaryEntriesThisWeek: diaries.length // Simplified for demo
+          diaryEntriesThisWeek: diaries.length 
         });
 
         setRecentActivity(activities);
-        setProjectHealth(projects.slice(0, 4)); // Mock health data for top 4 projects
+        setProjectHealth(projects.slice(0, 4)); 
         setLoading(false);
       } catch (err) {
         console.error("Dashboard Load Error:", err);
@@ -178,11 +204,11 @@ const MasterDashboard = () => {
             <div className="h-64 w-full">
                <Line 
                  data={{
-                   labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                   labels: chartData.labels,
                    datasets: [
                      {
                        label: 'Revenue',
-                       data: [12000, 19000, 3000, 5000, 2000, 3000, 15000], // Mock data
+                       data: chartData.revenue,
                        borderColor: '#10b981',
                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
                        tension: 0.4,
@@ -190,7 +216,7 @@ const MasterDashboard = () => {
                      },
                      {
                        label: 'Cost',
-                       data: [8000, 12000, 2000, 4000, 1500, 2500, 10000], // Mock data
+                       data: chartData.cost,
                        borderColor: '#f43f5e',
                        backgroundColor: 'rgba(244, 63, 94, 0.1)',
                        tension: 0.4,

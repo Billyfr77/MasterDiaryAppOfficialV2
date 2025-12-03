@@ -27,7 +27,6 @@ import VisualMapBuilder from './components/VisualMapBuilder'
 import FleetCommand from './components/FleetCommand'
 import { NotificationProvider } from './context/NotificationContext'
 import CommandPalette from './components/Shell/CommandPalette'
-import AIAssistantFAB from './components/Shell/AIAssistantFAB'
 import './App.css'
 
 function App() {
@@ -75,8 +74,7 @@ function App() {
 
           {/* Shell Components */}
           <CommandPalette />
-          <AIAssistantFAB />
-
+          
           {/* Header */}
           <header className="sticky top-0 z-50 glass-panel border-b-0 rounded-none shadow-lg transition-all duration-300">
             <div className="container mx-auto px-6 py-3">
