@@ -265,8 +265,12 @@ const Quotes = () => {
                       </div>
                     </td>
                     <td className="p-6">
-                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                        Approved
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border
+                        ${quote.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                          quote.status === 'rejected' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 
+                          quote.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
+                          'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
+                        {quote.status || 'Draft'}
                       </span>
                     </td>
                     <td className="p-6 text-right">
@@ -371,6 +375,27 @@ const Quotes = () => {
               </div>
               
               <div className="p-6 border-t border-white/10 bg-black/20 flex justify-end gap-3">
+                 <button 
+                    onClick={() => {
+                        const quoteItems = [
+                            ...(selectedQuote.nodes || []).map(n => ({ ...n, type: 'material', material: availableNodes.find(x => x.id === n.nodeId) })),
+                            ...(selectedQuote.staff || []).map(s => ({ ...s, type: 'staff', material: availableStaff.find(x => x.id === s.staffId) })),
+                            ...(selectedQuote.equipment || []).map(e => ({ ...e, type: 'equipment', material: availableEquipment.find(x => x.id === e.equipmentId) }))
+                        ].filter(i => i.material);
+
+                        navigate('/invoices', { 
+                            state: { 
+                                quoteId: selectedQuote.id, 
+                                projectId: selectedQuote.projectId,
+                                quoteItems: quoteItems,
+                                clientId: projects.find(p => p.id === selectedQuote.projectId)?.clientId // Try to auto-link client
+                            } 
+                        });
+                    }} 
+                    className="glass-btn glass-btn-secondary flex items-center gap-2 text-indigo-300 hover:text-white"
+                 >
+                    <CreditCard size={18} /> Convert to Invoice
+                 </button>
                  <button onClick={() => generateProfessionalPDF(selectedQuote)} className="glass-btn glass-btn-primary flex items-center gap-2">
                     <Download size={18} /> Download PDF
                  </button>

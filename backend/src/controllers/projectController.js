@@ -15,13 +15,14 @@ require('dotenv').config();
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
  */
-const { Project } = require('../models');
+const { Project, Client } = require('../models');
 const Joi = require('joi');
 const axios = require('axios');
 
   const projectSchema = Joi.object({
           name: Joi.string().min(1).required(),
           client: Joi.string().allow('').optional(),
+          clientId: Joi.string().guid().optional().allow(null),
           site: Joi.string().min(1).required(),
           status: Joi.string().valid('active', 'completed', 'on-hold', 'cancelled').optional(),
           estimatedValue: Joi.number().min(0).optional(),
@@ -41,6 +42,7 @@ const getAllProjects = async (req, res) => {
 
     const { count, rows } = await Project.findAndCountAll({
       where: req.user ? { userId: req.user?.id || null } : {},
+      include: [{ model: Client, as: 'clientDetails', required: false }],
       limit,
       offset
     });
@@ -68,7 +70,8 @@ const getProjectById = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Fetching project ${req.params.id} for user: ${req.user?.id}`);
   try {
     const project = await Project.findOne({
-      where: { id: req.params.id, userId: req.user?.id || null }
+      where: { id: req.params.id, userId: req.user?.id || null },
+      include: [{ model: Client, as: 'clientDetails', required: false }]
     });
     if (project) {
       res.json(project);
@@ -90,12 +93,12 @@ const getProjectById = async (req, res) => {
 const createProject = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Creating project:`, req.body, 'for user:', req.user?.id);
   try {
-    const { error } = projectSchema.validate(req.body);
+    const { error, value } = projectSchema.validate(req.body); // Use validated value
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
     const project = await Project.create({
-      ...req.body,
+      ...value,
       userId: req.user?.id || null
     });
     res.status(201).json(project);
@@ -114,13 +117,15 @@ const createProject = async (req, res) => {
 const updateProject = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Updating project ${req.params.id}:`, req.body, 'for user:', req.user?.id);
   try {
-    const { error } = projectSchema.validate(req.body);
+    const { error, value } = projectSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-    const [updated] = await Project.update(req.body, { where: { id: req.params.id, userId: req.user?.id || null } });
+    const [updated] = await Project.update(value, { where: { id: req.params.id, userId: req.user?.id || null } });
     if (updated) {
-      const updatedProject = await Project.findByPk(req.params.id);
+      const updatedProject = await Project.findByPk(req.params.id, {
+        include: [{ model: Client, as: 'clientDetails', required: false }]
+      });
       res.json(updatedProject);
     } else {
       res.status(404).json({ error: 'Project not found' });

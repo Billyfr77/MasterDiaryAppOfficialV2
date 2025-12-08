@@ -1,63 +1,50 @@
 /*
  * MasterDiaryApp Official - Construction SaaS Platform
- * Enhanced App.jsx - The Best Version Ever
+ * App.jsx - Stable Version
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  */
 
 import React, { useState, useEffect } from 'react'
-import { Routes, Route, Link, Navigate } from 'react-router-dom'
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command } from 'lucide-react'
+import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command, GitBranch, Briefcase, CreditCard, Activity } from 'lucide-react'
+import { NotificationProvider } from './context/NotificationContext'
+import CommandPalette from './components/CommandPalette'
 import Login from './components/Login'
 import Landing from './components/Landing'
-import MasterDashboard from './components/UltimateDashboardFinal'
+import UltimatePulseDashboard from './components/Dashboard/UltimatePulseDashboard'
 import EnhancedStaff from './components/EnhancedStaff'
 import EnhancedEquipment from './components/EnhancedEquipment'
 import EnhancedNodes from './components/EnhancedNodes'
 import EnhancedProjects from './components/EnhancedProjects'
-import ReportsSimple from './components/ReportsSimple';
+import PinnacleIntelligentReports from './components/PinnacleIntelligentReports';
+import DocumentForm from './components/DocumentForm';
+import ClientPortal from './components/ClientPortal';
 import EnhancedSettings from './components/EnhancedSettings'
-import EnhancedDiary from './components/EnhancedDiary'
+import Clients from './components/Clients/Clients'
+import PaintDiary from './components/PaintDiary'
+import ResourceCommand from './components/ResourceCommand'
 import Quotes from './components/Quotes'
 import NodesLibrary from './components/NodesLibrary'
 import QuoteBuilder from './components/QuoteBuilder'
-import PaintDiary from './components/PaintDiary'
 import VisualMapBuilder from './components/VisualMapBuilder'
-import FleetCommand from './components/FleetCommand'
+import WorkflowBuilder from './components/WorkflowBuilder/WorkflowBuilder'
 import InvoiceBuilder from './components/InvoiceBuilder'
 import XeroCallback from './components/XeroCallback'
-import { NotificationProvider } from './context/NotificationContext'
-import CommandPalette from './components/Shell/CommandPalette'
-import './App.css'
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode')
-    return saved !== null ? saved === 'true' : true
-  })
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-    localStorage.setItem('darkMode', darkMode)
-  }, [darkMode])
+  const [darkMode, setDarkMode] = useState(true);
 
   const handleLogin = (newToken) => {
-    setToken(newToken)
-    localStorage.setItem('token', newToken)
-  }
+    localStorage.setItem('token', newToken);
+    setToken(newToken);
+  };
 
-  const handleLogout = () => {
-    setToken('')
-    localStorage.removeItem('token')
-  }
+  const isPortal = window.location.pathname.startsWith('/portal');
 
-  if (!token) {
+  if (!token && !isPortal) {
     return <Login onLogin={handleLogin} />
   }
 
@@ -75,80 +62,78 @@ function App() {
           {darkMode && <div className="fixed inset-0 bg-stone-950/85 z-[-1] pointer-events-none" />}
 
           {/* Shell Components */}
-          <CommandPalette />
+          {!isPortal && <CommandPalette />}
           
           {/* Header */}
-          <header className="sticky top-0 z-50 glass-panel border-b-0 rounded-none shadow-lg transition-all duration-300">
-            <div className="container mx-auto px-6 py-3">
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                {/* Logo */}
-                <div className="flex items-center gap-3 group cursor-pointer">
-                  <div className="p-2 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <FileText size={20} className="text-white" />
+          {!isPortal && (
+            <header className="sticky top-0 z-50 glass-panel border-b-0 rounded-none shadow-lg transition-all duration-300">
+              <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+                <div className="flex items-center gap-8">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                      <Home className="text-white w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-xl tracking-tight hidden md:block">MasterDiary<span className="text-indigo-400">OS</span></span>
                   </div>
-                  <h1 className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-400 tracking-tight">
-                    MasterDiary<span className="text-indigo-500">App</span>
-                  </h1>
-                  <div className="hidden md:flex items-center gap-1 text-[10px] text-gray-500 bg-black/20 px-2 py-0.5 rounded border border-white/5 font-mono ml-2">
-                    <Command size={10} /> + K
-                  </div>
+                  
+                  <nav className="hidden md:flex items-center gap-1 overflow-x-auto no-scrollbar">
+                    <NavLink to="/pulse" icon={<Activity size={16} />} label="Pulse" />
+                    <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" />
+                    <NavLink to="/map-builder" icon={<Command size={16} />} label="Map" />
+                    <NavLink to="/clients" icon={<Users size={16} />} label="Clients" />
+                    <NavLink to="/quotes" icon={<DollarSign size={16} />} label="Quotes" />
+                    <NavLink to="/invoices" icon={<CreditCard size={16} />} label="Invoices" />
+                    <NavLink to="/workflows" icon={<GitBranch size={16} />} label="Flows" />
+                    <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" />
+                    <NavLink to="/nodes" icon={<Package size={16} />} label="Materials" />
+                    <NavLink to="/staff" icon={<Users size={16} />} label="Staff" />
+                    <NavLink to="/equipment" icon={<Wrench size={16} />} label="Equipment" />
+                    <NavLink to="/reports" icon={<FileText size={16} />} label="Reports" />
+                  </nav>
                 </div>
 
-                {/* Navigation */}
-                <nav className="flex items-center gap-1 overflow-x-auto max-w-full pb-2 lg:pb-0 scrollbar-hide p-1">
-                  <NavLink to="/dashboard" icon={<Home size={16} />} label="Dashboard" />
-                  <NavLink to="/projects" icon={<Folder size={16} />} label="Projects" />
-                  <NavLink to="/staff" icon={<Users size={16} />} label="Staff" />
-                  <NavLink to="/equipment" icon={<Wrench size={16} />} label="Equipment" />
-                  <NavLink to="/nodes" icon={<Package size={16} />} label="Materials" />
-                  <NavLink to="/quotes" icon={<DollarSign size={16} />} label="Quotes" />
-                  <NavLink to="/map-builder" icon={<Command size={16} />} label="Visual Map" />
-                  <NavLink to="/diary" icon={<Calendar size={16} />} label="Diary" />
-                  <NavLink to="/reports" icon={<FileText size={16} />} label="Reports" />
-                  <NavLink to="/settings" icon={<SettingsIcon size={16} />} label="Settings" />
-                  
-                  <div className="h-6 w-px bg-white/10 mx-2"></div>
-
-                  <button
-                    onClick={() => setDarkMode(!darkMode)}
-                    className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-white/10 transition-all hover:scale-110 active:scale-95"
-                    title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                  >
-                    {darkMode ? <Sun size={16} className="text-yellow-400" /> : <Moon size={16} className="text-indigo-600" />}
-                  </button>
-
-                  <button
-                    onClick={handleLogout}
-                    className="p-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-all hover:scale-110 active:scale-95"
-                    title="Logout"
-                  >
-                    <LogOut size={16} />
-                  </button>
-                </nav>
+                <div className="flex items-center gap-3">
+                   <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                      {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                   </button>
+                   <Link to="/settings" className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                      <SettingsIcon size={20} />
+                   </Link>
+                   <button onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }} className="p-2 rounded-full hover:bg-red-500/10 text-red-400 transition-colors">
+                      <LogOut size={20} />
+                   </button>
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
+          )}
 
           {/* Main Content */}
-          <main className="flex-1 container mx-auto px-4 py-8 animate-fade-in">
+          <main className={`flex-1 ${!isPortal ? 'container mx-auto px-4 py-8' : ''} animate-fade-in`}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login onLogin={handleLogin} />} />
-              <Route path="/dashboard" element={<MasterDashboard />} />
+              <Route path="/pulse" element={<UltimatePulseDashboard />} />
+              <Route path="/dashboard" element={<UltimatePulseDashboard />} />
               <Route path="/projects" element={<EnhancedProjects />} />
+              <Route path="/clients" element={<Clients />} />
               <Route path="/staff" element={<EnhancedStaff />} />
               <Route path="/diary" element={<PaintDiary />} />
               <Route path="/settings" element={<EnhancedSettings />} />
-              <Route path="/equipment" element={<FleetCommand />} />
+              <Route path="/equipment" element={<EnhancedEquipment />} />
+              <Route path="/resources" element={<ResourceCommand />} />
               <Route path="/nodes" element={<EnhancedNodes />} />
               <Route path="/quotes" element={<Quotes />} />
               <Route path="/quotes/library" element={<NodesLibrary />} />
               <Route path="/quotes/builder" element={<QuoteBuilder />} />
               <Route path="/quotes/builder/:id" element={<QuoteBuilder />} />
               <Route path="/map-builder" element={<VisualMapBuilder />} />
-              <Route path="/reports" element={<ReportsSimple />} />
+              <Route path="/workflows" element={<WorkflowBuilder />} />
+              <Route path="/reports" element={<PinnacleIntelligentReports />} />
+              <Route path="/reports/new" element={<DocumentForm />} />
+              <Route path="/reports/edit/:id" element={<DocumentForm />} />
               <Route path="/invoices" element={<InvoiceBuilder />} />
               <Route path="/xero/callback" element={<XeroCallback />} />
+              <Route path="/portal/view/:projectId" element={<ClientPortal />} />
             </Routes>
           </main>
         </div>
@@ -159,19 +144,23 @@ function App() {
 
 // Helper Component for Nav Links
 const NavLink = ({ to, icon, label }) => {
-  const isActive = window.location.pathname === to
+  const location = useLocation()
+  // Active if exact match OR if it's a sub-route (e.g. /quotes/builder is active for /quotes), excluding root /
+  const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to))
+
   return (
     <Link
       to={to}
+      title={label} 
       className={`
-        flex flex-col lg:flex-row items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 group text-xs font-bold whitespace-nowrap
+        flex flex-row items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 group text-xs font-bold whitespace-nowrap
         ${isActive 
           ? 'bg-white/10 text-white shadow-lg border border-white/10' 
           : 'text-gray-400 hover:text-white hover:bg-white/5'}
       `}
     >
       <span className={`transition-transform duration-300 ${isActive ? 'scale-110 text-indigo-400' : 'group-hover:scale-110 group-hover:text-indigo-400'}`}>{icon}</span>
-      <span className="hidden xl:block">{label}</span>
+      <span>{label}</span>
     </Link>
   )
 }

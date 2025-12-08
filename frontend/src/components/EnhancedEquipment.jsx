@@ -1,17 +1,31 @@
 /*
  * MasterDiaryApp Official - Construction SaaS Platform
- * Dark Theme Equipment Page - Professional Version
+ * Dark Theme Equipment Page - Professional Version (Enhanced with Telemetry)
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  */
 
 import React, { useState, useEffect } from 'react'
 import { api } from '../utils/api'
-import { Wrench, Plus, Edit, Trash2, Settings, DollarSign, Activity, AlertTriangle, CheckCircle, Clock, X } from 'lucide-react'
+import { Wrench, Plus, Edit, Trash2, Settings, DollarSign, Activity, AlertTriangle, CheckCircle, Clock, X, Fuel, Gauge, User } from 'lucide-react'
+
+// ================================
+// TELEMETRY GAUGE COMPONENT
+// ================================
+const TelemetryGauge = ({ icon: Icon, value, label, color }) => (
+  <div className="bg-black/40 rounded-xl p-4 border border-white/5 flex items-center gap-4">
+      <div className={`p-3 rounded-full bg-${color}-500/20 text-${color}-400`}>
+          <Icon size={20} />
+      </div>
+      <div>
+          <div className="text-2xl font-bold text-white font-mono">{value}</div>
+          <div className="text-[10px] uppercase text-gray-500 font-bold tracking-wider">{label}</div>
+      </div>
+  </div>
+);
 
 // ================================
 // SERVICE LOG MODAL
 // ================================
-
 const ServiceModal = ({ isOpen, onClose, equipment, onAddRecord }) => {
   const [description, setDescription] = useState('')
   const [cost, setCost] = useState('')
@@ -31,7 +45,6 @@ const ServiceModal = ({ isOpen, onClose, equipment, onAddRecord }) => {
     setCost('')
   }
 
-  // Mock service log data if none exists
   const logs = equipment.serviceHistory || []
 
   return (
@@ -102,28 +115,90 @@ const ServiceModal = ({ isOpen, onClose, equipment, onAddRecord }) => {
   )
 }
 
+// ================================
+// TELEMETRY MODAL
+// ================================
+const TelemetryModal = ({ isOpen, onClose, equipment }) => {
+    if (!isOpen || !equipment) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-8 animate-fade-in" onClick={onClose}>
+            <div className="bg-stone-900 w-full max-w-4xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="p-8 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-stone-900 to-stone-800">
+                    <div>
+                        <div className="text-indigo-500 font-bold uppercase text-xs tracking-widest mb-1">Live Telemetry Feed</div>
+                        <h2 className="text-3xl font-black text-white">{equipment.name}</h2>
+                    </div>
+                    <div className="flex gap-3">
+                        <button className="px-4 py-2 bg-stone-800 hover:bg-stone-700 rounded-lg text-sm font-bold border border-white/5 text-gray-300">History</button>
+                        <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold shadow-lg">Dispatch</button>
+                        <button onClick={onClose} className="p-2 text-gray-400 hover:text-white"><X size={24}/></button>
+                    </div>
+                </div>
+
+                <div className="p-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <TelemetryGauge icon={Gauge} value="0 km/h" label="Current Speed" color="indigo" />
+                        <TelemetryGauge icon={Fuel} value={`${equipment.fuelLevel || 100}%`} label="Fuel Level" color="emerald" />
+                        <TelemetryGauge icon={Activity} value="98%" label="Engine Health" color="blue" />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="bg-black/20 rounded-2xl p-6 border border-white/5">
+                            <h3 className="text-gray-400 font-bold uppercase text-xs mb-4">Maintenance Status</h3>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm text-gray-300">Next Service</span>
+                                <span className="text-sm font-mono text-white">{(equipment.serviceInterval - ((equipment.hoursUsed || 0) % equipment.serviceInterval))} hrs remaining</span>
+                            </div>
+                            <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 w-3/4" />
+                            </div>
+                        </div>
+
+                        <div className="bg-black/20 rounded-2xl p-6 border border-white/5">
+                            <h3 className="text-gray-400 font-bold uppercase text-xs mb-4">Driver Assignment</h3>
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-stone-700 flex items-center justify-center">
+                                    <User size={20} className="text-gray-400"/>
+                                </div>
+                                <div>
+                                    <div className="font-bold text-white">Unassigned</div>
+                                    <button className="text-xs text-indigo-400 font-bold hover:text-indigo-300 uppercase">Assign Driver</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const EnhancedEquipment = () => {
   const [equipment, setEquipment] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingEquipment, setEditingEquipment] = useState(null)
   
-  // Service Modal State
+  // Modals
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [selectedForService, setSelectedForService] = useState(null)
+  const [telemetryModalOpen, setTelemetryModalOpen] = useState(false)
+  const [selectedForTelemetry, setSelectedForTelemetry] = useState(null)
 
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     category: '',
     ownership: 'owned',
-    status: 'Available', // Available, Maintenance, Out of Order
+    status: 'Available', 
     costRateBase: '',
     costRateOT1: '',
     costRateOT2: '',
     notes: '',
     value: '',
-    serviceInterval: 500
+    serviceInterval: 500,
+    fuelLevel: 100
   })
 
   useEffect(() => {
@@ -155,12 +230,14 @@ const EnhancedEquipment = () => {
       costRateOT2: '',
       notes: '',
       value: '',
-      serviceInterval: 500
+      serviceInterval: 500,
+      fuelLevel: 100
     })
     setShowCreateForm(true)
   }
 
-  const handleEditEquipment = (equipmentItem) => {
+  const handleEditEquipment = (equipmentItem, e) => {
+    e.stopPropagation();
     setEditingEquipment(equipmentItem)
     setFormData({
       name: equipmentItem.name,
@@ -172,12 +249,14 @@ const EnhancedEquipment = () => {
       costRateOT2: equipmentItem.costRateOT2 || '',
       notes: equipmentItem.notes || '',
       value: equipmentItem.value || '',
-      serviceInterval: equipmentItem.serviceInterval || 500
+      serviceInterval: equipmentItem.serviceInterval || 500,
+      fuelLevel: equipmentItem.fuelLevel || 100
     })
     setShowCreateForm(true)
   }
 
-  const handleDeleteEquipment = async (equipmentId) => {
+  const handleDeleteEquipment = async (equipmentId, e) => {
+    e.stopPropagation();
     if (!confirm('Are you sure you want to delete this equipment?')) return
 
     try {
@@ -203,12 +282,12 @@ const EnhancedEquipment = () => {
         costRateOT2: parseFloat(formData.costRateOT2) || 0,
         notes: formData.notes,
         value: parseFloat(formData.value) || 0,
-        serviceInterval: parseInt(formData.serviceInterval) || 500
+        serviceInterval: parseInt(formData.serviceInterval) || 500,
+        fuelLevel: parseInt(formData.fuelLevel) || 100
       }
 
       if (editingEquipment) {
         const response = await api.put(`/equipment/${editingEquipment.id}`, equipmentData)
-        // If the API returns the updated object, use it. Otherwise, assume local update for demo if API doesn't support 'status' yet.
         const updated = response.data.data || response.data || { ...editingEquipment, ...equipmentData }
         setEquipment(equipment.map(e => e.id === editingEquipment.id ? updated : e))
         alert('Equipment updated successfully')
@@ -225,36 +304,34 @@ const EnhancedEquipment = () => {
     }
   }
 
-  const handleOpenService = (item) => {
+  const handleOpenService = (item, e) => {
+    e.stopPropagation();
     setSelectedForService(item)
     setServiceModalOpen(true)
   }
 
+  const handleCardClick = (item) => {
+      setSelectedForTelemetry(item);
+      setTelemetryModalOpen(true);
+  }
+
   const handleAddServiceRecord = async (id, record) => {
     try {
-      // Find current equipment to get existing history
       const currentItem = equipment.find(e => e.id === id);
       const newHistory = [record, ...(currentItem.serviceHistory || [])];
       
-      // Persist to backend
       const response = await api.put(`/equipment/${id}`, {
         ...currentItem,
         serviceHistory: newHistory,
-        lastServiceDate: record.date // Auto-update last service date
+        lastServiceDate: record.date 
       });
       
       const updatedItem = response.data.data || response.data;
-
-      // Update local state
       const updatedEquipment = equipment.map(e => {
-        if (e.id === id) {
-          return updatedItem;
-        }
+        if (e.id === id) return updatedItem;
         return e
       })
       setEquipment(updatedEquipment)
-      
-      // Update currently selected for modal refresh
       setSelectedForService(updatedItem)
     } catch (err) {
       console.error('Failed to add service record:', err);
@@ -299,6 +376,11 @@ const EnhancedEquipment = () => {
         equipment={selectedForService} 
         onAddRecord={handleAddServiceRecord}
       />
+      <TelemetryModal 
+        isOpen={telemetryModalOpen} 
+        onClose={() => setTelemetryModalOpen(false)} 
+        equipment={selectedForTelemetry} 
+      />
 
       <div className="max-w-[1600px] mx-auto">
         {/* Header */}
@@ -324,7 +406,11 @@ const EnhancedEquipment = () => {
         {/* Equipment Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {equipment.map(item => (
-            <div key={item.id} className="group bg-stone-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 hover:shadow-2xl hover:-translate-y-1 transition-all relative overflow-hidden">
+            <div 
+                key={item.id} 
+                onClick={() => handleCardClick(item)}
+                className="group bg-stone-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 hover:shadow-2xl hover:-translate-y-1 transition-all relative overflow-hidden cursor-pointer"
+            >
               {/* Glossy Overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
@@ -365,7 +451,7 @@ const EnhancedEquipment = () => {
               {/* Action Buttons */}
               <div className="flex gap-2 pt-4 border-t border-white/10 relative z-10">
                 <button
-                  onClick={() => handleOpenService(item)}
+                  onClick={(e) => handleOpenService(item, e)}
                   className="flex-1 py-2.5 px-3 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center gap-2 font-bold text-sm"
                 >
                   <Wrench size={16} />
@@ -373,7 +459,7 @@ const EnhancedEquipment = () => {
                 </button>
 
                 <button
-                  onClick={() => handleEditEquipment(item)}
+                  onClick={(e) => handleEditEquipment(item, e)}
                   className="p-2.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl hover:bg-indigo-500 hover:text-white transition-all"
                   title="Edit"
                 >
@@ -381,7 +467,7 @@ const EnhancedEquipment = () => {
                 </button>
 
                 <button
-                  onClick={() => handleDeleteEquipment(item.id)}
+                  onClick={(e) => handleDeleteEquipment(item.id, e)}
                   className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
                   title="Delete"
                 >

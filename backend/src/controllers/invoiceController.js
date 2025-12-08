@@ -131,16 +131,24 @@ const getInvoices = async (req, res) => {
     if (status) where.status = status;
     if (invoiceType) where.invoiceType = invoiceType;
 
+    const include = [];
+    if (Diary) {
+      const diaryInclude = [];
+      if (Project) {
+        diaryInclude.push({ model: Project });
+      }
+      include.push({ model: Diary, include: diaryInclude });
+    }
+
     const invoices = await Invoice.findAll({
       where,
-      include: [
-        { model: Diary, include: [{ model: Project }] }
-      ],
+      include,
       order: [['createdAt', 'DESC']]
     });
 
     res.json(invoices);
   } catch (error) {
+    console.error('Get Invoices Error:', error);
     res.status(500).json({ error: error.message });
   }
 };

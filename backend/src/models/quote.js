@@ -22,6 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       Quote.belongsTo(models.Project, { foreignKey: 'projectId', as: 'project' });
       Quote.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+      Quote.belongsTo(models.Client, { foreignKey: 'clientId', as: 'clientDetails' });
     }
   }
 
@@ -34,6 +35,18 @@ module.exports = (sequelize, DataTypes) => {
     name: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    status: {
+      type: DataTypes.ENUM('draft', 'pending', 'approved', 'rejected', 'archived'),
+      defaultValue: 'draft'
+    },
+    clientId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Clients',
+        key: 'id'
+      }
     },
     projectId: {
       type: DataTypes.UUID,

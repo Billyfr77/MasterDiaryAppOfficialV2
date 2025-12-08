@@ -34,6 +34,7 @@ import MapBackground from './MapBackground'
 import GeoreferenceModal from './GeoreferenceModal'
 import GoogleServicesSuggestions from './GoogleServicesSuggestions'
 import { generateQuotePDF } from '../utils/pdfGenerator'
+import ClientSelector from './Clients/ClientSelector'
 
 // ================================
 // UTILITIES
@@ -136,15 +137,6 @@ const ConfigModal = ({ isOpen, onClose, onConfirm, item, suggestedQuantity }) =>
 const QuoteSettingsModal = ({ isOpen, onClose, settings, setSettings, projects, selectedProject }) => {
   if (!isOpen) return null
 
-  useEffect(() => {
-    if (selectedProject && !settings.clientName) {
-      const proj = projects.find(p => p.id === selectedProject)
-      if (proj && proj.client) {
-        setSettings(s => ({ ...s, clientName: proj.client }))
-      }
-    }
-  }, [selectedProject, projects, isOpen])
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-stone-900 border border-white/10 rounded-2xl p-6 w-[500px] shadow-2xl transform transition-all scale-100">
@@ -158,13 +150,10 @@ const QuoteSettingsModal = ({ isOpen, onClose, settings, setSettings, projects, 
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Client Name</label>
-            <input 
-              type="text" 
-              value={settings.clientName} 
-              onChange={e => setSettings({...settings, clientName: e.target.value})}
-              className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none"
-              placeholder="Enter client name..."
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Client</label>
+            <ClientSelector 
+                selectedClient={settings.clientId ? { id: settings.clientId, name: settings.clientName } : null}
+                onSelect={(client) => setSettings({ ...settings, clientId: client?.id || null, clientName: client?.name || '' })}
             />
           </div>
           
@@ -621,7 +610,7 @@ const QuoteBuilderContent = () => {
   const [dropSuccess, setDropSuccess] = useState(false)
   const [pendingNode, setPendingNode] = useState(null)
   const [showSettings, setShowSettings] = useState(false)
-  const [quoteSettings, setQuoteSettings] = useState({ clientName: '', validUntil: '', terms: '', status: 'DRAFT' })
+  const [quoteSettings, setQuoteSettings] = useState({ clientName: '', clientId: null, validUntil: '', terms: '', status: 'DRAFT' })
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showFinancials, setShowFinancials] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
@@ -641,6 +630,20 @@ const QuoteBuilderContent = () => {
   const canvasRef = useRef(null)
   const { screenToFlowPosition, getNodes, fitView } = useReactFlow()
 
+  // --- AUTO-SYNC CLIENT FROM PROJECT ---
+  useEffect(() => {
+    if (selectedProject && projects.length > 0) {
+       const proj = projects.find(p => p.id === selectedProject)
+       if (proj) {
+         setQuoteSettings(prev => ({
+            ...prev,
+            clientId: proj.clientId || prev.clientId, // Prefer project's client, fallback to existing
+            clientName: proj.client || proj.clientDetails?.name || prev.clientName
+         }))
+       }
+    }
+  }, [selectedProject, projects])
+
   // --- FETCH DATA ---
   useEffect(() => {
     const fetchData = async () => {
@@ -659,7 +662,9 @@ const QuoteBuilderContent = () => {
 
   // --- LOAD EXISTING QUOTE ---
   useEffect(() => {
-    if (!id || materials.length === 0) return
+    // Wait for at least one resource list to populate (or all empty if API returns nothing)
+    // Ideally we'd track a 'loading' state for the initial fetch, but checking length > 0 is a proxy
+    if (!id || (materials.length === 0 && staff.length === 0 && equipment.length === 0)) return
 
     const loadQuote = async () => {
       try {
@@ -669,7 +674,8 @@ const QuoteBuilderContent = () => {
         setSelectedProject(quote.projectId)
         setMarginPct(quote.marginPct)
         setQuoteSettings({
-           clientName: quote.clientName || '', // assuming these might be saved
+           clientName: quote.clientName || quote.clientDetails?.name || '', 
+           clientId: quote.clientId || null,
            validUntil: quote.validUntil || '',
            terms: quote.terms || '',
            status: quote.status || 'DRAFT'
@@ -715,6 +721,9 @@ const QuoteBuilderContent = () => {
 
         setNodes(loadedNodes)
         setQuoteItems(loadedItems)
+        
+        // Ensure nodes are visible
+        setTimeout(() => fitView({ padding: 0.2 }), 100)
 
       } catch (err) {
         console.error('Error loading quote:', err)
@@ -722,7 +731,7 @@ const QuoteBuilderContent = () => {
       }
     }
     loadQuote()
-  }, [id, materials, staff, equipment])
+  }, [id, materials, staff, equipment, fitView])
 
   // --- AI ACTIONS ---
   const handleAIChat = async (message) => {
@@ -995,11 +1004,19 @@ const QuoteBuilderContent = () => {
             
             <select value={selectedProject} onChange={e => setSelectedProject(e.target.value)} className="bg-stone-900 border border-white/10 text-sm text-white rounded-lg px-3 py-2 outline-none shadow-inner w-40"><option value="">Project...</option>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
             
+            {/* Client Indicator */}
+            {quoteSettings.clientName && (
+               <div className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+                  <User size={14} className="text-indigo-400" />
+                  <span className="text-xs font-bold text-indigo-300 max-w-[100px] truncate" title={`Client: ${quoteSettings.clientName}`}>{quoteSettings.clientName}</span>
+               </div>
+            )}
+
             <button onClick={() => fitView()} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-300 hover:text-white" title="Fit View"><Focus size={20} /></button>
             <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-300 hover:text-white" title="Settings"><Settings size={20} /></button>
             <button onClick={() => setShowSuggestions(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-amber-400 hover:text-white hover:bg-amber-500/20" title="Google Integrations"><Zap size={20} /></button>
             
-            <button onClick={() => navigate('/invoices', { state: { quoteItems: quoteItems, projectId: selectedProject } })} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-purple-400 hover:text-white transition-colors" title="Convert to Invoice"><FileText size={20} /></button>
+            <button onClick={() => navigate('/invoices', { state: { quoteItems: quoteItems, projectId: selectedProject, clientId: quoteSettings.clientId } })} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-purple-400 hover:text-white transition-colors" title="Convert to Invoice"><FileText size={20} /></button>
             <button onClick={() => generateQuotePDF({ id: 'DRAFT', name: 'Quote', items: quoteItems.map(i => ({ name: i.material.name, type: i.type, quantity: i.quantity, rate: i.type==='staff'?i.material.chargeRate:i.type==='equipment'?i.material.costRate:i.material.pricePerUnit })), totalRevenue, marginPct }, projects.find(p=>p.id===selectedProject), quoteSettings)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-300 hover:text-white"><Download size={20} /></button>
             <button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg border border-indigo-400/50 flex items-center gap-2 active:scale-95"><Save size={16} /> Save</button>
           </div>

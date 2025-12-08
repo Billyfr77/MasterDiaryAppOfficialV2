@@ -18,6 +18,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter as Router } from 'react-router-dom'
 import { SettingsProvider } from './context/SettingsContext'
 import App from './App.jsx'
+import './App.css'
 
 // Mobile Drag and Drop Polyfill
 import { polyfill } from "mobile-drag-drop";

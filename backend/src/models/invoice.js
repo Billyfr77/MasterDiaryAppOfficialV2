@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Invoice.belongsTo(models.Diary, { foreignKey: 'diaryId' });
       Invoice.belongsTo(models.Project, { foreignKey: 'projectId' });
+      Invoice.belongsTo(models.Client, { foreignKey: 'clientId' });
     }
   }
 
@@ -33,6 +34,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       references: {
         model: 'Projects',
+        key: 'id'
+      }
+    },
+    clientId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Clients',
         key: 'id'
       }
     },

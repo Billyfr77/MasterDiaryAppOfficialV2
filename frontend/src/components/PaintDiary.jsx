@@ -21,6 +21,7 @@ import TimelineCanvas from './TimelineCanvas'
 import GoogleServicesSuggestions from './GoogleServicesSuggestions'
 import MapBackground from './MapBackground'
 import GeoreferenceModal from './GeoreferenceModal'
+import ClientSelector from './Clients/ClientSelector'
 
 // ================================
 // CONFIGURATION MODAL (Input on Drop)
@@ -469,6 +470,7 @@ const PaintDiary = () => {
   const [currentEntry, setCurrentEntry] = useState({ id: generateId(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), items: [], photos: [], voiceNotes: [], location: null, note: '' })
   const [projects, setProjects] = useState([])
   const [selectedProject, setSelectedProject] = useState(null)
+  const [selectedClient, setSelectedClient] = useState(null)
   const [isSaved, setIsSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [viewMode, setViewMode] = useState('daily')
@@ -497,6 +499,22 @@ const PaintDiary = () => {
   const [sitePlan, setSitePlan] = useState(null)
   const [showTools, setShowTools] = useState(false)
 
+  const fetchAllDiaries = useCallback(async () => { try { const response = await api.get('/paint-diaries'); setAllDiaries(response.data || []); } catch (err) { console.error('Error fetching all diaries:', err); } }, [])
+
+  // Auto-select client based on project
+  useEffect(() => {
+    if (selectedProject) {
+       // Prefer project's client, fallback to existing
+       if (selectedProject.clientId) {
+          setSelectedClient({ id: selectedProject.clientId, name: selectedProject.client || selectedProject.clientDetails?.name || '' });
+       } else if (selectedProject.client) {
+          // If we have a name but no ID, we might need to search or just set the name
+          // For now, let's assume if there's a name, we set it for display at least
+          setSelectedClient({ id: null, name: selectedProject.client });
+       }
+    }
+  }, [selectedProject]);
+
   // Load Data
   useEffect(() => {
     const loadData = async () => {
@@ -519,7 +537,7 @@ const PaintDiary = () => {
     setWeather({ temp: Math.floor(Math.random() * 20) + 15, condition: 'Sunny' });
   }, []);
 
-  useEffect(() => { if (viewMode === 'all') fetchAllDiaries(); }, [viewMode]);
+  useEffect(() => { if (viewMode === 'all') fetchAllDiaries(); }, [viewMode, fetchAllDiaries]);
 
   // Use Google Weather if available, else standard fallback
   const fetchRealWeather = async (lat, lon) => {
@@ -577,17 +595,16 @@ const PaintDiary = () => {
   const handleSave = useCallback(async () => {
     setIsSaving(true)
     try {
-      const diaryData = { date: selectedDate.toISOString().split('T')[0], projectId: selectedProject?.id, canvasData: { entries: [currentEntry] }, productivityScore: productivityScore, totalCost: cost, totalRevenue: revenue, gpsData: currentEntry.location }
+      const diaryData = { date: selectedDate.toISOString().split('T')[0], projectId: selectedProject?.id, clientId: selectedClient?.id, canvasData: { entries: [currentEntry] }, productivityScore: productivityScore, totalCost: cost, totalRevenue: revenue, gpsData: currentEntry.location }
       if (isSaved) await api.put(`/paint-diaries/${currentEntry.id}`, diaryData);
       else { const response = await api.post('/paint-diaries', diaryData); setCurrentEntry(prev => ({ ...prev, id: response.data.id })); }
       setIsSaved(true); setIsSaving(false);
     } catch (error) { console.error('Save error:', error); setIsSaving(false); }
-  }, [selectedDate, selectedProject, currentEntry, cost, revenue, isSaved, productivityScore])
+  }, [selectedDate, selectedProject, selectedClient, currentEntry, cost, revenue, isSaved, productivityScore])
 
-  const fetchAllDiaries = useCallback(async () => { try { const response = await api.get('/paint-diaries'); setAllDiaries(response.data || []); } catch (err) { console.error('Error fetching all diaries:', err); } }, [])
   const handleDeleteDiary = useCallback(async (diaryId) => { if (confirm('Delete diary?')) { try { await api.delete(`/paint-diaries/${diaryId}`); setAllDiaries(allDiaries.filter(d => d.id !== diaryId)); } catch (err) { console.error(err); } } }, [allDiaries])
   const handleViewDiary = useCallback((diary) => {
-    setSelectedDate(new Date(diary.date)); setSelectedProject(diary.Project || null);
+    setSelectedDate(new Date(diary.date)); setSelectedProject(diary.Project || null); setSelectedClient(diary.Client || null);
     let entry = diary.canvasData?.[0] || { id: generateId(), time: new Date().toLocaleTimeString(), items: [], photos: [], voiceNotes: [], location: null, note: '' };
     entry.items = resolveItems(entry.items || []); setCurrentEntry(entry); setViewMode('daily'); setIsSaved(true);
   }, [resolveItems])
@@ -615,7 +632,9 @@ const PaintDiary = () => {
            const analysis = await api.post('/google/vision', { imageBase64: base64 });
            console.log('Vision Analysis:', analysis.data);
            // Could auto-tag here
-        } catch (e) {}
+        } catch (e) {
+          console.error('Vision analysis failed', e);
+        }
         setCurrentEntry(prev => ({ ...prev, photos: [...(prev.photos || []), base64] })); 
         setIsSaved(false); 
       }; 
@@ -653,6 +672,7 @@ const PaintDiary = () => {
             <div className="flex flex-wrap items-center gap-4">
               <div className="relative"><DatePicker selected={selectedDate} onChange={(date) => { setSelectedDate(date); setIsSaved(false); }} dateFormat="MMMM d, yyyy" className="px-4 py-2.5 bg-stone-900/60 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 focus:outline-none cursor-pointer font-bold" /><Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" /></div>
               <select value={selectedProject?.id || ''} onChange={(e) => setSelectedProject(projects.find(p => p.id === e.target.value) || null)} className="px-4 py-2.5 bg-stone-900/60 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 focus:outline-none cursor-pointer font-bold appearance-none min-w-[200px]"><option value="" className="bg-stone-900">Select Project...</option>{projects.map(p => (<option key={p.id} value={p.id} className="bg-stone-900">{p.name}</option>))}</select>
+              <div className="w-[250px]"><ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} /></div>
               <button onClick={() => setShowTools(!showTools)} className={`lg:hidden flex items-center gap-2 px-5 py-2.5 ${showTools ? 'bg-indigo-600' : 'bg-stone-800'} text-white rounded-xl transition-all font-bold border border-white/10 shadow-lg`}><Wrench size={18} /> Tools</button>
               <button onClick={() => setViewMode('all')} className="flex items-center gap-2 px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded-xl transition-all font-bold border border-white/10 shadow-lg"><List size={18} /><span className="hidden sm:inline">All Diaries</span></button>
             </div>
@@ -675,7 +695,7 @@ const PaintDiary = () => {
                 <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
                   <div className="flex items-center gap-3">
                     <button onClick={handleSave} disabled={isSaving} className={`flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold shadow-lg transition-all ${isSaved ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-indigo-600 hover:bg-indigo-500 hover:-translate-y-0.5'} ${isSaving ? 'opacity-75 cursor-wait' : ''}`}><Save size={20} />{isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save Entry'}</button>
-                    <button onClick={() => navigate('/invoices', { state: { diaryItems: currentEntry.items, projectId: selectedProject?.id } })} className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold shadow-lg transition-all hover:-translate-y-0.5"><FileText size={20} /> Invoice</button>
+                    <button onClick={() => navigate('/invoices', { state: { diaryItems: currentEntry.items, projectId: selectedProject?.id, clientId: selectedClient?.id } })} className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold shadow-lg transition-all hover:-translate-y-0.5"><FileText size={20} /> Invoice</button>
                     <div className="flex items-center gap-2 p-1 bg-stone-900/60 rounded-xl border border-white/10">
                       <button onClick={handleGetLocation} className={`p-2.5 rounded-lg transition-all ${currentEntry.location ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:text-white hover:bg-white/10'}`} title="Pin Location"><MapPin size={20} /></button>
                       <label className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 cursor-pointer transition-all"><Camera size={20} /><input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} /></label>

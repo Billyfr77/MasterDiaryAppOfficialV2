@@ -3,7 +3,7 @@
  * Clean version with project assignment
  */
 
-const { Diary, Staff, Equipment, Node, Project } = require('../models');const Joi = require('joi');
+const { Diary, Staff, Equipment, Node, Project, Client } = require('../models');const Joi = require('joi');
 const { sequelize } = require('../models');
 
 const canvasSchema = Joi.object({
@@ -38,6 +38,7 @@ const canvasSchema = Joi.object({
 const paintDiarySchema = Joi.object({
   date: Joi.date().required(),
   projectId: Joi.alternatives().try(Joi.string().uuid(), Joi.string().allow(null, '')).optional(),
+  clientId: Joi.alternatives().try(Joi.string().uuid(), Joi.string().allow(null, '')).optional(),
   canvasData: Joi.any().optional(), // Allow any structure for canvasData
   totalCost: Joi.number().optional().default(0),
   totalRevenue: Joi.number().optional().default(0),
@@ -50,7 +51,7 @@ const getAllPaintDiaries = async (req, res) => {
     const { date } = req.query;
     const diaries = await Diary.findAll({
           where: { diaryType: 'paint', ...(date && { date }) },
-          include: [{ model: Project }],
+          include: [{ model: Project }, { model: Client }],
           order: [['date', 'DESC'], ['createdAt', 'DESC']]
         });
 
@@ -83,7 +84,7 @@ const createPaintDiary = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, canvasData, gpsData } = req.body;
+    const { date, projectId, clientId, canvasData, gpsData } = req.body;
 
     let calculatedCosts = { totalCost: 0, totalRevenue: 0, productivityScore: 0 };
     if (canvasData && canvasData.entries) {
@@ -100,6 +101,7 @@ const createPaintDiary = async (req, res) => {
     const diaryData = {
       date,
       projectId,
+      clientId,
       canvasData: processedCanvasData,
       totalCost: calculatedCosts.totalCost,
       totalRevenue: calculatedCosts.totalRevenue,
@@ -136,7 +138,7 @@ const updatePaintDiary = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, canvasData, gpsData } = req.body;
+    const { date, projectId, clientId, canvasData, gpsData } = req.body;
 
     let calculatedCosts = { totalCost: 0, totalRevenue: 0, productivityScore: 0 };
     if (canvasData && canvasData.entries) {
@@ -153,6 +155,7 @@ const updatePaintDiary = async (req, res) => {
     const [updated] = await Diary.update({
       date,
       projectId,
+      clientId,
       canvasData: processedCanvasData,
       totalCost: calculatedCosts.totalCost,
       totalRevenue: calculatedCosts.totalRevenue,

@@ -93,6 +93,12 @@ app.use('/api/map-assets', require('./src/routes/mapAssets')); // Register Map A
 app.use('/api/waste', require('./src/routes/waste')); // Register Waste Management routes
 app.use('/api/google', require('./src/routes/google')); // Register Google Integration routes
 app.use('/api/xero', require('./src/routes/xero')); // Register Xero Integration routes
+app.use('/api/workflows', require('./src/routes/workflowRoutes')); // Register Workflow routes
+app.use('/api/clients', require('./src/routes/clients')); // Register Client routes
+app.use('/api/allocations', require('./src/routes/allocations')); // Register Allocation routes
+app.use('/api/reports', require('./src/routes/reportRoutes')); // Unified Reports Hub
+app.use('/api/mail', require('./src/routes/mail')); // Email Service
+app.use('/api/ai', require('./src/routes/ai')); // Gemini AI Service
 
 const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 
@@ -218,11 +224,16 @@ app.listen(PORT, () => {
   console.log(`Loaded GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 10) + '...' : 'UNDEFINED'}`);
 });
 
+// MongoDB Connection
+const connectDB = require('./src/config/mongo');
+connectDB();
+
 // Database connection (Background)
 db.sequelize.authenticate()
   .then(() => {
     console.log('Database connected successfully.');
-    return db.sequelize.sync(); // Sync models to database
+    // Temporarily disabled alter: true to fix SQLite UNIQUE constraint error on Users_backup and allow manual migration for complex changes
+    return db.sequelize.sync({ alter: false }); 
   })
   .then(() => {
     console.log('Database synchronized.');

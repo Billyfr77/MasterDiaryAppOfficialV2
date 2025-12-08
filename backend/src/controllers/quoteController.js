@@ -13,12 +13,13 @@
  *
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
- */const { Quote, Node, Project, Staff, Equipment } = require('../models');
+ */const { Quote, Node, Project, Staff, Equipment, Client } = require('../models');
 const Joi = require('joi');
 
 const quoteSchema = Joi.object({
                  name: Joi.string().optional(),
                  projectId: Joi.string().optional(),
+                 clientId: Joi.string().optional().allow(null),
                  marginPct: Joi.number().optional(),
                  nodes: Joi.array().optional(),
                  staff: Joi.array().optional(),
@@ -81,7 +82,10 @@ const getAllQuotes = async (req, res) => {
 
     const { count, rows } = await Quote.findAndCountAll({
       where: req.user ? { userId: req.user?.id || null } : {},
-      include: [{ model: Project, as: 'project' }],
+      include: [
+          { model: Project, as: 'project' },
+          { model: Client, as: 'clientDetails', required: false }
+      ],
       limit,
       offset
     });
@@ -102,7 +106,10 @@ const getQuoteById = async (req, res) => {
   try {
     const quote = await Quote.findOne({
       where: { id: req.params.id, userId: req.user?.id || null },
-      include: [{ model: Project, as: 'project' }]
+      include: [
+          { model: Project, as: 'project' },
+          { model: Client, as: 'clientDetails', required: false }
+      ]
     });
     if (quote) {
       res.json(quote);
@@ -144,6 +151,7 @@ const createQuote = async (req, res) => {
     const quote = await Quote.create({
       name: value.name,
       projectId: value.projectId,
+      clientId: value.clientId || null,
       userId: req.user?.id || null,
       marginPct: value.marginPct,
       nodes: value.nodes || [],
@@ -155,7 +163,10 @@ const createQuote = async (req, res) => {
 
     // Return quote with project info
     const quoteWithProject = await Quote.findByPk(quote.id, {
-      include: [{ model: Project, as: 'project' }]
+      include: [
+          { model: Project, as: 'project' },
+          { model: Client, as: 'clientDetails', required: false }
+      ]
     });
 
     res.status(201).json(quoteWithProject);
@@ -200,6 +211,7 @@ const updateQuote = async (req, res) => {
     const [updated] = await Quote.update({
       name: value.name,
       projectId: value.projectId,
+      clientId: value.clientId || null,
       marginPct: value.marginPct,
       nodes: value.nodes || [],
       staff: value.staff || [],
@@ -212,7 +224,10 @@ const updateQuote = async (req, res) => {
 
     if (updated) {
       const updatedQuote = await Quote.findByPk(req.params.id, {
-        include: [{ model: Project, as: 'project' }]
+        include: [
+          { model: Project, as: 'project' },
+          { model: Client, as: 'clientDetails', required: false }
+        ]
       });
       res.json(updatedQuote);
     } else {

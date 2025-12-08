@@ -22,6 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       Project.hasMany(models.Diary, { foreignKey: 'projectId' });
       Project.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+      Project.belongsTo(models.Client, { foreignKey: 'clientId', as: 'clientDetails' });
     }
   }
 
@@ -38,6 +39,14 @@ module.exports = (sequelize, DataTypes) => {
     client: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    clientId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Clients',
+        key: 'id'
+      }
     },
     status: {
       type: DataTypes.STRING,

@@ -12,6 +12,7 @@ import { api } from '../utils/api'
 import { Folder, Plus, Edit, Trash2, Calendar, User, Search, Filter, Download, BarChart3, TrendingUp, MapPin, DollarSign,
     Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer, X } from 'lucide-react'
 import Papa from 'papaparse'
+import ClientSelector from './Clients/ClientSelector'
 
 const EnhancedProjects = () => {
   const navigate = useNavigate()
@@ -25,6 +26,8 @@ const EnhancedProjects = () => {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
+    client: '',
+    clientId: null,
     site: '',
     status: 'active',
     estimatedValue: '',
@@ -119,6 +122,8 @@ const EnhancedProjects = () => {
     setEditingProject(null)
     setFormData({
       name: '',
+      client: '',
+      clientId: null,
       site: '',
       status: 'active',
       estimatedValue: '',
@@ -133,6 +138,8 @@ const EnhancedProjects = () => {
     setEditingProject(project)
     setFormData({
       name: project.name,
+      client: project.client || '',
+      clientId: project.clientId || null,
       site: project.site,
       status: project.status || 'active',
       estimatedValue: project.estimatedValue || '',
@@ -161,6 +168,8 @@ const EnhancedProjects = () => {
     try {
       const projectData = {
         name: formData.name,
+        client: formData.client,
+        clientId: formData.clientId,
         site: formData.site,
         status: formData.status,
         estimatedValue: parseFloat(formData.estimatedValue) || 0,
@@ -502,6 +511,16 @@ const EnhancedProjects = () => {
                     required
                     className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-600"
                     placeholder="e.g. Skyline Tower Renovation"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    Client
+                  </label>
+                  <ClientSelector
+                    selectedClient={formData.clientId ? { id: formData.clientId, name: formData.client } : null}
+                    onSelect={(client) => setFormData({ ...formData, clientId: client?.id || null, client: client?.name || '' })}
                   />
                 </div>
 
