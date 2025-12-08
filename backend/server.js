@@ -231,9 +231,10 @@ connectDB();
 // Database connection (Background)
 db.sequelize.authenticate()
   .then(() => {
+    // Database connected successfully
     console.log('Database connected successfully.');
-    // Temporarily disabled alter: true to fix SQLite UNIQUE constraint error on Users_backup and allow manual migration for complex changes
-    return db.sequelize.sync({ alter: false }); 
+    // Enable alter: true to ensure Postgres schema updates for new features (Map, Workflow, etc.)
+    return db.sequelize.sync({ alter: true }); 
   })
   .then(() => {
     console.log('Database synchronized.');
