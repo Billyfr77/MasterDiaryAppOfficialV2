@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react'
 import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command, GitBranch, Briefcase, CreditCard, Activity } from 'lucide-react'
+import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command, GitBranch, Briefcase, CreditCard, Activity, PenTool } from 'lucide-react'
 import { NotificationProvider } from './context/NotificationContext'
 import CommandPalette from './components/CommandPalette'
 import Login from './components/Login'
@@ -79,15 +79,16 @@ function App() {
                   <nav className="hidden md:flex items-center gap-1 overflow-x-auto no-scrollbar">
                     <NavLink to="/pulse" icon={<Activity size={16} />} label="Pulse" />
                     <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" />
-                    <NavLink to="/map-builder" icon={<Command size={16} />} label="Map" />
-                    <NavLink to="/clients" icon={<Users size={16} />} label="Clients" />
+                    <NavLink to="/diary" icon={<PenTool size={16} />} label="Diary" />
+                    <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" />
                     <NavLink to="/quotes" icon={<DollarSign size={16} />} label="Quotes" />
                     <NavLink to="/invoices" icon={<CreditCard size={16} />} label="Invoices" />
-                    <NavLink to="/workflows" icon={<GitBranch size={16} />} label="Flows" />
-                    <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" />
+                    <NavLink to="/clients" icon={<Users size={16} />} label="Clients" />
+                    <NavLink to="/map-builder" icon={<Command size={16} />} label="Map" />
                     <NavLink to="/nodes" icon={<Package size={16} />} label="Materials" />
                     <NavLink to="/staff" icon={<Users size={16} />} label="Staff" />
                     <NavLink to="/equipment" icon={<Wrench size={16} />} label="Equipment" />
+                    <NavLink to="/workflows" icon={<GitBranch size={16} />} label="Flows" />
                     <NavLink to="/reports" icon={<FileText size={16} />} label="Reports" />
                   </nav>
                 </div>
