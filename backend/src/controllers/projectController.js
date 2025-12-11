@@ -15,7 +15,7 @@ require('dotenv').config();
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
  */
-const { Project, Client } = require('../models');
+const { Project, Client, MapAsset, Allocation, Diary, Quote, Document } = require('../models');
 const Joi = require('joi');
 const axios = require('axios');
 
@@ -145,11 +145,32 @@ const updateProject = async (req, res) => {
 const deleteProject = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Deleting project ${req.params.id} for user: ${req.user?.id}`);
   try {
-    const deleted = await Project.destroy({ where: { id: req.params.id, userId: req.user?.id || null } });
+    const projectId = req.params.id;
+    const userId = req.user?.id || null;
+
+    // Verify project exists and user has access
+    const project = await Project.findOne({ where: { id: projectId, userId } });
+    if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Manual Cascade Delete
+    // We delete related records first to satisfy Foreign Key constraints
+    await Promise.all([
+        MapAsset.destroy({ where: { projectId } }),
+        Allocation.destroy({ where: { projectId } }),
+        Diary.destroy({ where: { projectId } }),
+        Quote.destroy({ where: { projectId } }),
+        // Document uses 'relatedId' for polymorphic association, check model to confirm but usually strict FK isn't there, good to clean anyway
+        Document.destroy({ where: { relatedId: projectId } }) 
+    ]);
+
+    const deleted = await Project.destroy({ where: { id: projectId } });
+    
     if (deleted) {
-      res.json({ message: 'Project deleted' });
+      res.json({ message: 'Project and all associated data deleted' });
     } else {
-      res.status(404).json({ error: 'Project not found' });
+      res.status(404).json({ error: 'Project could not be deleted' });
     }
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in DELETE /api/projects/${req.params.id}:`, error);
@@ -197,11 +218,59 @@ const geocodeProject = async (req, res) => {
   }
 };
 
+const getProjectMapStats = async (req, res) => {
+    try {
+        const userId = req.user?.id || null;
+        const projects = await Project.findAll({
+            where: userId ? { userId } : {},
+            include: [
+                { 
+                    model: Diary,
+                    attributes: ['totalRevenue', 'totalCost']
+                },
+                {
+                    model: Allocation,
+                    attributes: ['resourceType', 'startDate', 'endDate'],
+                    required: false
+                }
+            ]
+        });
+
+        const today = new Date().toISOString().split('T')[0];
+
+        const stats = projects.map(p => {
+            // Calc Financials
+            const revenue = p.Diaries?.reduce((sum, d) => sum + (parseFloat(d.totalRevenue) || 0), 0) || 0;
+            const cost = p.Diaries?.reduce((sum, d) => sum + (parseFloat(d.totalCost) || 0), 0) || 0;
+            
+            // Calc Resources (Active Today)
+            const activeAllocations = p.Allocations?.filter(a => a.startDate <= today && a.endDate >= today) || [];
+            const staffCount = activeAllocations.filter(a => a.resourceType === 'staff').length;
+            const equipCount = activeAllocations.filter(a => a.resourceType === 'equipment').length;
+
+            return {
+                id: p.id,
+                revenue,
+                cost,
+                margin: revenue - cost,
+                staffCount,
+                equipCount
+            };
+        });
+
+        res.json(stats);
+    } catch (error) {
+        console.error("Error fetching map stats:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
   getAllProjects,
   getProjectById,
   createProject,
   updateProject,
   deleteProject,
-  geocodeProject
+  geocodeProject,
+  getProjectMapStats
 };

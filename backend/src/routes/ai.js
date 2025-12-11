@@ -8,5 +8,6 @@ const aiController = require('../controllers/aiController');
 
 router.post('/workflow', aiController.generateWorkflow);
 router.post('/summary', aiController.generateDiarySummary);
+router.post('/chat', aiController.chatGlobal);
 
 module.exports = router;

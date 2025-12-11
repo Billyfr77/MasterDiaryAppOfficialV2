@@ -49,19 +49,68 @@ const getRoutes = async (req, res) => {
         origin: { address: origin },
         destination: { address: destination },
         travelMode,
-        computeAlternativeRoutes: true
+        computeAlternativeRoutes: true,
+        routeModifiers: {
+          avoidTolls: false,
+          avoidHighways: false,
+          avoidFerries: false
+        },
+        languageCode: 'en-US',
+        units: 'METRIC'
       },
       {
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': API_KEY,
-          'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
+          'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.description,routes.warnings,routes.routeLabels,routes.travelAdvisory'
         }
       }
     );
     res.json(response.data);
   } catch (error) {
     handleGoogleError(error, res, 'Routes API');
+  }
+};
+
+const getAirQuality = async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.status(400).json({ error: 'Lat/Lng required' });
+
+    const response = await axios.post(
+      `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${API_KEY}`,
+      {
+        location: { latitude: parseFloat(lat), longitude: parseFloat(lng) },
+        extraComputations: ["HEALTH_RECOMMENDATIONS", "DOMINANT_POLLUTANT_CONCENTRATION", "POLLUTANT_CONCENTRATION", "LOCAL_INFORMATION_REPORTING"]
+      }
+    );
+    res.json(response.data);
+  } catch (error) {
+    handleGoogleError(error, res, 'Air Quality API');
+  }
+};
+
+const getSolarPotential = async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.status(400).json({ error: 'Lat/Lng required' });
+
+    // Solar API - Building Insights
+    const response = await axios.get('https://solar.googleapis.com/v1/buildingInsights:findClosest', {
+      params: {
+        'location.latitude': lat,
+        'location.longitude': lng,
+        requiredQuality: 'HIGH',
+        key: API_KEY
+      }
+    });
+    res.json(response.data);
+  } catch (error) {
+    // Solar API returns 404 if no data for the building/area
+    if (error.response?.status === 404) {
+      return res.status(404).json({ message: 'No solar data available for this location.' });
+    }
+    handleGoogleError(error, res, 'Solar API');
   }
 };
 
@@ -112,6 +161,8 @@ module.exports = {
   getPlacesAutocomplete,
   getPlaceDetails,
   getRoutes,
+  getAirQuality,
+  getSolarPotential,
   analyzeImage,
   getWeather
 };

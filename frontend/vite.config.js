@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Master Diary - Construction SaaS',
+        name: 'Master Diary App',
         short_name: 'MasterDiary',
-        description: 'Professional Construction Diary & Management Platform',
+        description: 'Construction Project Management',
         theme_color: '#ffffff',
         icons: [
           {
@@ -25,8 +25,11 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
+      },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 3000000
       }
-    })
+    }),
   ],
   build: {
     rollupOptions: {

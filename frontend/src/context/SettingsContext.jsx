@@ -1,60 +1,65 @@
-/*
- * MasterDiaryApp Official - Construction SaaS Platform
- * Copyright (c) 2025 Billy Fraser. All rights reserved.
- *
- * This software and associated documentation contain proprietary
- * and confidential information of Billy Fraser.
- *
- * Unauthorized copying, modification, distribution, or use of this
- * software, in whole or in part, is strictly prohibited without
- * prior written permission from the copyright holder.
- *
- * For licensing inquiries: billyfr77@example.com
- *
- * Patent Pending: Drag-and-drop construction quote builder system
- * Trade Secret: Real-time calculation algorithms and optimization techniques
- */import React, { createContext, useContext, useState, useEffect } from 'react'
-import { api } from '../utils/api'
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '../utils/api';
 
-const SettingsContext = createContext()
+const SettingsContext = createContext();
 
-export const useSettings = () => useContext(SettingsContext)
+export const useSettings = () => {
+  const context = useContext(SettingsContext);
+  if (!context) {
+    throw new Error('useSettings must be used within a SettingsProvider');
+  }
+  return context;
+};
 
 export const SettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState({})
-  const [loading, setLoading] = useState(true)
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  const fetchSettings = async () => {
+  const loadSettings = async () => {
     try {
-      const response = await api.get('/settings')
-      const settingsObj = {}
-      response.data.forEach(s => {
-        settingsObj[s.parameter] = s.value
-      })
-      setSettings(settingsObj)
-    } catch (err) {
-      console.error('Error fetching settings:', err)
+      const res = await api.get('/settings');
+      // Convert array [{parameter: 'x', value: 'y'}] to object {x: 'y'}
+      const settingsMap = {};
+      if (Array.isArray(res.data)) {
+        res.data.forEach(s => {
+          settingsMap[s.parameter] = s.value;
+        });
+      }
+      setSettings(settingsMap);
+    } catch (error) {
+      console.error('Failed to load settings context:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const updateSetting = async (parameter, value) => {
+  const updateSetting = async (key, value, notes = '') => {
     try {
-      await api.put(`/settings/${parameter}`, { parameter, value })
-      setSettings(prev => ({ ...prev, [parameter]: value }))
-    } catch (err) {
-      console.error('Error updating setting:', err)
+      // Optimistic update
+      setSettings(prev => ({ ...prev, [key]: value }));
+      
+      // Upsert via API (Backend needs to handle "upsert" logic based on parameter name)
+      // We'll assume the backend has a specific endpoint or we use the generic POST/PUT
+      // For now, let's use the generic POST which creates or errors if exists, 
+      // but ideally we want a "set" endpoint.
+      // We will implement a `updateByKey` helper in the component or backend.
+      
+      // Actually, let's just reload to be safe or rely on the component to call the API 
+      // and then we reload here. But a global "set" is better.
+      await api.post('/settings/upsert', { parameter: key, value: String(value), notes });
+      await loadSettings();
+    } catch (error) {
+      console.error('Failed to update setting:', error);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchSettings()
-  }, [])
+    loadSettings();
+  }, []);
 
   return (
-    <SettingsContext.Provider value={{ settings, loading, updateSetting }}>
+    <SettingsContext.Provider value={{ settings, loading, loadSettings, updateSetting }}>
       {children}
     </SettingsContext.Provider>
-  )
-}
+  );
+};

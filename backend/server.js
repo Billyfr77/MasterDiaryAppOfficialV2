@@ -74,6 +74,12 @@ app.get('/health', (req, res) => res.json({
 // Serve static files (uploaded images) for local development
 app.use('/uploads', express.static('uploads'));
 
+// Public Config Endpoint for Maps
+app.get('/api/config/maps', (req, res) => {
+  // Prefer server-side env var, fallback to empty (frontend defaults to build-time)
+  res.json({ key: process.env.GOOGLE_MAPS_API_KEY || '' });
+});
+
 app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/staff', require('./src/routes/staff'));
 app.use('/api/diaries', require('./src/routes/diaries'));
@@ -96,6 +102,7 @@ app.use('/api/xero', require('./src/routes/xero')); // Register Xero Integration
 app.use('/api/workflows', require('./src/routes/workflowRoutes')); // Register Workflow routes
 app.use('/api/clients', require('./src/routes/clients')); // Register Client routes
 app.use('/api/allocations', require('./src/routes/allocations')); // Register Allocation routes
+app.use('/api/safety', require('./src/routes/safetyRoutes')); // Register Safety & Compliance routes
 app.use('/api/reports', require('./src/routes/reportRoutes')); // Unified Reports Hub
 app.use('/api/mail', require('./src/routes/mail')); // Email Service
 app.use('/api/ai', require('./src/routes/ai')); // Gemini AI Service
@@ -204,7 +211,14 @@ app.get('/api/seed-secret', async (req, res) => {
         })
 // Serve Frontend in Production
 if (process.env.NODE_ENV === 'production') {
-  const frontendPath = path.join(__dirname, '../frontend/dist');
+  const fs = require('fs');
+  const localPublicPath = path.join(__dirname, 'public');
+  const devPublicPath = path.join(__dirname, '../frontend/dist');
+  
+  // Prioritize local 'public' folder (Deployment) over dev path
+  const frontendPath = fs.existsSync(localPublicPath) ? localPublicPath : devPublicPath;
+  
+  console.log(`Serving static files from: ${frontendPath}`);
   app.use(express.static(frontendPath));
 
   app.get('*', (req, res) => {
@@ -260,3 +274,5 @@ process.on('uncaughtException', (err) => {
                  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
                  // Keep server alive to prevent crashes
                });
+
+// Force restart trigger

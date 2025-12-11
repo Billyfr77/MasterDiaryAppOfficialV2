@@ -363,7 +363,7 @@ const GlassNode = ({ data, selected }) => {
 // SIDEBAR DRAGGABLE ITEM
 // ================================
 
-const DraggableItem = ({ item }) => {
+const DraggableItem = ({ item, onClick }) => {
   const onDragStart = (event) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify(item))
     event.dataTransfer.effectAllowed = 'move'
@@ -393,10 +393,11 @@ const DraggableItem = ({ item }) => {
     <div
       draggable
       onDragStart={onDragStart}
+      onClick={onClick}
       className={`
         group relative flex items-center gap-4 p-4 rounded-2xl border-t border-l border-white/20
         cursor-grab active:cursor-grabbing transition-all duration-300
-        shadow-lg ${wrapperClass} ${hoverClass}
+        shadow-lg ${wrapperClass} ${hoverClass} active:scale-95 touch-manipulation
       `}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent rounded-2xl pointer-events-none" />
@@ -630,16 +631,28 @@ const QuoteBuilderContent = () => {
   const canvasRef = useRef(null)
   const { screenToFlowPosition, getNodes, fitView } = useReactFlow()
 
-  // --- AUTO-SYNC CLIENT FROM PROJECT ---
+  // --- AUTO-SYNC CLIENT & LOCATION FROM PROJECT ---
   useEffect(() => {
     if (selectedProject && projects.length > 0) {
        const proj = projects.find(p => p.id === selectedProject)
        if (proj) {
          setQuoteSettings(prev => ({
             ...prev,
-            clientId: proj.clientId || prev.clientId, // Prefer project's client, fallback to existing
+            clientId: proj.clientId || prev.clientId, 
             clientName: proj.client || proj.clientDetails?.name || prev.clientName
          }))
+
+         // Auto-resolve location for map background
+         if (proj.site && window.google) {
+             const geocoder = new window.google.maps.Geocoder();
+             geocoder.geocode({ address: proj.site }, (results, status) => {
+                 if (status === 'OK' && results[0]) {
+                     const loc = results[0].geometry.location;
+                     setProjectLocation({ lat: loc.lat(), lng: loc.lng() });
+                     setShowMap(true); // Auto-show map if location found
+                 }
+             });
+         }
        }
     }
   }, [selectedProject, projects])
@@ -760,6 +773,24 @@ const QuoteBuilderContent = () => {
   }
 
   // --- DRAWING ACTIONS ---
+  const onTapAdd = (item) => {
+    // Center of screen
+    const position = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
+    
+    // Suggest quantity logic (same as drop)
+    let suggestedQty = null
+    const coverageKey = Object.keys(MATERIAL_COVERAGE).find(k => item.name.toLowerCase().includes(k))
+    if (coverageKey) {
+       // Default 10x10 room if no specific target
+       suggestedQty = Math.ceil((100 * MATERIAL_COVERAGE[coverageKey].waste) / MATERIAL_COVERAGE[coverageKey].coverage)
+    } else {
+       suggestedQty = 1
+    }
+
+    setPendingNode({ item, position, suggestedQuantity: suggestedQty })
+    if (window.innerWidth < 1024) setShowSidebar(false)
+  }
+
   const addDimensionNode = () => {
     const id = `dim-${Date.now()}`
     const newNode = {
@@ -1023,21 +1054,42 @@ const QuoteBuilderContent = () => {
         </div>
 
         {/* --- MAIN AREA --- */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden relative">
+          
+          {/* MOBILE BACKDROP */}
+          <div 
+            className={`fixed inset-0 z-40 bg-black/80 backdrop-blur-sm lg:hidden transition-opacity duration-300 ${showSidebar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={() => setShowSidebar(false)}
+          />
+
           {/* SIDEBAR */}
-          <div className={`flex-shrink-0 ${showSidebar ? 'w-64 md:w-80' : 'w-0 -ml-64 md:-ml-80'} lg:w-80 bg-stone-900/95 border-r border-white/5 flex flex-col z-20 shadow-2xl transition-all duration-300 overflow-hidden`}>
-            <div className="p-4 border-b border-white/5 bg-stone-900/50">
-              <div className="relative"><Search className="absolute left-3 top-2.5 text-gray-500" size={16} /><input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-stone-800 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white focus:border-indigo-500 outline-none" /></div>
+          <div className={`
+              fixed inset-y-0 left-0 z-50 w-80 bg-stone-900/95 border-r border-white/5 flex flex-col shadow-2xl transition-transform duration-300 
+              lg:relative lg:translate-x-0 lg:z-0
+              ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
+          `}>
+            <div className="p-4 border-b border-white/5 bg-stone-900/50 flex justify-between items-center">
+              <div className="relative flex-1 mr-2">
+                <Search className="absolute left-3 top-2.5 text-gray-500" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Search..." 
+                  value={searchTerm} 
+                  onChange={e => setSearchTerm(e.target.value)} 
+                  className="w-full bg-stone-800 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white focus:border-indigo-500 outline-none" 
+                />
+              </div>
+              <button onClick={() => setShowSidebar(false)} className="lg:hidden p-2 text-gray-400 hover:text-white"><X size={20}/></button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-              <div className="space-y-2">{materials.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(x => <DraggableItem key={x.id} item={x} />)}</div>
-              <div className="border-t border-white/10 my-2 pt-2"><div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Staff</div>{staff.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(x => <DraggableItem key={x.id} item={x} />)}</div>
-              <div className="border-t border-white/10 my-2 pt-2"><div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Equipment</div>{equipment.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(x => <DraggableItem key={x.id} item={x} />)}</div>
+              <div className="space-y-2">{materials.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}</div>
+              <div className="border-t border-white/10 my-2 pt-2"><div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Staff</div>{staff.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}</div>
+              <div className="border-t border-white/10 my-2 pt-2"><div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Equipment</div>{equipment.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}</div>
             </div>
           </div>
 
           {/* CANVAS */}
-          <div className="flex-1 flex flex-col relative bg-transparent">
+          <div className="flex-1 flex flex-col relative bg-transparent overflow-hidden">
             <div className="absolute inset-0 opacity-20 pointer-events-none bg-[size:40px_40px] bg-[linear-gradient(to_right,#4f46e5_1px,transparent_1px),linear-gradient(to_bottom,#4f46e5_1px,transparent_1px)]" />
             <div ref={canvasRef} className={`flex-1 rounded-3xl relative overflow-hidden m-6 transition-all duration-500 ${isDragOver ? 'border-4 border-indigo-500 bg-indigo-900/20' : 'border-2 border-white/5 bg-stone-900/40 shadow-2xl'} backdrop-blur-sm`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
               <div style={{ width: '100%', height: '100%' }}>

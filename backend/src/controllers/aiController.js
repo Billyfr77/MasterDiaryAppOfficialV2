@@ -57,7 +57,37 @@ const generateDiarySummary = async (req, res) => {
     }
 };
 
+// --- GLOBAL CHAT ASSISTANT ---
+const chatGlobal = async (req, res) => {
+    try {
+        const { message, context } = req.body;
+        
+        const systemPrompt = `
+            You are Pinnacle AI, the advanced super-assistant for MasterDiaryOS.
+            Your goal is to help construction managers, site supervisors, and business owners manage their operations.
+            
+            Capabilities:
+            - Answer questions about construction management, scheduling, and resource allocation.
+            - Draft professional emails, diary entries, and quotes.
+            - Analyze project risks and suggest improvements.
+            - Provide navigation help within the app (pulse, projects, diary, resources, map-builder, reports).
+            
+            Tone: Professional, concise, authoritative yet helpful.
+            
+            Current Context: ${JSON.stringify(context || {})}
+        `;
+
+        const reply = await generateContent(message, systemPrompt);
+        res.json({ reply });
+
+    } catch (error) {
+        console.error("AI Chat Error:", error);
+        res.status(500).json({ error: "I'm having trouble processing that right now." });
+    }
+};
+
 module.exports = {
   generateWorkflow,
-  generateDiarySummary
+  generateDiarySummary,
+  chatGlobal
 };

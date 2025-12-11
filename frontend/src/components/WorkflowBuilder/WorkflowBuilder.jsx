@@ -13,7 +13,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, Play, Plus, Trash2, Layout, Calendar, List, MoreVertical, Loader2, ArrowLeft, Sparkles, Wand2, HelpCircle, Clipboard, GitFork, Bell, Zap, User, MessageSquare, CheckSquare, FolderOpen, FileText, ArrowRight } from 'lucide-react';
+import { Save, Play, Plus, Trash2, Layout, Calendar, List, MoreVertical, Loader2, ArrowLeft, Sparkles, Wand2, HelpCircle, Clipboard, GitFork, Bell, Zap, User, MessageSquare, CheckSquare, FolderOpen, FileText, ArrowRight, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WorkflowSidebar from './WorkflowSidebar';
 import CustomNode from './CustomNode';
@@ -61,6 +61,7 @@ const WorkflowBuilderContent = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // --- LOCAL TEMPLATE LIBRARY (Offline AI) ---
   const LOCAL_TEMPLATES_DATA = {
@@ -359,6 +360,24 @@ const WorkflowBuilderContent = () => {
       setSelectedNodeId(newNode.id);
   };
 
+  const handleTapAddNode = (type, label) => {
+      if (!reactFlowInstance) return;
+      const position = reactFlowInstance.screenToFlowPosition({
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+      });
+      
+      const newNode = {
+        id: getId(),
+        type,
+        position,
+        data: { label, status: 'pending' },
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+      if (window.innerWidth < 1024) setShowSidebar(false);
+  };
+
   const onPaneContextMenu = useCallback(
     (event) => {
       event.preventDefault();
@@ -556,8 +575,19 @@ const WorkflowBuilderContent = () => {
       { type: 'approval', label: 'Approval', icon: User, color: 'text-purple-400' },
   ];
 
+  const resumeNode = (id) => {
+      setNodes((nds) => 
+        nds.map((node) => {
+            if (node.id === id) {
+                return { ...node, data: { ...node.data, status: 'pending' } };
+            }
+            return node;
+        })
+      );
+  };
+
   return (
-    <div className="flex h-[calc(100vh-80px)] w-full overflow-hidden bg-slate-950 text-slate-200">
+    <div className="flex h-[calc(100vh-80px)] w-full overflow-hidden bg-slate-950 text-slate-200 relative">
       <style>{`
         @keyframes dashdraw {
           from { stroke-dashoffset: 10; }
@@ -574,12 +604,40 @@ const WorkflowBuilderContent = () => {
              box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.4);
         }
       `}</style>
-      <WorkflowSidebar />
       
-      <div className="flex-1 flex flex-col relative">
+      {/* MOBILE BACKDROP */}
+      {showSidebar && (
+        <div 
+            className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm lg:hidden"
+            onClick={() => setShowSidebar(false)}
+        />
+      )}
+
+      {/* RESPONSIVE SIDEBAR WRAPPER */}
+      <div className={`
+          fixed inset-y-0 left-0 z-50 h-full shadow-2xl transition-transform duration-300
+          lg:relative lg:translate-x-0 lg:z-auto
+          ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+          <WorkflowSidebar onNodeClick={handleTapAddNode} setShowSidebar={setShowSidebar} />
+          {/* Mobile Close Button */}
+          <button 
+            onClick={() => setShowSidebar(false)} 
+            className="absolute top-4 right-4 p-2 bg-slate-800 text-slate-400 rounded-full lg:hidden hover:text-white hover:bg-slate-700 z-50 shadow-lg border border-white/10"
+          >
+            <X size={16} />
+          </button>
+      </div>
+      
+      <div className="flex-1 flex flex-col relative w-full">
         {/* Header Toolbar */}
-        <div className="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur flex items-center justify-between px-6 z-10">
-          <div className="flex items-center gap-4">
+        <div className="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur flex items-center justify-between px-4 md:px-6 z-10">
+          <div className="flex items-center gap-3 md:gap-4">
+             {/* Mobile Sidebar Toggle */}
+             <button onClick={() => setShowSidebar(true)} className="lg:hidden p-2 rounded-lg bg-slate-800 text-indigo-400 hover:text-white transition-colors">
+               <List size={20} />
+             </button>
+
              <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors">
                <ArrowLeft size={20} />
              </button>

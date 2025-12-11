@@ -21,6 +21,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       Project.hasMany(models.Diary, { foreignKey: 'projectId' });
+      Project.hasMany(models.SafetyForm, { foreignKey: 'projectId', as: 'safetyForms' }); // Added Safety Association
       Project.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
       Project.belongsTo(models.Client, { foreignKey: 'clientId', as: 'clientDetails' });
     }

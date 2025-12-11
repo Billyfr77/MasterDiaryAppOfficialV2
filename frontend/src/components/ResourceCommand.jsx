@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../utils/api';
 import { 
   Calendar as CalendarIcon, ChevronLeft, ChevronRight, User, Wrench, 
-  Search, Filter, Plus, GripVertical, AlertCircle, CheckCircle2, DollarSign, Edit, X 
+  Search, Filter, Plus, GripVertical, AlertCircle, CheckCircle2, DollarSign, Edit, X, MapPin
 } from 'lucide-react';
 import { 
   format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, 
@@ -85,6 +85,7 @@ const ResourceCommand = () => {
   const [loading, setLoading] = useState(true);
   const [dragOverCell, setDragOverCell] = useState(null); // { projectId, date }
   const [editingAllocation, setEditingAllocation] = useState(null);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // --- DATA LOADING ---
   useEffect(() => {
@@ -221,7 +222,7 @@ const ResourceCommand = () => {
   if (loading) return <div className="h-screen bg-stone-950 flex items-center justify-center text-white font-mono animate-pulse">INITIALIZING COMMAND MATRIX...</div>;
 
   return (
-    <div className="h-[calc(100vh-80px)] bg-stone-950 flex font-sans overflow-hidden text-gray-100">
+    <div className="h-[calc(100vh-80px)] bg-stone-950 flex font-sans overflow-hidden text-gray-100 relative">
       {editingAllocation && (
           <EditAllocationModal 
             allocation={editingAllocation} 
@@ -231,12 +232,27 @@ const ResourceCommand = () => {
           />
       )}
 
+      {/* MOBILE BACKDROP */}
+      {showSidebar && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm lg:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
       {/* SIDEBAR */}
-      <div className="w-80 bg-stone-900 border-r border-white/5 flex flex-col z-20 shadow-2xl">
+      <div className={`
+          fixed inset-y-0 left-0 z-50 w-80 bg-stone-900 border-r border-white/5 flex flex-col shadow-2xl transition-transform duration-300
+          lg:relative lg:translate-x-0
+          ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
+      `}>
         <div className="p-5 border-b border-white/5 bg-stone-900/50">
-          <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4 text-indigo-400">
-            <Filter size={14} /> Resource Bay
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+             <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 text-indigo-400">
+                <Filter size={14} /> Resource Bay
+             </h2>
+             <button onClick={() => setShowSidebar(false)} className="lg:hidden text-gray-400 hover:text-white"><X size={18}/></button>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 text-gray-500" size={16} />
             <input 
@@ -279,26 +295,24 @@ const ResourceCommand = () => {
       </div>
 
       {/* MAIN: TIMELINE */}
-      <div className="flex-1 flex flex-col bg-stone-950 relative">
+      <div className="flex-1 flex flex-col bg-stone-950 relative w-full">
         
         {/* HEADER */}
-        <div className="h-16 border-b border-white/5 bg-stone-900/30 backdrop-blur-md flex justify-between items-center px-6">
-          <div className="flex items-center gap-4">
+        <div className="h-16 border-b border-white/5 bg-stone-900/30 backdrop-blur-md flex justify-between items-center px-4 md:px-6">
+          <div className="flex items-center gap-2 md:gap-4">
+            <button onClick={() => setShowSidebar(true)} className="lg:hidden p-2 rounded-lg bg-stone-800 text-indigo-400"><Filter size={20}/></button>
+            
             <button onClick={() => setCurrentDate(subWeeks(currentDate, 1))} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"><ChevronLeft size={20}/></button>
-            <div className="flex items-center gap-3">
-              <CalendarIcon size={18} className="text-indigo-500" />
-              <span className="text-xl font-black text-white tracking-tight">{format(weekStart, 'MMMM yyyy')}</span>
-              <span className="text-sm font-medium text-gray-500 border-l border-white/10 pl-3">Week of {format(weekStart, 'do')}</span>
+            <div className="flex items-center gap-2 md:gap-3">
+              <CalendarIcon size={18} className="text-indigo-500 hidden md:block" />
+              <span className="text-sm md:text-xl font-black text-white tracking-tight">{format(weekStart, 'MMMM yyyy')}</span>
+              <span className="text-[10px] md:text-sm font-medium text-gray-500 border-l border-white/10 pl-2 md:pl-3">Week of {format(weekStart, 'do')}</span>
             </div>
             <button onClick={() => setCurrentDate(addWeeks(currentDate, 1))} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"><ChevronRight size={20}/></button>
-            <button onClick={() => setCurrentDate(new Date())} className="text-[10px] font-bold bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-3 py-1.5 rounded uppercase tracking-wider ml-2 transition-all">Today</button>
           </div>
           
           <div className="flex gap-4">
-             <div className="flex items-center gap-2 px-3 py-1.5 bg-stone-900/50 rounded-lg border border-white/5">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                <span className="text-xs font-bold text-gray-400">Conflicts Detected</span>
-             </div>
+             <button onClick={() => setCurrentDate(new Date())} className="text-[10px] font-bold bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-3 py-1.5 rounded uppercase tracking-wider transition-all hidden md:block">Today</button>
           </div>
         </div>
 
@@ -331,6 +345,11 @@ const ResourceCommand = () => {
                     <div className={`w-1.5 h-1.5 rounded-full ${project.status === 'active' ? 'bg-emerald-500' : 'bg-gray-500'}`} />
                     {project.client || 'Internal Project'}
                   </div>
+                  {project.site && (
+                      <div className="text-[9px] text-indigo-400 mt-1 truncate flex items-center gap-1">
+                          <MapPin size={10} /> {project.site}
+                      </div>
+                  )}
                 </div>
                 
                 {days.map(day => {

@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { DndProvider, useDrag, useDrop } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { api } from '../utils/api'
@@ -276,6 +277,7 @@ const DiaryToolbar = () => {
 
 // Main PaintDiary Component with working drag-and-drop
 const PaintDiary = () => {
+  const navigate = useNavigate(); // Add hook
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [diaryEntries, setDiaryEntries] = useState([])
   const [totalCost, setTotalCost] = useState(0)
@@ -283,7 +285,9 @@ const PaintDiary = () => {
   const [isSaved, setIsSaved] = useState(true)
   const [dropTargetEntry, setDropTargetEntry] = useState(null)
   
-  // Map State
+  // Project & Map State
+  const [projects, setProjects] = useState([]);
+  const [selectedProject, setSelectedProject] = useState('');
   const [showMap, setShowMap] = useState(false)
   const [sessionLocation, setSessionLocation] = useState(null)
   const [showGeoModal, setShowGeoModal] = useState(false)
@@ -292,6 +296,54 @@ const PaintDiary = () => {
   useEffect(() => {
     calculateTotals()
   }, [diaryEntries])
+
+  // Fetch Projects for Selector
+  useEffect(() => {
+      const loadProjects = async () => {
+          try {
+              const res = await api.get('/projects');
+              setProjects(res.data.data || res.data || []);
+          } catch (e) { console.error("Failed to load projects", e); }
+      };
+      loadProjects();
+  }, []);
+
+  const handleCreateInvoice = () => {
+      // Flatten all items from all entries
+      const allItems = diaryEntries.flatMap(entry => entry.items || []);
+      
+      if (allItems.length === 0) {
+          alert("No items to invoice.");
+          return;
+      }
+
+      // Get Client Info from Selected Project
+      let clientInfo = {};
+      if (selectedProject) {
+          const proj = projects.find(p => p.id === selectedProject);
+          if (proj) {
+              clientInfo = {
+                  client: {
+                      id: proj.clientId,
+                      name: proj.client || proj.clientDetails?.name,
+                      email: proj.clientDetails?.email, // Ensure backend returns this
+                      address: proj.clientDetails?.address || proj.site, // Use site as fallback
+                      phone: proj.clientDetails?.phone
+                  },
+                  clientAddress: proj.clientDetails?.address || proj.site,
+                  clientEmail: proj.clientDetails?.email
+              };
+          }
+      }
+
+      navigate('/invoices', { 
+          state: { 
+              diaryItems: allItems,
+              projectId: selectedProject,
+              ...clientInfo
+          } 
+      });
+  };
 
   const handleSitePlanSave = (planData) => {
     setSitePlan(planData);
@@ -445,6 +497,25 @@ const PaintDiary = () => {
 
               <div className="flex flex-wrap justify-center gap-3 items-center">
                 
+                {/* Project Selector */}
+                <select 
+                    value={selectedProject} 
+                    onChange={e => setSelectedProject(e.target.value)} 
+                    className="px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-primary/50 outline-none cursor-pointer max-w-[200px]"
+                >
+                    <option value="">Select Project...</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+
+                <button
+                  onClick={handleCreateInvoice}
+                  className="flex items-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-lg"
+                  title="Create Invoice from Diary"
+                >
+                  <FileText size={18} />
+                  Invoice
+                </button>
+
                 {/* Site Plan Upload */}
                 <button
                   onClick={() => setShowGeoModal(true)}

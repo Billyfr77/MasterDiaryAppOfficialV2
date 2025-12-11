@@ -662,6 +662,10 @@ const EnhancedProjects = () => {
                   </h4>
                   <div className="space-y-4 text-gray-200 text-sm">
                     <p className="flex justify-between border-b border-white/5 pb-2">
+                      <span className="text-gray-400">Site Location</span>
+                      <span className="font-bold text-right max-w-[60%] truncate" title={selectedProject.site}>{selectedProject.site || 'N/A'}</span>
+                    </p>
+                    <p className="flex justify-between border-b border-white/5 pb-2">
                       <span className="text-gray-400">Status</span>
                       <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${getStatusColor(selectedProject.status)}`}>
                         {selectedProject.status || 'Active'}

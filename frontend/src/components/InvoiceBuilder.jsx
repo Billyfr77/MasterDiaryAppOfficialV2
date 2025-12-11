@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../utils/api';
+import { useSettings } from '../context/SettingsContext';
 import { FileText, Save, Plus, Trash2, Download, DollarSign, Calendar, Percent, CreditCard, Building2, User } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -8,6 +9,7 @@ import ClientSelector from './Clients/ClientSelector';
 
 const InvoiceBuilder = () => {
   const location = useLocation();
+  const { settings } = useSettings();
   
   // --- STATE ---
   const [invoice, setInvoice] = useState({
@@ -23,23 +25,23 @@ const InvoiceBuilder = () => {
     clientAddress: '',
     clientPhone: '',
     
-    // Business (Sender)
-    senderName: '', // Load from settings ideally
-    senderAddress: '',
-    senderEmail: '',
-    senderPhone: '',
+    // Business (Sender) - Default from Settings Context
+    senderName: settings.companyName || 'My Construction Co', 
+    senderAddress: settings.companyAddress || '',
+    senderEmail: settings.companyEmail || '',
+    senderPhone: settings.companyPhone || '',
     
     // Items
     items: [],
     
     // Financials
-    taxRate: 0,
+    taxRate: parseFloat(settings.defaultTaxRate) || 0,
     discount: 0,
     discountType: 'percent', // 'percent' or 'fixed'
-    currency: 'USD',
+    currency: settings.currency || 'USD',
     
     notes: '',
-    terms: 'Payment is due within 14 days. Thank you for your business.',
+    terms: `Payment is due within 14 days. \nBank: ${settings.bankName || ''} \nAcc: ${settings.bankAccount || ''}`,
     projectId: null
   });
 
@@ -48,23 +50,24 @@ const InvoiceBuilder = () => {
 
   // --- PRE-LOAD LOGIC ---
   useEffect(() => {
-    const loadData = async () => {
-      // 1. Load Business Settings (Sender)
-      try {
-        const settingsRes = await api.get('/settings');
-        const s = settingsRes.data || {};
+    // Refresh local state if settings load later than initial render
+    if (!invoice.senderName && settings.companyName) {
         setInvoice(prev => ({
             ...prev,
-            senderName: s.companyName || 'My Construction Co',
-            senderAddress: s.address || '',
-            senderEmail: s.email || '',
-            senderPhone: s.phone || '',
-            currency: s.currency || 'USD'
+            senderName: settings.companyName,
+            senderAddress: settings.companyAddress,
+            senderEmail: settings.companyEmail,
+            senderPhone: settings.companyPhone,
+            taxRate: parseFloat(settings.defaultTaxRate) || prev.taxRate,
+            currency: settings.currency || prev.currency,
+            terms: prev.terms.includes('Bank:') ? prev.terms : `Payment is due within 14 days. \nBank: ${settings.bankName || ''} \nAcc: ${settings.bankAccount || ''}`
         }));
-      } catch (e) { console.warn("Failed to load settings", e); }
+    }
 
+    const loadData = async () => {
       // 2. Load Client (if ID provided)
       let currentClientId = location.state?.clientId;
+
       
       // Fallback: Check project if no client ID directly
       if (!currentClientId && location.state?.projectId) {
@@ -90,14 +93,36 @@ const InvoiceBuilder = () => {
           } catch (e) { console.error("Failed to load client", e); }
       }
 
+      // 3. Apply Direct Overrides from Navigation (Critical for "Pre-filled" request)
+      if (location.state?.clientAddress) {
+          setInvoice(prev => ({ ...prev, clientAddress: location.state.clientAddress }));
+      }
+      if (location.state?.clientEmail) {
+          setInvoice(prev => ({ ...prev, clientEmail: location.state.clientEmail }));
+      }
+
       // 3. Load Items (from Diary or Quote)
       if (location.state?.diaryItems) {
-        const newItems = location.state.diaryItems.map(item => ({
-          description: item.name,
-          quantity: parseFloat(item.quantity || item.duration || 1),
-          rate: parseFloat(item.chargeRate || 0),
-          amount: parseFloat(item.quantity || item.duration || 1) * parseFloat(item.chargeRate || 0)
-        }));
+        const newItems = location.state.diaryItems.map(item => {
+          const qty = parseFloat(item.duration || item.quantity || 1);
+          // Calculate effective rate from revenue if available (preserves Diary markup logic)
+          let rate = 0;
+          if (item.revenue && qty > 0) {
+              rate = item.revenue / qty;
+          } else if (item.data) {
+              // Fallback to base rates if revenue missing
+              rate = parseFloat(item.data.chargeOutBase || item.data.chargeRate || item.data.pricePerUnit || 0);
+          } else {
+              rate = parseFloat(item.chargeRate || 0);
+          }
+
+          return {
+            description: item.name,
+            quantity: qty,
+            rate: rate,
+            amount: qty * rate
+          };
+        });
         setInvoice(prev => ({ ...prev, items: newItems }));
       } else if (location.state?.quoteItems) {
         const newItems = location.state.quoteItems.map(item => {

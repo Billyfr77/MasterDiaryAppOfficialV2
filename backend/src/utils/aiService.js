@@ -11,7 +11,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const generateContent = async (prompt, systemInstruction = "") => {
   try {
     const model = genAI.getGenerativeModel({ 
-        model: "gemini-pro", 
+        model: "gemini-1.5-flash", 
         systemInstruction: systemInstruction 
     });
 
@@ -29,7 +29,7 @@ const generateContent = async (prompt, systemInstruction = "") => {
 const generateJSON = async (prompt, systemInstruction = "") => {
     try {
       const model = genAI.getGenerativeModel({ 
-          model: "gemini-pro", 
+          model: "gemini-1.5-flash", 
           generationConfig: { responseMimeType: "application/json" },
           systemInstruction: systemInstruction 
       });

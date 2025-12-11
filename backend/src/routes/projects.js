@@ -22,11 +22,13 @@ const {
   createProject,
   updateProject,
   deleteProject,
-  geocodeProject
+  geocodeProject,
+  getProjectMapStats
 } = require('../controllers/projectController');
 
 router.use(authenticateToken);
 
+router.get('/map-stats', getProjectMapStats); // Must be before /:id
 router.get('/', getAllProjects);
 router.get('/:id', getProjectById);
 router.post('/', createProject);

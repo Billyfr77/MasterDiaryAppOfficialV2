@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FileText, CheckSquare, MessageSquare, Truck, Clipboard, Bell, User, Zap, GitFork, Clock } from 'lucide-react';
 
-export default function WorkflowSidebar() {
+export default function WorkflowSidebar({ onNodeClick, setShowSidebar }) {
   const onDragStart = (event, nodeType, label) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.setData('application/reactflow-label', label);
@@ -22,10 +22,10 @@ export default function WorkflowSidebar() {
   ];
 
   return (
-    <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col h-full z-20 shadow-2xl">
+    <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col h-full z-20 shadow-2xl overflow-hidden">
       <div className="p-6 border-b border-slate-800 bg-slate-900/50">
         <h2 className="text-white font-black text-lg tracking-tight">Toolkit</h2>
-        <p className="text-slate-500 text-xs mt-1 font-medium">Drag nodes to build your workflow</p>
+        <p className="text-slate-500 text-xs mt-1 font-medium">Drag or Tap nodes to build</p>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
@@ -35,11 +35,12 @@ export default function WorkflowSidebar() {
             whileHover={{ scale: 1.02, x: 4 }}
             whileTap={{ scale: 0.98 }}
             onDragStart={(event) => onDragStart(event, node.type, node.label)}
+            onClick={() => onNodeClick && onNodeClick(node.type, node.label)}
             draggable
             className={`
               flex items-center gap-4 p-4 rounded-xl border ${node.border} ${node.bg} 
               cursor-grab active:cursor-grabbing hover:bg-slate-800 transition-all duration-200
-              group shadow-sm hover:shadow-md
+              group shadow-sm hover:shadow-md touch-manipulation
             `}
             title={node.desc}
           >

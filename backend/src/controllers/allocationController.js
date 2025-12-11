@@ -29,7 +29,14 @@ const getAllocations = async (req, res) => {
 const createAllocation = async (req, res) => {
   try {
     const allocation = await Allocation.create(req.body);
-    res.status(201).json(allocation);
+    const fullAllocation = await Allocation.findByPk(allocation.id, {
+      include: [
+        { model: Project },
+        { model: Staff, as: 'staffResource' },
+        { model: Equipment, as: 'equipmentResource' }
+      ]
+    });
+    res.status(201).json(fullAllocation);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -40,7 +47,13 @@ const updateAllocation = async (req, res) => {
     const { id } = req.params;
     const [updated] = await Allocation.update(req.body, { where: { id } });
     if (updated) {
-      const updatedAllocation = await Allocation.findByPk(id);
+      const updatedAllocation = await Allocation.findByPk(id, {
+        include: [
+          { model: Project },
+          { model: Staff, as: 'staffResource' },
+          { model: Equipment, as: 'equipmentResource' }
+        ]
+      });
       res.json(updatedAllocation);
     } else {
       res.status(404).json({ error: 'Allocation not found' });
