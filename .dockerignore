@@ -1,0 +1,15 @@
+node_modules
+.git
+.gitignore
+.env
+backend/node_modules
+frontend/node_modules
+backend/.env
+frontend/.env
+*.log
+.DS_Store
+dist
+build
+coverage
+.dockerignore
+Dockerfile

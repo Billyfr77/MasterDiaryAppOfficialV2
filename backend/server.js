@@ -3,7 +3,22 @@ const path = require('path');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config({ override: true }); // Force override system env vars
+
+// Load root .env first (e.g., C:\Users\billy\.env)
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+// Then load local backend .env, allowing it to override root values
+require('dotenv').config({ path: path.resolve(__dirname, './.env'), override: true });
+
+// Configure pg to parse integers (Postgres returns bigint as strings by default)
+if (process.env.NODE_ENV === 'production') {
+  try {
+    const pg = require('pg');
+    pg.defaults.parseInt8 = true;
+  } catch (e) {
+    console.warn('Failed to configure pg parser (pg module might not be loaded yet or needed)');
+  }
+}
+
 const db = require('./src/models');
 const { loadSettings } = require('./src/utils/settingsCache');
 
@@ -81,6 +96,7 @@ app.get('/api/config/maps', (req, res) => {
 });
 
 app.use('/api/projects', require('./src/routes/projects'));
+app.use('/api/jobs', require('./src/routes/jobs'));
 app.use('/api/staff', require('./src/routes/staff'));
 app.use('/api/diaries', require('./src/routes/diaries'));
 app.use('/api/paint-diaries', require('./src/routes/paintDiaries'));
@@ -96,7 +112,6 @@ app.use('/api/uploads', require('./src/routes/uploads')); // Register Upload rou
 app.use('/api/notifications', require('./src/routes/notifications')); // Register Notification routes
 app.use('/api/geocoding', require('./src/routes/geocoding'));
 app.use('/api/map-assets', require('./src/routes/mapAssets')); // Register Map Asset routes
-app.use('/api/waste', require('./src/routes/waste')); // Register Waste Management routes
 app.use('/api/google', require('./src/routes/google')); // Register Google Integration routes
 app.use('/api/xero', require('./src/routes/xero')); // Register Xero Integration routes
 app.use('/api/workflows', require('./src/routes/workflowRoutes')); // Register Workflow routes
@@ -105,7 +120,7 @@ app.use('/api/allocations', require('./src/routes/allocations')); // Register Al
 app.use('/api/safety', require('./src/routes/safetyRoutes')); // Register Safety & Compliance routes
 app.use('/api/reports', require('./src/routes/reportRoutes')); // Unified Reports Hub
 app.use('/api/mail', require('./src/routes/mail')); // Email Service
-app.use('/api/ai', require('./src/routes/ai')); // Gemini AI Service
+app.use('/api/ai', require('./src/routes/ai')); // Grok AI Service
 
 const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 
@@ -235,12 +250,8 @@ const PORT = process.env.PORT || 5003;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`Loaded GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 10) + '...' : 'UNDEFINED'}`);
+  console.log(`Loaded GROK_API_KEY: ${process.env.GROK_API_KEY ? process.env.GROK_API_KEY.substring(0, 4) + '...' : 'UNDEFINED'}`);
 });
-
-// MongoDB Connection
-const connectDB = require('./src/config/mongo');
-connectDB();
 
 // Database connection (Background)
 db.sequelize.authenticate()

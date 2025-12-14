@@ -32,6 +32,7 @@ import { api } from '../utils/api'
 import CountUp from 'react-countup'
 import MapBackground from './MapBackground'
 import GeoreferenceModal from './GeoreferenceModal'
+import VisualTakeoffCanvas from './VisualTakeoffCanvas'
 import GoogleServicesSuggestions from './GoogleServicesSuggestions'
 import { generateQuotePDF } from '../utils/pdfGenerator'
 import ClientSelector from './Clients/ClientSelector'
@@ -618,6 +619,7 @@ const QuoteBuilderContent = () => {
 
   // Feature State
   const [showMap, setShowMap] = useState(false)
+  const [showVisualTakeoff, setShowVisualTakeoff] = useState(false)
   const [projectLocation, setProjectLocation] = useState(null)
   const [showGeoModal, setShowGeoModal] = useState(false)
   const [sitePlan, setSitePlan] = useState(null)
@@ -745,6 +747,29 @@ const QuoteBuilderContent = () => {
     }
     loadQuote()
   }, [id, materials, staff, equipment, fitView])
+
+  // --- VISUAL TAKEOFF ---
+  const handleVisualMeasurement = (data) => {
+      const id = `dim-${Date.now()}`
+      const sideLen = Math.sqrt(parseFloat(data.area)) * 20 // Approx visual size
+      
+      const newNode = {
+          id,
+          type: 'dimension',
+          position: screenToFlowPosition({ x: window.innerWidth/2, y: window.innerHeight/2 }),
+          style: { width: sideLen, height: sideLen },
+          data: { 
+            label: data.name || 'Measured Area',
+            width: sideLen, 
+            height: sideLen,
+            onDelete: () => deleteNode(id),
+            realArea: data.area, // Store exact calc
+            realPerimeter: data.perimeter
+          }
+      }
+      setNodes(nds => nds.concat(newNode))
+      setShowVisualTakeoff(false)
+  }
 
   // --- AI ACTIONS ---
   const handleAIChat = async (message) => {
@@ -969,6 +994,7 @@ const QuoteBuilderContent = () => {
   return (
     <div className="h-[calc(100vh-80px)] bg-transparent flex flex-col font-sans overflow-hidden text-white relative">
       <GeoreferenceModal isOpen={showGeoModal} onClose={() => setShowGeoModal(false)} onSave={(data) => { setSitePlan(data); setShowMap(true); if(data.bounds) setProjectLocation({ lat: (data.bounds.north+data.bounds.south)/2, lng: (data.bounds.east+data.bounds.west)/2 }); }} />
+      {showVisualTakeoff && <VisualTakeoffCanvas imageUrl={sitePlan?.imageUrl} onAddMeasurement={handleVisualMeasurement} onClose={() => setShowVisualTakeoff(false)} />}
       <QuoteSettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={quoteSettings} setSettings={setQuoteSettings} projects={projects} selectedProject={selectedProject} />
       <GoogleServicesSuggestions isOpen={showSuggestions} onClose={() => setShowSuggestions(false)} />
       
@@ -1024,6 +1050,7 @@ const QuoteBuilderContent = () => {
           <div className="flex items-center gap-2 flex-wrap">
             {/* TOOLBAR */}
             <button onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-400 hover:text-white" title="Toggle Sidebar"><List size={20} /></button>
+            <button onClick={() => setShowVisualTakeoff(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-teal-400 hover:text-white hover:bg-teal-600/50 transition-colors" title="Visual Takeoff Mode"><PenTool size={20} /></button>
             <button onClick={addDimensionNode} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-blue-400 hover:text-white hover:bg-blue-600/50 transition-colors" title="Add Room/Area"><Ruler size={20} /></button>
             <button onClick={addZoneNode} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-purple-400 hover:text-white hover:bg-purple-600/50 transition-colors" title="Add Zone"><Layout size={20} /></button>
             <button onClick={() => setShowGeoModal(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-emerald-400 hover:text-white transition-colors" title="Upload Site Plan"><UploadCloud size={20} /></button>

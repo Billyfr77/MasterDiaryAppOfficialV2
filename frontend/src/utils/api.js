@@ -62,7 +62,7 @@ api.interceptors.response.use(
         // If refresh fails, logout
         console.error('Session expired:', refreshError)
         localStorage.removeItem('token')
-        window.location.href = '/login'
+        window.dispatchEvent(new Event('auth:logout'))
       }
     }
 

@@ -20,6 +20,7 @@ module.exports = (sequelize, DataTypes) => {
   class Equipment extends Model {
     static associate(models) {
       // define association here
+      Equipment.belongsTo(models.Staff, { foreignKey: 'assignedDriverId', as: 'assignedDriver' });
     }
   }
 

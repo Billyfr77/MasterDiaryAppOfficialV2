@@ -19,14 +19,14 @@ import { GoogleMap, useJsApiLoader, Polygon, DrawingManager, StreetViewPanorama,
 import { useNavigate } from 'react-router-dom';
 import { 
   format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, 
-  isSameDay, isToday, parseISO, addWeeks, subWeeks, isWithinInterval, startOfDay 
+  isSameDay, isToday, parseISO, addWeeks, subWeeks, isWithinInterval 
 } from 'date-fns';
 import { 
   Map as MapIcon, X, Building2, Briefcase, DollarSign, TrendingUp, 
   Calendar, FileText, Plus, ArrowRight, Navigation, 
   Locate, Layers, Globe, Camera, Zap, Trash2, Edit, 
   Image as ImageIcon, Users, Truck, Search, MoreHorizontal, ChevronRight, Activity,
-  Share2, Eye, Lock, CheckCircle2, AlertTriangle, ClipboardCheck
+  Share2, Eye, Lock, CheckCircle2, AlertTriangle, ClipboardCheck, ExternalLink, File, Upload
 } from 'lucide-react';
 import { api } from '../utils/api';
 import ClientSelector from './Clients/ClientSelector';
@@ -112,13 +112,21 @@ const RichMarker = ({ position, type, onClick, label, isSelected, isZoneCenter, 
                                 {label}
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-[10px]">
-                                <div className="bg-emerald-900/30 p-1.5 rounded border border-emerald-500/20">
-                                    <div className="text-emerald-400 font-bold uppercase">Rev</div>
-                                    <div className="text-white font-mono font-bold">${stats.revenue?.toLocaleString() || 0}</div>
+                                <div className="col-span-2 bg-indigo-900/30 p-1.5 rounded border border-indigo-500/20 flex justify-between items-center">
+                                    <div className="text-indigo-400 font-bold uppercase">Contract</div>
+                                    <div className="text-white font-mono font-bold">${stats.value?.toLocaleString() || 0}</div>
+                                </div>
+                                <div className="col-span-2 bg-violet-900/30 p-1.5 rounded border border-violet-500/20 flex justify-between items-center">
+                                    <div className="text-violet-400 font-bold uppercase">Charge Out</div>
+                                    <div className="text-white font-mono font-bold">${stats.diaryRevenue?.toLocaleString() || 0}</div>
                                 </div>
                                 <div className="bg-rose-900/30 p-1.5 rounded border border-rose-500/20">
                                     <div className="text-rose-400 font-bold uppercase">Cost</div>
                                     <div className="text-white font-mono font-bold">${stats.cost?.toLocaleString() || 0}</div>
+                                </div>
+                                <div className={`p-1.5 rounded border ${stats.profit >= 0 ? 'bg-emerald-900/30 border-emerald-500/20' : 'bg-red-900/30 border-red-500/20'}`}>
+                                    <div className={`${stats.profit >= 0 ? 'text-emerald-400' : 'text-red-400'} font-bold uppercase`}>Profit</div>
+                                    <div className="text-white font-mono font-bold">${stats.profit?.toLocaleString() || 0}</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1.5 w-full justify-center border border-white/5 mt-1">
@@ -199,35 +207,104 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
     const isHQ = project.properties?.type === 'office' || project.properties?.type === 'OfficeZone';
     
     // Stats & Data
-    const [stats, setStats] = useState({ revenue: 0, cost: 0, margin: 0 });
+    const [stats, setStats] = useState({ revenue: 0, cost: 0, margin: 0, contractValue: 0, profit: 0 });
     const [logistics, setLogistics] = useState({ distance: '...', duration: '...' });
     const [diaries, setDiaries] = useState([]);
     const [allocations, setAllocations] = useState([]);
-    const [safetyForms, setSafetyForms] = useState([]); // Added Safety
+    const [safetyForms, setSafetyForms] = useState([]); 
+    const [quotes, setQuotes] = useState([]); 
+    const [documents, setDocuments] = useState([]); 
     const [isAllocating, setIsAllocating] = useState(false);
-    const [newAlloc, setNewAlloc] = useState({ type: 'staff', id: '', start: '', end: '' });
+    const [newAlloc, setNewAlloc] = useState({ type: 'staff', id: '', start: '', end: '', startTime: '', endTime: '' });
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('image', file);
+        try {
+            const res = await api.post('/uploads', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+            await api.put(`/map-assets/${project.assetId}`, {
+                properties: { ...project.properties, coverImage: res.data.url }
+            });
+            onUpdate(); 
+        } catch (e) { alert("Upload failed"); }
+    };
 
     const loadProjectData = async () => {
         setLoading(true);
-        // Clear previous state to prevent stale data
         setAllocations([]); 
         try {
-            const [diaryRes, allocRes, safetyRes] = await Promise.all([
+            const queries = [
                 api.get('/diaries'),
-                api.get(`/allocations?projectId=${project.id}&t=${Date.now()}`), // Add timestamp to bust cache
-                api.get(`/safety?projectId=${project.id}`)
-            ]);
+                api.get(`/allocations?projectId=${project.id}&t=${Date.now()}`),
+                api.get(`/safety?projectId=${project.id}`),
+                api.get(`/quotes?projectId=${project.id}&t=${Date.now()}`)
+            ];
+
+            if (project.isProject) {
+                queries.push(api.get(`/projects/${project.id}`));
+            }
+
+            const results = await Promise.all(queries);
+            const diaryRes = results[0];
+            const allocRes = results[1];
+            const safetyRes = results[2];
+            const quotesRes = results[3];
+            const projectRes = project.isProject ? results[4] : null;
 
             const allDiaries = Array.isArray(diaryRes.data.data) ? diaryRes.data.data : [];
             const projectDiaries = allDiaries.filter(d => String(d.projectId) === String(project.id));
-            
-            const revenue = projectDiaries.reduce((sum, d) => sum + (parseFloat(d.totalRevenue) || 0), 0);
-            const cost = projectDiaries.reduce((sum, d) => sum + (parseFloat(d.totalCost) || 0), 0);
+            const quotesData = quotesRes.data.data || quotesRes.data || [];
 
-            setStats({ revenue, cost, margin: revenue - cost });
+            let cost = projectDiaries.reduce((sum, d) => sum + (parseFloat(d.totalCost) || 0), 0);
+            let diaryRevenue = projectDiaries.reduce((sum, d) => sum + (parseFloat(d.totalRevenue) || 0), 0);
+            
+            let contractValue = 0;
+            let livePrice = 0; 
+            let potentialPrice = 0;
+            let profit = 0;
+
+            if (projectRes) {
+                const pData = projectRes.data;
+                const f = pData.financials || {};
+
+                let baseValue = parseFloat(f.contractValue) || parseFloat(pData.value) || parseFloat(pData.estimatedValue) || parseFloat(pData.budget) || parseFloat(pData.contractValue) || 0;
+                
+                const allQuotesValue = quotesData
+                    .reduce((sum, q) => sum + (parseFloat(q.totalRevenue) || parseFloat(q.value) || parseFloat(q.total) || 0), 0);
+
+                contractValue = baseValue + allQuotesValue;
+                livePrice = f.livePrice || contractValue; 
+                potentialPrice = f.potentialPrice || 0;
+
+                if (pData.financials) {
+                    cost = f.totalCost !== undefined ? parseFloat(f.totalCost) : cost;
+                    profit = (f.profit !== undefined && f.profit !== 0) ? parseFloat(f.profit) : (contractValue - cost);
+                    if (f.revenue !== undefined) diaryRevenue = parseFloat(f.revenue);
+                } else {
+                    profit = contractValue - cost;
+                }
+
+                if (pData.documents) setDocuments(pData.documents);
+            } else {
+                profit = diaryRevenue - cost;
+            }
+
+            setStats({ 
+                contractValue,
+                livePrice,
+                potentialPrice,
+                diaryRevenue,
+                cost, 
+                profit,
+                margin: profit 
+            });
+            
             setDiaries(projectDiaries.slice(0, 10)); 
             setAllocations(allocRes.data || []);
             setSafetyForms(safetyRes.data || []);
+            setQuotes(quotesData);
         } catch (e) { console.error("Hub Data Error", e); }
         setLoading(false);
     };
@@ -236,7 +313,6 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
         if (project?.id) loadProjectData();
     }, [project]);
 
-    // Refresh data when switching to resources tab to ensure latest allocations
     useEffect(() => {
         if (activeTab === 'resources' && project?.id) {
             api.get(`/allocations?projectId=${project.id}&t=${Date.now()}`)
@@ -254,12 +330,14 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
                 resourceId: newAlloc.id,
                 startDate: newAlloc.start,
                 endDate: newAlloc.end,
+                startTime: newAlloc.startTime, // Include Time
+                endTime: newAlloc.endTime,     // Include Time
                 status: 'active'
             });
             setAllocations([...allocations, res.data]);
             setIsAllocating(false);
-            setNewAlloc({ type: 'staff', id: '', start: '', end: '' });
-            onUpdate(); // Refresh parent map to show new markers
+            setNewAlloc({ type: 'staff', id: '', start: '', end: '', startTime: '', endTime: '' });
+            onUpdate(); 
         } catch(e) { alert("Allocation failed: " + e.message); }
     };
 
@@ -274,7 +352,6 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
 
     const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
-    // Helper to check availability
     const isResourceBusy = (id, type) => {
         const today = new Date().toISOString().split('T')[0];
         return globalAllocations.some(a => 
@@ -282,21 +359,16 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
             a.resourceType === type && 
             a.startDate <= today && 
             a.endDate >= today &&
-            String(a.projectId) !== String(project.id) // Don't count self
+            String(a.projectId) !== String(project.id)
         );
     };
 
-    // Timeline Helpers
-    const getWeeklyAllocations = () => {
-        return allocations.filter(alloc => {
-            const start = parseISO(alloc.startDate);
-            const end = parseISO(alloc.endDate);
-            const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-            return (start <= weekEnd && end >= weekStart);
-        });
-    };
-
-    const weeklyAllocations = getWeeklyAllocations();
+    const weeklyAllocations = allocations.filter(alloc => {
+        const start = parseISO(alloc.startDate);
+        const end = parseISO(alloc.endDate);
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+        return (start <= weekEnd && end >= weekStart);
+    });
     
     // Get unique resources active this week
     const activeResources = useMemo(() => {
@@ -306,7 +378,6 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
             if (s) return { ...s, type: 'staff' };
             const e = allEquipment.find(x => String(x.id) === String(id));
             if (e) return { ...e, type: 'equipment' };
-            // Fallback from allocation if not found in list (shouldn't happen often with synced lists)
             const alloc = weeklyAllocations.find(a => String(a.resourceId) === String(id));
             if (alloc?.staffResource) return { ...alloc.staffResource, type: 'staff' };
             if (alloc?.equipmentResource) return { ...alloc.equipmentResource, type: 'equipment' };
@@ -316,7 +387,7 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
 
     return (
         <div className={`absolute top-0 right-0 bottom-0 bg-stone-950 border-l border-white/10 shadow-2xl flex flex-col animate-slide-left z-50 font-sans transition-all duration-500 w-[600px]`}>
-            <div className="relative h-48 bg-slate-900 overflow-hidden flex-shrink-0">
+            <div className="relative h-48 bg-slate-900 overflow-hidden flex-shrink-0 group/cover">
                 {project.properties?.coverImage ? (
                     <img src={project.properties.coverImage} className="w-full h-full object-cover" alt="Cover" />
                 ) : (
@@ -324,6 +395,15 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
                         <Building2 size={60} className="text-white/10" />
                     </div>
                 )}
+                
+                {/* Upload Button Overlay */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/cover:opacity-100 transition-opacity flex items-center justify-center z-30">
+                    <label className="cursor-pointer bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl backdrop-blur-md flex items-center gap-2 text-white font-bold transition-all border border-white/20">
+                        <Upload size={16} /> Change Cover
+                        <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                    </label>
+                </div>
+
                 <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/60 to-transparent pointer-events-none" />
                 
                 <div className="absolute top-4 right-4 z-20 flex gap-2">
@@ -343,7 +423,7 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
             </div>
 
             <div className="flex border-b border-white/5 bg-stone-900/50 p-1 backdrop-blur-sm sticky top-0 z-10 flex-shrink-0">
-                {['overview', 'resources', 'safety', 'diaries'].map(tab => (
+                {['overview', 'resources', 'safety', 'diaries', 'quotes', 'documents'].map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 ${activeTab === tab ? (isHQ ? 'border-purple-500 text-white bg-white/5' : 'border-indigo-500 text-white bg-white/5') : 'border-transparent text-gray-500 hover:text-gray-300'}`}>{tab}</button>
                 ))}
             </div>
@@ -351,7 +431,6 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-8 bg-stone-950">
                 {activeTab === 'overview' && (
                     <div className="space-y-6">
-                        {/* ... existing overview content ... */}
                         {isHQ ? (
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-stone-900 border border-white/5 p-5 rounded-3xl relative overflow-hidden">
@@ -366,14 +445,22 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-stone-900 border border-white/5 p-5 rounded-3xl">
-                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Revenue</span>
-                                    <div className="text-2xl font-black text-white mt-1">{formatMoney(stats.revenue)}</div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-stone-900 border border-white/5 p-4 rounded-2xl">
+                                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Contract</span>
+                                    <div className="text-xl font-black text-white mt-1">{formatMoney(stats.contractValue)}</div>
                                 </div>
-                                <div className="bg-stone-900 border border-white/5 p-5 rounded-3xl">
-                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Cost</span>
-                                    <div className="text-2xl font-black text-white mt-1">{formatMoney(stats.cost)}</div>
+                                <div className="bg-stone-900 border border-white/5 p-4 rounded-2xl">
+                                    <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest">Charge Out</span>
+                                    <div className="text-xl font-black text-white mt-1">{formatMoney(stats.diaryRevenue)}</div>
+                                </div>
+                                <div className="bg-stone-900 border border-white/5 p-4 rounded-2xl">
+                                    <span className="text-[9px] font-black text-rose-400 uppercase tracking-widest">Cost</span>
+                                    <div className="text-xl font-black text-white mt-1">{formatMoney(stats.cost)}</div>
+                                </div>
+                                <div className={`bg-stone-900 border border-white/5 p-4 rounded-2xl ${stats.profit < 0 ? 'border-red-500/20 bg-red-900/10' : 'border-emerald-500/20 bg-emerald-900/10'}`}>
+                                    <span className={`text-[9px] font-black uppercase tracking-widest ${stats.profit < 0 ? 'text-red-400' : 'text-emerald-400'}`}>Profit</span>
+                                    <div className={`text-xl font-black mt-1 ${stats.profit < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{formatMoney(stats.profit)}</div>
                                 </div>
                             </div>
                         )}
@@ -393,30 +480,18 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
 
                 {activeTab === 'safety' && (
                     <div className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-sm font-black text-white uppercase tracking-wider">Safety Documents</h3>
-                            <button onClick={() => navigate('/safety/new', { state: { projectId: project.id } })} className="text-xs font-bold text-orange-400 hover:text-orange-300 flex items-center gap-1">
-                                <Plus size={14} /> New Form
-                            </button>
-                        </div>
-                        <div className="space-y-3">
-                            {safetyForms.map(form => (
-                                <div key={form.id} onClick={() => navigate(`/safety/${form.id}`)} className="cursor-pointer p-3 bg-stone-900 hover:bg-stone-800 rounded-xl border border-white/5 flex items-center justify-between group">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${form.type === 'INCIDENT_REPORT' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                                            {form.type === 'INCIDENT_REPORT' ? <AlertTriangle size={14}/> : <ClipboardCheck size={14}/>}
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-bold text-white">{form.title}</div>
-                                            <div className="text-[10px] text-gray-500">{new Date(form.createdAt).toLocaleDateString()} • {form.status}</div>
-                                        </div>
-                                    </div>
-                                    <ChevronRight size={14} className="text-gray-600 group-hover:text-white" />
-                                </div>
-                            ))}
-                            {safetyForms.length === 0 && <div className="text-center text-gray-500 text-xs py-4">No safety forms recorded.</div>}
-                        </div>
+                        <div className="flex justify-between items-center"><h3 className="text-sm font-black text-white uppercase tracking-wider">Safety Documents</h3><button onClick={() => navigate('/safety/new', { state: { projectId: project.id } })} className="text-xs font-bold text-orange-400 hover:text-orange-300 flex items-center gap-1"><Plus size={14} /> New Form</button></div>
+                        <div className="space-y-3">{safetyForms.map(form => (<div key={form.id} onClick={() => navigate(`/safety/${form.id}`)} className="cursor-pointer p-3 bg-stone-900 hover:bg-stone-800 rounded-xl border border-white/5 flex items-center justify-between group"><div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${form.type === 'INCIDENT_REPORT' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{form.type === 'INCIDENT_REPORT' ? <AlertTriangle size={14}/> : <ClipboardCheck size={14}/>}</div><div><div className="text-xs font-bold text-white">{form.title}</div><div className="text-[10px] text-gray-500">{new Date(form.createdAt).toLocaleDateString()} • {form.status}</div></div></div><ChevronRight size={14} className="text-gray-600 group-hover:text-white" /></div>))}{safetyForms.length === 0 && <div className="text-center text-gray-500 text-xs py-4">No safety forms recorded.</div>}</div>
                     </div>
+                )}
+                {activeTab === 'documents' && (
+                    <div className="space-y-6"><div className="flex justify-between items-center"><h3 className="text-sm font-black text-white uppercase tracking-wider">Uploaded Files</h3></div><div className="space-y-3">{documents.map((doc, idx) => (<div key={idx} className="bg-stone-900 p-3 rounded-xl border border-white/5 flex items-center gap-3 hover:border-indigo-500/50 transition-all group"><div className="p-2 bg-indigo-500/10 rounded-lg"><FileText className="text-indigo-400" size={16} /></div><div className="flex-1 min-w-0"><div className="font-bold text-white truncate text-sm">{doc.title}</div><div className="text-[10px] text-gray-500">{new Date(doc.createdAt).toLocaleDateString()}</div></div><a href={doc.metadata?.url || '#'} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"><ExternalLink size={16} /></a></div>))}{documents.length === 0 && <div className="text-center text-gray-500 text-xs py-4">No files uploaded.</div>}</div></div>
+                )}
+                {activeTab === 'diaries' && (
+                    <div className="space-y-6"><div className="flex justify-between items-center"><h3 className="text-sm font-black text-white uppercase tracking-wider">Recent Diary Entries</h3><button onClick={() => navigate('/diary', { state: { projectId: project.id } })} className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"><Plus size={14} /> New Entry</button></div><div className="space-y-3">{diaries.length > 0 ? diaries.map(diary => (<div key={diary.id} className="p-3 bg-stone-900 hover:bg-stone-800 rounded-xl border border-white/5 flex items-center justify-between group"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400"><Calendar size={14}/></div><div><div className="text-xs font-bold text-white">{new Date(diary.date).toLocaleDateString()}</div><div className="text-[10px] text-gray-500">Cost: {formatMoney(diary.totalCost || 0)} Revenue: {formatMoney(diary.totalRevenue || 0)}</div></div></div><ChevronRight size={14} className="text-gray-600 group-hover:text-white" /></div>)) : (<div className="text-center text-gray-500 text-xs py-4">No diary entries recorded.</div>)}</div></div>
+                )}
+                {activeTab === 'quotes' && (
+                    <div className="space-y-6"><div className="flex justify-between items-center"><h3 className="text-sm font-black text-white uppercase tracking-wider">Project Quotes</h3><button onClick={() => navigate('/quotes/builder', { state: { projectId: project.id } })} className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"><Plus size={14} /> New Quote</button></div><div className="space-y-3">{quotes.length > 0 ? quotes.map(quote => (<div key={quote.id} className="p-3 bg-stone-900 hover:bg-stone-800 rounded-xl border border-white/5 flex items-center justify-between group"><div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${quote.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}><DollarSign size={14}/></div><div><div className="text-xs font-bold text-white">{quote.name || `Quote ${quote.id.slice(0, 4)}`}</div><div className="text-[10px] text-gray-500">Value: {formatMoney(quote.totalRevenue || 0)} Status: {quote.status}</div></div></div><ChevronRight size={14} className="text-gray-600 group-hover:text-white" /></div>)) : (<div className="text-center text-gray-500 text-xs py-4">No quotes found for this project.</div>)}</div></div>
                 )}
 
                 {activeTab === 'resources' && (
@@ -457,6 +532,10 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
                                 <div className="grid grid-cols-2 gap-2">
                                     <input type="date" className="bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white" value={newAlloc.start} onChange={e => setNewAlloc({...newAlloc, start: e.target.value})} />
                                     <input type="date" className="bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white" value={newAlloc.end} onChange={e => setNewAlloc({...newAlloc, end: e.target.value})} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <input type="time" className="bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white" value={newAlloc.startTime} onChange={e => setNewAlloc({...newAlloc, startTime: e.target.value})} placeholder="08:00" />
+                                    <input type="time" className="bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white" value={newAlloc.endTime} onChange={e => setNewAlloc({...newAlloc, endTime: e.target.value})} placeholder="16:00" />
                                 </div>
                                 <button onClick={handleAllocate} className={`w-full py-2 ${isHQ ? 'bg-purple-600 hover:bg-purple-500' : 'bg-emerald-600 hover:bg-emerald-500'} rounded text-xs font-bold text-white transition-colors`}>
                                     Confirm Assignment
@@ -501,34 +580,45 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
                                             </div>
                                             <div className="grid grid-cols-7">
                                                 {weekDays.map(day => {
-                                                    const isAllocated = weeklyAllocations.some(a => 
-                                                        String(a.resourceId) === String(resource.id) &&
+                                                    // Find relevant allocation
+                                                    // Check for "Sick" first in global allocations
+                                                    const sickAlloc = globalAllocations.find(a => 
+                                                        String(a.resourceId) === String(resource.id) && 
+                                                        (a.category === 'sick' || a.category === 'leave') &&
                                                         isWithinInterval(day, { start: parseISO(a.startDate), end: parseISO(a.endDate) })
                                                     );
-                                                    
-                                                    // Find the allocation ID for removal context if needed (can add click handler)
-                                                    const allocation = weeklyAllocations.find(a => 
+
+                                                    const projectAlloc = weeklyAllocations.find(a => 
                                                         String(a.resourceId) === String(resource.id) &&
                                                         isWithinInterval(day, { start: parseISO(a.startDate), end: parseISO(a.endDate) })
                                                     );
 
+                                                    const activeAlloc = sickAlloc || projectAlloc;
+                                                    const isSick = !!sickAlloc;
+
                                                     return (
                                                         <div key={day.toISOString()} className="border-r border-white/5 last:border-0 relative p-1 group/cell">
-                                                            {isAllocated && (
-                                                                <div className={`w-full h-full rounded ${resource.type === 'staff' ? 'bg-emerald-500/20 border border-emerald-500/30' : 'bg-amber-500/20 border border-amber-500/30'} flex items-center justify-center relative group-hover/cell:opacity-80 transition-all`}>
-                                                                    <div className={`w-1.5 h-1.5 rounded-full ${resource.type === 'staff' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                                            {activeAlloc && (
+                                                                <div className={`w-full h-full rounded flex items-center justify-center relative group-hover/cell:opacity-80 transition-all text-[8px] font-bold
+                                                                    ${isSick 
+                                                                        ? 'bg-red-500/20 border border-red-500/30 text-red-400' 
+                                                                        : (resource.type === 'staff' ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-amber-500/20 border border-amber-500/30 text-amber-400')}
+                                                                `}>
+                                                                    {isSick ? 'SICK' : <div className={`w-1.5 h-1.5 rounded-full ${resource.type === 'staff' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>}
                                                                     
-                                                                    {/* Delete Button (On Hover) */}
-                                                                    <button 
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            if(allocation) handleRemoveAllocation(allocation.id);
-                                                                        }}
-                                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity shadow-lg scale-75 hover:scale-100"
-                                                                        title="Remove Allocation"
-                                                                    >
-                                                                        <X size={10} />
-                                                                    </button>
+                                                                    {/* Delete Button (On Hover) - Only if it's THIS project's allocation */}
+                                                                    {(!isSick || activeAlloc.projectId === project.id) && (
+                                                                        <button 
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleRemoveAllocation(activeAlloc.id);
+                                                                            }}
+                                                                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity shadow-lg scale-75 hover:scale-100"
+                                                                            title="Remove Allocation"
+                                                                        >
+                                                                            <X size={10} />
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -591,7 +681,7 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
   // Creation Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newZonePath, setNewZonePath] = useState(null);
-  const [newHubData, setNewHubData] = useState({ name: '', type: 'project', site: '', client: '' }); 
+  const [newHubData, setNewHubData] = useState({ name: '', type: 'project', site: '', client: '', coverImage: null }); 
   const [draggedProject, setDraggedProject] = useState(null);
   
   const [initialView] = useState(() => {
@@ -742,6 +832,18 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
       mapInstance.setHeading(heading);
   }, [tilt, heading]);
 
+  const onMapIdle = useCallback(() => {
+      if (map) {
+          const center = map.getCenter();
+          const zoom = map.getZoom();
+          const viewState = {
+              center: { lat: center.lat(), lng: center.lng() },
+              zoom: zoom
+          };
+          localStorage.setItem(STORAGE_KEY_MAP_VIEW, JSON.stringify(viewState));
+      }
+  }, [map]);
+
   const handlePolygonComplete = async (polygon) => {
       const path = polygon.getPath();
       const coords = [];
@@ -800,8 +902,16 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
               }
           };
 
-          await api.post('/map-assets', assetPayload);
-          await fetchData(); 
+          const createdAssetRes = await api.post('/map-assets', assetPayload);
+          const newAsset = createdAssetRes.data;
+
+          // Optimistically add the new asset to state to ensure immediate visibility
+          setAssets(prevAssets => [...prevAssets, { 
+              ...newAsset,
+              coordinates: newAsset.coordinates // Ensure coordinates are parsed if necessary
+          }]);
+          
+          await fetchData(); // Fetch full updated data including stats
 
           setShowCreateModal(false);
           setNewHubData({ name: '', type: 'project', site: '', client: '', coverImage: null });
@@ -844,6 +954,18 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
       setAssets(prev => prev.map(z => z.id === updatedHub.assetId ? { ...z, properties: updatedHub.properties } : z));
       setSelectedHub(updatedHub);
   };
+
+  const handleCoverImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+        const res = await api.post('/uploads', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setNewHubData(prev => ({ ...prev, coverImage: res.data.url }));
+    } catch (e) { alert("Upload failed"); }
+};
+
 
   const getRenderableAssets = () => {
       const now = new Date().toISOString().split('T')[0];
@@ -982,6 +1104,7 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
                 clickableIcons: false 
             }}
             onLoad={onMapLoad}
+            onIdle={onMapIdle}
           >
               <ProjectionHelper setProjection={setMapProjection} />
 
@@ -1011,11 +1134,33 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
                   if (asset.geometryType === 'POLYGON') {
                       const center = getPolygonCenter(asset.coordinates);
                       const stats = projectStats.find(s => String(s.id) === String(asset.projectId));
+                      // Force re-render when stats update by including cost/value in key
+                      const renderKey = `${asset.id}-${stats?.cost || 0}-${stats?.value || 0}`;
+                      
                       return (
-                          <React.Fragment key={asset.id}>
-                              <Polygon paths={asset.coordinates} options={{ fillColor: asset.properties?.color || HUB_COLORS.active, fillOpacity: 0.2, strokeColor: asset.properties?.color || HUB_COLORS.active, strokeWeight: 2, zIndex: 1 }} onClick={(e) => { e.stop(); handleZoneClick(asset); }} />
+                          <React.Fragment key={renderKey}>
+                              <Polygon 
+                                paths={asset.coordinates} 
+                                options={{ 
+                                    fillColor: asset.properties?.color || HUB_COLORS.active, 
+                                    fillOpacity: 0.2, 
+                                    strokeColor: asset.properties?.color || HUB_COLORS.active, 
+                                    strokeWeight: 2, 
+                                    zIndex: 1 
+                                }} 
+                                onClick={(e) => { e.stop(); handleZoneClick(asset); }} 
+                              />
                               {center && (
-                                  <RichMarker position={center} type={asset.properties?.type || 'ProjectZone'} label={asset.name} isSelected={selectedHub?.assetId === asset.id} isZoneCenter={true} stats={stats} onClick={() => handleZoneClick(asset)} />
+                                  <RichMarker 
+                                    position={center} 
+                                    type={asset.properties?.type || 'ProjectZone'} 
+                                    label={asset.name} 
+                                    isSelected={selectedHub?.assetId === asset.id} 
+                                    isZoneCenter={true} 
+                                    stats={stats} 
+                                    zoom={initialView.zoom} // Pass current zoom if tracked, or just use prop
+                                    onClick={() => handleZoneClick(asset)} 
+                                  />
                               )}
                           </React.Fragment>
                       );
@@ -1030,7 +1175,7 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
               <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-stone-900/90 backdrop-blur-md text-white px-6 py-3 rounded-full font-bold text-xs shadow-2xl animate-in fade-in slide-in-from-top-4 z-30 border border-white/20 flex items-center gap-4">
                   <span className="animate-pulse text-emerald-400">●</span> 
                   <span>CLICK MAP TO DRAW ZONE</span>
-                  <div className="h-4 w-px bg-white/20"></div>
+                  <div className="h-4 w-px bg-white/10"></div>
                   <button 
                     onClick={() => setDrawingMode(null)}
                     className="hover:text-rose-400 transition-colors uppercase tracking-wider font-black"
@@ -1082,6 +1227,13 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
                       <div>
                           <label className="text-xs font-black text-gray-500 uppercase block mb-2 tracking-widest">Site Address</label>
                           <input className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-sm text-white font-mono" placeholder="Required for Geo-Features" value={newHubData.site || ''} onChange={e => setNewHubData({...newHubData, site: e.target.value})} />
+                      </div>
+                      <div>
+                          <label className="text-xs font-black text-gray-500 uppercase block mb-2 tracking-widest">Cover Image</label>
+                          <label className="cursor-pointer bg-black/30 hover:bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md flex items-center justify-center gap-2 text-white font-bold transition-all border border-white/20">
+                              <Upload size={16} /> Upload Image
+                              <input type="file" className="hidden" accept="image/*" onChange={handleCoverImageUpload} />
+                          </label>
                       </div>
                   </div>
                   <div className="flex gap-3 mt-10">

@@ -15,7 +15,7 @@ require('dotenv').config();
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
  */
-const { Project, Client, MapAsset, Allocation, Diary, Quote, Document } = require('../models');
+const { Project, Client, MapAsset, Allocation, Diary, Quote, Document, SafetyForm } = require('../models');
 const Joi = require('joi');
 const axios = require('axios');
 
@@ -25,13 +25,67 @@ const axios = require('axios');
           clientId: Joi.string().guid().optional().allow(null),
           site: Joi.string().min(1).required(),
           status: Joi.string().valid('active', 'completed', 'on-hold', 'cancelled').optional(),
-          estimatedValue: Joi.number().min(0).optional(),
+          value: Joi.number().min(0).optional(), // Changed from estimatedValue to value
           description: Joi.string().allow('').optional(),
           startDate: Joi.date().iso().optional().allow(null),
           endDate: Joi.date().iso().optional().allow(null),
           latitude: Joi.number().min(-90).max(90).optional().allow(null),
           longitude: Joi.number().min(-180).max(180).optional().allow(null)
         });
+
+// Helper to attach financial calculations
+const attachFinancials = (project) => {
+  const p = project.toJSON ? project.toJSON() : project;
+
+  // 1. Contract Value (Handle strings, nulls, etc)
+  const contractValue = p.value ? parseFloat(p.value) : 0;
+
+  // Handle associations (check both cases)
+  const quotes = p.quotes || p.Quotes || [];
+  const diaries = p.Diaries || p.diaries || [];
+
+  // 2. Variations (Approved Quotes)
+  const variationsValue = quotes
+    .filter(q => q.status === 'approved')
+    .reduce((sum, q) => sum + (parseFloat(q.totalRevenue) || 0), 0);
+
+  // 2b. Potential Variations (All Quotes)
+  const allQuotesValue = quotes
+    .reduce((sum, q) => sum + (parseFloat(q.totalRevenue) || 0), 0);
+
+  // 3. Live Price (Contract + Approved Variations)
+  const livePrice = contractValue + variationsValue;
+
+  // 3b. Potential Price (Contract + All Variations)
+  const potentialPrice = contractValue + allQuotesValue;
+
+  // 4. Total Cost (Diaries)
+  const totalCost = diaries.reduce((sum, d) => sum + (parseFloat(d.totalCost) || 0), 0);
+
+  // 5. Total Diary Revenue (Charge Out)
+  const totalDiaryRevenue = diaries.reduce((sum, d) => sum + (parseFloat(d.totalRevenue) || 0), 0);
+
+  // 6. Project Profit (Contract - Cost)
+  const profit = livePrice - totalCost;
+
+  // 7. Operational Profit (Diary Revenue - Diary Cost)
+  const operationalProfit = totalDiaryRevenue - totalCost;
+
+  return {
+    ...p,
+    financials: {
+      contractValue,
+      variationsValue,
+      livePrice,
+      potentialPrice,
+      totalCost,
+      totalDiaryRevenue,
+      profit,
+      operationalProfit,
+      isProfitable: profit >= 0
+    }
+  };
+};
 
 const getAllProjects = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Fetching projects for user: ${req.user?.id}`);
@@ -42,13 +96,31 @@ const getAllProjects = async (req, res) => {
 
     const { count, rows } = await Project.findAndCountAll({
       where: req.user ? { userId: req.user?.id || null } : {},
-      include: [{ model: Client, as: 'clientDetails', required: false }],
+      include: [
+        { model: Client, as: 'clientDetails', required: false },
+        { 
+          model: Quote, 
+          as: 'quotes', 
+          // Removed 'where: approved' to fetch ALL quotes for potential value calc
+          required: false 
+        },
+        { 
+          model: Diary, 
+          attributes: ['totalCost', 'totalRevenue'], // Ensure revenue is fetched
+          required: false 
+        }
+      ],
+      distinct: true, // Ensure correct count with includes
       limit,
-      offset
+      offset,
+      order: [['createdAt', 'DESC']]
     });
 
+    // Calculate Financials for each project
+    const enhancedRows = rows.map(attachFinancials);
+
     res.json({
-      data: rows,
+      data: enhancedRows,
       total: count,
       page,
       limit,
@@ -71,10 +143,19 @@ const getProjectById = async (req, res) => {
   try {
     const project = await Project.findOne({
       where: { id: req.params.id, userId: req.user?.id || null },
-      include: [{ model: Client, as: 'clientDetails', required: false }]
+      include: [
+        { model: Client, as: 'clientDetails', required: false },
+        { model: Quote, as: 'quotes', required: false },
+        { model: Diary, required: false },
+        { model: Document, as: 'documents', required: false },
+        { model: SafetyForm, as: 'safetyForms', required: false },
+        { model: Allocation, required: false }
+      ]
     });
+
     if (project) {
-      res.json(project);
+      const enhancedProject = attachFinancials(project);
+      res.json(enhancedProject);
     } else {
       res.status(404).json({ error: 'Project not found' });
     }
@@ -101,7 +182,10 @@ const createProject = async (req, res) => {
       ...value,
       userId: req.user?.id || null
     });
-    res.status(201).json(project);
+    
+    // Attach default financials (will be 0 except for contract value)
+    const enhancedProject = attachFinancials(project);
+    res.status(201).json(enhancedProject);
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in POST /api/projects:`, error);
     console.error('Stack:', error.stack);
@@ -123,10 +207,16 @@ const updateProject = async (req, res) => {
     }
     const [updated] = await Project.update(value, { where: { id: req.params.id, userId: req.user?.id || null } });
     if (updated) {
+      // Re-fetch with associations to calculate financials correctly
       const updatedProject = await Project.findByPk(req.params.id, {
-        include: [{ model: Client, as: 'clientDetails', required: false }]
+        include: [
+            { model: Client, as: 'clientDetails', required: false },
+            { model: Quote, as: 'quotes', required: false },
+            { model: Diary, required: false }
+        ]
       });
-      res.json(updatedProject);
+      const enhancedProject = attachFinancials(updatedProject);
+      res.json(enhancedProject);
     } else {
       res.status(404).json({ error: 'Project not found' });
     }
@@ -218,16 +308,43 @@ const geocodeProject = async (req, res) => {
   }
 };
 
+const addProjectDocument = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const { title, type, content, url } = req.body;
+
+    const project = await Project.findByPk(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const doc = await Document.create({
+      title,
+      type: type || 'REPORT',
+      content: url || content, // Store URL in content if it's a file, or text content
+      relatedModel: 'Project',
+      relatedId: projectId,
+      userId: req.user.id,
+      status: 'FINAL',
+      metadata: { url } // Also store URL in metadata for explicit access
+    });
+
+    res.status(201).json(doc);
+  } catch (error) {
+    console.error('Error adding document:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 const getProjectMapStats = async (req, res) => {
     try {
         const userId = req.user?.id || null;
         const projects = await Project.findAll({
             where: userId ? { userId } : {},
             include: [
-                { 
-                    model: Diary,
-                    attributes: ['totalRevenue', 'totalCost']
-                },
+                { model: Client, as: 'clientDetails', required: false },
+                { model: Quote, as: 'quotes', required: false },
+                { model: Diary, required: false },
                 {
                     model: Allocation,
                     attributes: ['resourceType', 'startDate', 'endDate'],
@@ -239,9 +356,8 @@ const getProjectMapStats = async (req, res) => {
         const today = new Date().toISOString().split('T')[0];
 
         const stats = projects.map(p => {
-            // Calc Financials
-            const revenue = p.Diaries?.reduce((sum, d) => sum + (parseFloat(d.totalRevenue) || 0), 0) || 0;
-            const cost = p.Diaries?.reduce((sum, d) => sum + (parseFloat(d.totalCost) || 0), 0) || 0;
+            // Use shared helper for financial consistency
+            const financialData = attachFinancials(p).financials;
             
             // Calc Resources (Active Today)
             const activeAllocations = p.Allocations?.filter(a => a.startDate <= today && a.endDate >= today) || [];
@@ -250,9 +366,13 @@ const getProjectMapStats = async (req, res) => {
 
             return {
                 id: p.id,
-                revenue,
-                cost,
-                margin: revenue - cost,
+                value: financialData.contractValue, // Contract Estimated Value
+                livePrice: financialData.livePrice,
+                potentialPrice: financialData.potentialPrice, // Contract + All Quotes
+                cost: financialData.totalCost,
+                diaryRevenue: financialData.totalDiaryRevenue, // Add Charge Out
+                profit: financialData.profit,
+                isProfitable: financialData.isProfitable,
                 staffCount,
                 equipCount
             };
@@ -272,5 +392,6 @@ module.exports = {
   updateProject,
   deleteProject,
   geocodeProject,
-  getProjectMapStats
+  getProjectMapStats,
+  addProjectDocument
 };

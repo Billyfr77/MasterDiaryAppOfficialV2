@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { FileText, CheckSquare, Bell, User, Clock, Calendar, CreditCard, Zap, Mail, MoreHorizontal, ListChecks, Lock } from 'lucide-react';
+import { FileText, CheckSquare, Bell, User, Clock, Calendar, CreditCard, Zap, Mail, MoreHorizontal, ListChecks, Lock, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const NodeIcon = ({ type, status }) => {
@@ -11,6 +11,8 @@ const NodeIcon = ({ type, status }) => {
 
   switch (type) {
     case 'input': return <Zap size={18} className="text-yellow-400" />;
+    case 'trigger': return <Zap size={18} className="text-amber-400" />;
+    case 'action': return <Play size={18} className="text-indigo-400" />;
     case 'output': return <CheckSquare size={18} className="text-green-400" />;
     case 'milestone': return <Bell size={18} className="text-yellow-500" />;
     case 'approval': return <User size={18} className="text-purple-400" />;
@@ -164,12 +166,14 @@ export default memo(({ data, type, selected }) => {
               <span className="text-slate-200 text-[11px] font-bold truncate max-w-[100px]">{data.assignee}</span>
             </div>
            ) : (
-             <div className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
-               <div className="w-6 h-6 rounded-full border border-dashed border-slate-500 flex items-center justify-center bg-slate-900">
-                 <User size={12} className="text-slate-400" />
-               </div>
-               <span className="text-[11px] text-slate-400 font-medium">Unassigned</span>
-             </div>
+             type !== 'trigger' && type !== 'action' && (
+                 <div className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
+                   <div className="w-6 h-6 rounded-full border border-dashed border-slate-500 flex items-center justify-center bg-slate-900">
+                     <User size={12} className="text-slate-400" />
+                   </div>
+                   <span className="text-[11px] text-slate-400 font-medium">Unassigned</span>
+                 </div>
+             )
            )}
 
            {/* Deadline */}
@@ -187,6 +191,18 @@ export default memo(({ data, type, selected }) => {
              </div>
            )}
         </div>
+
+        {/* Trigger/Action Details */}
+        {(type === 'trigger' && data.event) && (
+            <div className="mt-2 text-xs font-mono text-amber-300 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20 truncate">
+                Event: {data.event}
+            </div>
+        )}
+        {(type === 'action' && data.actionType) && (
+            <div className="mt-2 text-xs font-mono text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20 truncate">
+                Action: {data.actionType}
+            </div>
+        )}
       </div>
 
       {/* Progress Line */}

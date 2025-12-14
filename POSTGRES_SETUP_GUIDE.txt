@@ -1,0 +1,51 @@
+GOOGLE CLOUD RUN POSTGRES SETUP GUIDE
+=====================================
+
+To run this application on Google Cloud Run with a PostgreSQL database (Cloud SQL), you must set the following environment variables in your Cloud Run service configuration.
+
+REQUIRED VARIABLES:
+-------------------
+
+1. DB_USER
+   - The username for your PostgreSQL database (e.g., "postgres").
+
+2. DB_PASSWORD
+   - The password for the database user.
+
+3. DB_NAME
+   - The name of the database to connect to (e.g., "master_diary_db").
+
+4. DB_HOST
+   - If using a Public IP or Private IP (VPC): The IP address of the database.
+   - If using Unix Sockets (Recommended for Cloud Run): This can be left blank if DB_SOCKET_PATH is set, or set it to "localhost".
+
+5. DB_SOCKET_PATH (Recommended for Cloud SQL)
+   - The path to the Unix socket.
+   - Format: /cloudsql/INSTANCE_CONNECTION_NAME
+   - Example: /cloudsql/my-project-id:us-central1:my-db-instance
+
+   *NOTE:* You must also add the "Cloud SQL Connection" in the Cloud Run settings under "Container" > "Cloud SQL connections".
+
+OPTIONAL VARIABLES:
+-------------------
+
+- NODE_ENV
+  - Set to "production" (this is usually default in Cloud Run, but good to be explicit).
+
+- DB_PORT
+  - Default is 5432. Only change if your DB runs on a different port.
+
+HOW TO DEPLOY:
+--------------
+You can set these variables via the Google Cloud Console GUI or using the command line:
+
+gcloud run deploy master-diary-backend \
+  --image gcr.io/YOUR_PROJECT/YOUR_IMAGE \
+  --set-env-vars DB_USER=postgres,DB_PASSWORD=secret,DB_NAME=mydb,DB_SOCKET_PATH=/cloudsql/project:region:instance \
+  --add-cloudsql-instances project:region:instance \
+  --platform managed \
+  --region us-central1
+
+LOCAL DEVELOPMENT:
+------------------
+The application will continue to use SQLite locally by default unless you explicitly set DB_DIALECT=postgres and provide the credentials above in your local .env file.

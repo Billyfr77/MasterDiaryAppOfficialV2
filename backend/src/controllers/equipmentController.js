@@ -13,7 +13,7 @@
  *
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
- */const { Equipment } = require('../models');
+ */const { Equipment, Staff } = require('../models');
 const Joi = require('joi');
 
 const equipmentSchema = Joi.object({
@@ -55,6 +55,7 @@ const getAllEquipment = async (req, res) => {
 
     const { count, rows } = await Equipment.findAndCountAll({
       where: req.user ? { userId: req.user?.id || null } : {},
+      include: [{ model: Staff, as: 'assignedDriver', attributes: ['id', 'name'] }],
       limit,
       offset
     });
@@ -82,7 +83,8 @@ const getEquipmentById = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Fetching equipment ${req.params.id} for user: ${req.user?.id}`);
   try {
     const equipmentItem = await Equipment.findOne({
-      where: { id: req.params.id, userId: req.user?.id || null }
+      where: { id: req.params.id, userId: req.user?.id || null },
+      include: [{ model: Staff, as: 'assignedDriver', attributes: ['id', 'name'] }]
     });
     if (equipmentItem) {
       res.json(equipmentItem);

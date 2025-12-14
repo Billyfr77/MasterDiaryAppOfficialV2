@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     projectId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Allow null for Sick/Leave
       references: {
         model: 'Projects',
         key: 'id'
@@ -42,6 +42,18 @@ module.exports = (sequelize, DataTypes) => {
     endDate: {
       type: DataTypes.DATEONLY,
       allowNull: false
+    },
+    startTime: {
+      type: DataTypes.TIME,
+      allowNull: true
+    },
+    endTime: {
+      type: DataTypes.TIME,
+      allowNull: true
+    },
+    category: { // New field for Leave/Sick tracking
+      type: DataTypes.ENUM('project', 'sick', 'leave', 'training'),
+      defaultValue: 'project'
     },
     status: {
       type: DataTypes.ENUM('scheduled', 'confirmed', 'completed'),

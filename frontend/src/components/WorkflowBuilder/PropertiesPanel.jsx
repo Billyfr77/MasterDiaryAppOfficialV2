@@ -259,7 +259,70 @@ export default function PropertiesPanel({ selectedNode, updateNodeData, closePan
                     <p className="text-slate-400 text-xs">Configure what happens when this node is active or completed.</p>
                 </div>
 
-                <div className="space-y-4">
+                {type === 'trigger' && (
+                    <div className="bg-slate-800/50 border border-white/5 rounded-xl p-4 space-y-4">
+                        <label className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                            <Zap size={14} /> System Event
+                        </label>
+                        <select 
+                            value={data.event || ''} 
+                            onChange={(e) => handleChange('event', e.target.value)}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                        >
+                            <option value="">Select Event...</option>
+                            <option value="quote.approved">Quote Approved</option>
+                            <option value="job.completed">Job Completed</option>
+                            <option value="project.created">Project Created</option>
+                        </select>
+                        <p className="text-[10px] text-slate-500">This workflow will start automatically when this event occurs.</p>
+                    </div>
+                )}
+
+                {type === 'action' && (
+                    <div className="bg-slate-800/50 border border-white/5 rounded-xl p-4 space-y-4">
+                        <label className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                            <CreditCard size={14} /> Execute Action
+                        </label>
+                        <select 
+                            value={data.actionType || ''} 
+                            onChange={(e) => handleChange('actionType', e.target.value)}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                        >
+                            <option value="">Select Action...</option>
+                            <option value="create_project">Create Project from Source</option>
+                            <option value="send_email">Send Email Notification</option>
+                            <option value="log_audit">Log Audit Entry</option>
+                        </select>
+
+                        {data.actionType === 'send_email' && (
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-slate-500 pl-1 mb-1 block">Recipient</label>
+                                <input 
+                                    type="text" 
+                                    value={data.recipient || ''} 
+                                    onChange={(e) => handleChange('recipient', e.target.value)}
+                                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none" 
+                                    placeholder="admin@example.com"
+                                />
+                            </div>
+                        )}
+                         {data.actionType === 'log_audit' && (
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-slate-500 pl-1 mb-1 block">Log Message</label>
+                                <input 
+                                    type="text" 
+                                    value={data.message || ''} 
+                                    onChange={(e) => handleChange('message', e.target.value)}
+                                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none" 
+                                    placeholder="Workflow step executed"
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Legacy Automation (for Task nodes) */}
+                {type !== 'trigger' && type !== 'action' && (
                     <div className="bg-slate-800/50 border border-white/5 rounded-xl p-4 space-y-4">
                         {/* Email Toggle */}
                         <div className="flex items-center justify-between">
@@ -344,7 +407,7 @@ export default function PropertiesPanel({ selectedNode, updateNodeData, closePan
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         )}
 

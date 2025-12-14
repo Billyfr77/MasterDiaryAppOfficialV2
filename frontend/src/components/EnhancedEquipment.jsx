@@ -26,7 +26,7 @@ const TelemetryGauge = ({ icon: Icon, value, label, color }) => (
 // ================================
 // SERVICE LOG MODAL
 // ================================
-const ServiceModal = ({ isOpen, onClose, equipment, onAddRecord }) => {
+const ServiceModal = ({ isOpen, onClose, equipment, onAddRecord, onDeleteRecord }) => {
   const [description, setDescription] = useState('')
   const [cost, setCost] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
@@ -36,7 +36,7 @@ const ServiceModal = ({ isOpen, onClose, equipment, onAddRecord }) => {
   const handleSubmit = (e) => {
     e.preventDefault()
     onAddRecord(equipment.id, {
-      id: Date.now(),
+      id: Date.now().toString(),
       date,
       description,
       cost: parseFloat(cost) || 0
@@ -98,13 +98,22 @@ const ServiceModal = ({ isOpen, onClose, equipment, onAddRecord }) => {
             <div className="text-center py-8 text-gray-500 italic text-sm">No service history recorded.</div>
           ) : (
             logs.map((log, idx) => (
-              <div key={idx} className="flex justify-between items-center p-3 bg-stone-800/50 rounded-xl border border-white/5">
+              <div key={idx} className="flex justify-between items-center p-3 bg-stone-800/50 rounded-xl border border-white/5 group">
                 <div>
                   <div className="text-sm font-bold text-white">{log.description}</div>
                   <div className="text-xs text-gray-500">{new Date(log.date).toLocaleDateString()}</div>
                 </div>
-                <div className="text-sm font-mono font-bold text-amber-400">
-                  ${typeof log.cost === 'number' ? log.cost.toFixed(2) : log.cost}
+                <div className="flex items-center gap-3">
+                    <div className="text-sm font-mono font-bold text-amber-400">
+                    ${typeof log.cost === 'number' ? log.cost.toFixed(2) : log.cost}
+                    </div>
+                    <button 
+                        onClick={() => onDeleteRecord(equipment.id, log.id)}
+                        className="text-gray-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Delete Record"
+                    >
+                        <Trash2 size={14} />
+                    </button>
                 </div>
               </div>
             ))
@@ -118,8 +127,18 @@ const ServiceModal = ({ isOpen, onClose, equipment, onAddRecord }) => {
 // ================================
 // TELEMETRY MODAL
 // ================================
-const TelemetryModal = ({ isOpen, onClose, equipment }) => {
+const TelemetryModal = ({ isOpen, onClose, equipment, staffList, onAssignDriver }) => {
+    const [selectedDriver, setSelectedDriver] = useState('');
+
+    useEffect(() => {
+        if (equipment) setSelectedDriver(equipment.assignedDriverId || '');
+    }, [equipment]);
+
     if (!isOpen || !equipment) return null;
+
+    const maintenanceCost = (equipment.serviceHistory || []).reduce((sum, log) => sum + (parseFloat(log.cost) || 0), 0);
+    const operationalCost = (equipment.hoursUsed || 0) * (equipment.costRateBase || 0);
+    const totalCost = maintenanceCost + operationalCost;
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-8 animate-fade-in" onClick={onClose}>
@@ -131,19 +150,19 @@ const TelemetryModal = ({ isOpen, onClose, equipment }) => {
                     </div>
                     <div className="flex gap-3">
                         <button className="px-4 py-2 bg-stone-800 hover:bg-stone-700 rounded-lg text-sm font-bold border border-white/5 text-gray-300">History</button>
-                        <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold shadow-lg">Dispatch</button>
                         <button onClick={onClose} className="p-2 text-gray-400 hover:text-white"><X size={24}/></button>
                     </div>
                 </div>
 
-                <div className="p-8">
+                <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <TelemetryGauge icon={Gauge} value="0 km/h" label="Current Speed" color="indigo" />
+                        <TelemetryGauge icon={Gauge} value={`${equipment.hoursUsed || 0} hrs`} label="Total Hours" color="indigo" />
                         <TelemetryGauge icon={Fuel} value={`${equipment.fuelLevel || 100}%`} label="Fuel Level" color="emerald" />
-                        <TelemetryGauge icon={Activity} value="98%" label="Engine Health" color="blue" />
+                        <TelemetryGauge icon={Activity} value="Good" label="Condition" color="blue" />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        {/* Maintenance */}
                         <div className="bg-black/20 rounded-2xl p-6 border border-white/5">
                             <h3 className="text-gray-400 font-bold uppercase text-xs mb-4">Maintenance Status</h3>
                             <div className="flex items-center justify-between mb-2">
@@ -155,16 +174,56 @@ const TelemetryModal = ({ isOpen, onClose, equipment }) => {
                             </div>
                         </div>
 
+                        {/* Driver Assignment */}
                         <div className="bg-black/20 rounded-2xl p-6 border border-white/5">
                             <h3 className="text-gray-400 font-bold uppercase text-xs mb-4">Driver Assignment</h3>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 mb-4">
                                 <div className="w-10 h-10 rounded-full bg-stone-700 flex items-center justify-center">
                                     <User size={20} className="text-gray-400"/>
                                 </div>
-                                <div>
-                                    <div className="font-bold text-white">Unassigned</div>
-                                    <button className="text-xs text-indigo-400 font-bold hover:text-indigo-300 uppercase">Assign Driver</button>
+                                <div className="flex-1">
+                                    <div className="font-bold text-white">
+                                        {equipment.assignedDriver ? equipment.assignedDriver.name : 'Unassigned'}
+                                    </div>
+                                    <div className="text-xs text-gray-500">Current Operator</div>
                                 </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <select 
+                                    className="flex-1 bg-stone-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"
+                                    value={selectedDriver}
+                                    onChange={(e) => setSelectedDriver(e.target.value)}
+                                >
+                                    <option value="">Select Operator...</option>
+                                    {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                                <button 
+                                    onClick={() => onAssignDriver(equipment.id, selectedDriver)}
+                                    className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold uppercase"
+                                >
+                                    Assign
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Financials Section */}
+                    <div className="bg-gradient-to-br from-stone-800 to-stone-900 rounded-2xl p-6 border border-white/10">
+                        <h3 className="text-amber-500 font-black uppercase text-sm mb-6 flex items-center gap-2">
+                            <DollarSign size={16} /> Asset Financials
+                        </h3>
+                        <div className="grid grid-cols-3 gap-6">
+                            <div>
+                                <div className="text-[10px] uppercase text-gray-500 font-bold mb-1">Maintenance Cost</div>
+                                <div className="text-xl font-mono text-white font-bold">${maintenanceCost.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] uppercase text-gray-500 font-bold mb-1">Running Cost (Est)</div>
+                                <div className="text-xl font-mono text-white font-bold">${operationalCost.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] uppercase text-gray-500 font-bold mb-1">Total Lifetime Cost</div>
+                                <div className="text-2xl font-mono text-emerald-400 font-black">${totalCost.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                             </div>
                         </div>
                     </div>
@@ -176,6 +235,7 @@ const TelemetryModal = ({ isOpen, onClose, equipment }) => {
 
 const EnhancedEquipment = () => {
   const [equipment, setEquipment] = useState([])
+  const [staffList, setStaffList] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingEquipment, setEditingEquipment] = useState(null)
@@ -202,21 +262,50 @@ const EnhancedEquipment = () => {
   })
 
   useEffect(() => {
-    fetchEquipment()
+    fetchData()
   }, [])
 
-  const fetchEquipment = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await api.get('/equipment')
-      setEquipment(response.data.data || response.data)
+      const [equipRes, staffRes] = await Promise.all([
+          api.get('/equipment'),
+          api.get('/staff')
+      ]);
+      setEquipment(equipRes.data.data || equipRes.data)
+      setStaffList(staffRes.data.data || staffRes.data || [])
     } catch (err) {
-      console.error('Error fetching equipment:', err)
-      alert('Error loading equipment')
+      console.error('Error fetching data:', err)
+      alert('Error loading equipment data')
     } finally {
       setLoading(false)
     }
   }
+
+  const handleAssignDriver = async (equipmentId, driverId) => {
+      try {
+          const current = equipment.find(e => e.id === equipmentId);
+          await api.put(`/equipment/${equipmentId}`, {
+              ...current,
+              assignedDriverId: driverId || null
+          });
+          
+          // Refresh list to get updated association name
+          fetchData();
+          
+          // Update selected item for modal immediately
+          const updatedStaff = staffList.find(s => s.id === driverId);
+          setSelectedForTelemetry(prev => ({
+              ...prev,
+              assignedDriverId: driverId,
+              assignedDriver: updatedStaff || null
+          }));
+          
+          alert("Operator assigned successfully");
+      } catch (e) {
+          alert("Failed to assign operator");
+      }
+  };
 
   const handleCreateEquipment = () => {
     setEditingEquipment(null)
@@ -339,6 +428,26 @@ const EnhancedEquipment = () => {
     }
   }
 
+  const handleDeleteServiceRecord = async (equipmentId, recordId) => {
+      if(!confirm("Delete this service record?")) return;
+      try {
+          const current = equipment.find(e => e.id === equipmentId);
+          const newHistory = (current.serviceHistory || []).filter(h => String(h.id) !== String(recordId));
+          
+          const response = await api.put(`/equipment/${equipmentId}`, {
+              ...current,
+              serviceHistory: newHistory
+          });
+          
+          const updatedItem = response.data.data || response.data;
+          setEquipment(prev => prev.map(e => e.id === equipmentId ? updatedItem : e));
+          setSelectedForService(updatedItem);
+      } catch(e) {
+          console.error("Delete failed", e);
+          alert("Failed to delete record");
+      }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Available': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
@@ -375,11 +484,14 @@ const EnhancedEquipment = () => {
         onClose={() => setServiceModalOpen(false)} 
         equipment={selectedForService} 
         onAddRecord={handleAddServiceRecord}
+        onDeleteRecord={handleDeleteServiceRecord}
       />
       <TelemetryModal 
         isOpen={telemetryModalOpen} 
         onClose={() => setTelemetryModalOpen(false)} 
         equipment={selectedForTelemetry} 
+        staffList={staffList}
+        onAssignDriver={handleAssignDriver}
       />
 
       <div className="max-w-[1600px] mx-auto">

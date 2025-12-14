@@ -1,5 +1,6 @@
 const db = require('../models');
-const { SafetyForm, Project, User } = db;
+const { SafetyForm, Project, User, SafetyTemplate } = db;
+const pinnacleAi = require('../services/grokService');
 
 // Get all forms (optionally filter by Project)
 exports.getForms = async (req, res) => {
@@ -78,17 +79,30 @@ exports.getFormById = async (req, res) => {
 // Create new form
 exports.createForm = async (req, res) => {
   try {
-    const { title, type, projectId, data, status, latitude, longitude, locationDetails, riskLevel } = req.body;
+    const { title, type, projectId, data, status, latitude, longitude, locationDetails, riskLevel, templateId } = req.body;
     
     // Validate project exists
     const project = await Project.findByPk(projectId);
     if (!project) return res.status(404).json({ message: 'Project not found' });
 
+    let finalData = data || {};
+
+    // If templateId provided, merge template structure/defaults
+    if (templateId && SafetyTemplate) {
+        const template = await SafetyTemplate.findByPk(templateId);
+        if (template) {
+            // Logic to merge template structure into form data if needed
+            // For now, we assume 'data' might be pre-filled with template structure
+            // or we could store the structure in a separate field if we normalized it
+        }
+    }
+
     const newForm = await SafetyForm.create({
       title,
       type,
       projectId,
-      data: data || {},
+      templateId: templateId || null,
+      data: finalData,
       status: status || 'DRAFT',
       latitude,
       longitude,
@@ -119,6 +133,9 @@ exports.updateForm = async (req, res) => {
     if (longitude !== undefined) form.longitude = longitude;
     if (locationDetails) form.locationDetails = locationDetails;
     if (riskLevel) form.riskLevel = riskLevel;
+    
+    // Simple Version bump logic
+    form.version = (form.version || 1) + 1;
 
     await form.save();
     res.json(form);
@@ -169,3 +186,90 @@ exports.deleteForm = async (req, res) => {
     res.status(500).json({ message: 'Error deleting safety form', error: error.message, stack: error.stack });
   }
 };
+
+// --- NEW CAPABILITIES ---
+
+// Create Template
+exports.createTemplate = async (req, res) => {
+    try {
+        if (!SafetyTemplate) return res.status(500).json({ message: "SafetyTemplate model not loaded" });
+        const template = await SafetyTemplate.create({
+            ...req.body,
+            createdBy: req.user ? req.user.id : null
+        });
+        res.status(201).json(template);
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// Get Templates
+exports.getTemplates = async (req, res) => {
+    try {
+        if (!SafetyTemplate) return res.status(500).json({ message: "SafetyTemplate model not loaded" });
+        const templates = await SafetyTemplate.findAll();
+        res.json(templates);
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// AI Assist
+exports.generateAIContent = async (req, res) => {
+    try {
+        const { prompt, context } = req.body;
+        // Basic RAG context could be added here
+        const systemPrompt = "You are an expert Safety Officer (ISO 45001). Generate a JSON list of hazards and controls based on the work description. Format: [{ hazard: '', risk: 'High', controls: [''] }]";
+        const content = await pinnacleAi.generateText(`${prompt} Context: ${JSON.stringify(context)}`, systemPrompt);
+        // Attempt to parse JSON if model returned code block
+        const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        res.json({ result: cleanContent });
+    } catch(e) {
+        console.error(e);
+        res.status(500).json({ error: "AI Generation Failed" });
+    }
+};
+
+// Import Document
+exports.importDocument = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const { projectId, title, type } = req.body;
+        
+        // Use the path from the storage engine (Google Storage public URL or local path)
+        let fileUrl = req.file.path;
+        
+        // For local development, prefix with server address if it's just a filename/path
+        if (process.env.NODE_ENV !== 'production' && !fileUrl.startsWith('http')) {
+             const protocol = req.protocol;
+             const host = req.get('host');
+             fileUrl = `${protocol}://${host}/${fileUrl.replace(/\\/g, '/')}`;
+        }
+
+        const newForm = await SafetyForm.create({
+            title: title || req.file.originalname,
+            type: type || 'IMPORTED_DOC',
+            projectId: projectId || null,
+            status: 'COMPLETED', // Imported docs are usually final
+            data: { 
+                fileUrl: fileUrl,
+                filename: req.file.originalname,
+                mimetype: req.file.mimetype,
+                size: req.file.size
+            },
+            createdBy: req.user ? req.user.id : null
+        });
+
+        res.status(201).json({ 
+            message: "Document imported successfully",
+            form: newForm
+        });
+    } catch(e) {
+        console.error("Import Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+};
+

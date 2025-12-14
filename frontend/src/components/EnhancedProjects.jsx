@@ -10,7 +10,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
 import { Folder, Plus, Edit, Trash2, Calendar, User, Search, Filter, Download, BarChart3, TrendingUp, MapPin, DollarSign,
-    Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer, X } from 'lucide-react'
+    Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer, X, Upload, FileText, ExternalLink, File, CheckCircle2 } from 'lucide-react'
 import Papa from 'papaparse'
 import ClientSelector from './Clients/ClientSelector'
 
@@ -23,6 +23,11 @@ const EnhancedProjects = () => {
   const [editingProject, setEditingProject] = useState(null)
   const [weatherData, setWeatherData] = useState(null)
 
+  // Details Modal State
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'documents'
+  const [documents, setDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -30,19 +35,36 @@ const EnhancedProjects = () => {
     clientId: null,
     site: '',
     status: 'active',
-    estimatedValue: '',
+    value: '', // Changed from estimatedValue
     description: '',
     startDate: null,
     endDate: null
   })
 
   useEffect(() => {
-    if (selectedProject && selectedProject.latitude && selectedProject.longitude) {
-        fetchWeather(selectedProject.latitude, selectedProject.longitude);
-    } else {
-        setWeatherData(null);
+    if (selectedProject?.id) {
+        if (selectedProject.latitude && selectedProject.longitude) {
+            fetchWeather(selectedProject.latitude, selectedProject.longitude);
+        } else {
+            setWeatherData(null);
+        }
+        // Fetch fresh details (financials + docs) when opening modal
+        fetchProjectDetails(selectedProject.id);
     }
-  }, [selectedProject]);
+  }, [selectedProject?.id]);
+
+  const fetchProjectDetails = async (id) => {
+      try {
+          const res = await api.get(`/projects/${id}`);
+          // Update selected project with full details (financials, docs)
+          setSelectedProject(prev => ({ ...prev, ...res.data }));
+          if (res.data.documents) {
+              setDocuments(res.data.documents);
+          }
+      } catch (e) {
+          console.error("Failed to fetch project details", e);
+      }
+  };
 
   const fetchWeather = async (lat, lng) => {
       try {
@@ -52,6 +74,39 @@ const EnhancedProjects = () => {
       } catch (e) {
           console.error("Weather fetch failed", e);
       }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !selectedProject) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        // 1. Upload File
+        const uploadRes = await api.post('/uploads', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        const fileUrl = uploadRes.data.url;
+
+        // 2. Link to Project
+        const docRes = await api.post(`/projects/${selectedProject.id}/documents`, {
+            title: file.name,
+            type: 'REPORT', // Defaulting to report for now, could add selector
+            url: fileUrl,
+            content: `Uploaded file: ${file.name}`
+        });
+
+        setDocuments([docRes.data, ...documents]);
+        alert('Document uploaded successfully!');
+    } catch (err) {
+        console.error('Upload failed:', err);
+        alert('Failed to upload document.');
+    } finally {
+        setUploading(false);
+    }
   };
 
   // Advanced filtering and search
@@ -100,7 +155,7 @@ const EnhancedProjects = () => {
       const total = projectsData.length
       const active = projectsData.filter(p => p.status === 'active').length
       const completed = projectsData.filter(p => p.status === 'completed').length
-      const totalValue = projectsData.reduce((sum, p) => sum + (p.estimatedValue || 0), 0)
+      const totalValue = projectsData.reduce((sum, p) => sum + (parseFloat(p.value) || 0), 0) // Updated to use p.value
       const avgValue = total > 0 ? totalValue / total : 0
       
       setAnalytics({
@@ -118,6 +173,11 @@ const EnhancedProjects = () => {
     }
   }
 
+  const handleViewProject = (project) => {
+      setActiveTab('overview');
+      setSelectedProject(project);
+  };
+
   const handleCreateProject = () => {
     setEditingProject(null)
     setFormData({
@@ -126,7 +186,7 @@ const EnhancedProjects = () => {
       clientId: null,
       site: '',
       status: 'active',
-      estimatedValue: '',
+      value: '', // Changed from estimatedValue
       description: '',
       startDate: null,
       endDate: null
@@ -142,7 +202,7 @@ const EnhancedProjects = () => {
       clientId: project.clientId || null,
       site: project.site,
       status: project.status || 'active',
-      estimatedValue: project.estimatedValue || '',
+      value: project.value || '', // Changed from estimatedValue
       description: project.description || '',
       startDate: project.startDate ? new Date(project.startDate) : null,
       endDate: project.endDate ? new Date(project.endDate) : null
@@ -172,7 +232,7 @@ const EnhancedProjects = () => {
         clientId: formData.clientId,
         site: formData.site,
         status: formData.status,
-        estimatedValue: parseFloat(formData.estimatedValue) || 0,
+        value: parseFloat(formData.value) || 0, // Changed from estimatedValue
         description: formData.description,
         startDate: formData.startDate?.toISOString(),
         endDate: formData.endDate?.toISOString()
@@ -200,7 +260,7 @@ const EnhancedProjects = () => {
       Name: project.name,
       Site: project.site,
       Status: project.status || 'Active',
-      'Estimated Value': project.estimatedValue || 0,
+      'Value': project.value || 0, // Changed from Estimated Value
       Description: project.description || '',
       'Start Date': project.startDate ? new Date(project.startDate).toLocaleDateString() : '',
       'End Date': project.endDate ? new Date(project.endDate).toLocaleDateString() : '',
@@ -228,6 +288,17 @@ const EnhancedProjects = () => {
       default: return 'bg-gray-400'
     }
   }
+
+  const handleExportProject = () => {
+      if (!selectedProject) return;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedProject, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `${selectedProject.name.replace(/\s+/g, '_')}_full_export.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+  };
 
   if (loading) {
     return (
@@ -371,7 +442,7 @@ const EnhancedProjects = () => {
               <option value="created_at" className="bg-stone-900">Sort: Date</option>
               <option value="name" className="bg-stone-900">Sort: Name</option>
               <option value="site" className="bg-stone-900">Sort: Site</option>
-              <option value="estimatedValue" className="bg-stone-900">Sort: Value</option>
+              <option value="value" className="bg-stone-900">Sort: Value</option>
             </select>
             
             <select
@@ -409,12 +480,30 @@ const EnhancedProjects = () => {
                   {project.site}
                 </div>
                 
-                {project.estimatedValue && (
-                  <div className="flex items-center text-2xl font-black text-white mb-4 tracking-tight">
-                    <span className="text-emerald-500 mr-1">$</span>
-                    {project.estimatedValue.toLocaleString()}
-                  </div>
-                )}
+                <div className="mb-4">
+                    {project.financials ? (
+                        <div>
+                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Live Value</div>
+                            <div className="flex items-center text-2xl font-black text-white tracking-tight mb-2">
+                                <span className="text-emerald-500 mr-1">$</span>
+                                {project.financials.livePrice?.toLocaleString()}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-mono">
+                                <span className="text-red-300">Costs: ${project.financials.totalCost?.toLocaleString()}</span>
+                                <span className={`px-1.5 py-0.5 rounded ${project.financials.isProfitable ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                    {project.financials.profit >= 0 ? '+' : ''}${project.financials.profit?.toLocaleString()}
+                                </span>
+                            </div>
+                        </div>
+                    ) : (
+                        project.value && (
+                            <div className="flex items-center text-2xl font-black text-white mb-4 tracking-tight">
+                                <span className="text-emerald-500 mr-1">$</span>
+                                {project.value.toLocaleString()}
+                            </div>
+                        )
+                    )}
+                </div>
                 
                 <div className="flex items-center gap-3 text-xs text-gray-500 mb-5 font-mono">
                   <div className="flex items-center gap-1">
@@ -438,7 +527,7 @@ const EnhancedProjects = () => {
               {/* Action Buttons */}
               <div className="flex gap-2 pt-4 border-t border-white/10 relative z-10">
                 <button
-                  onClick={() => setSelectedProject(project)}
+                  onClick={() => handleViewProject(project)}
                   className="flex-1 py-2.5 px-3 bg-white/5 hover:bg-indigo-600 hover:text-white text-indigo-300 border border-white/5 hover:border-indigo-500 rounded-xl transition-all flex items-center justify-center gap-2 font-bold text-sm"
                 >
                   <Folder size={16} />
@@ -557,14 +646,14 @@ const EnhancedProjects = () => {
 
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                      Estimated Value
+                      Estimated Contract Value
                     </label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                       <input
                         type="number"
-                        value={formData.estimatedValue}
-                        onChange={(e) => setFormData({ ...formData, estimatedValue: e.target.value })}
+                        value={formData.value} // Changed from estimatedValue
+                        onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                         placeholder="0.00"
                         className="w-full pl-8 pr-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
                       />
@@ -636,8 +725,10 @@ const EnhancedProjects = () => {
         {/* Project Details Modal */}
         {selectedProject && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setSelectedProject(null)}>
-            <div className="bg-stone-900 border border-white/10 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl animate-slide-up p-8 rounded-3xl" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-start mb-8">
+            <div className="bg-stone-900 border border-white/10 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl animate-slide-up p-8 rounded-3xl" onClick={(e) => e.stopPropagation()}>
+              
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-6">
                 <div>
                   <h2 className="text-3xl font-black text-white tracking-tight mb-2">
                     {selectedProject.name}
@@ -647,89 +738,245 @@ const EnhancedProjects = () => {
                     {selectedProject.site}
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedProject(null)}
-                  className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
-                >
-                  <X size={24} />
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleExportProject}
+                        className="p-2 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white rounded-full text-indigo-400 transition-colors"
+                        title="Export Full Project Data"
+                    >
+                        <Download size={20} />
+                    </button>
+                    <button
+                        onClick={() => setSelectedProject(null)}
+                        className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+                    >
+                        <X size={24} />
+                    </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6">
-                  <h4 className="text-emerald-400 font-bold mb-4 flex items-center gap-2 uppercase tracking-wider text-xs">
-                    <Folder size={16} /> Project Information
-                  </h4>
-                  <div className="space-y-4 text-gray-200 text-sm">
-                    <p className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-gray-400">Site Location</span>
-                      <span className="font-bold text-right max-w-[60%] truncate" title={selectedProject.site}>{selectedProject.site || 'N/A'}</span>
-                    </p>
-                    <p className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-gray-400">Status</span>
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${getStatusColor(selectedProject.status)}`}>
-                        {selectedProject.status || 'Active'}
-                      </span>
-                    </p>
-                    <p className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-gray-400">Created</span>
-                      <span className="font-mono font-bold">{new Date(selectedProject.createdAt).toLocaleDateString()}</span>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="text-gray-400">Manager</span>
-                      <span className="font-bold">{selectedProject.createdBy?.username || 'Unknown'}</span>
-                    </p>
-                  </div>
-                </div>
+              {/* Tabs */}
+              <div className="flex gap-4 mb-6 border-b border-white/10">
+                  <button 
+                    onClick={() => setActiveTab('overview')}
+                    className={`pb-3 px-2 text-sm font-bold transition-all ${activeTab === 'overview' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-400 hover:text-white'}`}
+                  >
+                      Overview & Financials
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('documents')}
+                    className={`pb-3 px-2 text-sm font-bold transition-all ${activeTab === 'documents' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-400 hover:text-white'}`}
+                  >
+                      Documents & Files
+                  </button>
+              </div>
 
-                <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-6 relative overflow-hidden">
-                  <h4 className="text-indigo-400 font-bold mb-4 flex items-center gap-2 uppercase tracking-wider text-xs relative z-10">
-                    <DollarSign size={16} /> Financials
-                  </h4>
-                  <div className="flex flex-col items-center justify-center h-32 relative z-10">
-                    <p className="text-5xl font-black text-white mb-2 tracking-tight">
-                      ${selectedProject.estimatedValue?.toLocaleString() || '0'}
-                    </p>
-                    <p className="text-xs text-indigo-300 uppercase tracking-widest font-bold">Estimated Value</p>
-                  </div>
-                  {/* Background decoration */}
-                  <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-                </div>
-
-                {/* Weather Intelligence */}
-                {weatherData && (
-                    <div className="md:col-span-2 bg-sky-500/5 border border-sky-500/20 rounded-2xl p-6 relative overflow-hidden">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h4 className="text-sky-400 font-bold mb-1 flex items-center gap-2 uppercase tracking-wider text-xs">
-                                    <Cloud size={16} /> Site Conditions
-                                </h4>
-                                <div className="text-3xl font-black text-white flex items-center gap-2">
-                                    {weatherData.temperature}°C <span className="text-sm font-medium text-sky-300/50">Current</span>
+              {activeTab === 'overview' && (
+                  <div className="space-y-6 animate-fade-in">
+                        {/* Financial Dashboard */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             {/* Live Price Card */}
+                            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-5 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-3 opacity-10">
+                                    <DollarSign size={48} className="text-indigo-400" />
+                                </div>
+                                <h4 className="text-indigo-400 font-bold mb-1 text-xs uppercase tracking-wider">Live Project Value</h4>
+                                <div className="text-3xl font-black text-white tracking-tight">
+                                    ${(selectedProject.financials?.livePrice || selectedProject.estimatedValue || 0).toLocaleString()}
+                                </div>
+                                <div className="mt-2 text-[10px] text-indigo-300 flex gap-2">
+                                    <span>Contract: ${(selectedProject.financials?.contractValue || 0).toLocaleString()}</span>
+                                    <span>+ Variations: ${(selectedProject.financials?.variationsValue || 0).toLocaleString()}</span>
                                 </div>
                             </div>
-                            <div className="flex gap-4">
-                                <div className="bg-black/20 p-3 rounded-xl text-center min-w-[80px]">
-                                    <Wind size={16} className="mx-auto mb-1 text-sky-300"/>
-                                    <div className="text-xs font-bold text-white">{weatherData.windspeed} km/h</div>
-                                    <div className="text-[10px] text-sky-500/70">WIND</div>
+
+                             {/* Charge Out Card */}
+                            <div className="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-5 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-3 opacity-10">
+                                    <TrendingUp size={48} className="text-violet-400" />
+                                </div>
+                                <h4 className="text-violet-400 font-bold mb-1 text-xs uppercase tracking-wider">Actual Charge Out</h4>
+                                <div className="text-3xl font-black text-white tracking-tight">
+                                    ${(selectedProject.financials?.totalDiaryRevenue || 0).toLocaleString()}
+                                </div>
+                                <div className="mt-2 text-[10px] text-violet-300">
+                                    Generated from Diary Entries
+                                </div>
+                            </div>
+
+                             {/* Total Cost Card */}
+                            <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-3 opacity-10">
+                                    <Wrench size={48} className="text-rose-400" />
+                                </div>
+                                <h4 className="text-rose-400 font-bold mb-1 text-xs uppercase tracking-wider">In-House Costs</h4>
+                                <div className="text-3xl font-black text-white tracking-tight">
+                                    ${(selectedProject.financials?.totalCost || 0).toLocaleString()}
+                                </div>
+                                <div className="mt-2 text-[10px] text-rose-300">
+                                    Labor, Material & Equipment Spend
+                                </div>
+                            </div>
+
+                             {/* Profit Card */}
+                            <div className={`bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 relative overflow-hidden ${!selectedProject.financials?.isProfitable && selectedProject.financials?.profit < 0 ? 'bg-red-500/10 border-red-500/20' : ''}`}>
+                                <h4 className={`font-bold mb-1 text-xs uppercase tracking-wider ${selectedProject.financials?.isProfitable ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    Net Project Profit
+                                </h4>
+                                <div className={`text-3xl font-black tracking-tight ${selectedProject.financials?.isProfitable ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    ${(selectedProject.financials?.profit || 0).toLocaleString()}
+                                </div>
+                                <div className="mt-2 text-[10px] text-emerald-300">
+                                    Contract - Costs
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
-              </div>
 
-              {selectedProject.description && (
-                <div className="bg-black/20 border border-white/5 rounded-2xl p-6 mb-8">
-                  <h4 className="font-bold text-gray-400 mb-3 text-xs uppercase tracking-wider">Description</h4>
-                  <p className="text-gray-200 leading-relaxed">
-                    {selectedProject.description}
-                  </p>
-                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Project Info */}
+                            <div className="bg-stone-800/50 border border-white/5 rounded-2xl p-6">
+                                <h4 className="text-gray-400 font-bold mb-4 flex items-center gap-2 uppercase tracking-wider text-xs">
+                                    <Folder size={16} /> Details
+                                </h4>
+                                <div className="space-y-4 text-gray-200 text-sm">
+                                    <p className="flex justify-between border-b border-white/5 pb-2">
+                                        <span className="text-gray-400">Site Location</span>
+                                        <span className="font-bold text-right max-w-[60%] truncate" title={selectedProject.site}>{selectedProject.site || 'N/A'}</span>
+                                    </p>
+                                    <p className="flex justify-between border-b border-white/5 pb-2">
+                                        <span className="text-gray-400">Status</span>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${getStatusColor(selectedProject.status)}`}>
+                                            {selectedProject.status || 'Active'}
+                                        </span>
+                                    </p>
+                                    <p className="flex justify-between border-b border-white/5 pb-2">
+                                        <span className="text-gray-400">Created</span>
+                                        <span className="font-mono font-bold">{new Date(selectedProject.createdAt).toLocaleDateString()}</span>
+                                    </p>
+                                    <p className="flex justify-between">
+                                        <span className="text-gray-400">Manager</span>
+                                        <span className="font-bold">{selectedProject.createdBy?.username || 'Unknown'}</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Weather Intelligence */}
+                            {weatherData && (
+                                <div className="bg-sky-500/5 border border-sky-500/20 rounded-2xl p-6 relative overflow-hidden">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h4 className="text-sky-400 font-bold mb-1 flex items-center gap-2 uppercase tracking-wider text-xs">
+                                                <Cloud size={16} /> Site Conditions
+                                            </h4>
+                                            <div className="text-3xl font-black text-white flex items-center gap-2">
+                                                {weatherData.temperature}°C <span className="text-sm font-medium text-sky-300/50">Current</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="bg-black/20 p-3 rounded-xl text-center min-w-[80px]">
+                                                <Wind size={16} className="mx-auto mb-1 text-sky-300"/>
+                                                <div className="text-xs font-bold text-white">{weatherData.windspeed} km/h</div>
+                                                <div className="text-[10px] text-sky-500/70">WIND</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                         {selectedProject.description && (
+                            <div className="bg-black/20 border border-white/5 rounded-2xl p-6">
+                            <h4 className="font-bold text-gray-400 mb-3 text-xs uppercase tracking-wider">Description</h4>
+                            <p className="text-gray-200 leading-relaxed">
+                                {selectedProject.description}
+                            </p>
+                            </div>
+                        )}
+                  </div>
               )}
 
-              <div className="flex gap-3 justify-end pt-6 border-t border-white/10">
+              {activeTab === 'documents' && (
+                  <div className="space-y-8 animate-fade-in">
+                      {/* Upload Area */}
+                      <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center bg-stone-800/30 hover:bg-stone-800/50 transition-colors">
+                          <input 
+                            type="file" 
+                            id="file-upload" 
+                            className="hidden" 
+                            onChange={handleFileUpload}
+                            disabled={uploading}
+                          />
+                          <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                              {uploading ? (
+                                  <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"/>
+                              ) : (
+                                  <Upload size={32} className="text-gray-400 mb-2" />
+                              )}
+                              <span className="text-white font-bold">Click to Upload Document</span>
+                              <span className="text-gray-500 text-sm">PDF, Images, Excel, Word (Max 10MB)</span>
+                          </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* General Documents */}
+                          <div className="space-y-3">
+                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Files & Contracts</h4>
+                              {documents.map((doc, idx) => (
+                                  <div key={idx} className="bg-stone-800 p-3 rounded-xl border border-white/5 flex items-center gap-3 hover:border-indigo-500/50 transition-all">
+                                      <div className="p-2 bg-indigo-500/10 rounded-lg"><FileText className="text-indigo-400" size={16} /></div>
+                                      <div className="flex-1 min-w-0"><div className="font-bold text-white truncate text-sm">{doc.title}</div><div className="text-[10px] text-gray-500">{new Date(doc.createdAt).toLocaleDateString()}</div></div>
+                                      <a href={doc.metadata?.url || '#'} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"><ExternalLink size={16} /></a>
+                                  </div>
+                              ))}
+                              {documents.length === 0 && <div className="text-gray-500 text-xs italic">No files uploaded.</div>}
+                          </div>
+
+                          {/* Quotes */}
+                          <div className="space-y-3">
+                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Quotes</h4>
+                              {(selectedProject.quotes || []).map((quote, idx) => (
+                                  <div key={idx} className="bg-stone-800 p-3 rounded-xl border border-white/5 flex items-center gap-3 hover:border-violet-500/50 transition-all cursor-pointer" onClick={() => navigate(`/quotes/builder`, { state: { projectId: selectedProject.id, quoteId: quote.id } })}>
+                                      <div className="p-2 bg-violet-500/10 rounded-lg"><DollarSign className="text-violet-400" size={16} /></div>
+                                      <div className="flex-1 min-w-0">
+                                          <div className="font-bold text-white truncate text-sm">{quote.name}</div>
+                                          <div className="text-[10px] text-gray-500 flex gap-2">
+                                              <span>{new Date(quote.createdAt).toLocaleDateString()}</span>
+                                              <span className={`uppercase font-bold ${quote.status==='approved'?'text-emerald-400':'text-amber-400'}`}>{quote.status}</span>
+                                          </div>
+                                      </div>
+                                  </div>
+                              ))}
+                              {(!selectedProject.quotes || selectedProject.quotes.length === 0) && <div className="text-gray-500 text-xs italic">No quotes found.</div>}
+                          </div>
+
+                          {/* Safety Forms */}
+                          <div className="space-y-3">
+                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Safety & Compliance</h4>
+                              {(selectedProject.safetyForms || []).map((form, idx) => (
+                                  <div key={idx} className="bg-stone-800 p-3 rounded-xl border border-white/5 flex items-center gap-3 hover:border-rose-500/50 transition-all cursor-pointer" onClick={() => navigate(`/safety/${form.id}`)}>
+                                      <div className="p-2 bg-rose-500/10 rounded-lg"><CheckCircle2 className="text-rose-400" size={16} /></div>
+                                      <div className="flex-1 min-w-0"><div className="font-bold text-white truncate text-sm">{form.title}</div><div className="text-[10px] text-gray-500">{form.type} • {new Date(form.createdAt).toLocaleDateString()}</div></div>
+                                  </div>
+                              ))}
+                              {(!selectedProject.safetyForms || selectedProject.safetyForms.length === 0) && <div className="text-gray-500 text-xs italic">No safety forms.</div>}
+                          </div>
+
+                          {/* Diaries */}
+                          <div className="space-y-3">
+                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Recent Diaries</h4>
+                              {(selectedProject.Diaries || selectedProject.diaries || []).slice(0, 5).map((diary, idx) => (
+                                  <div key={idx} className="bg-stone-800 p-3 rounded-xl border border-white/5 flex items-center gap-3 hover:border-emerald-500/50 transition-all cursor-pointer" onClick={() => navigate(`/diary`, { state: { date: diary.date, projectId: selectedProject.id } })}>
+                                      <div className="p-2 bg-emerald-500/10 rounded-lg"><Calendar className="text-emerald-400" size={16} /></div>
+                                      <div className="flex-1 min-w-0"><div className="font-bold text-white truncate text-sm">{new Date(diary.date).toLocaleDateString()}</div><div className="text-[10px] text-gray-500">{diary.weather || 'No weather data'}</div></div>
+                                  </div>
+                              ))}
+                              {(!selectedProject.Diaries && !selectedProject.diaries) && <div className="text-gray-500 text-xs italic">No diary entries.</div>}
+                          </div>
+                      </div>
+                  </div>
+              )}
+
+              <div className="flex gap-3 justify-end pt-6 border-t border-white/10 mt-6">
                 <button
                   onClick={() => handleEditProject(selectedProject)}
                   className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white rounded-xl transition-colors font-bold text-sm border border-amber-500/20"

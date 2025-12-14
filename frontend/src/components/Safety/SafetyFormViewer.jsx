@@ -48,7 +48,7 @@ const SafetyFormViewer = () => {
   const fetchProjects = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5003/api/projects', {
+        const res = await axios.get('/api/projects', {
             headers: { Authorization: `Bearer ${token}` }
         });
         const projectData = Array.isArray(res.data) ? res.data : (res.data.data || []);
@@ -59,7 +59,7 @@ const SafetyFormViewer = () => {
   const fetchForm = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:5003/api/safety/${id}`, {
+      const res = await axios.get(`/api/safety/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -126,12 +126,12 @@ const SafetyFormViewer = () => {
       if (!payload.projectId && projects.length > 0) payload.projectId = projects[0].id;
 
       if (isNew) {
-        const res = await axios.post('http://localhost:5003/api/safety', payload, {
+        const res = await axios.post('/api/safety', payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         navigate(`/safety/${res.data.id}`);
       } else {
-        await axios.put(`http://localhost:5003/api/safety/${id}`, payload, {
+        await axios.put(`/api/safety/${id}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         alert('Saved successfully!');
@@ -174,7 +174,7 @@ const SafetyFormViewer = () => {
     
     try {
         const token = localStorage.getItem('token');
-        await axios.post(`http://localhost:5003/api/safety/${id}/sign`, {
+        await axios.post(`/api/safety/${id}/sign`, {
             signatureData,
             signerName: signerName,
             signerRole: 'Worker' 

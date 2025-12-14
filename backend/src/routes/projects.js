@@ -23,7 +23,8 @@ const {
   updateProject,
   deleteProject,
   geocodeProject,
-  getProjectMapStats
+  getProjectMapStats,
+  addProjectDocument
 } = require('../controllers/projectController');
 
 router.use(authenticateToken);
@@ -35,5 +36,6 @@ router.post('/', createProject);
 router.put('/:id', updateProject);
 router.delete('/:id', deleteProject);
 router.post('/:id/geocode', geocodeProject);
+router.post('/:id/documents', addProjectDocument);
 
 module.exports = router;

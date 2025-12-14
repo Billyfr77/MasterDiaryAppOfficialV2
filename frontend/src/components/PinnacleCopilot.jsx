@@ -5,7 +5,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Send, X, Minimize, Maximize, BrainCircuit, MessageSquare, ChevronRight } from 'lucide-react';
 import { api } from '../utils/api';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 
 const PinnacleCopilot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,6 +17,7 @@ const PinnacleCopilot = () => {
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef(null);
   const location = useLocation();
+  const params = useParams(); // For path-based IDs
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -31,8 +32,31 @@ const PinnacleCopilot = () => {
     setTyping(true);
 
     try {
-      // Gather context from current page
+      // --- GATHER ENHANCED CONTEXT FROM CURRENT PAGE ---
+      let screenName = 'Unknown';
+      let currentProjectId = null;
+      let currentQuoteId = null;
+
+      if (location.pathname.includes('/projects')) screenName = 'Projects Dashboard';
+      if (location.pathname.includes('/projects/') && params.id) {
+        screenName = 'Project Details';
+        currentProjectId = params.id;
+      }
+      if (location.pathname.includes('/quotes')) screenName = 'Quotes List';
+      if (location.pathname.includes('/quotes/builder')) screenName = 'Quote Builder';
+      if (location.pathname.includes('/quotes/builder/') && params.id) {
+        screenName = 'Quote Builder (Editing)';
+        currentQuoteId = params.id;
+        currentProjectId = location.state?.projectId || currentProjectId; // Get project ID from location state if available
+      }
+      if (location.pathname.includes('/diary')) screenName = 'Site Diary';
+      if (location.pathname.includes('/resources')) screenName = 'Resource Allocator';
+      if (location.pathname.includes('/map-builder')) screenName = 'Map Builder';
+
       const context = {
+        screen: screenName,
+        currentProjectId: currentProjectId,
+        currentQuoteId: currentQuoteId,
         path: location.pathname,
         timestamp: new Date().toISOString()
       };

@@ -101,7 +101,7 @@ const InvoiceBuilder = () => {
           setInvoice(prev => ({ ...prev, clientEmail: location.state.clientEmail }));
       }
 
-      // 3. Load Items (from Diary or Quote)
+      // 3. Load Items (from Diary, Quote, or Job Board)
       if (location.state?.diaryItems) {
         const newItems = location.state.diaryItems.map(item => {
           const qty = parseFloat(item.duration || item.quantity || 1);
@@ -139,6 +139,15 @@ const InvoiceBuilder = () => {
             amount: qty * rate
           };
         });
+        setInvoice(prev => ({ ...prev, items: newItems }));
+      } else if (location.state?.jobItems) {
+        // Job Board Integration
+        const newItems = location.state.jobItems.map(job => ({
+            description: `${job.jobNumber} - ${job.serviceType || 'Service'}`, // Use Job Number & Service
+            quantity: 1,
+            rate: parseFloat(job.cost) || 0,
+            amount: parseFloat(job.cost) || 0
+        }));
         setInvoice(prev => ({ ...prev, items: newItems }));
       }
     };

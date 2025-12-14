@@ -22,6 +22,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       Staff.hasMany(models.Diary, { foreignKey: 'workerId' });
+      Staff.hasMany(models.Equipment, { foreignKey: 'assignedDriverId', as: 'assignedEquipment' });
     }
 
     // Instance method to check password

@@ -1,0 +1,16 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - '-t'
+      - $_IMAGE_NAME
+      - '--build-arg'
+      - 'VITE_GOOGLE_MAPS_API_KEY=$_VITE_GOOGLE_MAPS_API_KEY'
+      - .
+images:
+  - $_IMAGE_NAME
+substitutions:
+  _IMAGE_NAME: 'gcr.io/gen-lang-client-0889466012/master-diary-app-v2'
+  _VITE_GOOGLE_MAPS_API_KEY: 'default_value'
+options:
+  substitutionOption: 'ALLOW_LOOSE'

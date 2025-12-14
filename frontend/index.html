@@ -1,6 +1,24 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) {
+              console.log('Force unregistering SW:', registration);
+              registration.unregister();
+            }
+          });
+        });
+        // Also try immediately
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+           for(let registration of registrations) {
+              registration.unregister();
+           }
+        });
+      }
+    </script>
     <meta charset="UTF-8" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />

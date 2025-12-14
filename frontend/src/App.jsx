@@ -4,13 +4,16 @@
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command, GitBranch, Briefcase, CreditCard, Activity, PenTool, Menu, X } from 'lucide-react'
 import { NotificationProvider } from './context/NotificationContext'
 import { SettingsProvider } from './context/SettingsContext'
+import { UIProvider } from './context/UIContext'
+import { DataProvider } from './context/DataContext'
+import ErrorBoundary from './components/ErrorBoundary'
 import CommandPalette from './components/CommandPalette'
 import Login from './components/Login'
 import Landing from './components/Landing'
@@ -32,16 +35,107 @@ import QuoteBuilder from './components/QuoteBuilder'
 import VisualMapBuilder from './components/VisualMapBuilder'
 import WorkflowBuilder from './components/WorkflowBuilder/WorkflowBuilder'
 import InvoiceBuilder from './components/InvoiceBuilder'
+import JobBoard from './components/JobBoard'
 import XeroCallback from './components/XeroCallback'
 import PinnacleCopilot from './components/PinnacleCopilot'
 import SafetyDashboard from './components/Safety/SafetyDashboard'
 import SafetyFormViewer from './components/Safety/SafetyFormViewer'
-import { ClipboardCheck } from 'lucide-react'
+import { ClipboardCheck, Layout } from 'lucide-react'
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
   const [darkMode, setDarkMode] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Handle graceful logout without reload
+  useEffect(() => {
+    const handleLogout = () => setToken('');
+    window.addEventListener('auth:logout', handleLogout);
+    return () => window.removeEventListener('auth:logout', handleLogout);
+  }, []);
+
+  // --- DRAG TO SCROLL NAV ---
+  const navRef = useRef(null);
+  const [isNavDragging, setIsNavDragging] = useState(false);
+  const [navStartX, setNavStartX] = useState(0);
+  const [navScrollLeft, setNavScrollLeft] = useState(0);
+
+  // --- CUSTOM SCROLLBAR STATE ---
+  const [scrollThumbWidth, setScrollThumbWidth] = useState(0);
+  const [scrollThumbLeft, setScrollThumbLeft] = useState(0);
+  const [isThumbDragging, setIsThumbDragging] = useState(false);
+  const [thumbStartX, setThumbStartX] = useState(0);
+  const [thumbStartScroll, setThumbStartScroll] = useState(0);
+
+  // Update Scrollbar on Mount/Resize
+  useEffect(() => {
+    const updateScrollbar = () => {
+        if (navRef.current) {
+            const { clientWidth, scrollWidth, scrollLeft } = navRef.current;
+            const widthPercentage = (clientWidth / scrollWidth) * 100;
+            const leftPercentage = (scrollLeft / scrollWidth) * 100;
+            setScrollThumbWidth(widthPercentage < 100 ? widthPercentage : 0);
+            setScrollThumbLeft(leftPercentage);
+        }
+    };
+    updateScrollbar();
+    window.addEventListener('resize', updateScrollbar);
+    return () => window.removeEventListener('resize', updateScrollbar);
+  }, []);
+
+  const handleNavScroll = (e) => {
+    const { scrollWidth, scrollLeft } = e.target;
+    setScrollThumbLeft((scrollLeft / scrollWidth) * 100);
+  };
+
+  const handleNavMouseDown = (e) => {
+    setIsNavDragging(true);
+    setNavStartX(e.pageX - navRef.current.offsetLeft);
+    setNavScrollLeft(navRef.current.scrollLeft);
+  };
+
+  const handleNavMouseMove = (e) => {
+    if (!isNavDragging) return;
+    e.preventDefault();
+    const x = e.pageX - navRef.current.offsetLeft;
+    const walk = (x - navStartX) * 2; 
+    navRef.current.scrollLeft = navScrollLeft - walk;
+  };
+
+  const handleNavMouseUp = () => setIsNavDragging(false);
+  const handleNavMouseLeave = () => setIsNavDragging(false);
+
+  // Thumb Drag Handlers
+  const handleThumbMouseDown = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setIsThumbDragging(true);
+      setThumbStartX(e.pageX);
+      setThumbStartScroll(navRef.current.scrollLeft);
+  };
+
+  useEffect(() => {
+      const handleGlobalMove = (e) => {
+          if (!isThumbDragging || !navRef.current) return;
+          e.preventDefault();
+          const { scrollWidth, clientWidth } = navRef.current;
+          const deltaX = e.pageX - thumbStartX;
+          const scrollRatio = scrollWidth / clientWidth; // Approximation
+          navRef.current.scrollLeft = thumbStartScroll + (deltaX * scrollRatio);
+      };
+      
+      const handleGlobalUp = () => setIsThumbDragging(false);
+
+      if (isThumbDragging) {
+          window.addEventListener('mousemove', handleGlobalMove);
+          window.addEventListener('mouseup', handleGlobalUp);
+      }
+      return () => {
+          window.removeEventListener('mousemove', handleGlobalMove);
+          window.removeEventListener('mouseup', handleGlobalUp);
+      };
+  }, [isThumbDragging, thumbStartX, thumbStartScroll]);
+
 
   const handleLogin = (newToken) => {
     localStorage.setItem('token', newToken);
@@ -55,16 +149,27 @@ function App() {
   }
 
   return (
-    <NotificationProvider>
-      <SettingsProvider>
-        <DndProvider backend={HTML5Backend}>
-          <div className="min-h-screen flex flex-col text-gray-900 dark:text-gray-100 font-sans bg-fixed bg-cover bg-center transition-all duration-500"
+    <ErrorBoundary>
+      <UIProvider>
+        <NotificationProvider>
+          <SettingsProvider>
+            <DataProvider>
+              <DndProvider backend={HTML5Backend}>
+                <div className="min-h-screen flex flex-col text-gray-900 dark:text-gray-100 font-sans bg-fixed bg-cover bg-center transition-all duration-500"
              style={{
                backgroundImage: darkMode 
                  ? 'url("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop")' 
                  : 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)'
              }}
         >
+          <style>{`
+            .custom-scrollbar-x::-webkit-scrollbar {
+              height: 0px; /* Hide default scrollbar since we have custom one */
+            }
+            .custom-scrollbar-x {
+              scrollbar-width: none; /* Firefox */
+            }
+          `}</style>
           {/* Dark Overlay for readability */}
           {darkMode && <div className="fixed inset-0 bg-stone-950/85 z-[-1] pointer-events-none" />}
 
@@ -95,6 +200,7 @@ function App() {
                     <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-2">Core</div>
                     <NavLink to="/pulse" icon={<Activity size={18} />} label="Pulse Dashboard" onClick={() => setMobileMenuOpen(false)} />
                     <NavLink to="/projects" icon={<Briefcase size={18} />} label="Projects" onClick={() => setMobileMenuOpen(false)} />
+                    <NavLink to="/jobs" icon={<Layout size={18} />} label="Job Board" onClick={() => setMobileMenuOpen(false)} />
                     <NavLink to="/diary" icon={<PenTool size={18} />} label="Site Diary" onClick={() => setMobileMenuOpen(false)} />
                     
                     <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-4">Finance</div>
@@ -122,7 +228,7 @@ function App() {
           {!isPortal && (
             <header className="sticky top-0 z-50 glass-panel border-b-0 rounded-none shadow-lg transition-all duration-300">
               <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-                <div className="flex items-center gap-4 md:gap-8">
+                <div className="flex items-center gap-4 md:gap-8 flex-1 min-w-0">
                   {/* Hamburger for Mobile */}
                   <button 
                     onClick={() => setMobileMenuOpen(true)} 
@@ -131,32 +237,61 @@ function App() {
                     <Menu size={24} />
                   </button>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                       <Home className="text-white w-5 h-5" />
                     </div>
                     <span className="font-bold text-xl tracking-tight hidden md:block">MasterDiary<span className="text-indigo-400">OS</span></span>
                   </div>
                   
-                  <nav className="hidden md:flex items-center gap-1 overflow-x-auto no-scrollbar">
-                    <NavLink to="/pulse" icon={<Activity size={16} />} label="Pulse" />
-                    <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" />
-                    <NavLink to="/diary" icon={<PenTool size={16} />} label="Diary" />
-                    <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" />
-                    <NavLink to="/quotes" icon={<DollarSign size={16} />} label="Quotes" />
-                    <NavLink to="/invoices" icon={<CreditCard size={16} />} label="Invoices" />
-                    <NavLink to="/clients" icon={<Users size={16} />} label="Clients" />
-                    <NavLink to="/map-builder" icon={<Command size={16} />} label="Map" />
-                    <NavLink to="/nodes" icon={<Package size={16} />} label="Materials" />
-                    <NavLink to="/staff" icon={<Users size={16} />} label="Staff" />
-                    <NavLink to="/equipment" icon={<Wrench size={16} />} label="Equipment" />
-                    <NavLink to="/workflows" icon={<GitBranch size={16} />} label="Flows" />
-                    <NavLink to="/safety" icon={<ClipboardCheck size={16} />} label="Safety" />
-                    <NavLink to="/reports" icon={<FileText size={16} />} label="Reports" />
-                  </nav>
+                  {/* SCROLLABLE NAV CONTAINER */}
+                  <div className="hidden md:flex flex-col flex-1 min-w-0 relative group/nav h-full justify-center">
+                      <nav 
+                        ref={navRef}
+                        className="flex items-center gap-1 overflow-x-auto custom-scrollbar-x cursor-grab active:cursor-grabbing select-none h-full items-center"
+                        onMouseDown={handleNavMouseDown}
+                        onMouseLeave={handleNavMouseLeave}
+                        onMouseUp={handleNavMouseUp}
+                        onMouseMove={handleNavMouseMove}
+                        onScroll={handleNavScroll}
+                        onWheel={(e) => { 
+                          if (navRef.current) {
+                            navRef.current.scrollLeft += e.deltaY;
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <NavLink to="/pulse" icon={<Activity size={16} />} label="Pulse" />
+                        <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" />
+                        <NavLink to="/jobs" icon={<Layout size={16} />} label="Jobs" />
+                        <NavLink to="/diary" icon={<PenTool size={16} />} label="Diary" />
+                        <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" />
+                        <NavLink to="/quotes" icon={<DollarSign size={16} />} label="Quotes" />
+                        <NavLink to="/invoices" icon={<CreditCard size={16} />} label="Invoices" />
+                        <NavLink to="/clients" icon={<Users size={16} />} label="Clients" />
+                        <NavLink to="/map-builder" icon={<Command size={16} />} label="Map" />
+                        <NavLink to="/nodes" icon={<Package size={16} />} label="Materials" />
+                        <NavLink to="/staff" icon={<Users size={16} />} label="Staff" />
+                        <NavLink to="/equipment" icon={<Wrench size={16} />} label="Equipment" />
+                        <NavLink to="/workflows" icon={<GitBranch size={16} />} label="Flows" />
+                        <NavLink to="/safety" icon={<ClipboardCheck size={16} />} label="Safety" />
+                        <NavLink to="/reports" icon={<FileText size={16} />} label="Reports" />
+                      </nav>
+
+                      {/* Custom Scrollbar Handle */}
+                      {scrollThumbWidth > 0 && scrollThumbWidth < 100 && (
+                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5 rounded-full opacity-0 group-hover/nav:opacity-100 transition-opacity duration-200">
+                              <div 
+                                  className="absolute top-0 bottom-0 bg-indigo-500 rounded-full cursor-grab active:cursor-grabbing hover:bg-indigo-400"
+                                  style={{ left: `${scrollThumbLeft}%`, width: `${scrollThumbWidth}%` }}
+                                  onMouseDown={handleThumbMouseDown}
+                              />
+                          </div>
+                      )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-shrink-0">
                    <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
                       {darkMode ? <Sun size={20} /> : <Moon size={20} />}
                    </button>
@@ -179,6 +314,7 @@ function App() {
               <Route path="/pulse" element={<UltimatePulseDashboard />} />
               <Route path="/dashboard" element={<UltimatePulseDashboard />} />
               <Route path="/projects" element={<EnhancedProjects />} />
+              <Route path="/jobs" element={<JobBoard />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/staff" element={<EnhancedStaff />} />
               <Route path="/diary" element={<PaintDiary />} />
@@ -205,11 +341,13 @@ function App() {
 
           {!isPortal && <PinnacleCopilot />}
         </div>
-              </DndProvider>
-            </SettingsProvider>
-          </NotificationProvider>
-        )
-      }
+                            </DndProvider>
+                          </DataProvider>
+                        </SettingsProvider>
+                      </NotificationProvider>
+                    </UIProvider>
+                  </ErrorBoundary>
+                )      }
 // Helper Component for Nav Links
 const NavLink = ({ to, icon, label, onClick }) => {
   const location = useLocation()

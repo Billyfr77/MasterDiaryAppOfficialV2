@@ -21,13 +21,13 @@ import App from './App.jsx'
 import './App.css'
 
 // Mobile Drag and Drop Polyfill
-import { polyfill } from "mobile-drag-drop";
-import { scrollBehaviourDragImageTranslateOverride } from "mobile-drag-drop/scroll-behaviour";
-import "mobile-drag-drop/default.css";
+// import { polyfill } from "mobile-drag-drop";
+// import { scrollBehaviourDragImageTranslateOverride } from "mobile-drag-drop/scroll-behaviour";
+// import "mobile-drag-drop/default.css";
 
-polyfill({
-  dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride
-});
+// polyfill({
+//   dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride
+// });
 
 // Fix for iOS to prevent scrolling while dragging
 document.addEventListener("touchmove", (e) => {
@@ -35,6 +35,18 @@ document.addEventListener("touchmove", (e) => {
     e.preventDefault();
   }
 }, { passive: false });
+
+console.log('App Mounting - Version 2.0'); // DEBUG LOG
+
+// FORCE UNREGISTER SERVICE WORKERS (Fix for Refresh Loop)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (const registration of registrations) {
+      console.log('Unregistering SW:', registration);
+      registration.unregister();
+    }
+  });
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

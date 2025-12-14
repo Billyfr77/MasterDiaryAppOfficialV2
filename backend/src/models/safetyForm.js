@@ -8,6 +8,9 @@ module.exports = (sequelize, DataTypes) => {
       SafetyForm.belongsTo(models.Project, { foreignKey: 'projectId', as: 'project' });
       SafetyForm.belongsTo(models.User, { foreignKey: 'createdBy', as: 'creator' });
       // Self-referencing for templates? Maybe later.
+      if (models.SafetyTemplate) {
+        SafetyForm.belongsTo(models.SafetyTemplate, { foreignKey: 'templateId', as: 'template' });
+      }
     }
   }
 
@@ -71,6 +74,18 @@ module.exports = (sequelize, DataTypes) => {
         model: 'Projects',
         key: 'id'
       }
+    },
+    templateId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'SafetyTemplates',
+        key: 'id'
+      }
+    },
+    version: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1
     },
     createdBy: {
       type: DataTypes.UUID,

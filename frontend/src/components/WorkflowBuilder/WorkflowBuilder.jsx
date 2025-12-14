@@ -35,6 +35,8 @@ const nodeTypes = {
   input: CustomNode,
   output: CustomNode,
   decision: DecisionNode,
+  trigger: CustomNode,
+  action: CustomNode,
   quoteAction: CustomNode,
   diaryAction: CustomNode,
   resourceAction: CustomNode
@@ -570,6 +572,8 @@ const WorkflowBuilderContent = () => {
   // Quick Add Menu Items
   const quickAddItems = [
       { type: 'default', label: 'Task', icon: Clipboard, color: 'text-blue-400' },
+      { type: 'trigger', label: 'Trigger', icon: Zap, color: 'text-amber-400' },
+      { type: 'action', label: 'Action', icon: Play, color: 'text-indigo-400' },
       { type: 'decision', label: 'Logic', icon: GitFork, color: 'text-orange-400' },
       { type: 'milestone', label: 'Milestone', icon: Bell, color: 'text-yellow-400' },
       { type: 'approval', label: 'Approval', icon: User, color: 'text-purple-400' },
@@ -728,7 +732,12 @@ const WorkflowBuilderContent = () => {
         </div>
 
         {/* Canvas Area */}
-        <div className="flex-1 w-full h-full relative" ref={reactFlowWrapper}>
+        <div 
+            className="flex-1 w-full h-full relative" 
+            ref={reactFlowWrapper}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+        >
           {viewMode === 'graph' && (
             <ReactFlow
               nodes={nodes}
@@ -739,8 +748,6 @@ const WorkflowBuilderContent = () => {
               onConnectStart={onConnectStart}
               onConnectEnd={onConnectEnd}
               onInit={setReactFlowInstance}
-              onDrop={onDrop}
-              onDragOver={onDragOver}
               onNodeClick={onNodeClick}
               onPaneClick={onPaneClick}
               onPaneContextMenu={onPaneContextMenu}
