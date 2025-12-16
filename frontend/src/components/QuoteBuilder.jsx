@@ -26,13 +26,12 @@ import {
   User, Wrench, Package, Plus, Save, Search, Trash2,
   Crown, List, GripVertical, CheckCircle2, X, Sparkles, MapPin, Eye, EyeOff, UploadCloud,
   Settings, FileText, Download, Calendar, FileType, Ruler, PenTool, MessageSquare, Send, Calculator, Maximize, Minimize,
-  Layout, Focus, Image as ImageIcon, Zap, DollarSign
+  Layout, Focus, Image as ImageIcon, Zap, DollarSign, Wand2, ArrowRight
 } from 'lucide-react'
 import { api } from '../utils/api'
 import CountUp from 'react-countup'
 import MapBackground from './MapBackground'
 import GeoreferenceModal from './GeoreferenceModal'
-import VisualTakeoffCanvas from './VisualTakeoffCanvas'
 import GoogleServicesSuggestions from './GoogleServicesSuggestions'
 import { generateQuotePDF } from '../utils/pdfGenerator'
 import ClientSelector from './Clients/ClientSelector'
@@ -49,464 +48,45 @@ const formatCurrency = (amount) => {
   }).format(amount || 0)
 }
 
-// Simple material coverage database (Mock)
+// SMART MATERIAL DATABASE
 const MATERIAL_COVERAGE = {
-  'paint': { coverage: 350, unit: 'sq ft/gal', waste: 1.1 }, // 350 sqft per gal
-  'drywall': { coverage: 32, unit: 'sq ft/sheet', waste: 1.15 }, // 4x8 sheet
-  'flooring': { coverage: 15, unit: 'sq ft/box', waste: 1.1 },
-  'insulation': { coverage: 40, unit: 'sq ft/roll', waste: 1.05 },
-  'concrete': { coverage: 80, unit: 'sq ft/yd (4in)', waste: 1.05 }, // approx for 4 inch slab
+  // Floor
+  'flooring': { coverage: 15, unit: 'sq ft/box', waste: 1.1, type: 'floor' },
+  'carpet': { coverage: 12, unit: 'sq ft/roll', waste: 1.15, type: 'floor' },
+  'tile': { coverage: 10, unit: 'sq ft/box', waste: 1.1, type: 'floor' },
+  'concrete': { coverage: 80, unit: 'sq ft/yd (4in)', waste: 1.05, type: 'floor' },
+  // Wall
+  'paint': { coverage: 350, unit: 'sq ft/gal', waste: 1.1, type: 'wall' },
+  'drywall': { coverage: 32, unit: 'sq ft/sheet', waste: 1.15, type: 'wall' },
+  'plaster': { coverage: 50, unit: 'sq ft/bag', waste: 1.1, type: 'wall' },
+  'insulation': { coverage: 40, unit: 'sq ft/roll', waste: 1.05, type: 'wall' },
+  // Linear
+  'skirting': { unit: 'linear ft', waste: 1.1, type: 'linear' },
+  'cornice': { unit: 'linear ft', waste: 1.1, type: 'linear' },
+  'framing': { unit: 'linear ft', waste: 1.15, type: 'linear' } 
 }
 
 // ================================
-// CONFIGURATION MODAL (Input on Drop)
+// SMART ACTIONS MENU
 // ================================
-
-const ConfigModal = ({ isOpen, onClose, onConfirm, item, suggestedQuantity }) => {
-  const [value, setValue] = useState(suggestedQuantity || 1)
-  const inputRef = useRef(null)
-
-  useEffect(() => {
-    if (isOpen) {
-      setValue(suggestedQuantity || 1)
-      if (inputRef.current) setTimeout(() => inputRef.current.focus(), 100)
-    }
-  }, [isOpen, suggestedQuantity])
-
-  if (!isOpen || !item) return null
-
-  const isTimeBased = item.type === 'staff' || item.type === 'equipment'
-  const label = isTimeBased ? 'Hours Worked' : 'Units'
-  const unit = isTimeBased ? 'hrs' : 'units'
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-stone-900 border border-white/10 rounded-2xl p-6 w-80 shadow-2xl transform transition-all scale-100">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-black text-white uppercase tracking-wide">Add {item.type}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+const SmartActionsMenu = ({ node, onAutoFit }) => {
+    if (!node || node.type !== 'dimension') return null;
+    return (
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-2 bg-stone-900 border border-white/20 p-1.5 rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 pointer-events-auto">
+            <button onClick={(e) => { e.stopPropagation(); onAutoFit(node, 'basic'); }} className="flex items-center gap-1.5 px-2 py-1 hover:bg-white/10 rounded-lg text-[10px] font-bold text-white uppercase transition-colors" title="Add Paint & Floor">
+                <Sparkles size={12} className="text-amber-400" /> Auto-Fit
+            </button>
+            <div className="w-px h-4 bg-white/10 my-auto" />
+            <button onClick={(e) => { e.stopPropagation(); onAutoFit(node, 'paint'); }} className="p-1.5 hover:bg-white/10 rounded-lg text-indigo-400" title="Add Wall Paint"><PenTool size={12}/></button>
+            <button onClick={(e) => { e.stopPropagation(); onAutoFit(node, 'floor'); }} className="p-1.5 hover:bg-white/10 rounded-lg text-emerald-400" title="Add Flooring"><Layout size={12}/></button>
         </div>
-        
-        <div className="mb-6">
-          <div className="text-sm font-bold text-gray-300 mb-2">{item.name}</div>
-          <label className="block text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">
-            {label}
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              ref={inputRef}
-              type="number"
-              min="0.1"
-              step="0.5"
-              value={value}
-              onChange={(e) => setValue(parseFloat(e.target.value) || 0)}
-              onKeyDown={(e) => e.key === 'Enter' && onConfirm(value)}
-              className="flex-1 bg-black/30 border-2 border-indigo-500/50 rounded-xl px-4 py-2 text-xl font-mono font-bold text-white focus:border-indigo-500 focus:outline-none text-center"
-            />
-            <span className="text-sm font-bold text-gray-500">{unit}</span>
-          </div>
-          {suggestedQuantity && (
-            <div className="mt-2 text-xs text-emerald-400 font-bold flex items-center gap-1">
-              <Sparkles size={10} /> AI Suggested based on dimensions
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-3">
-          <button 
-            onClick={onClose}
-            className="flex-1 px-4 py-2 rounded-xl font-bold text-gray-400 hover:bg-white/5 transition-colors"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={() => onConfirm(value)}
-            className="flex-1 px-4 py-2 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/30 transition-all"
-          >
-            Add Item
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+    );
+};
 
 // ================================
-// QUOTE SETTINGS MODAL
+// SENIOR ESTIMATOR AI (SMART AI)
 // ================================
-
-const QuoteSettingsModal = ({ isOpen, onClose, settings, setSettings, projects, selectedProject }) => {
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-stone-900 border border-white/10 rounded-2xl p-6 w-[500px] shadow-2xl transform transition-all scale-100">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <Settings className="text-indigo-500" size={24} />
-            <h3 className="text-xl font-black text-white uppercase tracking-wide">Quote Settings</h3>
-          </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Client</label>
-            <ClientSelector 
-                selectedClient={settings.clientId ? { id: settings.clientId, name: settings.clientName } : null}
-                onSelect={(client) => setSettings({ ...settings, clientId: client?.id || null, clientName: client?.name || '' })}
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Valid Until</label>
-              <input 
-                type="date" 
-                value={settings.validUntil} 
-                onChange={e => setSettings({...settings, validUntil: e.target.value})}
-                className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none"
-              />
-            </div>
-            <div>
-               <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Status</label>
-               <select
-                 value={settings.status}
-                 onChange={e => setSettings({...settings, status: e.target.value})}
-                 className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none"
-               >
-                 <option value="DRAFT">Draft</option>
-                 <option value="SENT">Sent</option>
-                 <option value="APPROVED">Approved</option>
-                 <option value="REJECTED">Rejected</option>
-               </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Terms & Conditions</label>
-            <textarea 
-              value={settings.terms} 
-              onChange={e => setSettings({...settings, terms: e.target.value})}
-              className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none h-32 text-sm"
-              placeholder="Enter standard terms..."
-            />
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <button 
-            onClick={onClose}
-            className="px-6 py-2 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/30 transition-all"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ================================
-// NODES: Dimension (Visual Takeoff)
-// ================================
-
-const DimensionNode = ({ data, selected }) => {
-  const { width = 100, height = 100, label, onDelete, onResize } = data
-  const area = ((width / 20) * (height / 20)).toFixed(1) // Assuming 20px = 1 unit (ft/m)
-
-  return (
-    <div className={`
-       relative rounded-lg border-2 border-dashed border-blue-400/50 bg-blue-500/10 backdrop-blur-sm group
-       ${selected ? 'ring-2 ring-blue-400' : ''}
-    `} style={{ width: '100%', height: '100%', minWidth: 50, minHeight: 50 }}>
-      <NodeResizer 
-        minWidth={50} 
-        minHeight={50} 
-        isVisible={selected} 
-        lineClassName="border-blue-400" 
-        handleClassName="h-3 w-3 bg-blue-500 border-2 border-white rounded"
-      />
-      
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-         <span className="text-xs font-bold text-blue-200 uppercase tracking-widest">{label || 'Room'}</span>
-         <span className="text-xl font-black text-white drop-shadow-md">{area} <span className="text-xs font-normal opacity-70">sq ft</span></span>
-      </div>
-
-      <button 
-        onClick={(e) => { e.stopPropagation(); onDelete?.() }}
-        className="absolute -top-3 -right-3 p-1.5 rounded-full bg-red-500 text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto"
-      >
-        <X size={12} strokeWidth={3} />
-      </button>
-
-      {/* Target handle for dropping materials onto this dimension */}
-      <Handle type="target" position={Position.Top} className="!w-full !h-full !opacity-0 !bg-transparent !border-none !rounded-none" />
-    </div>
-  )
-}
-
-// ================================
-// NODES: Zone (Grouping)
-// ================================
-
-const ZoneNode = ({ data, selected }) => {
-  const { label, onDelete, width, height } = data
-  
-  return (
-    <div className={`
-      relative rounded-3xl border-2 border-white/10 bg-white/5 group transition-all duration-300
-      ${selected ? 'border-indigo-500/50 bg-indigo-500/5 ring-2 ring-indigo-500/20' : ''}
-    `} style={{ width: '100%', height: '100%', minWidth: 100, minHeight: 100 }}>
-       <NodeResizer 
-        minWidth={100} 
-        minHeight={100} 
-        isVisible={selected} 
-        lineClassName="border-indigo-400/30" 
-        handleClassName="h-2 w-2 bg-indigo-500/50 border border-white/50 rounded-full"
-      />
-      <div className="absolute top-4 left-4 pointer-events-none">
-        <span className="text-xs font-black text-white/20 uppercase tracking-[0.2em]">{label || 'ZONE'}</span>
-      </div>
-      
-       <button 
-        onClick={(e) => { e.stopPropagation(); onDelete?.() }}
-        className="absolute -top-2 -right-2 p-1 rounded-full bg-stone-800 text-gray-500 hover:text-white border border-white/10 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto"
-      >
-        <X size={10} strokeWidth={3} />
-      </button>
-    </div>
-  )
-}
-
-// ================================
-// NODES: Standard Item (Solid)
-// ================================
-
-const GlassNode = ({ data, selected }) => {
-  const { label, subLabel, quantity, type, onDelete } = data
-  
-  let containerClass = "bg-gradient-to-br from-indigo-600 to-violet-700 border-2 border-indigo-300 shadow-[0_10px_30px_-5px_rgba(79,70,229,0.6)]"
-  let iconBg = "bg-white/20"
-  let badgeClass = "bg-black/20 text-indigo-100 border border-white/20"
-  let glowClass = "shadow-indigo-500/80"
-
-  if (type === 'staff') {
-    containerClass = "bg-gradient-to-br from-emerald-500 to-teal-700 border-2 border-emerald-200 shadow-[0_10px_30px_-5px_rgba(16,185,129,0.6)]"
-    badgeClass = "bg-black/20 text-emerald-100 border border-white/20"
-    glowClass = "shadow-emerald-500/80"
-  } else if (type === 'equipment') {
-    containerClass = "bg-gradient-to-br from-orange-500 to-amber-600 border-2 border-orange-200 shadow-[0_10px_30px_-5px_rgba(249,115,22,0.6)]"
-    badgeClass = "bg-black/20 text-orange-100 border border-white/20"
-    glowClass = "shadow-orange-500/80"
-  }
-
-  const getIcon = () => {
-    switch (type) {
-      case 'staff': return <User size={22} className="text-white" strokeWidth={2.5} />
-      case 'equipment': return <Wrench size={22} className="text-white" strokeWidth={2.5} />
-      default: return <Package size={22} className="text-white" strokeWidth={2.5} />
-    }
-  }
-
-  return (
-    <div className={`
-      relative min-w-[280px] rounded-[2rem] transition-all duration-300 group
-      ${containerClass}
-      ${selected ? `scale-110 -translate-y-2 z-50 ring-4 ring-white/60 ${glowClass}` : 'hover:scale-105 hover:-translate-y-1 hover:shadow-2xl'}
-    `}>
-      <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-white/30 via-white/5 to-transparent pointer-events-none" />
-      <Handle type="target" position={Position.Top} className="!w-4 !h-4 !bg-white !border-4 !border-slate-900 transition-transform hover:scale-150" />
-      
-      <div className="relative p-5">
-        <div className="flex justify-between items-start mb-4">
-          <div className={`p-3 rounded-2xl ${iconBg} backdrop-blur-sm border border-white/30 shadow-inner`}>
-            {getIcon()}
-          </div>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onDelete?.() }}
-            className="p-2 rounded-full bg-black/10 text-white/70 hover:bg-red-500 hover:text-white hover:shadow-lg transition-all backdrop-blur-md"
-          >
-            <X size={18} strokeWidth={3} />
-          </button>
-        </div>
-        
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase ${badgeClass}`}>
-              {type}
-            </span>
-            {selected && <span className="flex items-center gap-1 text-[10px] font-bold text-white animate-pulse"><Sparkles size={10}/> ACTIVE</span>}
-          </div>
-          <div className="text-2xl font-black leading-none text-white drop-shadow-md tracking-tight">
-            {label}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-3 border-t border-white/20">
-          <div className="flex flex-col">
-            <span className="text-[9px] text-white/80 font-bold uppercase tracking-wider">Quantity</span>
-            <span className="text-xl font-mono font-bold text-white drop-shadow-sm">{quantity}</span>
-          </div>
-          <div className={`px-3 py-1.5 rounded-xl ${badgeClass} backdrop-blur-md`}>
-            <div className="text-xs font-bold text-white/90 truncate max-w-[120px]">
-              {subLabel}
-            </div>
-          </div>
-        </div>
-      </div>
-      <Handle type="source" position={Position.Bottom} className="!w-4 !h-4 !bg-white !border-4 !border-slate-900 transition-transform hover:scale-150" />
-    </div>
-  )
-}
-
-// ================================
-// SIDEBAR DRAGGABLE ITEM
-// ================================
-
-const DraggableItem = ({ item, onClick }) => {
-  const onDragStart = (event) => {
-    event.dataTransfer.setData('application/reactflow', JSON.stringify(item))
-    event.dataTransfer.effectAllowed = 'move'
-  }
-
-  let wrapperClass = "bg-gradient-to-r from-indigo-600 to-violet-700 border-indigo-400/50 shadow-indigo-900/30"
-  let hoverClass = "hover:from-indigo-500 hover:to-violet-600 hover:shadow-indigo-600/50 hover:-translate-y-1"
-  let badgeClass = "bg-indigo-900/40 text-indigo-200 border-indigo-400/30"
-  
-  if (item.type === 'staff') {
-    wrapperClass = "bg-gradient-to-r from-emerald-600 to-teal-700 border-emerald-400/50 shadow-emerald-900/30"
-    hoverClass = "hover:from-emerald-500 hover:to-teal-600 hover:shadow-emerald-600/50 hover:-translate-y-1"
-    badgeClass = "bg-emerald-900/40 text-emerald-200 border-emerald-400/30"
-  } else if (item.type === 'equipment') {
-    wrapperClass = "bg-gradient-to-r from-orange-500 to-amber-600 border-orange-400/50 shadow-orange-900/30"
-    hoverClass = "hover:from-orange-400 hover:to-amber-500 hover:shadow-orange-600/50 hover:-translate-y-1"
-    badgeClass = "bg-orange-900/40 text-orange-200 border-orange-400/30"
-  }
-
-  const getIcon = () => {
-    if (item.type === 'staff') return <User size={18} className="text-white" strokeWidth={3} />
-    if (item.type === 'equipment') return <Wrench size={18} className="text-white" strokeWidth={3} />
-    return <Package size={18} className="text-white" strokeWidth={3} />
-  }
-
-  return (
-    <div
-      draggable
-      onDragStart={onDragStart}
-      onClick={onClick}
-      className={`
-        group relative flex items-center gap-4 p-4 rounded-2xl border-t border-l border-white/20
-        cursor-grab active:cursor-grabbing transition-all duration-300
-        shadow-lg ${wrapperClass} ${hoverClass} active:scale-95 touch-manipulation
-      `}
-    >
-      <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent rounded-2xl pointer-events-none" />
-      
-      <div className="relative p-2.5 rounded-xl bg-black/20 shadow-inner ring-1 ring-white/10 group-hover:scale-110 transition-transform">
-        {getIcon()}
-      </div>
-      
-      <div className="relative flex-1 min-w-0">
-        <div className="text-sm font-black text-white truncate drop-shadow-md tracking-tight">{item.name}</div>
-        <div className="flex items-center gap-2 mt-1">
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badgeClass}`}>
-            {item.type === 'staff' ? `$${item.chargeRate}/hr` : item.type === 'equipment' ? `$${item.costRate}/day` : `$${item.pricePerUnit}/unit`}
-          </span>
-        </div>
-      </div>
-
-      <div className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 rounded-lg p-1 backdrop-blur-sm">
-        <GripVertical size={14} className="text-white" />
-      </div>
-    </div>
-  )
-}
-
-// ================================
-// LIST ITEM COMPONENT
-// ================================
-
-const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
-  const [isEditing, setIsEditing] = useState(false)
-
-  const getRate = () => {
-    if (item.type === 'staff') return item.material.chargeRate
-    if (item.type === 'equipment') return item.material.costRate
-    return item.material.pricePerUnit
-  }
-
-  let themeClass = "bg-indigo-900/20 border-indigo-500/30 hover:bg-indigo-900/40"
-  let barColor = "bg-indigo-500"
-  
-  if (item.type === 'staff') {
-    themeClass = "bg-emerald-900/20 border-emerald-500/30 hover:bg-emerald-900/40"
-    barColor = "bg-emerald-500"
-  } else if (item.type === 'equipment') {
-    themeClass = "bg-amber-900/20 border-amber-500/30 hover:bg-amber-900/40"
-    barColor = "bg-orange-500"
-  }
-
-  return (
-    <div className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 group hover:shadow-md ${themeClass}`}>
-      <div className="flex items-center gap-3 overflow-hidden">
-        <div className={`w-1.5 h-10 rounded-full ${barColor} shadow-[0_0_12px_currentColor]`} />
-        <div className="space-y-1">
-          <div className="bg-stone-900/80 border border-white/10 px-2 py-0.5 rounded-lg">
-            <div className="text-sm font-bold text-white truncate flex-1 min-w-[80px]">{item.material.name}</div>
-          </div>
-          <div className="inline-block bg-stone-900/50 border border-white/5 px-2 py-0.5 rounded-md">
-            <div className="text-[10px] text-gray-300 font-mono">{formatCurrency(getRate())} / unit</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <div className="flex flex-col items-end gap-1">
-          <span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">QTY</span>
-          {isEditing ? (
-            <input
-              type="number"
-              className="w-14 bg-stone-800 border border-indigo-500 text-white text-xs px-2 py-1 rounded-lg text-right focus:outline-none shadow-[0_0_10px_rgba(99,102,241,0.3)]"
-              defaultValue={item.quantity}
-              onBlur={(e) => {
-                const val = parseFloat(e.target.value)
-                if (val > 0) onUpdate(item.tempId, { quantity: val })
-                setIsEditing(false)
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
-              autoFocus
-            />
-          ) : (
-            <div 
-              onClick={() => setIsEditing(true)}
-              className="bg-stone-900/80 border border-white/10 px-3 py-1 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors hover:scale-105"
-            >
-              <div className="text-sm font-mono font-bold text-white">
-                {item.quantity}
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col items-end w-20 sm:w-24 gap-1">
-          <span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">Total</span>
-          <div className="bg-stone-900/80 border border-white/10 px-2 py-1 rounded-lg w-full text-right">
-            <div className="text-sm font-bold text-emerald-400">{formatCurrency(getRate() * item.quantity)}</div>
-          </div>
-        </div>
-        <button onClick={() => onRemove(item.tempId)} className="p-2 bg-stone-800 hover:bg-red-900/80 border border-white/10 hover:border-red-500/50 rounded-xl text-gray-400 hover:text-white transition-all opacity-0 group-hover:opacity-100">
-          <Trash2 size={16} />
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ================================
-// AI CHAT COMPONENT
-// ================================
-
-const AIChat = ({ isOpen, onClose, messages, onSendMessage, isTyping }) => {
+const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAction, onGenerateBlueprint }) => {
   const [input, setInput] = useState('')
   const scrollRef = useRef(null)
 
@@ -517,40 +97,59 @@ const AIChat = ({ isOpen, onClose, messages, onSendMessage, isTyping }) => {
   if (!isOpen) return null
 
   return (
-    <div className="absolute bottom-20 right-6 w-96 h-[500px] bg-stone-900/95 border border-white/20 rounded-2xl shadow-2xl flex flex-col z-50 backdrop-blur-xl animate-fade-in">
-      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-purple-900/30 to-indigo-900/30 rounded-t-2xl">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg">
-            <Sparkles size={16} className="text-white" />
+    <div className="fixed bottom-24 right-6 w-96 h-[600px] max-h-[70vh] bg-stone-900/95 border border-white/20 rounded-2xl shadow-2xl flex flex-col z-[100] backdrop-blur-xl animate-fade-in origin-bottom-right">
+      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-t-2xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg ring-1 ring-white/20">
+            <Crown size={20} className="text-white" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-white">AI Copilot</h3>
+            <h3 className="text-sm font-black text-white uppercase tracking-wider">Senior Estimator</h3>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Online</span>
             </div>
           </div>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-white"><Minimize size={18} /></button>
+        <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-white/10 rounded-lg transition-colors"><X size={18} /></button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" ref={scrollRef}>
         {messages.length === 0 && (
-          <div className="text-center text-gray-500 text-sm mt-10">
-            <Sparkles size={40} className="mx-auto mb-4 opacity-20" />
-            <p>Ask me to estimate materials, check risks, or optimize your quote!</p>
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 space-y-4">
+            <Wand2 size={40} className="opacity-20 animate-pulse" />
+            <div className="max-w-[200px]">
+                <p className="text-sm font-bold text-gray-400 mb-1">I can build full quotes for you.</p>
+                <p className="text-xs">Try "Build a 20m timber fence" or "Full kitchen renovation estimates"</p>
+            </div>
           </div>
         )}
         {messages.map((msg, idx) => (
-          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-stone-800 text-gray-200 border border-white/10 rounded-tl-none'}`}>
+          <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+            <div className={`max-w-[90%] p-3 rounded-2xl text-sm mb-1 ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-stone-800 text-gray-200 border border-white/10 rounded-tl-sm'}`}>
               {msg.content}
             </div>
+            
+            {/* Action Chips */}
+            {msg.actions && msg.actions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2 max-w-[90%]">
+                    {msg.actions.map((action, i) => (
+                        <button 
+                            key={i}
+                            onClick={() => onAction(action)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold transition-all group"
+                        >
+                            <Plus size={12} className="group-hover:scale-110 transition-transform" />
+                            {action.type === 'add_node' ? `Add ${action.quantity}x ${action.label}` : 'Action'}
+                        </button>
+                    ))}
+                </div>
+            )}
           </div>
         ))}
         {isTyping && (
           <div className="flex justify-start">
-             <div className="bg-stone-800 p-3 rounded-2xl rounded-tl-none border border-white/10 flex gap-1">
+             <div className="bg-stone-800 p-3 rounded-2xl rounded-tl-sm border border-white/10 flex gap-1">
                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" />
                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-75" />
                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-150" />
@@ -559,25 +158,146 @@ const AIChat = ({ isOpen, onClose, messages, onSendMessage, isTyping }) => {
         )}
       </div>
 
-      <div className="p-4 border-t border-white/10 bg-stone-900/50 rounded-b-2xl">
-        <div className="relative">
+      <div className="p-4 border-t border-white/10 bg-stone-900/50 rounded-b-2xl backdrop-blur-md space-y-2">
+        <div className="relative flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && (onSendMessage(input), setInput(''))}
-            placeholder="Ask about materials, costs..."
-            className="w-full bg-stone-800 border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+            placeholder="Describe scope or ask for advice..."
+            className="flex-1 bg-black/30 border border-white/10 rounded-xl pl-4 pr-4 py-3 text-sm text-white focus:border-indigo-500 focus:outline-none placeholder-gray-600"
           />
           <button 
             onClick={() => { onSendMessage(input); setInput('') }}
             disabled={!input.trim()}
-            className="absolute right-2 top-2 p-1.5 bg-indigo-600 rounded-lg text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="p-3 bg-indigo-600 rounded-xl text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/20"
           >
-            <Send size={16} />
+            <ArrowRight size={18} />
           </button>
         </div>
+        {/* Full Build Button */}
+        <button 
+            onClick={() => { if(input.trim()) { onGenerateBlueprint(input); setInput(''); } else { alert("Please describe what to build first."); } }}
+            className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl text-white text-xs font-bold uppercase tracking-wider shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+        >
+            <Wand2 size={14} /> Generate Full Blueprint
+        </button>
       </div>
+    </div>
+  )
+}
+
+// ... Node Components ...
+
+const DimensionNode = ({ id, data, selected, position }) => {
+  const { width = 100, height = 100, label, onDelete, onResize, onAutoFit } = data
+  // 20px = 1ft scale approximation for this demo
+  const realWidth = width / 20
+  const realLength = height / 20
+  const ceilingHeight = 8 // ft default
+
+  const floorArea = (realWidth * realLength).toFixed(1)
+  const perimeter = ((realWidth + realLength) * 2).toFixed(1)
+  const wallArea = (perimeter * ceilingHeight).toFixed(1)
+
+  return (
+    <div className={`relative rounded-xl border-2 border-dashed border-blue-400/50 bg-blue-500/5 backdrop-blur-sm group transition-all ${selected ? 'ring-2 ring-blue-400 bg-blue-500/10' : ''}`} style={{ width: '100%', height: '100%', minWidth: 50, minHeight: 50 }}>
+      {selected && onAutoFit && <SmartActionsMenu node={{ id, position, data }} onAutoFit={onAutoFit} />}
+      <NodeResizer minWidth={50} minHeight={50} isVisible={selected} lineClassName="border-blue-400" handleClassName="h-3 w-3 bg-blue-500 border-2 border-white rounded shadow-sm" />
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-2 text-center">
+         <span className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-1">{label || 'Room'}</span>
+         <div className="text-lg font-black text-white drop-shadow-md">{floorArea} <span className="text-[9px] font-normal opacity-70">sqft</span></div>
+         {selected && (
+             <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-[9px] text-blue-200 border-t border-blue-500/30 pt-1">
+                 <div><span className="opacity-50">Wall:</span> <b>{wallArea}</b></div>
+                 <div><span className="opacity-50">Perim:</span> <b>{perimeter}</b></div>
+             </div>
+         )}
+      </div>
+      <button onClick={(e) => { e.stopPropagation(); onDelete?.() }} className="absolute -top-3 -right-3 p-1.5 rounded-full bg-red-500 text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto hover:scale-110"><X size={12} strokeWidth={3} /></button>
+      <Handle type="target" position={Position.Top} className="!w-full !h-full !opacity-0 !bg-transparent !border-none !rounded-none" />
+    </div>
+  )
+}
+
+const ZoneNode = ({ data, selected }) => {
+  const { label, onDelete, width, height } = data
+  return (
+    <div className={`relative rounded-3xl border-2 border-white/10 bg-white/5 group transition-all duration-300 ${selected ? 'border-indigo-500/50 bg-indigo-500/5 ring-2 ring-indigo-500/20' : ''}`} style={{ width: '100%', height: '100%', minWidth: 100, minHeight: 100 }}>
+       <NodeResizer minWidth={100} minHeight={100} isVisible={selected} lineClassName="border-indigo-400/30" handleClassName="h-2 w-2 bg-indigo-500/50 border border-white/50 rounded-full" />
+      <div className="absolute top-4 left-4 pointer-events-none"><span className="text-xs font-black text-white/20 uppercase tracking-[0.2em]">{label || 'ZONE'}</span></div>
+       <button onClick={(e) => { e.stopPropagation(); onDelete?.() }} className="absolute -top-2 -right-2 p-1 rounded-full bg-stone-800 text-gray-500 hover:text-white border border-white/10 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto"><X size={10} strokeWidth={3} /></button>
+    </div>
+  )
+}
+
+const GlassNode = ({ data, selected }) => {
+  const { label, subLabel, quantity, type, onDelete } = data
+  let containerClass = "bg-gradient-to-br from-indigo-600 to-violet-700 border-2 border-indigo-300 shadow-[0_10px_30px_-5px_rgba(79,70,229,0.6)]"
+  let iconBg = "bg-white/20"
+  let badgeClass = "bg-black/20 text-indigo-100 border border-white/20"
+  let glowClass = "shadow-indigo-500/80"
+  if (type === 'staff') { containerClass = "bg-gradient-to-br from-emerald-500 to-teal-700 border-2 border-emerald-200 shadow-[0_10px_30px_-5px_rgba(16,185,129,0.6)]"; badgeClass = "bg-black/20 text-emerald-100 border border-white/20"; glowClass = "shadow-emerald-500/80" }
+  else if (type === 'equipment') { containerClass = "bg-gradient-to-br from-orange-500 to-amber-600 border-2 border-orange-200 shadow-[0_10px_30px_-5px_rgba(249,115,22,0.6)]"; badgeClass = "bg-black/20 text-orange-100 border border-white/20"; glowClass = "shadow-orange-500/80" }
+  const getIcon = () => { if (type === 'staff') return <User size={22} className="text-white" strokeWidth={2.5} />; if (type === 'equipment') return <Wrench size={22} className="text-white" strokeWidth={2.5} />; return <Package size={22} className="text-white" strokeWidth={2.5} /> }
+  return (
+    <div className={`relative min-w-[280px] rounded-[2rem] transition-all duration-300 group ${containerClass} ${selected ? `scale-110 -translate-y-2 z-50 ring-4 ring-white/60 ${glowClass}` : 'hover:scale-105 hover:-translate-y-1 hover:shadow-2xl'}`}>
+      <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-white/30 via-white/5 to-transparent pointer-events-none" />
+      <Handle type="target" position={Position.Top} className="!w-4 !h-4 !bg-white !border-4 !border-slate-900 transition-transform hover:scale-150" />
+      <div className="relative p-5">
+        <div className="flex justify-between items-start mb-4"><div className={`p-3 rounded-2xl ${iconBg} backdrop-blur-sm border border-white/30 shadow-inner`}>{getIcon()}</div><button onClick={(e) => { e.stopPropagation(); onDelete?.() }} className="p-2 rounded-full bg-black/10 text-white/70 hover:bg-red-500 hover:text-white hover:shadow-lg transition-all backdrop-blur-md"><X size={18} strokeWidth={3} /></button></div>
+        <div className="mb-4"><div className="flex items-center gap-2 mb-1"><span className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase ${badgeClass}`}>{type}</span>{selected && <span className="flex items-center gap-1 text-[10px] font-bold text-white animate-pulse"><Sparkles size={10}/> ACTIVE</span>}</div><div className="text-2xl font-black leading-none text-white drop-shadow-md tracking-tight">{label}</div></div>
+        <div className="flex items-center justify-between pt-3 border-t border-white/20"><div className="flex flex-col"><span className="text-[9px] text-white/80 font-bold uppercase tracking-wider">Quantity</span><span className="text-xl font-mono font-bold text-white drop-shadow-sm">{quantity}</span></div><div className={`px-3 py-1.5 rounded-xl ${badgeClass} backdrop-blur-md`}><div className="text-xs font-bold text-white/90 truncate max-w-[120px]">{subLabel}</div></div></div>
+      </div>
+      <Handle type="source" position={Position.Bottom} className="!w-4 !h-4 !bg-white !border-4 !border-slate-900 transition-transform hover:scale-150" />
+    </div>
+  )
+}
+
+const ConfigModal = ({ isOpen, onClose, onConfirm, item, suggestedQuantity }) => {
+  const [value, setValue] = useState(suggestedQuantity || 1); const inputRef = useRef(null);
+  useEffect(() => { if (isOpen) { setValue(suggestedQuantity || 1); if (inputRef.current) setTimeout(() => inputRef.current.focus(), 100); } }, [isOpen, suggestedQuantity]);
+  if (!isOpen || !item) return null;
+  const isTimeBased = item.type === 'staff' || item.type === 'equipment';
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"><div className="bg-stone-900 border border-white/10 rounded-2xl p-6 w-80 shadow-2xl transform transition-all scale-100"><div className="flex justify-between items-center mb-4"><h3 className="text-lg font-black text-white uppercase tracking-wide">Add {item.type}</h3><button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button></div><div className="mb-6"><div className="text-sm font-bold text-gray-300 mb-2">{item.name}</div><div className="flex items-center gap-3"><input ref={inputRef} type="number" min="0.1" step="0.5" value={value} onChange={(e) => setValue(parseFloat(e.target.value) || 0)} onKeyDown={(e) => e.key === 'Enter' && onConfirm(value)} className="flex-1 bg-black/30 border-2 border-indigo-500/50 rounded-xl px-4 py-2 text-xl font-mono font-bold text-white focus:border-indigo-500 focus:outline-none text-center" /><span className="text-sm font-bold text-gray-500">{isTimeBased ? 'hrs' : 'units'}</span></div></div><div className="flex gap-3"><button onClick={onClose} className="flex-1 px-4 py-2 rounded-xl font-bold text-gray-400 hover:bg-white/5 transition-colors">Cancel</button><button onClick={() => onConfirm(value)} className="flex-1 px-4 py-2 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/30 transition-all">Add Item</button></div></div></div>
+  )
+}
+
+const QuoteSettingsModal = ({ isOpen, onClose, settings, setSettings, projects, selectedProject }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"><div className="bg-stone-900 border border-white/10 rounded-2xl p-6 w-[500px] shadow-2xl"><div className="flex justify-between items-center mb-6"><div className="flex items-center gap-2"><Settings className="text-indigo-500" size={24} /><h3 className="text-xl font-black text-white uppercase tracking-wide">Quote Settings</h3></div><button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button></div><div className="space-y-4"><div><label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Client</label><ClientSelector selectedClient={settings.clientId ? { id: settings.clientId, name: settings.clientName } : null} onSelect={(client) => setSettings({ ...settings, clientId: client?.id || null, clientName: client?.name || '' })} /></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Valid Until</label><input type="date" value={settings.validUntil} onChange={e => setSettings({...settings, validUntil: e.target.value})} className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none" /></div><div><label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Status</label><select value={settings.status} onChange={e => setSettings({...settings, status: e.target.value})} className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none"><option value="DRAFT">Draft</option><option value="SENT">Sent</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select></div></div><div><label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Terms & Conditions</label><textarea value={settings.terms} onChange={e => setSettings({...settings, terms: e.target.value})} className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none h-24" placeholder="Standard terms apply..." /></div></div><div className="flex justify-end gap-3 mt-6"><button onClick={onClose} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5 transition-colors">Close</button></div></div></div>
+  )
+}
+
+const DraggableItem = ({ item, onClick }) => {
+  const onDragStart = (event) => { event.dataTransfer.setData('application/reactflow', JSON.stringify(item)); event.dataTransfer.effectAllowed = 'move'; }
+  let wrapperClass = "bg-gradient-to-r from-indigo-600 to-violet-700 border-indigo-400/50 shadow-indigo-900/30"; let badgeClass = "bg-indigo-900/40 text-indigo-200 border-indigo-400/30";
+  if (item.type === 'staff') { wrapperClass = "bg-gradient-to-r from-emerald-600 to-teal-700 border-emerald-400/50 shadow-emerald-900/30"; badgeClass = "bg-emerald-900/40 text-emerald-200 border-emerald-400/30"; }
+  else if (item.type === 'equipment') { wrapperClass = "bg-gradient-to-r from-orange-500 to-amber-600 border-orange-400/50 shadow-orange-900/30"; badgeClass = "bg-orange-900/40 text-orange-200 border-orange-400/30"; }
+  const getIcon = () => { if (item.type === 'staff') return <User size={18} className="text-white" strokeWidth={3} />; if (item.type === 'equipment') return <Wrench size={18} className="text-white" strokeWidth={3} />; return <Package size={18} className="text-white" strokeWidth={3} /> }
+  return (
+    <div draggable onDragStart={onDragStart} onClick={onClick} className={`group relative flex items-center gap-4 p-4 rounded-2xl border-t border-l border-white/20 cursor-grab active:cursor-grabbing transition-all duration-300 shadow-lg ${wrapperClass} hover:brightness-110 active:scale-95`}>
+      <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent rounded-2xl pointer-events-none" />
+      <div className="relative p-2.5 rounded-xl bg-black/20 shadow-inner ring-1 ring-white/10 group-hover:scale-110 transition-transform">{getIcon()}</div>
+      <div className="relative flex-1 min-w-0"><div className="text-sm font-black text-white truncate drop-shadow-md tracking-tight">{item.name}</div><div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badgeClass}`}>{item.type === 'staff' ? `$${item.chargeRate}/hr` : item.type === 'equipment' ? `$${item.costRate}/day` : `$${item.pricePerUnit}/unit`}</span></div></div>
+      <div className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 rounded-lg p-1 backdrop-blur-sm"><GripVertical size={14} className="text-white" /></div>
+    </div>
+  )
+}
+
+const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
+  const [isEditing, setIsEditing] = useState(false)
+  const getRate = () => { if (item.type === 'staff') return item.material.chargeRate; if (item.type === 'equipment') return item.material.costRate; return item.material.pricePerUnit }
+  let themeClass = "bg-indigo-900/20 border-indigo-500/30 hover:bg-indigo-900/40"; let barColor = "bg-indigo-500";
+  if (item.type === 'staff') { themeClass = "bg-emerald-900/20 border-emerald-500/30 hover:bg-emerald-900/40"; barColor = "bg-emerald-500"; }
+  else if (item.type === 'equipment') { themeClass = "bg-amber-900/20 border-amber-500/30 hover:bg-amber-900/40"; barColor = "bg-orange-500"; }
+  return (
+    <div className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 group hover:shadow-md ${themeClass}`}>
+      <div className="flex items-center gap-3 overflow-hidden"><div className={`w-1.5 h-10 rounded-full ${barColor} shadow-[0_0_12px_currentColor]`} /><div className="space-y-1"><div className="bg-stone-900/80 border border-white/10 px-2 py-0.5 rounded-lg"><div className="text-sm font-bold text-white truncate flex-1 min-w-[80px]">{item.material.name}</div></div><div className="inline-block bg-stone-900/50 border border-white/5 px-2 py-0.5 rounded-md"><div className="text-[10px] text-gray-300 font-mono">{formatCurrency(getRate())} / unit</div></div></div></div>
+      <div className="flex items-center gap-4"><div className="flex flex-col items-end gap-1"><span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">QTY</span>{isEditing ? (<input type="number" className="w-14 bg-stone-800 border border-indigo-500 text-white text-xs px-2 py-1 rounded-lg text-right focus:outline-none" defaultValue={item.quantity} onBlur={(e) => { const val = parseFloat(e.target.value); if (val > 0) onUpdate(item.tempId, { quantity: val }); setIsEditing(false) }} onKeyDown={(e) => e.key === 'Enter' && e.target.blur()} autoFocus />) : (<div onClick={() => setIsEditing(true)} className="bg-stone-900/80 border border-white/10 px-3 py-1 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors"><div className="text-sm font-mono font-bold text-white">{item.quantity.toFixed(2)}</div></div>)}</div><div className="flex flex-col items-end w-20 sm:w-24 gap-1"><span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">Total</span><div className="bg-stone-900/80 border border-white/10 px-2 py-1 rounded-lg w-full text-right"><div className="text-sm font-bold text-emerald-400">{formatCurrency(getRate() * item.quantity)}</div></div></div><button onClick={() => onRemove(item.tempId)} className="p-2 bg-stone-800 hover:bg-red-900/80 border border-white/10 hover:border-red-500/50 rounded-xl text-gray-400 hover:text-white transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button></div>
     </div>
   )
 }
@@ -619,7 +339,6 @@ const QuoteBuilderContent = () => {
 
   // Feature State
   const [showMap, setShowMap] = useState(false)
-  const [showVisualTakeoff, setShowVisualTakeoff] = useState(false)
   const [projectLocation, setProjectLocation] = useState(null)
   const [showGeoModal, setShowGeoModal] = useState(false)
   const [sitePlan, setSitePlan] = useState(null)
@@ -632,6 +351,98 @@ const QuoteBuilderContent = () => {
 
   const canvasRef = useRef(null)
   const { screenToFlowPosition, getNodes, fitView } = useReactFlow()
+
+  // --- HELPER FOR RE-ATTACHING EVENTS ---
+  const deleteNode = useCallback((id) => {
+    setNodes((nds) => nds.filter(n => n.id !== id))
+    setQuoteItems((items) => items.filter(i => i.tempId !== id))
+  }, [setNodes])
+
+  // --- AUTO-FIT LOGIC ---
+  const handleAutoFit = useCallback((node, mode) => {
+      const width = node.data.width || 200;
+      const height = node.data.height || 200;
+      // 20px = 1ft
+      const realWidth = width / 20;
+      const realLength = height / 20;
+      const ceilingHeight = 8;
+      
+      const floorArea = realWidth * realLength;
+      const perimeter = (realWidth + realLength) * 2;
+      const wallArea = perimeter * ceilingHeight;
+
+      const itemsToAdd = [];
+
+      // Helper to find or mock item
+      const findItem = (key, type) => {
+          const match = materials.find(m => m.name.toLowerCase().includes(key));
+          if (match) return match;
+          return { id: `auto-${key}-${Date.now()}`, name: `${key.charAt(0).toUpperCase() + key.slice(1)} (Standard)`, pricePerUnit: 10, type: 'material' };
+      };
+
+      if (mode === 'basic' || mode === 'paint') {
+          const paint = findItem('paint', 'material');
+          const coverage = MATERIAL_COVERAGE['paint'];
+          const qty = Math.ceil((wallArea * coverage.waste) / coverage.coverage);
+          itemsToAdd.push({ item: paint, qty, label: 'Wall Paint' });
+      }
+
+      if (mode === 'basic' || mode === 'floor') {
+          const flooring = findItem('flooring', 'material');
+          const coverage = MATERIAL_COVERAGE['flooring'];
+          const qty = Math.ceil((floorArea * coverage.waste) / coverage.coverage);
+          itemsToAdd.push({ item: flooring, qty, label: 'Flooring' });
+      }
+
+      // Add nodes
+      const newNodes = [];
+      const newQuoteItems = [];
+      
+      itemsToAdd.forEach((add, i) => {
+          const nodeId = `${add.item.id}-${Date.now()}-${i}`;
+          const position = { 
+              x: node.position.x + (i * 50) + 20, 
+              y: node.position.y + node.data.height + 20 
+          };
+
+          newNodes.push({
+              id: nodeId,
+              type: 'glass',
+              position,
+              data: { 
+                  label: add.item.name, 
+                  subLabel: add.label, 
+                  quantity: add.qty, 
+                  type: 'material',
+                  onDelete: () => deleteNode(nodeId)
+              }
+          });
+          
+          newQuoteItems.push({
+              nodeId: add.item.id,
+              tempId: nodeId,
+              quantity: add.qty,
+              material: add.item,
+              type: 'material'
+          });
+          
+          // Link edge
+          setEdges(eds => addEdge({ id: `e-${node.id}-${nodeId}`, source: node.id, target: nodeId, animated: true, style: { stroke: '#6366f1' } }, eds));
+      });
+
+      setNodes(prev => [...prev, ...newNodes]);
+      setQuoteItems(prev => [...prev, ...newQuoteItems]);
+  }, [materials, deleteNode, setNodes, setEdges, setQuoteItems]);
+
+  // --- EFFECT: ATTACH HANDLERS TO NODES ---
+  useEffect(() => {
+      setNodes(nds => nds.map(n => {
+          if (n.type === 'dimension' && !n.data.onAutoFit) {
+              return { ...n, data: { ...n.data, onAutoFit: handleAutoFit } };
+          }
+          return n;
+      }));
+  }, [handleAutoFit, setNodes, nodes.length]); // Re-run when node count changes
 
   // --- AUTO-SYNC CLIENT & LOCATION FROM PROJECT ---
   useEffect(() => {
@@ -677,8 +488,6 @@ const QuoteBuilderContent = () => {
 
   // --- LOAD EXISTING QUOTE ---
   useEffect(() => {
-    // Wait for at least one resource list to populate (or all empty if API returns nothing)
-    // Ideally we'd track a 'loading' state for the initial fetch, but checking length > 0 is a proxy
     if (!id || (materials.length === 0 && staff.length === 0 && equipment.length === 0)) return
 
     const loadQuote = async () => {
@@ -699,18 +508,16 @@ const QuoteBuilderContent = () => {
         const loadedItems = []
         const loadedNodes = []
 
-        // Helper to process items
         const processItem = (item, type, list) => {
            const refItem = list.find(x => x.id === (item.nodeId || item.staffId || item.equipmentId))
            if (!refItem) return
 
            const tempId = `${type}-${refItem.id}-${Date.now()}-${Math.random()}`
            
-           // Visual Node
            loadedNodes.push({
               id: tempId,
               type: 'glass',
-              position: { x: Math.random() * 800, y: Math.random() * 600 }, // Random position as coordinates aren't saved yet
+              position: { x: Math.random() * 800, y: Math.random() * 600 }, 
               data: {
                  label: refItem.name,
                  subLabel: type,
@@ -720,7 +527,6 @@ const QuoteBuilderContent = () => {
               }
            })
 
-           // Data Item
            loadedItems.push({
               nodeId: refItem.id,
               tempId: tempId,
@@ -737,7 +543,6 @@ const QuoteBuilderContent = () => {
         setNodes(loadedNodes)
         setQuoteItems(loadedItems)
         
-        // Ensure nodes are visible
         setTimeout(() => fitView({ padding: 0.2 }), 100)
 
       } catch (err) {
@@ -748,30 +553,7 @@ const QuoteBuilderContent = () => {
     loadQuote()
   }, [id, materials, staff, equipment, fitView])
 
-  // --- VISUAL TAKEOFF ---
-  const handleVisualMeasurement = (data) => {
-      const id = `dim-${Date.now()}`
-      const sideLen = Math.sqrt(parseFloat(data.area)) * 20 // Approx visual size
-      
-      const newNode = {
-          id,
-          type: 'dimension',
-          position: screenToFlowPosition({ x: window.innerWidth/2, y: window.innerHeight/2 }),
-          style: { width: sideLen, height: sideLen },
-          data: { 
-            label: data.name || 'Measured Area',
-            width: sideLen, 
-            height: sideLen,
-            onDelete: () => deleteNode(id),
-            realArea: data.area, // Store exact calc
-            realPerimeter: data.perimeter
-          }
-      }
-      setNodes(nds => nds.concat(newNode))
-      setShowVisualTakeoff(false)
-  }
-
-  // --- AI ACTIONS ---
+  // --- AI COPILOT LOGIC ---
   const handleAIChat = async (message) => {
     if (!message.trim()) return
     setChatMessages(prev => [...prev, { role: 'user', content: message }])
@@ -788,14 +570,139 @@ const QuoteBuilderContent = () => {
         settings: quoteSettings
       }
 
+      // Use the new Actionable Chat endpoint
       const res = await api.post('/ai/chat-quote', { message, context })
-      setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
+      const { reply, suggestedActions } = res.data;
+
+      setChatMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: reply, 
+          actions: suggestedActions 
+      }])
     } catch (err) {
       setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting to the server." }])
     } finally {
       setChatTyping(false)
     }
   }
+
+  // --- FULL BLUEPRINT GENERATION ---
+  const handleGenerateBlueprint = async (prompt) => {
+      setChatMessages(prev => [...prev, { role: 'user', content: `Generate Blueprint: ${prompt}` }]);
+      setChatTyping(true);
+      
+      try {
+          const res = await api.post('/ai/quote', { prompt });
+          const { nodes: aiNodes, edges: aiEdges } = res.data;
+
+          if (aiNodes && aiNodes.length > 0) {
+              const newNodes = [];
+              const newItems = [];
+              
+              // Helper to map backend types to frontend
+              const mapType = (t) => {
+                  if (t === 'staff-resource') return 'staff';
+                  if (t === 'equipment-resource') return 'equipment';
+                  return 'material'; // default for 'glass'
+              };
+
+              aiNodes.forEach(n => {
+                  const frontendType = n.type === 'dimension' ? 'dimension' : 'glass';
+                  const itemType = mapType(n.type);
+                  
+                  // Try to find matching real resource
+                  let refItem = null;
+                  if (itemType === 'staff') refItem = staff.find(s => s.id === n.data.nodeId) || staff.find(s => s.name === n.data.label);
+                  else if (itemType === 'equipment') refItem = equipment.find(e => e.id === n.data.nodeId) || equipment.find(e => e.name === n.data.label);
+                  else if (n.type !== 'dimension') refItem = materials.find(m => m.id === n.data.nodeId) || materials.find(m => m.name === n.data.label);
+
+                  // Create mock if not found
+                  if (!refItem && n.type !== 'dimension') {
+                      refItem = {
+                          id: `ai-${Date.now()}-${Math.random()}`,
+                          name: n.data.label,
+                          pricePerUnit: n.data.cost || 0,
+                          chargeRate: n.data.cost || 0,
+                          costRate: n.data.cost || 0,
+                          type: itemType
+                      };
+                  }
+
+                  const nodeId = n.id; 
+                  
+                  newNodes.push({
+                      id: nodeId,
+                      type: frontendType,
+                      position: n.position || { x: 0, y: 0 },
+                      data: {
+                          ...n.data,
+                          type: itemType,
+                          subLabel: itemType,
+                          label: n.data.label,
+                          quantity: n.data.quantity,
+                          onDelete: () => deleteNode(nodeId)
+                      },
+                      style: n.type === 'dimension' ? { width: 200, height: 200 } : undefined
+                  });
+
+                  if (n.type !== 'dimension' && refItem) {
+                      newItems.push({
+                          nodeId: refItem.id,
+                          tempId: nodeId,
+                          quantity: n.data.quantity,
+                          material: refItem,
+                          type: itemType
+                      });
+                  }
+              });
+
+              setNodes(prev => [...prev, ...newNodes]);
+              setEdges(prev => [...prev, ...aiEdges.map(e => ({ ...e, type: 'smoothstep', animated: true }))]);
+              setQuoteItems(prev => [...prev, ...newItems]);
+              
+              setChatMessages(prev => [...prev, { role: 'assistant', content: "Blueprint generated successfully! I've added the requested systems to the canvas." }]);
+              setTimeout(() => fitView({ padding: 0.2 }), 500);
+          } else {
+              throw new Error("AI did not return a valid structure.");
+          }
+
+      } catch (err) {
+          console.error(err);
+          setChatMessages(prev => [...prev, { role: 'assistant', content: "I encountered an error generating the blueprint. Please try again." }]);
+      } finally {
+          setChatTyping(false);
+      }
+  };
+
+  // --- SMART ACTION EXECUTION ---
+  const handleCopilotAction = (action) => {
+      if (action.type === 'add_node') {
+          // Find resource
+          let item = null;
+          if (action.category === 'staff') item = staff.find(s => s.name.toLowerCase().includes(action.label.toLowerCase()));
+          else if (action.category === 'equipment') item = equipment.find(e => e.name.toLowerCase().includes(action.label.toLowerCase()));
+          else item = materials.find(m => m.name.toLowerCase().includes(action.label.toLowerCase()));
+
+          // If not found, create a mock item
+          if (!item) {
+              item = {
+                  id: `ai-${Date.now()}`,
+                  name: action.label,
+                  pricePerUnit: action.cost || 0,
+                  chargeRate: action.cost || 0,
+                  costRate: action.cost || 0,
+                  type: action.category
+              };
+          }
+
+          // Use the Drawing Action
+          setPendingNode({ 
+              item, 
+              position: screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }), 
+              suggestedQuantity: action.quantity || 1 
+          });
+      }
+  };
 
   // --- DRAWING ACTIONS ---
   const onTapAdd = (item) => {
@@ -834,7 +741,8 @@ const QuoteBuilderContent = () => {
              style: { ...n.style, width: params.width, height: params.height },
              data: { ...n.data, width: params.width, height: params.height } 
            } : n))
-        }
+        },
+        onAutoFit: handleAutoFit
       }
     }
     setNodes(nds => nds.concat(newNode))
@@ -883,14 +791,29 @@ const QuoteBuilderContent = () => {
     if (droppedOnNode) {
        const width = droppedOnNode.data.width || 200
        const height = droppedOnNode.data.height || 200
-       const areaSqFt = (width / 20) * (height / 20) 
        
+       // Calc Metrics
+       const realWidth = width / 20;
+       const realLength = height / 20;
+       const floorArea = realWidth * realLength;
+       const perimeter = (realWidth + realLength) * 2;
+       const wallArea = perimeter * 8; // Default 8ft ceiling
+
+       // Detect Material Type
        const coverageKey = Object.keys(MATERIAL_COVERAGE).find(k => item.name.toLowerCase().includes(k))
+       
        if (coverageKey) {
          const info = MATERIAL_COVERAGE[coverageKey]
-         suggestedQty = Math.ceil((areaSqFt * info.waste) / info.coverage)
+         let metric = floorArea; // Default
+         if (info.type === 'wall') metric = wallArea;
+         if (info.type === 'linear') metric = perimeter;
+
+         // Linear unit check (if info.unit is 'linear ft', coverage usually 1:1, just waste)
+         const denom = info.coverage || 1; 
+         suggestedQty = Math.ceil((metric * info.waste) / denom)
        } else {
-         suggestedQty = Math.ceil(areaSqFt) 
+         // Fallback to Floor Area if unknown
+         suggestedQty = Math.ceil(floorArea) 
        }
     }
     
@@ -923,36 +846,12 @@ const QuoteBuilderContent = () => {
     setPendingNode(null)
   }
 
-  // --- HELPERS ---
-  const deleteNode = useCallback((id) => {
-    setNodes((nds) => nds.filter(n => n.id !== id))
-    setQuoteItems((items) => items.filter(i => i.tempId !== id))
-  }, [setNodes])
-
   const updateItem = useCallback((tempId, updates) => {
     setQuoteItems(prev => prev.map(i => i.tempId === tempId ? { ...i, ...updates } : i))
     setNodes(nds => nds.map(n => n.id === tempId ? { ...n, data: { ...n.data, ...updates } } : n))
   }, [setNodes])
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges])
-
-  const { totalCost, totalRevenue, margin } = useMemo(() => {
-    let c = 0, r = 0
-    quoteItems.forEach(i => {
-      const qty = i.quantity
-      if (i.type === 'staff') {
-        c += qty * i.material.payRate
-        r += qty * i.material.chargeRate
-      } else if (i.type === 'equipment') {
-        c += qty * i.material.costRate
-        r += (qty * i.material.costRate) * (1 + marginPct / 100)
-      } else {
-        c += qty * i.material.pricePerUnit
-        r += (qty * i.material.pricePerUnit) * (1 + marginPct / 100)
-      }
-    })
-    return { totalCost: c, totalRevenue: r, margin: r - c }
-  }, [quoteItems, marginPct])
 
   const handleSave = async () => {
     if (!selectedProject) return alert('Select a project first!')
@@ -964,22 +863,28 @@ const QuoteBuilderContent = () => {
       const nodesData = [
           ...quoteItems.filter(i => i.type !== 'staff' && i.type !== 'equipment').map(i => ({ 
               nodeId: i.nodeId, 
+              name: i.material.name, // Pass name for creation
+              isNew: String(i.nodeId).startsWith('ai-'), // Flag
               quantity: i.quantity,
-              pricePerUnit: i.material.pricePerUnit // Explicit price
+              pricePerUnit: i.material.pricePerUnit
           })), 
           metadataNode
       ]
       
       const staffData = quoteItems.filter(i => i.type === 'staff').map(i => ({ 
           staffId: i.nodeId, 
+          name: i.material.name,
+          isNew: String(i.nodeId).startsWith('ai-'),
           hours: i.quantity,
-          chargeRate: i.material.chargeRate // Explicit rate
+          chargeRate: i.material.chargeRate
       }))
       
       const equipmentData = quoteItems.filter(i => i.type === 'equipment').map(i => ({ 
           equipmentId: i.nodeId, 
+          name: i.material.name,
+          isNew: String(i.nodeId).startsWith('ai-'),
           hours: i.quantity,
-          costRate: i.material.costRate // Explicit rate
+          costRate: i.material.costRate
       }))
 
       await api.post('/quotes', {
@@ -990,11 +895,21 @@ const QuoteBuilderContent = () => {
     } catch (err) { console.error('Error saving quote:', err); alert('Error saving quote data.') }
   }
 
+  const totalRevenue = useMemo(() => {
+      const cost = quoteItems.reduce((acc, item) => {
+          let rate = 0;
+          if (item.type === 'staff') rate = item.material.chargeRate;
+          else if (item.type === 'equipment') rate = item.material.costRate;
+          else rate = item.material.pricePerUnit;
+          return acc + (rate * item.quantity);
+      }, 0);
+      return cost * (1 + (marginPct/100));
+  }, [quoteItems, marginPct]);
+
   // --- RENDER ---
   return (
     <div className="h-[calc(100vh-80px)] bg-transparent flex flex-col font-sans overflow-hidden text-white relative">
       <GeoreferenceModal isOpen={showGeoModal} onClose={() => setShowGeoModal(false)} onSave={(data) => { setSitePlan(data); setShowMap(true); if(data.bounds) setProjectLocation({ lat: (data.bounds.north+data.bounds.south)/2, lng: (data.bounds.east+data.bounds.west)/2 }); }} />
-      {showVisualTakeoff && <VisualTakeoffCanvas imageUrl={sitePlan?.imageUrl} onAddMeasurement={handleVisualMeasurement} onClose={() => setShowVisualTakeoff(false)} />}
       <QuoteSettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={quoteSettings} setSettings={setQuoteSettings} projects={projects} selectedProject={selectedProject} />
       <GoogleServicesSuggestions isOpen={showSuggestions} onClose={() => setShowSuggestions(false)} />
       
@@ -1003,19 +918,6 @@ const QuoteBuilderContent = () => {
       <div className={`absolute inset-0 z-10 flex flex-col transition-all duration-500 ${showMap ? 'bg-stone-900/40 backdrop-blur-sm' : ''}`}>
         <ConfigModal isOpen={!!pendingNode} item={pendingNode?.item} suggestedQuantity={pendingNode?.suggestedQuantity} onClose={() => setPendingNode(null)} onConfirm={handleAddNode} />
         
-        {showStreetView && projectLocation && (
-           <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-10 animate-fade-in" onClick={() => setShowStreetView(false)}>
-             <div className="relative bg-white p-2 rounded-xl shadow-2xl max-w-4xl w-full">
-               <img 
-                 src={`https://maps.googleapis.com/maps/api/streetview?size=800x400&location=${projectLocation.lat},${projectLocation.lng}&fov=90&heading=235&pitch=10&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`} 
-                 alt="Street View" 
-                 className="w-full h-auto rounded-lg"
-               />
-               <div className="absolute top-4 left-4 bg-black/60 px-3 py-1 rounded text-white text-xs font-bold uppercase tracking-wider">Site Preview</div>
-             </div>
-           </div>
-        )}
-
         {/* --- TOP BAR --- */}
         <div className={`h-auto py-3 px-4 md:px-6 border-b border-white/10 ${showMap ? 'bg-stone-900/60' : 'bg-stone-900/80'} backdrop-blur-md z-30 flex flex-wrap justify-between items-center shadow-lg transition-colors gap-2`}>
           <div className="flex items-center gap-2">
@@ -1050,7 +952,6 @@ const QuoteBuilderContent = () => {
           <div className="flex items-center gap-2 flex-wrap">
             {/* TOOLBAR */}
             <button onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-400 hover:text-white" title="Toggle Sidebar"><List size={20} /></button>
-            <button onClick={() => setShowVisualTakeoff(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-teal-400 hover:text-white hover:bg-teal-600/50 transition-colors" title="Visual Takeoff Mode"><PenTool size={20} /></button>
             <button onClick={addDimensionNode} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-blue-400 hover:text-white hover:bg-blue-600/50 transition-colors" title="Add Room/Area"><Ruler size={20} /></button>
             <button onClick={addZoneNode} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-purple-400 hover:text-white hover:bg-purple-600/50 transition-colors" title="Add Zone"><Layout size={20} /></button>
             <button onClick={() => setShowGeoModal(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-emerald-400 hover:text-white transition-colors" title="Upload Site Plan"><UploadCloud size={20} /></button>
@@ -1160,7 +1061,15 @@ const QuoteBuilderContent = () => {
               <Sparkles size={24} />
             </button>
           )}
-          <AIChat isOpen={showChat} onClose={() => setShowChat(false)} messages={chatMessages} onSendMessage={handleAIChat} isTyping={chatTyping} />
+          <QuoteCopilot 
+            isOpen={showChat} 
+            onClose={() => setShowChat(false)} 
+            messages={chatMessages} 
+            onSendMessage={handleAIChat} 
+            isTyping={chatTyping} 
+            onAction={handleCopilotAction}
+            onGenerateBlueprint={handleGenerateBlueprint} 
+          />
         </div>
 
       </div>

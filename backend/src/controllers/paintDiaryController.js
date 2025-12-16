@@ -3,7 +3,8 @@
  * Clean version with project assignment
  */
 
-const { Diary, Staff, Equipment, Node, Project, Client } = require('../models');const Joi = require('joi');
+const { Diary, Staff, Equipment, Node, Project, Client } = require('../models');
+const Joi = require('joi');
 const { sequelize } = require('../models');
 
 const canvasSchema = Joi.object({
@@ -46,6 +47,60 @@ const paintDiarySchema = Joi.object({
   gpsData: Joi.any().optional().allow(null), // Allow any structure for gpsData
 });
 
+// Helper to auto-create resources from diary entries
+const processNewDiaryItems = async (canvasData, userId) => {
+    if (!canvasData || !canvasData.entries) return canvasData;
+
+    const processedEntries = [];
+    for (const entry of canvasData.entries) {
+        const processedItems = [];
+        for (const item of entry.items || []) {
+            // Check if item needs creation (no dataId, or generic ID)
+            // 'ai-' is used by frontend AI, 'temp-' or just missing dataId implies new
+            const isNew = !item.dataId || String(item.dataId).startsWith('ai-') || String(item.id).startsWith('ai-');
+            
+            if (isNew) {
+                try {
+                    let newItem;
+                    if (item.type === 'material') {
+                        newItem = await Node.create({
+                            name: item.name || 'New Material',
+                            pricePerUnit: parseFloat(item.costRate) || 0,
+                            category: 'material',
+                            unit: 'unit',
+                            userId
+                        });
+                    } else if (item.type === 'staff') {
+                        newItem = await Staff.create({
+                            name: item.name || 'New Staff',
+                            role: 'General',
+                            payRates: { base: parseFloat(item.costRate) || 0 },
+                            chargeRates: { base: parseFloat(item.chargeRate) || 0 },
+                            userId
+                        });
+                    } else if (item.type === 'equipment') {
+                        newItem = await Equipment.create({
+                            name: item.name || 'New Equipment',
+                            costRates: { base: parseFloat(item.costRate) || 0 },
+                            chargeRates: { base: parseFloat(item.chargeRate) || 0 },
+                            userId
+                        });
+                    }
+                    
+                    if (newItem) {
+                        item.dataId = newItem.id;
+                    }
+                } catch (err) {
+                    console.error("Auto-create resource failed:", err.message);
+                }
+            }
+            processedItems.push(item);
+        }
+        processedEntries.push({ ...entry, items: processedItems });
+    }
+    return { ...canvasData, entries: processedEntries };
+};
+
 const getAllPaintDiaries = async (req, res) => {
   try {
     const { date } = req.query;
@@ -86,12 +141,15 @@ const createPaintDiary = async (req, res) => {
 
     const { date, projectId, clientId, canvasData, gpsData } = req.body;
 
+    // 1. Auto-Create Resources
+    const processedCanvas = await processNewDiaryItems(canvasData, req.user?.id);
+
     let calculatedCosts = { totalCost: 0, totalRevenue: 0, productivityScore: 0 };
-    if (canvasData && canvasData.entries) {
-      calculatedCosts = await calculateCostsFromEntries(canvasData.entries);
+    if (processedCanvas && processedCanvas.entries) {
+      calculatedCosts = await calculateCostsFromEntries(processedCanvas.entries);
     }
 
-    const processedCanvasData = canvasData ? canvasData.entries.map(entry => ({
+    const processedCanvasData = processedCanvas ? processedCanvas.entries.map(entry => ({
       ...entry,
       photos: entry.photos || [],
       voiceNotes: entry.voiceNotes || [],
@@ -140,12 +198,15 @@ const updatePaintDiary = async (req, res) => {
 
     const { date, projectId, clientId, canvasData, gpsData } = req.body;
 
+    // 1. Auto-Create Resources
+    const processedCanvas = await processNewDiaryItems(canvasData, req.user?.id);
+
     let calculatedCosts = { totalCost: 0, totalRevenue: 0, productivityScore: 0 };
-    if (canvasData && canvasData.entries) {
-      calculatedCosts = await calculateCostsFromEntries(canvasData.entries);
+    if (processedCanvas && processedCanvas.entries) {
+      calculatedCosts = await calculateCostsFromEntries(processedCanvas.entries);
     }
 
-    const processedCanvasData = canvasData ? canvasData.entries.map(entry => ({
+    const processedCanvasData = processedCanvas ? processedCanvas.entries.map(entry => ({
       ...entry,
       photos: entry.photos || [],
       voiceNotes: entry.voiceNotes || [],
@@ -207,7 +268,10 @@ const saveCanvasState = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const canvasData = req.body.entries.map(entry => ({
+    // Auto-Create Resources for partial saves too? Yes.
+    const processedCanvas = await processNewDiaryItems({ entries: req.body.entries }, req.user?.id);
+
+    const canvasData = processedCanvas.entries.map(entry => ({
       ...entry,
       photos: entry.photos || [],
       voiceNotes: entry.voiceNotes || [],

@@ -10,7 +10,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
 import { Folder, Plus, Edit, Trash2, Calendar, User, Search, Filter, Download, BarChart3, TrendingUp, MapPin, DollarSign,
-    Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer, X, Upload, FileText, ExternalLink, File, CheckCircle2 } from 'lucide-react'
+    Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer, X, Upload, FileText, ExternalLink, File, CheckCircle2, Sparkles, Loader2 } from 'lucide-react'
 import Papa from 'papaparse'
 import ClientSelector from './Clients/ClientSelector'
 
@@ -27,6 +27,8 @@ const EnhancedProjects = () => {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'documents'
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [analyzingDoc, setAnalyzingDoc] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -83,23 +85,16 @@ const EnhancedProjects = () => {
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('projectId', selectedProject.id); // Ensure project ID is sent
 
     try {
-        // 1. Upload File
+        // Upload file to get URL, backend now also creates Document record
         const uploadRes = await api.post('/uploads', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
-        const fileUrl = uploadRes.data.url;
-
-        // 2. Link to Project
-        const docRes = await api.post(`/projects/${selectedProject.id}/documents`, {
-            title: file.name,
-            type: 'REPORT', // Defaulting to report for now, could add selector
-            url: fileUrl,
-            content: `Uploaded file: ${file.name}`
-        });
-
-        setDocuments([docRes.data, ...documents]);
+        
+        // Response should contain the new Document object
+        setDocuments([uploadRes.data, ...documents]);
         alert('Document uploaded successfully!');
     } catch (err) {
         console.error('Upload failed:', err);
@@ -107,6 +102,19 @@ const EnhancedProjects = () => {
     } finally {
         setUploading(false);
     }
+  };
+
+  const handleAnalyzeDocument = async (docId) => {
+      setAnalyzingDoc(docId);
+      try {
+          const res = await api.post('/ai/analyze-document', { docId });
+          setAnalysisResult(res.data.analysis);
+      } catch (e) {
+          console.error("Analysis failed", e);
+          alert(`Analysis Failed: ${e.response?.data?.error || 'Server error'}`);
+      } finally {
+          setAnalyzingDoc(null);
+      }
   };
 
   // Advanced filtering and search
@@ -535,7 +543,7 @@ const EnhancedProjects = () => {
                 </button>
 
                 <button
-                  onClick={() => navigate('/map-builder')}
+                  onClick={() => navigate('/map-builder', { state: { projectId: project.id } })}
                   className="p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl hover:bg-emerald-500 hover:text-white transition-all"
                   title="View on Map"
                 >
@@ -922,10 +930,13 @@ const EnhancedProjects = () => {
                           <div className="space-y-3">
                               <h4 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Files & Contracts</h4>
                               {documents.map((doc, idx) => (
-                                  <div key={idx} className="bg-stone-800 p-3 rounded-xl border border-white/5 flex items-center gap-3 hover:border-indigo-500/50 transition-all">
+                                  <div key={idx} className="bg-stone-800 p-3 rounded-xl border border-white/5 flex items-center gap-3 hover:border-indigo-500/50 transition-all group">
                                       <div className="p-2 bg-indigo-500/10 rounded-lg"><FileText className="text-indigo-400" size={16} /></div>
                                       <div className="flex-1 min-w-0"><div className="font-bold text-white truncate text-sm">{doc.title}</div><div className="text-[10px] text-gray-500">{new Date(doc.createdAt).toLocaleDateString()}</div></div>
                                       <a href={doc.metadata?.url || '#'} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"><ExternalLink size={16} /></a>
+                                      <button onClick={() => handleAnalyzeDocument(doc.id)} className="p-2 hover:bg-purple-500/20 rounded-lg text-purple-400 hover:text-white" title="Analyze with AI">
+                                        {analyzingDoc === doc.id ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                      </button>
                                   </div>
                               ))}
                               {documents.length === 0 && <div className="text-gray-500 text-xs italic">No files uploaded.</div>}
@@ -993,6 +1004,21 @@ const EnhancedProjects = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* AI Analysis Modal */}
+        {analysisResult && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4 animate-fade-in" onClick={() => setAnalysisResult(null)}>
+                <div className="bg-stone-900 border border-white/10 w-full max-w-2xl rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                        <h2 className="text-lg font-bold text-white flex items-center gap-2"><Sparkles size={20} className="text-purple-400"/> AI Document Analysis</h2>
+                        <button onClick={() => setAnalysisResult(null)} className="text-gray-400 hover:text-white"><X size={20}/></button>
+                    </div>
+                    <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar prose prose-invert prose-sm">
+                        <pre className="whitespace-pre-wrap font-sans text-gray-300">{analysisResult}</pre>
+                    </div>
+                </div>
+            </div>
         )}
       </div>
     </div>

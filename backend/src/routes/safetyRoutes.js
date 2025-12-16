@@ -13,7 +13,7 @@ router.post('/', safetyController.createForm);
 // New Capabilities
 router.post('/templates', safetyController.createTemplate);
 router.get('/templates', safetyController.getTemplates);
-router.post('/ai/generate', safetyController.generateAIContent);
+router.post('/ai-content', safetyController.generateAIContent);
 router.post('/import', upload.single('file'), safetyController.importDocument);
 
 router.get('/:id', safetyController.getFormById);

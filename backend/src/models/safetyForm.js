@@ -69,7 +69,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     projectId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Changed to true to allow unassigned drafts
       references: {
         model: 'Projects',
         key: 'id'

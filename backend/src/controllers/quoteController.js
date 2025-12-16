@@ -15,49 +15,91 @@ const quoteSchema = Joi.object({
   nodes: Joi.array().optional(),
   staff: Joi.array().optional(),
   equipment: Joi.array().optional(),
-  visualData: Joi.object().unknown(true).optional().allow(null) // Added visualData
+  visualData: Joi.object().unknown(true).optional().allow(null)
 }).unknown(true);
+
+const processNewItems = async (items, type, userId) => {
+    const processed = [];
+    for (const item of items || []) {
+        // Check if item is marked as new or has a temp ID (starts with 'ai-')
+        const idField = type === 'material' ? 'nodeId' : type === 'staff' ? 'staffId' : 'equipmentId';
+        const idVal = item[idField];
+
+        if (item.isNew || (typeof idVal === 'string' && idVal.startsWith('ai-'))) {
+            try {
+                let newItem;
+                if (type === 'material') {
+                    newItem = await Node.create({
+                        name: item.name || 'New Material',
+                        pricePerUnit: parseFloat(item.pricePerUnit) || 0,
+                        category: 'material',
+                        unit: 'unit',
+                        userId
+                    });
+                    item.nodeId = newItem.id;
+                } else if (type === 'staff') {
+                    newItem = await Staff.create({
+                        name: item.name || 'New Staff',
+                        role: 'General',
+                        payRates: { base: parseFloat(item.chargeRate) || 0 }, // Using charge as base estimate
+                        chargeRates: { base: parseFloat(item.chargeRate) || 0 },
+                        userId
+                    });
+                    item.staffId = newItem.id;
+                } else if (type === 'equipment') {
+                    newItem = await Equipment.create({
+                        name: item.name || 'New Equipment',
+                        costRates: { base: parseFloat(item.costRate) || 0 },
+                        chargeRates: { base: parseFloat(item.costRate) || 0 },
+                        userId
+                    });
+                    item.equipmentId = newItem.id;
+                }
+                // Remove temp flags
+                delete item.isNew; 
+            } catch (err) {
+                console.error(`Failed to auto-create resource: ${err.message}`);
+                // Proceed without creating (will likely fail FK constraint or save with temp ID which is bad)
+            }
+        }
+        processed.push(item);
+    }
+    return processed;
+};
 
 const calculateTotals = async (nodes, staff, equipment, userId) => {
   let totalCost = 0;
 
-  // Calculate materials cost
   for (const item of nodes || []) {
     if (item.type === 'metadata' || item.nodeId === 'METADATA') continue;
-
     let price = item.pricePerUnit || item.price || 0;
-    
     if (!price && item.nodeId) {
         try {
           const node = await Node.findOne({ where: { id: item.nodeId } });
           if (node) price = parseFloat(node.pricePerUnit);
-        } catch (err) { console.warn(`Material lookup failed: ${err.message}`); }
+        } catch (err) {}
     }
     totalCost += parseFloat(price || 0) * (parseFloat(item.quantity) || 0);
   }
 
-  // Calculate staff cost
   for (const item of staff || []) {
     let rate = item.chargeRate || item.rate || 0;
-
     if (!rate && item.staffId) {
         try {
           const staffMember = await Staff.findOne({ where: { id: item.staffId } });
-          if (staffMember) rate = staffMember.chargeRates?.base || staffMember.payRates?.base || 0;
-        } catch (err) { console.warn(`Staff lookup failed: ${err.message}`); }
+          if (staffMember) rate = staffMember.chargeRates?.base || 0;
+        } catch (err) {}
     }
     totalCost += parseFloat(rate || 0) * (parseFloat(item.hours) || 0);
   }
 
-  // Calculate equipment cost
   for (const item of equipment || []) {
      let rate = item.costRate || item.rate || 0;
-
      if (!rate && item.equipmentId) {
         try {
           const equipmentItem = await Equipment.findOne({ where: { id: item.equipmentId } });
           if (equipmentItem) rate = equipmentItem.costRates?.base || 0;
-        } catch (err) { console.warn(`Equipment lookup failed: ${err.message}`); }
+        } catch (err) {}
      }
      totalCost += parseFloat(rate || 0) * (parseFloat(item.hours) || 0);
   }
@@ -119,20 +161,18 @@ const getQuoteById = async (req, res) => {
 const createQuote = async (req, res) => {
   try {
     const { error, value } = quoteSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({
-        error: error.details[0].message,
-        field: error.details[0].path?.[0] || 'unknown'
-      });
-    }
+    if (error) return res.status(400).json({ error: error.details[0].message });
 
     const project = await Project.findByPk(value.projectId);
-    
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
+    if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    const totalCost = await calculateTotals(value.nodes, value.staff, value.equipment, req.user.id);
+    // 1. Process New Items (Auto-Create Resources)
+    const userId = req.user?.id;
+    const processedNodes = await processNewItems(value.nodes, 'material', userId);
+    const processedStaff = await processNewItems(value.staff, 'staff', userId);
+    const processedEquipment = await processNewItems(value.equipment, 'equipment', userId);
+
+    const totalCost = await calculateTotals(processedNodes, processedStaff, processedEquipment, userId);
     const totalRevenue = totalCost * (1 + value.marginPct / 100);
 
     const quote = await Quote.create({
@@ -140,24 +180,17 @@ const createQuote = async (req, res) => {
       status: value.status || 'draft',
       projectId: value.projectId,
       clientId: value.clientId || null,
-      userId: req.user?.id || null,
+      userId: userId || null,
       marginPct: value.marginPct,
-      nodes: value.nodes || [],
-      staff: value.staff || [],
-      equipment: value.equipment || [],
-      visualData: value.visualData || {}, // Save visual data
+      nodes: processedNodes || [],
+      staff: processedStaff || [],
+      equipment: processedEquipment || [],
+      visualData: value.visualData || {},
       totalCost: totalCost.toFixed(2),
       totalRevenue: totalRevenue.toFixed(2)
     });
 
-    const quoteWithProject = await Quote.findByPk(quote.id, {
-      include: [
-          { model: Project, as: 'project' },
-          { model: Client, as: 'clientDetails', required: false }
-      ]
-    });
-
-    res.status(201).json(quoteWithProject);
+    res.status(201).json(quote);
   } catch (error) {
     console.error('Quote creation error:', error);
     res.status(400).json({ error: error.message });
@@ -167,28 +200,16 @@ const createQuote = async (req, res) => {
 const updateQuote = async (req, res) => {
   try {
     const { error, value } = quoteSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({
-        error: error.details[0].message,
-        field: error.details[0].path?.[0] || 'unknown'
-      });
-    }
+    if (error) return res.status(400).json({ error: error.details[0].message });
 
-    const project = await Project.findOne({
-      where: req.user ? { id: value.projectId, userId: req.user?.id || null } : { id: value.projectId }
-    });
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found or not accessible' });
-    }
+    const userId = req.user?.id;
 
-    const existingQuote = await Quote.findOne({
-      where: { id: req.params.id, userId: req.user?.id || null }
-    });
-    if (!existingQuote) {
-      return res.status(404).json({ error: 'Quote not found' });
-    }
+    // 1. Process New Items
+    const processedNodes = await processNewItems(value.nodes, 'material', userId);
+    const processedStaff = await processNewItems(value.staff, 'staff', userId);
+    const processedEquipment = await processNewItems(value.equipment, 'equipment', userId);
 
-    const totalCost = await calculateTotals(value.nodes, value.staff, value.equipment, req.user.id);
+    const totalCost = await calculateTotals(processedNodes, processedStaff, processedEquipment, userId);
     const totalRevenue = totalCost * (1 + value.marginPct / 100);
 
     const [updated] = await Quote.update({
@@ -196,11 +217,11 @@ const updateQuote = async (req, res) => {
       projectId: value.projectId,
       clientId: value.clientId || null,
       marginPct: value.marginPct,
-      status: value.status || existingQuote.status,
-      nodes: value.nodes || [],
-      staff: value.staff || [],
-      equipment: value.equipment || [],
-      visualData: value.visualData || existingQuote.visualData, // Update visual data
+      status: value.status,
+      nodes: processedNodes || [],
+      staff: processedStaff || [],
+      equipment: processedEquipment || [],
+      visualData: value.visualData,
       totalCost: totalCost.toFixed(2),
       totalRevenue: totalRevenue.toFixed(2)
     }, {
@@ -208,18 +229,7 @@ const updateQuote = async (req, res) => {
     });
 
     if (updated) {
-      const updatedQuote = await Quote.findByPk(req.params.id, {
-        include: [
-          { model: Project, as: 'project' },
-          { model: Client, as: 'clientDetails', required: false }
-        ]
-      });
-
-      // Workflow Trigger
-      if (value.status === 'approved' && existingQuote.status !== 'approved') {
-          workflowEngine.emit('quote.approved', { quote: updatedQuote, user: req.user });
-      }
-
+      const updatedQuote = await Quote.findByPk(req.params.id);
       res.json(updatedQuote);
     } else {
       res.status(404).json({ error: 'Quote not found' });

@@ -371,6 +371,7 @@ const getProjectMapStats = async (req, res) => {
                 potentialPrice: financialData.potentialPrice, // Contract + All Quotes
                 cost: financialData.totalCost,
                 diaryRevenue: financialData.totalDiaryRevenue, // Add Charge Out
+                revenue: financialData.totalDiaryRevenue, // Frontend expects 'revenue'
                 profit: financialData.profit,
                 isProfitable: financialData.isProfitable,
                 staffCount,

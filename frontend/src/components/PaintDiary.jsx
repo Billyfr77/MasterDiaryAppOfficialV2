@@ -13,7 +13,7 @@ import {
   TrendingUp, BarChart3, Edit3, FileText, Palette, Camera, Mic,
   MicOff, MapPin, Cloud, Download, Zap, Target, Award, Upload,
   Moon, Sun, Keyboard, Settings, RotateCcw, FileDown, FileSpreadsheet,
-  Package, Eye, List, Image as ImageIcon, File, Folder, X, Sparkles, Send, Minimize, Layout
+  Package, Eye, List, Image as ImageIcon, File, Folder, X, Sparkles, Send, Minimize, Layout, Wand2, ArrowRight
 } from 'lucide-react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -164,10 +164,81 @@ const ConfigModal = ({ isOpen, onClose, onConfirm, item }) => {
 }
 
 // ================================
-// AI CHAT COMPONENT
+// SMART LOG MODAL
 // ================================
+const AIAutoLogModal = ({ isOpen, onClose, onConfirm, loading }) => {
+  const [prompt, setPrompt] = useState('')
+  const [isListening, setIsListening] = useState(false)
 
-const AIChat = ({ isOpen, onClose, messages, onSendMessage, isTyping }) => {
+  const toggleListening = () => {
+    if (isListening) {
+      window.speechRecognition?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return alert("Voice input not supported in this browser.");
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setPrompt(prev => prev + (prev ? ' ' : '') + transcript);
+    };
+
+    recognition.start();
+    window.speechRecognition = recognition;
+  };
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-stone-900 border border-white/10 rounded-2xl p-6 w-[500px] shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-black text-white flex items-center gap-2"><Sparkles className="text-emerald-400" /> Smart Diary Log</h3>
+          <button onClick={onClose}><X className="text-gray-500 hover:text-white" /></button>
+        </div>
+        <div className="relative">
+            <textarea 
+              value={prompt} 
+              onChange={e => setPrompt(e.target.value)} 
+              placeholder="e.g. 'John and Mike worked 8 hours installing 20 sheets of drywall...'"
+              className="w-full h-32 bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-emerald-500 outline-none mb-4 resize-none pr-12"
+            />
+            <button 
+                onClick={toggleListening}
+                className={`absolute right-3 bottom-7 p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-stone-800 text-gray-400 hover:text-white'}`}
+                title="Voice Input"
+            >
+                {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+        </div>
+        <div className="flex justify-end">
+          <button 
+            onClick={() => onConfirm(prompt)} 
+            disabled={loading || !prompt.trim()}
+            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
+          >
+            {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Zap size={18} />}
+            Process Log
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ================================
+// DIARY COPILOT (SMART AI)
+// ================================
+const DiaryCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAction }) => {
   const [input, setInput] = useState('')
   const scrollRef = useRef(null)
 
@@ -178,40 +249,59 @@ const AIChat = ({ isOpen, onClose, messages, onSendMessage, isTyping }) => {
   if (!isOpen) return null
 
   return (
-    <div className="absolute bottom-24 right-6 w-96 h-[500px] bg-stone-900/95 border border-white/20 rounded-2xl shadow-2xl flex flex-col z-50 backdrop-blur-xl animate-fade-in">
-      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-purple-900/30 to-indigo-900/30 rounded-t-2xl">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg">
-            <Sparkles size={16} className="text-white" />
+    <div className="fixed bottom-24 right-6 w-96 h-[600px] max-h-[70vh] bg-stone-900/95 border border-white/20 rounded-2xl shadow-2xl flex flex-col z-[100] backdrop-blur-xl animate-fade-in origin-bottom-right">
+      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-emerald-900/50 to-teal-900/50 rounded-t-2xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg ring-1 ring-white/20">
+            <Sparkles size={20} className="text-white" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-white">Diary Copilot</h3>
+            <h3 className="text-sm font-black text-white uppercase tracking-wider">Diary Copilot</h3>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Online</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Active</span>
             </div>
           </div>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-white"><Minimize size={18} /></button>
+        <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-white/10 rounded-lg transition-colors"><X size={18} /></button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" ref={scrollRef}>
         {messages.length === 0 && (
-          <div className="text-center text-gray-500 text-sm mt-10">
-            <Sparkles size={40} className="mx-auto mb-4 opacity-20" />
-            <p>I can help summarize your day, spot missing costs, or analyze productivity!</p>
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 space-y-4">
+            <Wand2 size={40} className="opacity-20 animate-pulse" />
+            <div className="max-w-[200px]">
+                <p className="text-sm font-bold text-gray-400 mb-1">I can help you log your day.</p>
+                <p className="text-xs">Try "Add Mike for 8 hours" or "Used the excavator"</p>
+            </div>
           </div>
         )}
         {messages.map((msg, idx) => (
-          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-stone-800 text-gray-200 border border-white/10 rounded-tl-none'}`}>
+          <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+            <div className={`max-w-[90%] p-3 rounded-2xl text-sm mb-1 ${msg.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-sm' : 'bg-stone-800 text-gray-200 border border-white/10 rounded-tl-sm'}`}>
               {msg.content}
             </div>
+            
+            {/* Action Chips */}
+            {msg.actions && msg.actions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2 max-w-[90%]">
+                    {msg.actions.map((action, i) => (
+                        <button 
+                            key={i}
+                            onClick={() => onAction(action)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-xs font-bold transition-all group"
+                        >
+                            <Plus size={12} className="group-hover:scale-110 transition-transform" />
+                            {action.type === 'add_item' ? `Add ${action.quantity}x ${action.label}` : 'Action'}
+                        </button>
+                    ))}
+                </div>
+            )}
           </div>
         ))}
         {isTyping && (
           <div className="flex justify-start">
-             <div className="bg-stone-800 p-3 rounded-2xl rounded-tl-none border border-white/10 flex gap-1">
+             <div className="bg-stone-800 p-3 rounded-2xl rounded-tl-sm border border-white/10 flex gap-1">
                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" />
                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-75" />
                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-150" />
@@ -220,22 +310,22 @@ const AIChat = ({ isOpen, onClose, messages, onSendMessage, isTyping }) => {
         )}
       </div>
 
-      <div className="p-4 border-t border-white/10 bg-stone-900/50 rounded-b-2xl">
-        <div className="relative">
+      <div className="p-4 border-t border-white/10 bg-stone-900/50 rounded-b-2xl backdrop-blur-md">
+        <div className="relative flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && (onSendMessage(input), setInput(''))}
-            placeholder="Ask about today's log..."
-            className="w-full bg-stone-800 border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+            placeholder="Ask Copilot..."
+            className="flex-1 bg-black/30 border border-white/10 rounded-xl pl-4 pr-4 py-3 text-sm text-white focus:border-emerald-500 focus:outline-none placeholder-gray-600"
           />
           <button 
             onClick={() => { onSendMessage(input); setInput('') }}
             disabled={!input.trim()}
-            className="absolute right-2 top-2 p-1.5 bg-indigo-600 rounded-lg text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="p-3 bg-emerald-600 rounded-xl text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20"
           >
-            <Send size={16} />
+            <ArrowRight size={18} />
           </button>
         </div>
       </div>
@@ -498,6 +588,45 @@ const PaintDiary = () => {
   const [showGeoModal, setShowGeoModal] = useState(false)
   const [sitePlan, setSitePlan] = useState(null)
   const [showTools, setShowTools] = useState(false)
+  const [showSmartLog, setShowSmartLog] = useState(false)
+  const [smartLogLoading, setSmartLogLoading] = useState(false)
+
+  const handleSmartLog = async (prompt) => {
+      setSmartLogLoading(true);
+      try {
+          const res = await api.post('/ai/parse-diary', { prompt });
+          const parsedItems = res.data.items || [];
+          
+          if (parsedItems.length === 0) {
+              alert("Could not identify any items. Please try being more specific.");
+          } else {
+              const newItems = resolveItems(parsedItems).map(i => ({
+                  id: generateId(),
+                  dataId: i.dataId,
+                  type: i.type,
+                  name: i.name,
+                  costRate: i.costRate,
+                  chargeRate: i.chargeRate,
+                  quantity: i.quantity,
+                  duration: i.quantity, 
+                  position: { x: Math.random() * 200, y: Math.random() * 200 } 
+              }));
+              
+              setCurrentEntry(prev => ({ 
+                  ...prev, 
+                  items: [...prev.items, ...newItems],
+                  note: res.data.result.note || prev.note // Auto-fill note if provided
+              }));
+              setShowSmartLog(false);
+              setIsSaved(false);
+          }
+      } catch (err) {
+          console.error("Smart Log Error:", err);
+          alert("Failed to process log.");
+      } finally {
+          setSmartLogLoading(false);
+      }
+  };
 
   const fetchAllDiaries = useCallback(async () => { try { const response = await api.get('/paint-diaries'); setAllDiaries(response.data || []); } catch (err) { console.error('Error fetching all diaries:', err); } }, [])
 
@@ -508,8 +637,6 @@ const PaintDiary = () => {
        if (selectedProject.clientId) {
           setSelectedClient({ id: selectedProject.clientId, name: selectedProject.client || selectedProject.clientDetails?.name || '' });
        } else if (selectedProject.client) {
-          // If we have a name but no ID, we might need to search or just set the name
-          // For now, let's assume if there's a name, we set it for display at least
           setSelectedClient({ id: null, name: selectedProject.client });
        }
     }
@@ -526,7 +653,6 @@ const PaintDiary = () => {
         setEquipment(Array.isArray(equipRes.data) ? equipRes.data : (equipRes.data?.data || []));
         setMaterials(nodesRes.data.data || nodesRes.data || []);
 
-        // Auto-select project from navigation state
         if (location.state?.projectId) {
             const preSelected = loadedProjects.find(p => p.id === location.state.projectId);
             if (preSelected) setSelectedProject(preSelected);
@@ -543,7 +669,7 @@ const PaintDiary = () => {
   const fetchRealWeather = async (lat, lon) => {
     try {
       const res = await api.get(`/google/weather?lat=${lat}&lon=${lon}`);
-      setWeather({ temp: res.data.current.temperature_2m, condition: 'Cloudy' }); // Simple mapping
+      setWeather({ temp: res.data.current.temperature_2m, condition: 'Cloudy' }); 
     } catch (e) { console.error('Weather fetch failed', e); }
   }
 
@@ -627,11 +753,9 @@ const PaintDiary = () => {
       const reader = new FileReader(); 
       reader.onloadend = async () => { 
         const base64 = reader.result;
-        // Analyze image with Google Vision
         try {
            const analysis = await api.post('/google/vision', { imageBase64: base64 });
            console.log('Vision Analysis:', analysis.data);
-           // Could auto-tag here
         } catch (e) {
           console.error('Vision analysis failed', e);
         }
@@ -642,23 +766,51 @@ const PaintDiary = () => {
     } 
   }
   
-  // AI Chat
+  // AI Chat (New Actionable Copilot)
   const handleAIChat = async (message) => {
     if (!message.trim()) return
     setChatMessages(prev => [...prev, { role: 'user', content: message }])
     setChatTyping(true)
     try {
-       const res = await api.post('/ai/cloud-assist', { message: `Context: Diary for ${selectedProject?.name || 'Unknown Project'}. Items: ${currentEntry.items.length}. User asks: ${message}` })
-       setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.insight || "I've noted that." }])
+       const context = {
+           project: selectedProject?.name,
+           date: selectedDate,
+           stats: { cost, revenue, profit, productivity: productivityScore },
+           items: currentEntry.items.map(i => `${i.name} (${i.quantity} ${i.type === 'staff' ? 'hrs' : 'units'})`).join(', ')
+       };
+       // Use new endpoint
+       const res = await api.post('/ai/chat-diary', { message, context })
+       const { reply, suggestedActions } = res.data;
+       
+       setChatMessages(prev => [...prev, { role: 'assistant', content: reply, actions: suggestedActions }])
     } catch (err) {
        setChatMessages(prev => [...prev, { role: 'assistant', content: "I'm offline right now." }])
     } finally { setChatTyping(false) }
   }
 
+  const handleCopilotAction = (action) => {
+      if (action.type === 'add_item') {
+          // Create new item directly
+          const newItem = {
+              id: `ai-${Date.now()}`,
+              type: action.category,
+              name: action.label,
+              costRate: action.cost || 0,
+              chargeRate: action.charge || 0,
+              quantity: action.quantity || 1,
+              duration: action.quantity || 1,
+              position: { x: 50, y: 50 } // Default position
+          };
+          setCurrentEntry(prev => ({ ...prev, items: [...prev.items, newItem] }));
+          setIsSaved(false);
+      }
+  };
+
   if (viewMode === 'daily') {
     return (
       <div className="min-h-screen p-4 md:p-8 animate-fade-in font-sans bg-transparent relative">
         {pendingItem && <ConfigModal isOpen={!!pendingItem} item={pendingItem.item} onClose={() => setPendingItem(null)} onConfirm={handleConfirmAddItem} />}
+        <AIAutoLogModal isOpen={showSmartLog} onClose={() => setShowSmartLog(false)} onConfirm={handleSmartLog} loading={smartLogLoading} />
         <GoogleServicesSuggestions isOpen={showSuggestions} onClose={() => setShowSuggestions(false)} />
         <GeoreferenceModal isOpen={showGeoModal} onClose={() => setShowGeoModal(false)} onSave={(data) => { setSitePlan(data); setShowMap(true); }} />
 
@@ -673,6 +825,14 @@ const PaintDiary = () => {
               <div className="relative"><DatePicker selected={selectedDate} onChange={(date) => { setSelectedDate(date); setIsSaved(false); }} dateFormat="MMMM d, yyyy" className="px-4 py-2.5 bg-stone-900/60 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 focus:outline-none cursor-pointer font-bold" /><Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" /></div>
               <select value={selectedProject?.id || ''} onChange={(e) => setSelectedProject(projects.find(p => p.id === e.target.value) || null)} className="px-4 py-2.5 bg-stone-900/60 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 focus:outline-none cursor-pointer font-bold appearance-none min-w-[200px]"><option value="" className="bg-stone-900">Select Project...</option>{projects.map(p => (<option key={p.id} value={p.id} className="bg-stone-900">{p.name}</option>))}</select>
               <div className="w-[250px]"><ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} /></div>
+              
+              <button 
+                onClick={() => setShowSmartLog(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all font-bold shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-0.5"
+              >
+                <Sparkles size={18} /> Smart Log
+              </button>
+
               <button onClick={() => setShowTools(!showTools)} className={`lg:hidden flex items-center gap-2 px-5 py-2.5 ${showTools ? 'bg-indigo-600' : 'bg-stone-800'} text-white rounded-xl transition-all font-bold border border-white/10 shadow-lg`}><Wrench size={18} /> Tools</button>
               <button onClick={() => setViewMode('all')} className="flex items-center gap-2 px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded-xl transition-all font-bold border border-white/10 shadow-lg"><List size={18} /><span className="hidden sm:inline">All Diaries</span></button>
             </div>
@@ -720,7 +880,7 @@ const PaintDiary = () => {
         {/* AI Chat Button */}
         <div className="absolute bottom-6 right-6 z-50">
           {!showChat && <button onClick={() => setShowChat(true)} className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 shadow-[0_0_30px_rgba(99,102,241,0.6)] flex items-center justify-center text-white hover:scale-110 transition-transform animate-bounce-slow"><Sparkles size={24} /></button>}
-          <AIChat isOpen={showChat} onClose={() => setShowChat(false)} messages={chatMessages} onSendMessage={handleAIChat} isTyping={chatTyping} />
+          <DiaryCopilot isOpen={showChat} onClose={() => setShowChat(false)} messages={chatMessages} onSendMessage={handleAIChat} isTyping={chatTyping} onAction={handleCopilotAction} />
         </div>
       </div>
     )

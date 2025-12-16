@@ -81,9 +81,22 @@ exports.createForm = async (req, res) => {
   try {
     const { title, type, projectId, data, status, latitude, longitude, locationDetails, riskLevel, templateId } = req.body;
     
-    // Validate project exists
-    const project = await Project.findByPk(projectId);
-    if (!project) return res.status(404).json({ message: 'Project not found' });
+    let targetProjectId = projectId;
+
+    // Fallback: If no projectId provided, try to grab the most recent active project
+    if (!targetProjectId) {
+        const lastProject = await Project.findOne({ order: [['updatedAt', 'DESC']] });
+        if (lastProject) {
+            targetProjectId = lastProject.id;
+        }
+        // If still null, it's okay -> Unassigned Draft
+    }
+    
+    // Validate project exists IF we have an ID
+    if (targetProjectId) {
+        const project = await Project.findByPk(targetProjectId);
+        if (!project) return res.status(404).json({ message: 'Project not found' });
+    }
 
     let finalData = data || {};
 
@@ -93,14 +106,13 @@ exports.createForm = async (req, res) => {
         if (template) {
             // Logic to merge template structure into form data if needed
             // For now, we assume 'data' might be pre-filled with template structure
-            // or we could store the structure in a separate field if we normalized it
         }
     }
 
     const newForm = await SafetyForm.create({
       title,
       type,
-      projectId,
+      projectId: targetProjectId,
       templateId: templateId || null,
       data: finalData,
       status: status || 'DRAFT',
@@ -192,14 +204,28 @@ exports.deleteForm = async (req, res) => {
 // Create Template
 exports.createTemplate = async (req, res) => {
     try {
-        if (!SafetyTemplate) return res.status(500).json({ message: "SafetyTemplate model not loaded" });
-        const template = await SafetyTemplate.create({
-            ...req.body,
+        console.log("createTemplate called with:", JSON.stringify(req.body, null, 2));
+        
+        // Ensure structure is valid JSON (if it's a string, parse it; if object, keep it)
+        let cleanStructure = req.body.structure;
+        if (typeof cleanStructure === 'string') {
+            try { cleanStructure = JSON.parse(cleanStructure); } catch(e) {}
+        }
+
+        const payload = {
+            name: req.body.name || 'Untitled Template',
+            type: req.body.type || 'SWMS',
+            structure: cleanStructure || [],
             createdBy: req.user ? req.user.id : null
-        });
+        };
+        console.log("Creating template with payload:", payload);
+
+        const template = await db.SafetyTemplate.create(payload);
+        console.log("Template created:", template.id);
         res.status(201).json(template);
     } catch(e) {
-        res.status(500).json({ error: e.message });
+        console.error("Template Creation Error:", e);
+        res.status(500).json({ error: e.message, stack: e.stack });
     }
 };
 
@@ -214,18 +240,102 @@ exports.getTemplates = async (req, res) => {
     }
 };
 
-// AI Assist
+// AI Assist - UPGRADED for Full Document Generation
 exports.generateAIContent = async (req, res) => {
     try {
-        const { prompt, context } = req.body;
-        // Basic RAG context could be added here
-        const systemPrompt = "You are an expert Safety Officer (ISO 45001). Generate a JSON list of hazards and controls based on the work description. Format: [{ hazard: '', risk: 'High', controls: [''] }]";
-        const content = await pinnacleAi.generateText(`${prompt} Context: ${JSON.stringify(context)}`, systemPrompt);
-        // Attempt to parse JSON if model returned code block
-        const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
-        res.json({ result: cleanContent });
+        const { prompt, context, mode = 'hazards' } = req.body;
+        
+        let systemPrompt = "";
+
+        if (mode === 'full_form') {
+             systemPrompt = `
+                You are a Senior HSEQ Manager and Lead Auditor (ISO 45001 & Safe Work Australia Standards).
+                Your task is to generate a **world-class, legally robust, and industry-specific** Safety Document based on the user's request.
+                
+                **Objective:**
+                Create a document that would pass a Tier 1 Construction Site Audit. It must be detailed, specific, and formatted professionally.
+
+                **Output Format:**
+                Return a valid JSON object with a single key "fields", which is an array of field objects.
+
+                **Field Types Available:**
+                - 'header': Section titles (e.g., "1. High Risk Construction Work").
+                - 'paragraph': Read-only text for instructions, legislation, or procedures.
+                - 'text': Single line inputs (e.g., "Project Manager Name").
+                - 'date': Date pickers.
+                - 'time': Time pickers.
+                - 'checkbox': Checkbox lists (e.g., for PPE or Pre-starts).
+                - 'hazard': A specialized card for Risk/Control. Label = Hazard, Value = Control Measure.
+                - 'signature': Sign-off blocks.
+                - 'select': Dropdowns.
+
+                **Mandatory Structure & Content Quality:**
+                1.  **Document Control Header:** Start with fields for "Project Name", "Site Address", "Date", and "Permit/SWMS Number".
+                2.  **Scope & Legislation:** Include a 'paragraph' field with a professional "Scope of Works" description and a list of relevant Standards/Codes of Practice (e.g., "AS/NZS 3000 for Electrical", "Code of Practice: Excavation").
+                3.  **Emergency Response:** Include a section defining the assembly point and emergency contact details.
+                4.  **Critical Risk Analysis:** Generate specific 'hazard' fields. 
+                    -   *Label*: The specific hazard (e.g., "Trench Collapse > 1.5m").
+                    -   *Value*: A detailed, realistic hierarchy of control (e.g., "1. Benching/battering required. 2. Shoring box installed. 3. Geotech report reviewed."). DO NOT use generic text like "Be careful".
+                5.  **PPE & Plant:** Use a 'checkbox' field for standard PPE (Hard Hat, Boots, Hi-Vis, Glasses, Gloves) and specific items (e.g., Harness, Respirator).
+                6.  **Sign-Off:** Conclude with a clear declaration paragraph ("I have read and understood...") followed by signature fields for "Worker(s)" and "Supervisor".
+
+                **Tone:** Formal, Technical, Legalistic.
+             `;
+             
+             const result = await pinnacleAi.generateJSON(`${prompt} Context: ${JSON.stringify(context)}`, systemPrompt);
+             return res.json({ result });
+
+        } else if (mode === 'polish') {
+             // Text polishing mode (returns simple JSON wrapper)
+             systemPrompt = "You are a professional technical writer for construction safety. Improve the clarity, tone, and professionalism of the provided text. Return JSON: { \"text\": \"Polished text...\" }";
+             const result = await pinnacleAi.generateJSON(prompt, systemPrompt);
+             return res.json({ result });
+
+        } else if (mode === 'consult') {
+            // Consultation Mode (New Feature)
+            systemPrompt = `
+                You are "Pinnacle Safety Copilot", an expert Construction Safety Consultant (ISO 45001).
+                Your goal is to advise the user on what safety documentation is required for their described work activity.
+
+                **Output Format:**
+                Return a valid JSON object:
+                {
+                    "reply": "A concise, professional conversational response explaining the risks and requirements.",
+                    "suggestedDocuments": [
+                        {
+                            "title": "Document Title (e.g. Roof Work SWMS)",
+                            "description": "Brief explanation of why this is needed.",
+                            "type": "SWMS" | "PERMIT" | "RISK_ASSESSMENT" | "INCIDENT_REPORT" | "TOOLBOX_TALK"
+                        }
+                    ]
+                }
+
+                **Rules:**
+                1. Analyze the user's work description (e.g. "digging a trench").
+                2. Identify key risks (collapse, services, access).
+                3. Recommend specific documents to manage those risks.
+                4. Keep the "reply" helpful and ask for confirmation to proceed.
+            `;
+            const result = await pinnacleAi.generateJSON(`${prompt} Context: ${JSON.stringify(context)}`, systemPrompt);
+            return res.json({ result });
+
+        } else {
+             // Legacy/Simple mode
+             systemPrompt = "You are an expert Safety Officer (ISO 45001). Generate a JSON list of hazards and controls based on the work description. Format: [{ hazard: '', risk: 'High', controls: [''] }]";
+             const content = await pinnacleAi.generateText(`${prompt} Context: ${JSON.stringify(context)}`, systemPrompt);
+             // Robust JSON Parsing for legacy text mode
+             let cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+             let result;
+             try {
+                result = JSON.parse(cleanContent);
+             } catch (e) {
+                result = { error: "Could not parse AI response", raw: cleanContent };
+             }
+             return res.json({ result });
+        }
+
     } catch(e) {
-        console.error(e);
+        console.error("AI Generation Error:", e);
         res.status(500).json({ error: "AI Generation Failed" });
     }
 };

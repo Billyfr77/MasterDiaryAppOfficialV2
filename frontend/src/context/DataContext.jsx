@@ -18,6 +18,34 @@ export const DataProvider = ({ children }) => {
   const [equipment, setEquipment] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // --- SESSION PERSISTENCE ---
+  const [sessionState, setSessionState] = useState(() => {
+      try {
+          return JSON.parse(localStorage.getItem('MASTER_DIARY_SESSION') || '{}');
+      } catch (e) { return {}; }
+  });
+
+  const saveSession = useCallback((key, data) => {
+      setSessionState(prev => {
+          const newState = { ...prev, [key]: data };
+          localStorage.setItem('MASTER_DIARY_SESSION', JSON.stringify(newState));
+          return newState;
+      });
+  }, []);
+
+  const getSession = useCallback((key, defaultValue) => {
+      return sessionState[key] !== undefined ? sessionState[key] : defaultValue;
+  }, [sessionState]);
+
+  const clearSession = useCallback((key) => {
+      setSessionState(prev => {
+          const newState = { ...prev };
+          delete newState[key];
+          localStorage.setItem('MASTER_DIARY_SESSION', JSON.stringify(newState));
+          return newState;
+      });
+  }, []);
+
   const refreshProjects = useCallback(async () => {
     try {
       const res = await api.get('/projects');
@@ -70,7 +98,8 @@ export const DataProvider = ({ children }) => {
     <DataContext.Provider value={{ 
       projects, staff, equipment, 
       loading, 
-      refreshAll, refreshProjects, refreshStaff, refreshEquipment 
+      refreshAll, refreshProjects, refreshStaff, refreshEquipment,
+      saveSession, getSession, clearSession
     }}>
       {children}
     </DataContext.Provider>

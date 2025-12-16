@@ -28,7 +28,8 @@ class GrokService {
             { role: "system", content: systemInstruction },
             { role: "user", content: prompt }
         ],
-        model: "grok-3", // Updated model name
+        model: "grok-4", // Updated to valid public model
+        max_tokens: 4096 
       });
 
       return completion.choices[0].message.content;
@@ -47,16 +48,24 @@ class GrokService {
             { role: "system", content: systemInstruction + "\nIMPORTANT: Return ONLY valid JSON. No markdown formatting." },
             { role: "user", content: prompt }
         ],
-        model: "grok-3", // Updated model name
+        model: "grok-4",
+        response_format: { type: "json_object" },
+        max_tokens: 4096 
       });
 
-      const content = completion.choices[0].message.content;
-      // Robust cleaning for JSON parsing
-      const clean = content.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(clean);
+      return JSON.parse(completion.choices[0].message.content);
     } catch (error) {
       console.error("[Grok] JSON Gen Error:", error.message);
-      throw error;
+      // Fallback for models that might not support JSON mode perfectly yet
+      try {
+        console.warn("[Grok] JSON mode failed, retrying with text prompt...");
+        const textCompletion = await this.generateText(prompt + "\n\nReturn your answer as a raw JSON object.", systemInstruction);
+        const cleanText = textCompletion.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(cleanText);
+      } catch (fallbackError) {
+          console.error("[Grok] JSON fallback failed:", fallbackError.message);
+          throw fallbackError;
+      }
     }
   }
 }

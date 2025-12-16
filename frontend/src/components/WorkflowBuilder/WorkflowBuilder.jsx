@@ -157,36 +157,39 @@ const WorkflowBuilderContent = () => {
   const generateAiTemplate = async (type = 'custom') => {
       setAiLoading(true);
       
-      // Simulate AI thinking time
-      setTimeout(() => {
-          let templateData = null;
+      const finalPrompt = type === 'custom' 
+          ? aiPrompt 
+          : `A standard workflow for: ${type.replace(/_/g, ' ')}`;
 
-          if (type !== 'custom' && LOCAL_TEMPLATES_DATA[type]) {
-              // Direct template match
-              templateData = LOCAL_TEMPLATES_DATA[type];
-          } else {
-              // Keyword Matching for "Custom" prompts
-              const p = aiPrompt.toLowerCase();
-              if (p.includes('kitchen') || p.includes('cabinet')) templateData = LOCAL_TEMPLATES_DATA['renovation_kitchen'];
-              else if (p.includes('asbestos') || p.includes('hazard')) templateData = LOCAL_TEMPLATES_DATA['hazmat_asbestos'];
-              else if (p.includes('house') || p.includes('build')) templateData = LOCAL_TEMPLATES_DATA['construction_residential'];
-              else if (p.includes('demo')) templateData = LOCAL_TEMPLATES_DATA['hazmat_asbestos']; // Fallback for demo
-              else templateData = LOCAL_TEMPLATES_DATA['generic'];
-          }
-
-          if (templateData) {
-              // Clone to avoid reference issues
-              setNodes(JSON.parse(JSON.stringify(templateData.nodes)));
-              setEdges(JSON.parse(JSON.stringify(templateData.edges)));
-              setShowAIModal(false);
-          } else {
-              // Fallback logic
-              setNodes(JSON.parse(JSON.stringify(LOCAL_TEMPLATES_DATA['generic'].nodes)));
-              setEdges(JSON.parse(JSON.stringify(LOCAL_TEMPLATES_DATA['generic'].edges)));
-              setShowAIModal(false);
-          }
+      if (!finalPrompt) {
+          alert("Please provide a description or select a template.");
           setAiLoading(false);
-      }, 1500);
+          return;
+      }
+
+      try {
+          const res = await api.post('/ai/workflow', { prompt: finalPrompt });
+          const { nodes, edges } = res.data;
+
+          if (nodes && edges) {
+              setNodes(nodes);
+              setEdges(edges);
+              setShowAIModal(false);
+              // Auto-fit view after AI generation
+              setTimeout(() => {
+                  if (reactFlowInstance) {
+                      reactFlowInstance.fitView({ padding: 0.2, duration: 800 });
+                  }
+              }, 100);
+          } else {
+              throw new Error("AI did not return a valid workflow structure.");
+          }
+      } catch (err) {
+          console.error("AI Workflow Generation Error:", err);
+          alert(`Failed to generate workflow: ${err.response?.data?.error || err.message}`);
+      } finally {
+          setAiLoading(false);
+      }
   }
   
   // Selection & Properties
