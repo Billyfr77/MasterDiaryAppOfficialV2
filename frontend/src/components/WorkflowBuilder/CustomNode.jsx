@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { FileText, CheckSquare, Bell, User, Clock, Calendar, CreditCard, Zap, Mail, MoreHorizontal, ListChecks, Lock, Play } from 'lucide-react';
+import { FileText, CheckSquare, Bell, User, Clock, Calendar, CreditCard, Zap, Mail, MoreHorizontal, ListChecks, Lock, Play, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const NodeIcon = ({ type, status }) => {
@@ -198,9 +198,27 @@ export default memo(({ data, type, selected }) => {
                 Event: {data.event}
             </div>
         )}
-        {(type === 'action' && data.actionType) && (
+        
+        {/* SMART INTERFACE: Generic Action Label */}
+        {(type === 'action' && data.actionType && data.actionType !== 'create_quote') && (
             <div className="mt-2 text-xs font-mono text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20 truncate">
                 Action: {data.actionType}
+            </div>
+        )}
+
+        {/* SMART INTERFACE: Quote Link */}
+        {type === 'action' && data.actionType === 'create_quote' && (
+            <div className="mt-3 p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl flex flex-col gap-2 relative z-50">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-indigo-300">
+                    <FileText size={12} /> Quote Builder
+                </div>
+                <button 
+                    onMouseDown={(e) => { e.stopPropagation(); }} 
+                    onClick={(e) => { e.stopPropagation(); window.location.href = '/quotes/new'; }}
+                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                >
+                    Launch Builder <ArrowRight size={12} />
+                </button>
             </div>
         )}
       </div>

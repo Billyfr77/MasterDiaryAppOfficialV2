@@ -504,7 +504,7 @@ const ResourceCommand = () => {
 
       {/* FILTER POPUP */}
       {showFilters && (
-          <div className="absolute top-16 left-20 z-50 bg-stone-900 border border-white/10 rounded-xl shadow-2xl w-80 max-h-[80vh] flex flex-col animate-fade-in-up">
+          <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[999] bg-stone-900 border border-white/10 rounded-xl shadow-2xl w-80 max-h-[80vh] flex flex-col animate-fade-in-up">
               <div className="p-4 border-b border-white/5 flex justify-between items-center bg-stone-950/50 rounded-t-xl">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2"><Eye size={16}/> View Context</h3>
                   <button onClick={() => setShowFilters(false)} className="text-gray-400 hover:text-white"><X size={16}/></button>

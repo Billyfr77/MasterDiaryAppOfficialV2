@@ -290,9 +290,28 @@ export default function PropertiesPanel({ selectedNode, updateNodeData, closePan
                         >
                             <option value="">Select Action...</option>
                             <option value="create_project">Create Project from Source</option>
+                            <option value="create_quote">Create Quote</option>
+                            <option value="create_invoice">Create Invoice</option>
+                            <option value="assign_staff">Assign Staff</option>
                             <option value="send_email">Send Email Notification</option>
                             <option value="log_audit">Log Audit Entry</option>
                         </select>
+
+                        {data.actionType === 'assign_staff' && (
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-slate-500 pl-1 mb-1 block">Staff Member</label>
+                                <select
+                                    value={data.staffId || ''}
+                                    onChange={(e) => handleChange('staffId', e.target.value)}
+                                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
+                                >
+                                    <option value="">Select Staff...</option>
+                                    {Array.isArray(staffList) && staffList.map(staff => (
+                                        <option key={staff.id} value={staff.id}>{staff.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         {data.actionType === 'send_email' && (
                             <div>

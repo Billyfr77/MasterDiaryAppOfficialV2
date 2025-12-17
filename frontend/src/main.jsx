@@ -48,6 +48,11 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+import { syncManager } from './utils/syncManager';
+
+// Initialize Offline Sync
+syncManager.init();
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Router>

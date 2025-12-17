@@ -5,3 +5,9 @@ dist
 MasterDiaryAppOfficialV2_Backup
 MasterDiaryAppOfficialV2_Restored
 **/_archive
+*.sqlite
+*.db
+backend/uploads/
+.DS_Store
+coverage
+.vscode

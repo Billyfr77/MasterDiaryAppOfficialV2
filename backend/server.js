@@ -6,7 +6,9 @@ const rateLimit = require('express-rate-limit');
 
 // Load root .env first (e.g., C:\Users\billy\.env)
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
-// Then load local backend .env, allowing it to override root values
+// Then load project root .env (e.g. MasterDiaryAppOfficialV2/.env)
+require('dotenv').config({ path: path.resolve(__dirname, '../.env'), override: true });
+// Then load local backend .env, allowing it to override all
 require('dotenv').config({ path: path.resolve(__dirname, './.env'), override: true });
 
 // Configure pg to parse integers (Postgres returns bigint as strings by default)
@@ -52,48 +54,19 @@ app.use((req, res, next) => {
 });
 
 app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Full error details:', err);
-  console.error('Stack trace:', err.stack);
-
-  const isDevelopment = process.env.NODE_ENV !== 'production';
-  res.status(500).json({
-    message: 'Something went wrong!',
-    error: isDevelopment ? err.message : 'Internal server error',
-    stack: isDevelopment ? err.stack : undefined,
-    timestamp: new Date().toISOString(),
-    url: req.url,
-    method: req.method
-  });
-});
-
-// Request logging
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - User: ${req.user?.id || 'unauthenticated'}`);
-  next();
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => res.json({
-  status: 'ok',
-  timestamp: new Date().toISOString(),
-  pid: process.pid
+// JSON Middleware with Raw Body capture for Stripe Webhooks
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl.startsWith('/api/stripe/webhook')) {
+      req.rawBody = buf.toString();
+    }
+  }
 }));
 
-// Root route handled after API routes for production serving
+app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (uploaded images) for local development
-app.use('/uploads', express.static('uploads'));
-
-// Public Config Endpoint for Maps
-app.get('/api/config/maps', (req, res) => {
-  // Prefer server-side env var, fallback to empty (frontend defaults to build-time)
-  res.json({ key: process.env.GOOGLE_MAPS_API_KEY || '' });
-});
+// ... (Error handling middleware) ...
 
 app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/jobs', require('./src/routes/jobs'));
@@ -107,7 +80,9 @@ app.use('/api/nodes', require('./src/routes/nodes'));
 app.use('/api/quotes', require('./src/routes/quotes'));
 app.use('/api/quote-templates', require('./src/routes/quoteTemplates'));
 app.use('/api/subscriptions', require('./src/routes/subscriptions'));
+app.use('/api/stripe', require('./src/routes/stripe')); // NEW: Stripe Routes
 app.use('/api/auth', require('./src/routes/auth'));
+
 app.use('/api/uploads', require('./src/routes/uploads')); // Register Upload routes
 app.use('/api/notifications', require('./src/routes/notifications')); // Register Notification routes
 app.use('/api/geocoding', require('./src/routes/geocoding'));
@@ -121,6 +96,7 @@ app.use('/api/safety', require('./src/routes/safetyRoutes')); // Register Safety
 app.use('/api/reports', require('./src/routes/reportRoutes')); // Unified Reports Hub
 app.use('/api/mail', require('./src/routes/mail')); // Email Service
 app.use('/api/ai', require('./src/routes/ai')); // Grok AI Service
+app.use('/api/weather', require('./src/routes/weather')); // Weather Service
 
 const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 

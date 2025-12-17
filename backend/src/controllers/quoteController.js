@@ -40,17 +40,18 @@ const processNewItems = async (items, type, userId) => {
                 } else if (type === 'staff') {
                     newItem = await Staff.create({
                         name: item.name || 'New Staff',
-                        role: 'General',
-                        payRates: { base: parseFloat(item.chargeRate) || 0 }, // Using charge as base estimate
-                        chargeRates: { base: parseFloat(item.chargeRate) || 0 },
+                        role: 'General', // Default required field
+                        payRateBase: parseFloat(item.chargeRate) || 0, 
+                        chargeOutBase: parseFloat(item.chargeRate) || 0,
                         userId
                     });
                     item.staffId = newItem.id;
                 } else if (type === 'equipment') {
                     newItem = await Equipment.create({
                         name: item.name || 'New Equipment',
-                        costRates: { base: parseFloat(item.costRate) || 0 },
-                        chargeRates: { base: parseFloat(item.costRate) || 0 },
+                        category: 'General', // Default required field
+                        ownership: 'Owned',   // Default required field
+                        costRateBase: parseFloat(item.costRate) || 0,
                         userId
                     });
                     item.equipmentId = newItem.id;
@@ -230,6 +231,16 @@ const updateQuote = async (req, res) => {
 
     if (updated) {
       const updatedQuote = await Quote.findByPk(req.params.id);
+
+      // TRIGGER WORKFLOW: Quote Approved
+      if (updatedQuote.status === 'approved') { // Check if status is approved
+          console.log(`[QuoteController] Triggering workflow for Quote ${updatedQuote.id}`);
+          workflowEngine.emit('quote.approved', { 
+              quote: updatedQuote.toJSON(), 
+              user: req.user 
+          });
+      }
+
       res.json(updatedQuote);
     } else {
       res.status(404).json({ error: 'Quote not found' });

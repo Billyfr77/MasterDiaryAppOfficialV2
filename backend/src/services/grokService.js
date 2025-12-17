@@ -19,7 +19,7 @@ class GrokService {
     }
   }
 
-  async generateText(prompt, systemInstruction = "You are a helpful assistant.") {
+  async generateText(prompt, systemInstruction = "You are a helpful assistant.", maxTokens = 2048) {
     if (!this.client) throw new Error("AI Service not configured (Missing GROK_API_KEY)");
 
     try {
@@ -28,8 +28,8 @@ class GrokService {
             { role: "system", content: systemInstruction },
             { role: "user", content: prompt }
         ],
-        model: "grok-4", // Updated to valid public model
-        max_tokens: 4096 
+        model: "grok-4-1-fast-reasoning", // Updated to grok-4 as per user confirmation
+        max_tokens: maxTokens
       });
 
       return completion.choices[0].message.content;
@@ -39,7 +39,7 @@ class GrokService {
     }
   }
 
-  async generateJSON(prompt, systemInstruction = "") {
+  async generateJSON(prompt, systemInstruction = "", maxTokens = 4096) {
     if (!this.client) throw new Error("AI Service not configured");
 
     try {
@@ -48,24 +48,15 @@ class GrokService {
             { role: "system", content: systemInstruction + "\nIMPORTANT: Return ONLY valid JSON. No markdown formatting." },
             { role: "user", content: prompt }
         ],
-        model: "grok-4",
+        model: "grok-4-1-fast-reasoning", 
         response_format: { type: "json_object" },
-        max_tokens: 4096 
+        max_tokens: maxTokens 
       });
 
       return JSON.parse(completion.choices[0].message.content);
     } catch (error) {
       console.error("[Grok] JSON Gen Error:", error.message);
-      // Fallback for models that might not support JSON mode perfectly yet
-      try {
-        console.warn("[Grok] JSON mode failed, retrying with text prompt...");
-        const textCompletion = await this.generateText(prompt + "\n\nReturn your answer as a raw JSON object.", systemInstruction);
-        const cleanText = textCompletion.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(cleanText);
-      } catch (fallbackError) {
-          console.error("[Grok] JSON fallback failed:", fallbackError.message);
-          throw fallbackError;
-      }
+      throw error; 
     }
   }
 }

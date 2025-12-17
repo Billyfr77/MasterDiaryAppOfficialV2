@@ -40,7 +40,8 @@ import XeroCallback from './components/XeroCallback'
 import PinnacleCopilot from './components/PinnacleCopilot'
 import SafetyDashboard from './components/Safety/SafetyDashboard'
 import SafetyFormViewer from './components/Safety/SafetyFormViewer'
-import { ClipboardCheck, Layout } from 'lucide-react'
+import SubscriptionPage from './components/SubscriptionPage'
+import { ClipboardCheck, Layout, Crown } from 'lucide-react'
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
@@ -67,20 +68,20 @@ function App() {
   const [thumbStartX, setThumbStartX] = useState(0);
   const [thumbStartScroll, setThumbStartScroll] = useState(0);
 
-  // Update Scrollbar on Mount/Resize
+  // --- HORIZONTAL SCROLL HANDLER (NON-PASSIVE) ---
   useEffect(() => {
-    const updateScrollbar = () => {
-        if (navRef.current) {
-            const { clientWidth, scrollWidth, scrollLeft } = navRef.current;
-            const widthPercentage = (clientWidth / scrollWidth) * 100;
-            const leftPercentage = (scrollLeft / scrollWidth) * 100;
-            setScrollThumbWidth(widthPercentage < 100 ? widthPercentage : 0);
-            setScrollThumbLeft(leftPercentage);
-        }
-    };
-    updateScrollbar();
-    window.addEventListener('resize', updateScrollbar);
-    return () => window.removeEventListener('resize', updateScrollbar);
+      const el = navRef.current;
+      if (!el) return;
+
+      const handleWheel = (e) => {
+          if (e.deltaY === 0) return;
+          // Prevent vertical scroll page-wide when scrolling this container
+          e.preventDefault();
+          el.scrollLeft += e.deltaY;
+      };
+
+      el.addEventListener('wheel', handleWheel, { passive: false });
+      return () => el.removeEventListener('wheel', handleWheel);
   }, []);
 
   const handleNavScroll = (e) => {
@@ -206,6 +207,7 @@ function App() {
                     <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-4">Finance</div>
                     <NavLink to="/quotes" icon={<DollarSign size={18} />} label="Quotes & Estimates" onClick={() => setMobileMenuOpen(false)} />
                     <NavLink to="/invoices" icon={<CreditCard size={18} />} label="Invoices" onClick={() => setMobileMenuOpen(false)} />
+                    <NavLink to="/subscription" icon={<Crown size={18} />} label="Upgrade Plan" onClick={() => setMobileMenuOpen(false)} />
                     
                     <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-4">Operations</div>
                     <NavLink to="/resources" icon={<Calendar size={18} />} label="Resource Scheduler" onClick={() => setMobileMenuOpen(false)} />
@@ -254,12 +256,6 @@ function App() {
                         onMouseUp={handleNavMouseUp}
                         onMouseMove={handleNavMouseMove}
                         onScroll={handleNavScroll}
-                        onWheel={(e) => { 
-                          if (navRef.current) {
-                            navRef.current.scrollLeft += e.deltaY;
-                            e.preventDefault();
-                          }
-                        }}
                       >
                         <NavLink to="/pulse" icon={<Activity size={16} />} label="Pulse" />
                         <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" />
@@ -276,6 +272,7 @@ function App() {
                         <NavLink to="/workflows" icon={<GitBranch size={16} />} label="Flows" />
                         <NavLink to="/safety" icon={<ClipboardCheck size={16} />} label="Safety" />
                         <NavLink to="/reports" icon={<FileText size={16} />} label="Reports" />
+                        <NavLink to="/subscription" icon={<Crown size={16} />} label="Upgrade" />
                       </nav>
 
                       {/* Custom Scrollbar Handle */}
@@ -335,6 +332,7 @@ function App() {
               <Route path="/safety" element={<SafetyDashboard />} />
               <Route path="/safety/:id" element={<SafetyFormViewer />} />
               <Route path="/xero/callback" element={<XeroCallback />} />
+              <Route path="/subscription" element={<SubscriptionPage />} />
               <Route path="/portal/view/:projectId" element={<ClientPortal />} />
             </Routes>
           </main>

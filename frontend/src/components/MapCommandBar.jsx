@@ -31,8 +31,8 @@ const MapCommandBar = ({ map, onAssetsGenerated }) => {
 
             const res = await api.post('/ai/map-elements', payload);
             
-            if (res.data.assets) {
-                onAssetsGenerated(res.data.assets);
+            if (res.data) {
+                onAssetsGenerated(res.data);
                 setPrompt(''); // Clear prompt on success
             }
         } catch (err) {

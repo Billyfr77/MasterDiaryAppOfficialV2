@@ -65,6 +65,32 @@ const WorkflowBuilderContent = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
 
+  // --- PERSISTENCE: LOAD DRAFT ---
+  useEffect(() => {
+      const savedData = localStorage.getItem('workflow_draft');
+      if (savedData) {
+          try {
+              const { nodes, edges, name, id } = JSON.parse(savedData);
+              if (nodes && nodes.length > 0) setNodes(nodes);
+              if (edges) setEdges(edges);
+              if (name) setWorkflowName(name);
+              if (id) setWorkflowId(id);
+          } catch (e) { console.error("Failed to load workflow draft", e); }
+      }
+  }, []);
+
+  // --- PERSISTENCE: AUTO-SAVE ---
+  useEffect(() => {
+      const timeout = setTimeout(() => {
+          if (nodes.length > 0) {
+              localStorage.setItem('workflow_draft', JSON.stringify({
+                  nodes, edges, name: workflowName, id: workflowId
+              }));
+          }
+      }, 1000);
+      return () => clearTimeout(timeout);
+  }, [nodes, edges, workflowName, workflowId]);
+
   // --- LOCAL TEMPLATE LIBRARY (Offline AI) ---
   const LOCAL_TEMPLATES_DATA = {
     'construction_residential': {
@@ -498,7 +524,7 @@ const WorkflowBuilderContent = () => {
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
-  const saveWorkflow = async () => {
+  const saveWorkflow = async (silent = false) => {
     setLoading(true);
     try {
       const workflowData = {
@@ -509,34 +535,36 @@ const WorkflowBuilderContent = () => {
       };
 
       let res;
+      let newId = workflowId;
+
       if (workflowId) {
         res = await api.put(`/workflows/${workflowId}`, workflowData);
       } else {
         res = await api.post('/workflows', workflowData);
-        setWorkflowId(res.data._id);
+        newId = res.data.id || res.data._id;
+        setWorkflowId(newId);
       }
       
-      alert('Workflow saved successfully!');
+      if (!silent) alert('Workflow saved successfully!');
+      return newId;
     } catch (error) {
       console.error('Failed to save workflow:', error);
       alert('Failed to save workflow. Check console.');
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
   const runWorkflow = async () => {
-      if (!workflowId) {
-          alert('Please save the workflow first.');
-          return;
-      }
+      // 1. Save (or Create) first
+      const currentId = await saveWorkflow(true); // Silent save
+      
+      if (!currentId) return;
       
       try {
-          // 1. Save current state first
-          await saveWorkflow();
-
-          // 2. Trigger Run
-          const res = await api.post(`/workflows/${workflowId}/run`);
+          // 2. Trigger Run using the ID we just got
+          const res = await api.post(`/workflows/${currentId}/run`);
           
           // 3. Update local state
           setNodes(res.data.nodes);
@@ -595,6 +623,18 @@ const WorkflowBuilderContent = () => {
 
   return (
     <div className="flex h-[calc(100vh-80px)] w-full overflow-hidden bg-slate-950 text-slate-200 relative">
+      {/* LOADING OVERLAY */}
+      {aiLoading && (
+        <div className="absolute inset-0 z-[999] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in">
+           <div className="relative">
+              <div className="absolute inset-0 bg-indigo-500 rounded-full blur-xl opacity-20 animate-pulse"></div>
+              <Loader2 size={48} className="text-indigo-500 animate-spin relative z-10" />
+           </div>
+           <h2 className="mt-6 text-xl font-black text-white uppercase tracking-wider">Architecting Workflow...</h2>
+           <p className="text-gray-400 text-sm mt-2 font-medium">Pinnacle AI is designing your automation logic</p>
+        </div>
+      )}
+
       <style>{`
         @keyframes dashdraw {
           from { stroke-dashoffset: 10; }

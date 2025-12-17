@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react'
-import { GoogleMap, useJsApiLoader, Marker, GroundOverlay } from '@react-google-maps/api'
-import { MapPin, Navigation } from 'lucide-react'
+import { GoogleMap, useJsApiLoader, Marker, GroundOverlay, TrafficLayer, TransitLayer, BicyclingLayer } from '@react-google-maps/api'
+import { MapPin, Navigation, Cloud, Sun, Wind, Truck, Train, Bike, Layers } from 'lucide-react'
+
+const LIBRARIES = ['places', 'drawing', 'geometry'];
 
 const containerStyle = {
   width: '100%',
@@ -105,10 +107,14 @@ const MapBackground = ({ onLocationSelect, activeLocation, overlayImage }) => {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: isKeyValid ? apiKey : '',
+    libraries: LIBRARIES,
     preventGoogleFontsLoading: true
   })
 
   const [map, setMap] = useState(null)
+  const [showTraffic, setShowTraffic] = useState(false)
+  const [showTransit, setShowTransit] = useState(false)
+  const [showBike, setShowBike] = useState(false)
   
   // Use a ref to store the overlay instance if we were using raw JS API, 
   // but @react-google-maps/api handles this declaratively mostly.
@@ -160,7 +166,8 @@ const MapBackground = ({ onLocationSelect, activeLocation, overlayImage }) => {
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={activeLocation || defaultCenter}
-        zoom={activeLocation ? 18 : 12} // Higher zoom when active
+        zoom={activeLocation ? 18 : 12}
+        mapId="90f87356969d889c"
         onLoad={onLoad}
         onUnmount={onUnmount}
         onClick={handleMapClick}
@@ -168,10 +175,14 @@ const MapBackground = ({ onLocationSelect, activeLocation, overlayImage }) => {
           styles: darkMapStyle,
           disableDefaultUI: true,
           zoomControl: true,
-          mapTypeId: overlayImage ? 'satellite' : 'roadmap', // Switch to satellite if overlay present for context
-          tilt: 0
+          mapTypeId: overlayImage ? 'satellite' : 'roadmap',
+          tilt: 45
         }}
       >
+        {showTraffic && <TrafficLayer />}
+        {showTransit && <TransitLayer />}
+        {showBike && <BicyclingLayer />}
+        
         {activeLocation && (
           <Marker position={activeLocation} />
         )}
@@ -186,6 +197,30 @@ const MapBackground = ({ onLocationSelect, activeLocation, overlayImage }) => {
            />
         )}
       </GoogleMap>
+
+      {/* Map Controls */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 pointer-events-auto">
+          <div className="bg-stone-900/90 backdrop-blur-md border border-white/10 p-2 rounded-xl shadow-2xl flex flex-col gap-2">
+              <button onClick={() => setShowTraffic(!showTraffic)} className={`p-2 rounded-lg transition-all ${showTraffic ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'}`} title="Traffic">
+                  <Truck size={20} />
+              </button>
+              <button onClick={() => setShowTransit(!showTransit)} className={`p-2 rounded-lg transition-all ${showTransit ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`} title="Transit">
+                  <Train size={20} />
+              </button>
+              <button onClick={() => setShowBike(!showBike)} className={`p-2 rounded-lg transition-all ${showBike ? 'bg-orange-600 text-white' : 'text-gray-400 hover:text-white'}`} title="Bicycling">
+                  <Bike size={20} />
+              </button>
+          </div>
+          
+          <div className="bg-stone-900/90 backdrop-blur-md border border-white/10 p-2 rounded-xl shadow-2xl flex flex-col gap-2">
+              <button className="p-2 rounded-lg text-yellow-400 hover:bg-white/10" title="Solar Potential">
+                  <Sun size={20} />
+              </button>
+              <button className="p-2 rounded-lg text-cyan-400 hover:bg-white/10" title="Air Quality">
+                  <Wind size={20} />
+              </button>
+          </div>
+      </div>
       
       {/* Overlay gradient to blend with app UI */}
       <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-gray-900/10 pointer-events-none z-[1]" />

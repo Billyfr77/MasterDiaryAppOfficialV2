@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const aiController = require('../controllers/aiController');
+const { authenticateToken } = require('../middleware/auth');
 
 // Apply a specific rate limiter for all AI routes
 // This prevents abuse and controls costs. Adjust limits as needed.
@@ -13,8 +14,9 @@ const aiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// All routes in this file will be affected by the aiLimiter
+// All routes in this file will be affected by the aiLimiter and Authentication
 router.use(aiLimiter);
+router.use(authenticateToken);
 
 router.post('/workflow', aiController.generateWorkflow);
 router.post('/summary', aiController.generateDiarySummary);
@@ -29,6 +31,7 @@ router.post('/generate-quote', aiController.generateQuote); // Legacy/Alt alias
 router.post('/map-analysis', aiController.analyzeMapZone);
 router.post('/map-elements', aiController.generateMapElements); // Genesis Mode
 router.post('/parse-diary', aiController.parseDiaryLog); // Smart Log
+router.post('/dashboard-insights', aiController.generateDashboardInsights); // Neural Core
 
 // Chat Aliases
 router.post('/chat-quote', aiController.chatQuoteAssistant);

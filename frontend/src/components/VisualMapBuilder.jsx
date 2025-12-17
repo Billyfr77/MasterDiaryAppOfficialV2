@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { GoogleMap, useJsApiLoader, Polygon, DrawingManager, StreetViewPanorama, OverlayView, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Polygon, DrawingManager, StreetViewPanorama, OverlayView, DirectionsRenderer, TrafficLayer, Marker } from '@react-google-maps/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, 
@@ -26,7 +26,7 @@ import {
   Calendar, FileText, Plus, ArrowRight, Navigation, 
   Locate, Layers, Globe, Camera, Zap, Trash2, Edit, 
   Image as ImageIcon, Users, Truck, Search, MoreHorizontal, ChevronRight, Activity,
-  Share2, Eye, Lock, CheckCircle2, AlertTriangle, ClipboardCheck, Upload, Sparkles, ExternalLink, Wrench
+  Share2, Eye, Lock, CheckCircle2, AlertTriangle, ClipboardCheck, Upload, Sparkles, ExternalLink, Wrench, Maximize2, Minimize2
 } from 'lucide-react';
 import { api } from '../utils/api';
 import ClientSelector from './Clients/ClientSelector';
@@ -180,6 +180,77 @@ const ProjectionHelper = ({ setProjection }) => {
             <div />
         </OverlayView>
     );
+};
+
+// --- STREET VIEW PANEL (MANUAL INIT FOR STABILITY) ---
+const StreetViewPanel = ({ position, assets, onPositionChange }) => {
+    const ref = useRef(null);
+    const [pano, setPano] = useState(null);
+
+    // 1. Initialize Pano
+    useEffect(() => {
+        if (ref.current && !pano && window.google) {
+            const sv = new window.google.maps.StreetViewPanorama(ref.current, {
+                position: position,
+                visible: true,
+                disableDefaultUI: true,
+                enableCloseButton: false,
+                addressControl: false,
+                showRoadLabels: true
+            });
+            sv.addListener('position_changed', () => {
+                const pos = sv.getPosition();
+                const pov = sv.getPov(); 
+                if(onPositionChange) onPositionChange({ position: pos, pov: pov });
+            });
+            setPano(sv);
+        }
+    }, [ref]); 
+
+    // 2. Update Position from Prop (Sync with Map)
+    useEffect(() => {
+        if(pano && position) {
+            const current = pano.getPosition();
+            // Only update if significantly different to avoid loop
+            if (!current || Math.abs(current.lat() - position.lat) > 0.0001 || Math.abs(current.lng() - position.lng) > 0.0001) {
+                 pano.setPosition(position);
+            }
+        }
+    }, [position, pano]);
+
+    // 3. Render Markers
+    useEffect(() => {
+        if (!pano || !assets || !window.google) return;
+        const markers = assets.map(asset => {
+            const center = asset.geometryType === 'POLYGON' ? getPolygonCenter(asset.coordinates) : asset.coordinates[0];
+            if (!center) return null;
+            
+            console.log(`[StreetView] Adding marker for ${asset.name} at`, center);
+
+            return new window.google.maps.Marker({
+                position: center,
+                map: pano,
+                label: { 
+                    text: `🚧 ${asset.name}`, 
+                    color: "black", 
+                    fontSize: "18px", 
+                    fontWeight: "bold"
+                },
+                icon: { 
+                    path: window.google.maps.SymbolPath.CIRCLE, 
+                    scale: 10, 
+                    fillColor: "#ffff00", 
+                    fillOpacity: 1, 
+                    strokeColor: "black",
+                    strokeWeight: 2 
+                },
+                zIndex: 999
+            });
+        }).filter(Boolean);
+        return () => markers.forEach(m => m.setMap(null));
+    }, [pano, assets]);
+
+    return <div ref={ref} className="w-full h-full bg-black" />;
 };
 
 // --- PROJECT HUB DRAWER ---
@@ -745,6 +816,36 @@ const getPolygonCenter = (coordinates) => {
     return { lat, lng };
 };
 
+// --- LIVE PEGMAN MARKER (GLASSMORPHISM) ---
+const LivePegmanMarker = ({ position, heading }) => {
+    const getPixelPositionOffset = (width, height) => ({
+        x: -(width / 2),
+        y: -(height / 2),
+    });
+
+    return (
+        <OverlayView
+            position={position}
+            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={getPixelPositionOffset}
+        >
+            <div className="relative w-16 h-16 flex items-center justify-center pointer-events-none">
+                {/* Pulse Animation */}
+                <div className="absolute inset-0 bg-yellow-400/40 rounded-full animate-ping blur-sm"></div>
+                
+                {/* Glassmorphism Container */}
+                <div 
+                    className="relative w-10 h-10 bg-yellow-500/20 backdrop-blur-md border border-yellow-400/60 rounded-full shadow-[0_0_25px_rgba(234,179,8,0.6)] flex items-center justify-center transition-transform duration-300 ease-out"
+                    style={{ transform: `rotate(${heading}deg)` }}
+                >
+                    {/* Directional Arrow Icon */}
+                    <Navigation size={20} className="text-yellow-300 fill-yellow-400 drop-shadow-sm" />
+                </div>
+            </div>
+        </OverlayView>
+    );
+};
+
 // --- MAIN BUILDER ---
 const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
   const location = useLocation();
@@ -764,8 +865,12 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
 
   const [drawingMode, setDrawingMode] = useState(null);
   const [mapTypeId, setMapTypeId] = useState('roadmap');
-  const [tilt, setTilt] = useState(0); 
+  const [tilt, setTilt] = useState(45);
   const [heading, setHeading] = useState(0);
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [streetViewMode, setStreetViewMode] = useState('hidden'); // 'hidden', 'split', 'full'
+  const [streetViewPos, setStreetViewPos] = useState(null);
+  const [streetViewPov, setStreetViewPov] = useState(null);
 
   const [assets, setAssets] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -847,8 +952,23 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleAIAssets = async (aiAssets) => {
-      if (!aiAssets || !Array.isArray(aiAssets)) return;
+  const handleAIAssets = async (aiResponse) => {
+      // Support both legacy array and new object format
+      const aiAssets = Array.isArray(aiResponse) ? aiResponse : (aiResponse.assets || []);
+      const viewSettings = aiResponse.view || {};
+
+      // 1. Apply Smart View Settings
+      if (viewSettings) {
+          console.log("Applying AI View Settings:", viewSettings);
+          if (viewSettings.mapTypeId) setMapTypeId(viewSettings.mapTypeId);
+          if (typeof viewSettings.tilt === 'number') setTilt(viewSettings.tilt);
+          if (viewSettings.layers) {
+              if (viewSettings.layers.traffic !== undefined) setShowTraffic(viewSettings.layers.traffic);
+          }
+      }
+
+      if (!aiAssets || aiAssets.length === 0) return;
+
       try {
           const promises = aiAssets.map(async (asset) => {
               const payload = {
@@ -867,7 +987,7 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
           });
           await Promise.all(promises);
           await fetchData();
-          alert(`Successfully created ${aiAssets.length} map elements!`);
+          alert(`GeoCore successfully deployed ${aiAssets.length} assets and configured the view.`);
       } catch (err) {
           console.error("Failed to save AI assets:", err);
           alert("Partial failure saving AI assets.");
@@ -931,6 +1051,34 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
       setMap(mapInstance);
       mapInstance.setTilt(tilt);
       mapInstance.setHeading(heading);
+
+      // Intercept Pegman Drop for Split Screen AR
+      const sv = mapInstance.getStreetView();
+      if (sv) {
+          sv.addListener('visible_changed', () => {
+              if (sv.getVisible()) {
+                  const dropPos = sv.getPosition();
+                  sv.setVisible(false); // Disable default UI
+                  setStreetViewMode('split'); 
+                  
+                  if (dropPos && window.google) {
+                      // SNAP TO ROAD for precision
+                      const service = new window.google.maps.StreetViewService();
+                      service.getPanorama({ location: dropPos, radius: 50 }, (data, status) => {
+                          if (status === 'OK' && data.location) {
+                              const snappedPos = data.location.latLng;
+                              setStreetViewPos({ lat: snappedPos.lat(), lng: snappedPos.lng() });
+                              mapInstance.setCenter(snappedPos);
+                              mapInstance.setZoom(18);
+                          } else {
+                              setStreetViewPos({ lat: dropPos.lat(), lng: dropPos.lng() });
+                              mapInstance.setCenter(dropPos);
+                          }
+                      });
+                  }
+              }
+          });
+      }
   }, [tilt, heading]);
 
   const handlePolygonComplete = async (polygon) => {
@@ -1111,53 +1259,113 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
       </div>
       )}
 
-      <div ref={mapContainerRef} className="flex-1 relative" onDragOver={handleDragOver} onDrop={handleDrop}>
-          {!readOnly && (
-          <input ref={inputRef} type="text" placeholder="Search location..." className="absolute top-4 left-1/2 -translate-x-1/2 w-96 px-6 py-3 bg-stone-900/90 backdrop-blur-md border border-white/10 rounded-full text-white font-bold shadow-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 z-[60] pointer-events-auto" />
-          )}
+      <div ref={mapContainerRef} className="flex-1 relative flex" onDragOver={handleDragOver} onDrop={handleDrop}>
           
-          {!readOnly && map && <MapCommandBar map={map} onAssetsGenerated={handleAIAssets} />}
-
-          <GoogleMap
-            mapContainerStyle={{ width: '100%', height: '100%' }}
-            center={initialView.center}
-            zoom={initialView.zoom}
-            mapId="90f87356969d889c"
-            options={{ styles: mapTypeId === 'roadmap' ? MIDNIGHT_STYLE : null, disableDefaultUI: true, streetViewControl: true, mapTypeControl: false, clickableIcons: false }}
-            onLoad={onMapLoad}
-          >
-              <ProjectionHelper setProjection={setMapProjection} />
-              {drawingMode === 'polygon' && (
-                  <DrawingManager
-                      onLoad={dm => { drawingManagerRef.current = dm; }}
-                      drawingMode={window.google?.maps?.drawing?.OverlayType?.POLYGON || 'polygon'}
-                      onPolygonComplete={handlePolygonComplete}
-                      options={{ drawingControl: false, polygonOptions: { fillColor: '#10b981', fillOpacity: 0.3, strokeWeight: 2, strokeColor: '#fff', clickable: true, editable: true, zIndex: 10 } }}
-                  />
+          {/* MAP PANE */}
+          <div className={`relative h-full transition-all duration-500 ${streetViewMode !== 'hidden' ? (streetViewMode === 'full' ? 'w-0' : 'w-1/2') : 'w-full'}`}>
+              {!readOnly && (
+              <input ref={inputRef} type="text" placeholder="Search location..." className="absolute top-4 left-1/2 -translate-x-1/2 w-96 px-6 py-3 bg-stone-900/90 backdrop-blur-md border border-white/10 rounded-full text-white font-bold shadow-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 z-[60] pointer-events-auto" />
               )}
-              {renderableAssets.map(asset => {
-                  if (asset.geometryType === 'POLYGON') {
-                      const center = getPolygonCenter(asset.coordinates);
-                      const stats = projectStats.find(s => String(s.id) === String(asset.projectId));
-                      return (
-                          <React.Fragment key={asset.id}>
-                              <Polygon paths={asset.coordinates} options={{ fillColor: asset.properties?.color || HUB_COLORS.active, fillOpacity: 0.2, strokeColor: asset.properties?.color || HUB_COLORS.active, strokeWeight: 2, zIndex: 1 }} onClick={(e) => { e.stop(); handleZoneClick(asset); }} />
-                              {center && <RichMarker position={center} type={asset.properties?.type || 'ProjectZone'} label={asset.name} isSelected={selectedHub?.assetId === asset.id} isZoneCenter={true} stats={stats} onClick={() => handleZoneClick(asset)} />}
-                          </React.Fragment>
-                      );
-                  } else if (asset.geometryType === 'POINT') {
-                      return <RichMarker key={asset.id} position={asset.coordinates[0]} type={asset.type} label={asset.name} isSelected={false} onClick={() => {}} />;
-                  }
-                  return null;
-              })}
-          </GoogleMap>
-          
-          {drawingMode && !readOnly && (
-              <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-stone-900/90 backdrop-blur-md text-white px-6 py-3 rounded-full font-bold text-xs shadow-2xl animate-in fade-in slide-in-from-top-4 z-30 border border-white/20 flex items-center gap-4">
-                  <span className="animate-pulse text-emerald-400">●</span> 
-                  <span>CLICK MAP TO DRAW ZONE</span>
-                  <div className="h-4 w-px bg-white/20"></div>
-                  <button onClick={() => setDrawingMode(null)} className="hover:text-rose-400 transition-colors uppercase tracking-wider font-black">Cancel</button>
+              
+              {!readOnly && map && <MapCommandBar map={map} onAssetsGenerated={handleAIAssets} />}
+
+              {/* MAP CONTROLS */}
+              {!readOnly && (
+                  <div className="absolute top-20 right-4 z-[60] flex flex-col gap-2">
+                      <div className="bg-stone-900/90 backdrop-blur-md border border-white/10 p-1.5 rounded-xl shadow-2xl flex flex-col gap-1">
+                          <button onClick={() => setMapTypeId(prev => prev === 'roadmap' ? 'satellite' : 'roadmap')} className={`p-2 rounded-lg transition-all ${mapTypeId === 'satellite' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`} title="Toggle Satellite">
+                              <Globe size={20} />
+                          </button>
+                          <button onClick={() => setShowTraffic(!showTraffic)} className={`p-2 rounded-lg transition-all ${showTraffic ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'}`} title="Toggle Traffic">
+                              <Truck size={20} />
+                          </button>
+                                                <button onClick={() => setTilt(prev => prev === 0 ? 45 : 0)} className={`p-2 rounded-lg transition-all ${tilt === 45 ? 'bg-amber-600 text-white' : 'text-gray-400 hover:text-white'}`} title="Toggle 3D">
+                                                    <Layers size={20} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+              <GoogleMap
+                mapContainerStyle={{ width: '100%', height: '100%' }}
+                center={initialView.center}
+                zoom={initialView.zoom}
+                mapId="90f87356969d889c"
+                options={{ 
+                    styles: mapTypeId === 'roadmap' ? MIDNIGHT_STYLE : null, 
+                    disableDefaultUI: true, 
+                    streetViewControl: true, 
+                    mapTypeControl: false, 
+                    clickableIcons: false,
+                    mapTypeId: mapTypeId,
+                    tilt: tilt
+                }}
+                onLoad={onMapLoad}
+              >
+                  {showTraffic && <TrafficLayer />}
+                  <ProjectionHelper setProjection={setMapProjection} />
+                  {drawingMode === 'polygon' && (
+                      <DrawingManager
+                          onLoad={dm => { drawingManagerRef.current = dm; }}
+                          drawingMode={window.google?.maps?.drawing?.OverlayType?.POLYGON || 'polygon'}
+                          onPolygonComplete={handlePolygonComplete}
+                          options={{ drawingControl: false, polygonOptions: { fillColor: '#10b981', fillOpacity: 0.3, strokeWeight: 2, strokeColor: '#fff', clickable: true, editable: true, zIndex: 10 } }}
+                      />
+                  )}
+                  {renderableAssets.map(asset => {
+                      if (asset.geometryType === 'POLYGON') {
+                          const center = getPolygonCenter(asset.coordinates);
+                          const stats = projectStats.find(s => String(s.id) === String(asset.projectId));
+                          return (
+                              <React.Fragment key={asset.id}>
+                                  <Polygon paths={asset.coordinates} options={{ fillColor: asset.properties?.color || HUB_COLORS.active, fillOpacity: 0.2, strokeColor: asset.properties?.color || HUB_COLORS.active, strokeWeight: 2, zIndex: 1 }} onClick={(e) => { e.stop(); handleZoneClick(asset); }} />
+                                  {center && <RichMarker position={center} type={asset.properties?.type || 'ProjectZone'} label={asset.name} isSelected={selectedHub?.assetId === asset.id} isZoneCenter={true} stats={stats} onClick={() => handleZoneClick(asset)} />}
+                              </React.Fragment>
+                          );
+                      } else if (asset.geometryType === 'POINT') {
+                          return <RichMarker key={asset.id} position={asset.coordinates[0]} type={asset.type} label={asset.name} isSelected={false} onClick={() => {}} />;
+                      }
+                      return null;
+                  })}
+                  {streetViewMode !== 'hidden' && streetViewPos && (
+                      <LivePegmanMarker 
+                          position={streetViewPos}
+                          heading={streetViewPov ? streetViewPov.heading : 0}
+                      />
+                  )}
+              </GoogleMap>
+              
+              {drawingMode && !readOnly && (
+                  <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-stone-900/90 backdrop-blur-md text-white px-6 py-3 rounded-full font-bold text-xs shadow-2xl animate-in fade-in slide-in-from-top-4 z-30 border border-white/20 flex items-center gap-4">
+                      <span className="animate-pulse text-emerald-400">●</span> 
+                      <span>CLICK MAP TO DRAW ZONE</span>
+                      <div className="h-4 w-px bg-white/20"></div>
+                      <button onClick={() => setDrawingMode(null)} className="hover:text-rose-400 transition-colors uppercase tracking-wider font-black">Cancel</button>
+                  </div>
+              )}
+          </div>
+
+          {/* STREET VIEW PANE */}
+          {streetViewMode !== 'hidden' && (
+              <div className={`relative h-full transition-all duration-500 ${streetViewMode === 'full' ? 'w-full' : 'w-1/2'} border-l border-white/10 animate-fade-in-right`}>
+                  <StreetViewPanel 
+                      position={streetViewPos} 
+                      assets={renderableAssets}
+                      onPositionChange={(data) => {
+                          if (map && data.position) map.panTo(data.position);
+                          setStreetViewPos({lat: data.position.lat(), lng: data.position.lng()});
+                          setStreetViewPov(data.pov);
+                          console.log("SV POV Changed:", data.pov.heading); // ADDED LOG
+                      }}
+                  />
+                  {/* Controls for Fullscreen / Close */}
+                  <div className="absolute top-4 right-4 z-50 flex gap-2">
+                      <button onClick={() => setStreetViewMode(prev => prev === 'full' ? 'split' : 'full')} className="bg-black/50 text-white p-2 rounded-full hover:bg-blue-500 transition-colors" title={streetViewMode === 'full' ? 'Exit Fullscreen' : 'Enter Fullscreen'}>
+                          {streetViewMode === 'full' ? <Minimize2 size={20}/> : <Maximize2 size={20}/>}
+                      </button>
+                      <button onClick={() => setStreetViewMode('hidden')} className="bg-black/50 text-white p-2 rounded-full hover:bg-red-500 transition-colors" title="Close Street View"><X size={20}/></button>
+                  </div>
+                  
+                  <div id="ar-zone-overlay" className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-red-600/90 text-white font-black px-6 py-3 rounded-full shadow-2xl backdrop-blur transition-opacity duration-300 opacity-0 pointer-events-none border-2 border-white/20 tracking-widest text-sm z-50"></div>
               </div>
           )}
       </div>

@@ -15,7 +15,7 @@ import {
   ArrowRight, Plus, DollarSign, Users, Package, Zap, BarChart3, 
   Briefcase, Folder, MoreHorizontal, Target, Award, Calendar, FileText,
   Map as MapIcon, GitBranch, Layers, Truck, PenTool, Layout, Box, PieChart,
-  BrainCircuit, Sparkles, ChevronRight, Filter
+  BrainCircuit, Sparkles, ChevronRight, Filter, Cloud, Sun, Umbrella
 } from 'lucide-react';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import {
@@ -86,6 +86,32 @@ const generateSmartInsights = (stats, conflicts, quotes) => {
 
 // --- SUB-COMPONENTS ---
 
+const WeatherWidget = () => {
+    const [weather, setWeather] = useState(null);
+    useEffect(() => {
+        // Default to Sydney or fetch from user location if available
+        // In a real app, we'd use navigator.geolocation or user settings
+        const lat = -33.8688; 
+        const lng = 151.2093;
+        api.get(`/weather?lat=${lat}&lng=${lng}`).then(res => setWeather(res.data)).catch(console.error);
+    }, []);
+
+    if (!weather) return null;
+
+    return (
+        <div className="hidden md:flex items-center gap-3 bg-stone-900/80 p-1.5 pl-4 pr-4 rounded-full border border-white/10 backdrop-blur-md shadow-lg animate-fade-in transition-all hover:bg-stone-900">
+            <div className="flex flex-col items-end">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{weather.current.description}</span>
+                <span className="text-sm font-black text-white leading-none">{weather.current.temp}°C</span>
+            </div>
+            <div className="p-1.5 bg-sky-500/20 rounded-full text-sky-400">
+                {weather.current.description.toLowerCase().includes('rain') ? <Umbrella size={16} /> : 
+                 weather.current.description.toLowerCase().includes('cloud') ? <Cloud size={16} /> : <Sun size={16} />}
+            </div>
+        </div>
+    );
+};
+
 const NeuralCore = ({ insights }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -100,9 +126,8 @@ const NeuralCore = ({ insights }) => {
   const Icon = activeInsight.icon;
 
   return (
-    <div className="bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 border border-white/10 rounded-[2rem] p-1 shadow-2xl relative overflow-hidden group mb-8">
-      <div className={`absolute inset-0 opacity-20 bg-gradient-to-r from-${activeInsight.color}-500/20 to-transparent transition-colors duration-1000`}></div>
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+    <div className="bg-stone-900 border border-white/10 rounded-[2rem] p-1 shadow-2xl relative overflow-hidden group mb-8">
+      <div className={`absolute inset-0 bg-${activeInsight.color}-900/20 transition-colors duration-1000`}></div>
       
       <div className="relative z-10 flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-4">
@@ -208,19 +233,19 @@ const QuickActionBtn = ({ icon: Icon, label, desc, color, onClick, delay }) => {
 };
 
 const ActivityItem = ({ item }) => (
-  <div className="flex gap-4 relative z-10 group animate-fade-in">
+  <div className="flex gap-4 relative z-10 group">
     <div className={`
-        w-10 h-10 rounded-full flex items-center justify-center border-4 border-stone-950 shrink-0 shadow-lg
-        ${item.type === 'alert' ? 'bg-gradient-to-br from-rose-500 to-pink-600 text-white' : 
-          item.type === 'success' ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white' : 
-          item.type === 'quote' ? 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white' :
-          'bg-stone-800 text-gray-400 border-stone-700'}
+        w-10 h-10 rounded-full flex items-center justify-center border-2 border-stone-800 shrink-0 shadow-lg
+        ${item.type === 'alert' ? 'bg-rose-500 text-white' : 
+          item.type === 'success' ? 'bg-emerald-500 text-white' : 
+          item.type === 'quote' ? 'bg-indigo-500 text-white' :
+          'bg-stone-800 text-gray-400'}
     `}>
         {item.type === 'alert' ? <AlertTriangle size={16} strokeWidth={2.5} /> : 
          item.type === 'success' || item.type === 'quote' ? <CheckCircle2 size={16} strokeWidth={2.5} /> : 
          <Clock size={16} />}
     </div>
-    <div className="bg-stone-900/50 border border-white/5 p-4 rounded-2xl flex-1 group-hover:border-white/10 group-hover:bg-stone-900 transition-all hover:translate-x-1">
+    <div className="bg-stone-900 border border-white/5 p-4 rounded-2xl flex-1 hover:bg-stone-800 transition-colors">
         <p className="text-gray-200 font-bold text-sm">{item.message}</p>
         <div className="flex justify-between items-center mt-1">
            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wide">{item.time}</span>
@@ -426,7 +451,7 @@ const UltimatePulseDashboard = () => {
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-8 gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/20 ring-1 ring-white/10">
+            <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/20 ring-1 ring-white/20">
               <Activity className="text-white" size={28} />
             </div>
             <div>
@@ -443,16 +468,21 @@ const UltimatePulseDashboard = () => {
           </div>
         </div>
 
-        {/* System Status Pills */}
-        <div className="flex items-center gap-4 bg-stone-900/80 p-1.5 pl-4 pr-1.5 rounded-full border border-white/10 backdrop-blur-md shadow-lg">
-           <div className="flex items-center gap-2">
-             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></span>
-             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Systems Nominal</span>
-           </div>
-           <div className="h-4 w-px bg-white/10"></div>
-           <button onClick={() => navigate('/settings')} className="p-1.5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-             <MoreHorizontal size={16} />
-           </button>
+        <div className="flex flex-col md:flex-row gap-4 items-end md:items-center">
+            {/* Weather Widget (New Feature) */}
+            <WeatherWidget />
+
+            {/* System Status Pills */}
+            <div className="flex items-center gap-4 bg-stone-900/80 p-1.5 pl-4 pr-1.5 rounded-full border border-white/10 backdrop-blur-md shadow-lg">
+               <div className="flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></span>
+                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Systems Nominal</span>
+               </div>
+               <div className="h-4 w-px bg-white/10"></div>
+               <button onClick={() => navigate('/settings')} className="p-1.5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                 <MoreHorizontal size={16} />
+               </button>
+            </div>
         </div>
       </div>
 

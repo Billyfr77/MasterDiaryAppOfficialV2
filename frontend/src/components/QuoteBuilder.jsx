@@ -26,8 +26,9 @@ import {
   User, Wrench, Package, Plus, Save, Search, Trash2,
   Crown, List, GripVertical, CheckCircle2, X, Sparkles, MapPin, Eye, EyeOff, UploadCloud,
   Settings, FileText, Download, Calendar, FileType, Ruler, PenTool, MessageSquare, Send, Calculator, Maximize, Minimize,
-  Layout, Focus, Image as ImageIcon, Zap, DollarSign, Wand2, ArrowRight
+  Layout, Focus, Image as ImageIcon, Zap, DollarSign, Wand2, ArrowRight, Loader2
 } from 'lucide-react'
+import { useNotification } from '../context/NotificationContext'
 import { api } from '../utils/api'
 import CountUp from 'react-countup'
 import MapBackground from './MapBackground'
@@ -35,6 +36,7 @@ import GeoreferenceModal from './GeoreferenceModal'
 import GoogleServicesSuggestions from './GoogleServicesSuggestions'
 import { generateQuotePDF } from '../utils/pdfGenerator'
 import ClientSelector from './Clients/ClientSelector'
+import { syncManager } from '../utils/syncManager'
 
 // ================================
 // UTILITIES
@@ -191,31 +193,50 @@ const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
 // ... Node Components ...
 
 const DimensionNode = ({ id, data, selected, position }) => {
-  const { width = 100, height = 100, label, onDelete, onResize, onAutoFit } = data
-  // 20px = 1ft scale approximation for this demo
-  const realWidth = width / 20
-  const realLength = height / 20
-  const ceilingHeight = 8 // ft default
-
-  const floorArea = (realWidth * realLength).toFixed(1)
-  const perimeter = ((realWidth + realLength) * 2).toFixed(1)
-  const wallArea = (perimeter * ceilingHeight).toFixed(1)
+  const { width = 200, height = 200, label, onDelete, onResize, onAutoFit } = data
+  const realWidth = (width / 20).toFixed(1)
+  const realHeight = (height / 20).toFixed(1)
+  
+  const [localLabel, setLocalLabel] = useState(label || 'Room Area');
 
   return (
-    <div className={`relative rounded-xl border-2 border-dashed border-blue-400/50 bg-blue-500/5 backdrop-blur-sm group transition-all ${selected ? 'ring-2 ring-blue-400 bg-blue-500/10' : ''}`} style={{ width: '100%', height: '100%', minWidth: 50, minHeight: 50 }}>
+    <div className={`relative rounded-xl border-2 border-dashed transition-all ${selected ? 'border-blue-400 bg-blue-500/10 ring-4 ring-blue-500/20' : 'border-blue-400/30 bg-blue-500/5'}`} style={{ width: '100%', height: '100%', minWidth: 50, minHeight: 50 }}>
       {selected && onAutoFit && <SmartActionsMenu node={{ id, position, data }} onAutoFit={onAutoFit} />}
-      <NodeResizer minWidth={50} minHeight={50} isVisible={selected} lineClassName="border-blue-400" handleClassName="h-3 w-3 bg-blue-500 border-2 border-white rounded shadow-sm" />
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-2 text-center">
-         <span className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-1">{label || 'Room'}</span>
-         <div className="text-lg font-black text-white drop-shadow-md">{floorArea} <span className="text-[9px] font-normal opacity-70">sqft</span></div>
-         {selected && (
-             <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-[9px] text-blue-200 border-t border-blue-500/30 pt-1">
-                 <div><span className="opacity-50">Wall:</span> <b>{wallArea}</b></div>
-                 <div><span className="opacity-50">Perim:</span> <b>{perimeter}</b></div>
-             </div>
-         )}
+      
+      <NodeResizer 
+        minWidth={50} minHeight={50} isVisible={selected} 
+        lineClassName="border-blue-400" 
+        handleClassName="h-4 w-4 bg-blue-500 border-2 border-white rounded-full shadow-md hover:scale-125 transition-transform" 
+      />
+      
+      <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center pointer-events-none">
+         <div className="bg-slate-900/80 px-2 py-1 rounded border border-blue-500/30 mb-1 pointer-events-auto">
+             <input 
+                className="bg-transparent text-[10px] font-black text-blue-300 uppercase tracking-widest text-center w-24 outline-none"
+                value={localLabel}
+                onChange={(e) => setLocalLabel(e.target.value)}
+                placeholder="LABEL"
+             />
+         </div>
+         
+         <div className="text-3xl font-black text-white drop-shadow-xl flex flex-col items-center leading-none">
+            {((realWidth * realHeight)).toFixed(0)} 
+            <span className="text-[9px] font-bold opacity-70 uppercase tracking-wide mt-1">sq. ft.</span>
+         </div>
+         
+         <div className="mt-2 flex gap-2 text-[9px] font-mono text-blue-200 bg-black/40 px-2 py-1 rounded-full backdrop-blur-md">
+             <span>{realWidth}'</span>
+             <span className="opacity-50">x</span>
+             <span>{realHeight}'</span>
+         </div>
       </div>
-      <button onClick={(e) => { e.stopPropagation(); onDelete?.() }} className="absolute -top-3 -right-3 p-1.5 rounded-full bg-red-500 text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto hover:scale-110"><X size={12} strokeWidth={3} /></button>
+      
+      {/* Delete Button */}
+      {selected && (
+        <button onClick={(e) => { e.stopPropagation(); onDelete?.() }} className="absolute -top-3 -right-3 p-1.5 rounded-full bg-red-500 text-white shadow-lg z-50 pointer-events-auto hover:scale-110 transition-transform">
+            <X size={12} strokeWidth={3} />
+        </button>
+      )}
       <Handle type="target" position={Position.Top} className="!w-full !h-full !opacity-0 !bg-transparent !border-none !rounded-none" />
     </div>
   )
@@ -290,14 +311,46 @@ const DraggableItem = ({ item, onClick }) => {
 
 const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
   const [isEditing, setIsEditing] = useState(false)
-  const getRate = () => { if (item.type === 'staff') return item.material.chargeRate; if (item.type === 'equipment') return item.material.costRate; return item.material.pricePerUnit }
-  let themeClass = "bg-indigo-900/20 border-indigo-500/30 hover:bg-indigo-900/40"; let barColor = "bg-indigo-500";
-  if (item.type === 'staff') { themeClass = "bg-emerald-900/20 border-emerald-500/30 hover:bg-emerald-900/40"; barColor = "bg-emerald-500"; }
-  else if (item.type === 'equipment') { themeClass = "bg-amber-900/20 border-amber-500/30 hover:bg-amber-900/40"; barColor = "bg-orange-500"; }
+  // Use customRate if set, otherwise fallback to material default
+  const rate = item.customRate !== undefined ? item.customRate : (item.type === 'staff' ? item.material.chargeRate : item.type === 'equipment' ? item.material.costRate : item.material.pricePerUnit);
+  
   return (
-    <div className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 group hover:shadow-md ${themeClass}`}>
-      <div className="flex items-center gap-3 overflow-hidden"><div className={`w-1.5 h-10 rounded-full ${barColor} shadow-[0_0_12px_currentColor]`} /><div className="space-y-1"><div className="bg-stone-900/80 border border-white/10 px-2 py-0.5 rounded-lg"><div className="text-sm font-bold text-white truncate flex-1 min-w-[80px]">{item.material.name}</div></div><div className="inline-block bg-stone-900/50 border border-white/5 px-2 py-0.5 rounded-md"><div className="text-[10px] text-gray-300 font-mono">{formatCurrency(getRate())} / unit</div></div></div></div>
-      <div className="flex items-center gap-4"><div className="flex flex-col items-end gap-1"><span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">QTY</span>{isEditing ? (<input type="number" className="w-14 bg-stone-800 border border-indigo-500 text-white text-xs px-2 py-1 rounded-lg text-right focus:outline-none" defaultValue={item.quantity} onBlur={(e) => { const val = parseFloat(e.target.value); if (val > 0) onUpdate(item.tempId, { quantity: val }); setIsEditing(false) }} onKeyDown={(e) => e.key === 'Enter' && e.target.blur()} autoFocus />) : (<div onClick={() => setIsEditing(true)} className="bg-stone-900/80 border border-white/10 px-3 py-1 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors"><div className="text-sm font-mono font-bold text-white">{item.quantity.toFixed(2)}</div></div>)}</div><div className="flex flex-col items-end w-20 sm:w-24 gap-1"><span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">Total</span><div className="bg-stone-900/80 border border-white/10 px-2 py-1 rounded-lg w-full text-right"><div className="text-sm font-bold text-emerald-400">{formatCurrency(getRate() * item.quantity)}</div></div></div><button onClick={() => onRemove(item.tempId)} className="p-2 bg-stone-800 hover:bg-red-900/80 border border-white/10 hover:border-red-500/50 rounded-xl text-gray-400 hover:text-white transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button></div>
+    <div className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 group hover:shadow-md ${item.type === 'staff' ? 'bg-emerald-900/20 border-emerald-500/30' : item.type === 'equipment' ? 'bg-amber-900/20 border-amber-500/30' : 'bg-indigo-900/20 border-indigo-500/30'}`}>
+      <div className="flex items-center gap-3 overflow-hidden">
+          <div className={`w-1.5 h-10 rounded-full shadow-[0_0_12px_currentColor] ${item.type === 'staff' ? 'bg-emerald-500' : item.type === 'equipment' ? 'bg-orange-500' : 'bg-indigo-500'}`} />
+          <div className="space-y-1">
+              <div className="bg-stone-900/80 border border-white/10 px-2 py-0.5 rounded-lg"><div className="text-sm font-bold text-white truncate flex-1 min-w-[80px]">{item.material.name}</div></div>
+              <div onClick={() => setIsEditing(true)} className="inline-block bg-stone-900/50 border border-white/5 px-2 py-0.5 rounded-md cursor-pointer hover:border-white/30">
+                  {isEditing ? (
+                      <input 
+                          type="number" 
+                          className="w-20 bg-stone-800 border border-indigo-500 text-white text-[10px] px-1 rounded outline-none" 
+                          defaultValue={rate} 
+                          onBlur={(e) => { const val = parseFloat(e.target.value); onUpdate(item.tempId, { customRate: val }); setIsEditing(false) }} 
+                          onKeyDown={(e) => e.key === 'Enter' && e.target.blur()} 
+                          autoFocus 
+                      />
+                  ) : (
+                      <div className="text-[10px] text-gray-300 font-mono">{formatCurrency(rate)} / unit</div>
+                  )}
+              </div>
+          </div>
+      </div>
+      <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end gap-1">
+              <span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">QTY</span>
+              {isEditing ? (
+                  <input type="number" className="w-14 bg-stone-800 border border-indigo-500 text-white text-xs px-2 py-1 rounded-lg text-right focus:outline-none" defaultValue={item.quantity} onBlur={(e) => { const val = parseFloat(e.target.value); if (val > 0) onUpdate(item.tempId, { quantity: val }); }} onKeyDown={(e) => e.key === 'Enter' && e.target.blur()} />
+              ) : (
+                  <div onClick={() => setIsEditing(true)} className="bg-stone-900/80 border border-white/10 px-3 py-1 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors"><div className="text-sm font-mono font-bold text-white">{item.quantity.toFixed(2)}</div></div>
+              )}
+          </div>
+          <div className="flex flex-col items-end w-20 sm:w-24 gap-1">
+              <span className="text-[9px] text-gray-400 font-bold uppercase bg-stone-900/50 px-1 rounded">Total</span>
+              <div className="bg-stone-900/80 border border-white/10 px-2 py-1 rounded-lg w-full text-right"><div className="text-sm font-bold text-emerald-400">{formatCurrency(rate * item.quantity)}</div></div>
+          </div>
+          <button onClick={() => onRemove(item.tempId)} className="p-2 bg-stone-800 hover:bg-red-900/80 border border-white/10 hover:border-red-500/50 rounded-xl text-gray-400 hover:text-white transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
+      </div>
     </div>
   )
 }
@@ -313,6 +366,10 @@ const QuoteBuilderContent = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { id } = useParams()
+  const { addNotification } = useNotification()
+  const [isSaving, setIsSaving] = useState(false)
+  const [isGeneratingBlueprint, setIsGeneratingBlueprint] = useState(false)
+  const [dataLoading, setDataLoading] = useState(true)
   const nodeTypes = useMemo(() => ({ glass: GlassNode, dimension: DimensionNode, zone: ZoneNode }), [])
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
@@ -334,7 +391,7 @@ const QuoteBuilderContent = () => {
   const [showSettings, setShowSettings] = useState(false)
   const [quoteSettings, setQuoteSettings] = useState({ clientName: '', clientId: null, validUntil: '', terms: '', status: 'DRAFT' })
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [showFinancials, setShowFinancials] = useState(false)
+  const [showFinancials, setShowFinancials] = useState(true) // Default to true
   const [showSidebar, setShowSidebar] = useState(true)
 
   // Feature State
@@ -348,6 +405,11 @@ const QuoteBuilderContent = () => {
   const [showChat, setShowChat] = useState(false)
   const [chatMessages, setChatMessages] = useState([])
   const [chatTyping, setChatTyping] = useState(false)
+
+  // --- UI State for Pagination ---
+  const [visibleMaterials, setVisibleMaterials] = useState(20);
+  const [visibleStaff, setVisibleStaff] = useState(10);
+  const [visibleEquipment, setVisibleEquipment] = useState(10);
 
   const canvasRef = useRef(null)
   const { screenToFlowPosition, getNodes, fitView } = useReactFlow()
@@ -434,15 +496,75 @@ const QuoteBuilderContent = () => {
       setQuoteItems(prev => [...prev, ...newQuoteItems]);
   }, [materials, deleteNode, setNodes, setEdges, setQuoteItems]);
 
-  // --- EFFECT: ATTACH HANDLERS TO NODES ---
+  // --- EFFECT: HYDRATE HANDLERS (PERSISTENCE SUPPORT) ---
   useEffect(() => {
       setNodes(nds => nds.map(n => {
-          if (n.type === 'dimension' && !n.data.onAutoFit) {
-              return { ...n, data: { ...n.data, onAutoFit: handleAutoFit } };
+          const newData = { ...n.data };
+          let changed = false;
+
+          // Hydrate onDelete (All nodes)
+          if (!newData.onDelete) {
+              newData.onDelete = () => deleteNode(n.id);
+              changed = true;
           }
-          return n;
+
+          // Hydrate onAutoFit (Dimension)
+          if (n.type === 'dimension' && !newData.onAutoFit) {
+              newData.onAutoFit = handleAutoFit;
+              changed = true;
+          }
+          
+          // Hydrate onResize (Dimension/Zone)
+          if ((n.type === 'dimension' || n.type === 'zone') && !newData.onResize) {
+               newData.onResize = (e, params) => {
+                   setNodes(curr => curr.map(cn => cn.id === n.id ? { 
+                     ...cn, 
+                     style: { ...cn.style, width: params.width, height: params.height },
+                     data: { ...cn.data, width: params.width, height: params.height } 
+                   } : cn));
+               };
+               changed = true;
+          }
+
+          return changed ? { ...n, data: newData } : n;
       }));
-  }, [handleAutoFit, setNodes, nodes.length]); // Re-run when node count changes
+  }, [handleAutoFit, deleteNode, setNodes, nodes.length]);
+
+  // --- PERSISTENCE: LOAD NEW DRAFT ---
+  useEffect(() => {
+      if (!id) { 
+          const savedData = localStorage.getItem('quote_draft_new');
+          if (savedData) {
+              try {
+                  const parsed = JSON.parse(savedData);
+                  // Restore if we have data and current state is empty
+                  if (parsed.nodes && nodes.length === 0) {
+                      setNodes(parsed.nodes);
+                      if (parsed.edges) setEdges(parsed.edges);
+                      if (parsed.items) setQuoteItems(parsed.items);
+                      if (parsed.chat) setChatMessages(parsed.chat);
+                      if (parsed.settings) setQuoteSettings(parsed.settings);
+                      if (parsed.project) setSelectedProject(parsed.project);
+                  }
+              } catch (e) { console.error("Draft Load Error:", e); }
+          }
+      }
+  }, [id]);
+
+  // --- PERSISTENCE: AUTO-SAVE ---
+  useEffect(() => {
+      const draftKey = `quote_draft_${id || 'new'}`;
+      const timeout = setTimeout(() => {
+          if (nodes.length > 0 || quoteItems.length > 0 || chatMessages.length > 0) {
+              const payload = {
+                  nodes, edges, items: quoteItems, chat: chatMessages, 
+                  settings: quoteSettings, project: selectedProject, timestamp: Date.now()
+              };
+              localStorage.setItem(draftKey, JSON.stringify(payload));
+          }
+      }, 1000);
+      return () => clearTimeout(timeout);
+  }, [nodes, edges, quoteItems, chatMessages, quoteSettings, selectedProject, id]);
 
   // --- AUTO-SYNC CLIENT & LOCATION FROM PROJECT ---
   useEffect(() => {
@@ -473,6 +595,7 @@ const QuoteBuilderContent = () => {
   // --- FETCH DATA ---
   useEffect(() => {
     const fetchData = async () => {
+      setDataLoading(true)
       try {
         const [n, s, e, p] = await Promise.all([
           api.get('/nodes'), api.get('/staff'), api.get('/equipment'), api.get('/projects')
@@ -481,7 +604,12 @@ const QuoteBuilderContent = () => {
         setStaff((s.data.data || s.data || []).map(x => ({...x, type: 'staff', payRate: x.payRateBase, chargeRate: x.chargeOutBase})))
         setEquipment((e.data.data || e.data || []).map(x => ({...x, type: 'equipment', costRate: x.costRateBase})))
         setProjects(p.data.data || p.data || [])
-      } catch (err) { console.error(err) }
+      } catch (err) { 
+          console.error(err);
+          addNotification('error', 'Connection Error', 'Failed to load resources. Please refresh.');
+      } finally {
+          setDataLoading(false);
+      }
     }
     fetchData()
   }, [])
@@ -491,6 +619,25 @@ const QuoteBuilderContent = () => {
     if (!id || (materials.length === 0 && staff.length === 0 && equipment.length === 0)) return
 
     const loadQuote = async () => {
+      // CHECK FOR RECENT DRAFT (Client-Side Persistence)
+      const draftKey = `quote_draft_${id}`;
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+          try {
+             const parsed = JSON.parse(savedDraft);
+             if (parsed.timestamp > (Date.now() - 24*60*60*1000)) { // 24h validity
+                 console.log("Restoring Draft instead of DB:", draftKey);
+                 setNodes(parsed.nodes);
+                 if (parsed.edges) setEdges(parsed.edges);
+                 if (parsed.items) setQuoteItems(parsed.items);
+                 if (parsed.chat) setChatMessages(parsed.chat);
+                 if (parsed.settings) setQuoteSettings(parsed.settings);
+                 if (parsed.project) setSelectedProject(parsed.project);
+                 return; // SKIP DB LOAD
+             }
+          } catch(e) { console.error("Draft parsing failed, falling back to DB", e); }
+      }
+
       try {
         const res = await api.get(`/quotes/${id}`)
         const quote = res.data
@@ -588,14 +735,16 @@ const QuoteBuilderContent = () => {
 
   // --- FULL BLUEPRINT GENERATION ---
   const handleGenerateBlueprint = async (prompt) => {
+      setIsGeneratingBlueprint(true);
       setChatMessages(prev => [...prev, { role: 'user', content: `Generate Blueprint: ${prompt}` }]);
-      setChatTyping(true);
       
       try {
           const res = await api.post('/ai/quote', { prompt });
           const { nodes: aiNodes, edges: aiEdges } = res.data;
 
           if (aiNodes && aiNodes.length > 0) {
+              console.log("[Blueprint] Received:", { nodes: aiNodes, edges: aiEdges });
+              addNotification('success', 'Blueprint Generated', 'AI has constructed the visual quote.');
               const newNodes = [];
               const newItems = [];
               
@@ -606,21 +755,41 @@ const QuoteBuilderContent = () => {
                   return 'material'; // default for 'glass'
               };
 
-              aiNodes.forEach(n => {
+              aiNodes.forEach(rawNode => {
+                  // Normalize Node Structure (Handle flat AI output)
+                  let n = rawNode;
+                  if (!n.data) {
+                      n = {
+                          id: rawNode.id || rawNode.nodeId || `ai-${Math.random().toString(36).substr(2, 9)}`,
+                          type: rawNode.type || 'material',
+                          position: rawNode.position || { x: 0, y: 0 },
+                          data: rawNode
+                      };
+                  }
+
+                  if (!n.data) return; // Skip invalid nodes
+
                   const frontendType = n.type === 'dimension' ? 'dimension' : 'glass';
                   const itemType = mapType(n.type);
                   
                   // Try to find matching real resource
                   let refItem = null;
-                  if (itemType === 'staff') refItem = staff.find(s => s.id === n.data.nodeId) || staff.find(s => s.name === n.data.label);
-                  else if (itemType === 'equipment') refItem = equipment.find(e => e.id === n.data.nodeId) || equipment.find(e => e.name === n.data.label);
-                  else if (n.type !== 'dimension') refItem = materials.find(m => m.id === n.data.nodeId) || materials.find(m => m.name === n.data.label);
+                  const targetId = n.data.nodeId;
+                  const targetName = n.data.label;
+
+                  if (itemType === 'staff') {
+                      refItem = staff.find(s => s.id === targetId) || (targetName ? staff.find(s => s.name === targetName) : null);
+                  } else if (itemType === 'equipment') {
+                      refItem = equipment.find(e => e.id === targetId) || (targetName ? equipment.find(e => e.name === targetName) : null);
+                  } else if (n.type !== 'dimension') {
+                      refItem = materials.find(m => m.id === targetId) || (targetName ? materials.find(m => m.name === targetName) : null);
+                  }
 
                   // Create mock if not found
                   if (!refItem && n.type !== 'dimension') {
                       refItem = {
                           id: `ai-${Date.now()}-${Math.random()}`,
-                          name: n.data.label,
+                          name: n.data.label || 'Unknown Item',
                           pricePerUnit: n.data.cost || 0,
                           chargeRate: n.data.cost || 0,
                           costRate: n.data.cost || 0,
@@ -633,7 +802,8 @@ const QuoteBuilderContent = () => {
                   newNodes.push({
                       id: nodeId,
                       type: frontendType,
-                      position: n.position || { x: 0, y: 0 },
+                      // Fallback layout if AI fails at positioning
+                      position: (n.position && typeof n.position.x === 'number') ? n.position : { x: 0, y: newNodes.length * 250 },
                       data: {
                           ...n.data,
                           type: itemType,
@@ -651,13 +821,14 @@ const QuoteBuilderContent = () => {
                           tempId: nodeId,
                           quantity: n.data.quantity,
                           material: refItem,
-                          type: itemType
+                          type: itemType,
+                          customRate: n.data.cost > 0 ? n.data.cost : undefined // AI Override
                       });
                   }
               });
 
               setNodes(prev => [...prev, ...newNodes]);
-              setEdges(prev => [...prev, ...aiEdges.map(e => ({ ...e, type: 'smoothstep', animated: true }))]);
+              setEdges(prev => [...prev, ...aiEdges.map(e => ({ ...e, id: `e-${window.crypto.randomUUID()}`, type: 'smoothstep', animated: true }))]);
               setQuoteItems(prev => [...prev, ...newItems]);
               
               setChatMessages(prev => [...prev, { role: 'assistant', content: "Blueprint generated successfully! I've added the requested systems to the canvas." }]);
@@ -669,8 +840,10 @@ const QuoteBuilderContent = () => {
       } catch (err) {
           console.error(err);
           setChatMessages(prev => [...prev, { role: 'assistant', content: "I encountered an error generating the blueprint. Please try again." }]);
+          addNotification('error', 'Generation Error', 'Failed to generate blueprint.');
       } finally {
           setChatTyping(false);
+          setIsGeneratingBlueprint(false);
       }
   };
 
@@ -820,11 +993,12 @@ const QuoteBuilderContent = () => {
     setPendingNode({ item, position, suggestedQuantity: suggestedQty })
   }, [screenToFlowPosition, getNodes])
 
-  const handleAddNode = (quantity) => {
+  const handleAddNode = (quantity, cost, charge) => {
     if (!pendingNode) return
     const { item, position } = pendingNode
     const nodeId = `${item.type || 'material'}-${item.id}-${Date.now()}`
     
+    // Create node data
     const newNode = {
       id: nodeId,
       type: 'glass',
@@ -839,7 +1013,20 @@ const QuoteBuilderContent = () => {
     }
 
     setNodes(nds => nds.concat(newNode))
-    setQuoteItems(prev => [...prev, { nodeId: item.id, tempId: nodeId, quantity: quantity, material: item, type: item.type || 'material' }])
+    
+    // Create quote item with custom rates
+    const newItem = { 
+        nodeId: item.id, 
+        tempId: nodeId, 
+        quantity: quantity, 
+        material: item, 
+        type: item.type || 'material',
+        customRate: charge > 0 ? charge : undefined // Use Charge as the rate for the quote
+    }
+    // Also store internal cost if needed for margin calculation later, but QuoteItem primarily uses 'rate' (revenue).
+    // If we want to track cost margin per item, we'd need 'customCost'.
+    
+    setQuoteItems(prev => [...prev, newItem])
     
     setDropSuccess(true)
     setTimeout(() => setDropSuccess(false), 600)
@@ -854,7 +1041,8 @@ const QuoteBuilderContent = () => {
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges])
 
   const handleSave = async () => {
-    if (!selectedProject) return alert('Select a project first!')
+    if (!selectedProject) return addNotification('warning', 'Project Required', 'Please select a project before saving.');
+    setIsSaving(true);
     try {
       if (projectLocation) await api.put(`/projects/${selectedProject}`, { latitude: projectLocation.lat, longitude: projectLocation.lng })
 
@@ -887,23 +1075,42 @@ const QuoteBuilderContent = () => {
           costRate: i.material.costRate
       }))
 
-      await api.post('/quotes', {
+      const payload = {
         name: `Quote for ${projects.find(p => p.id === selectedProject)?.name} - ${new Date().toLocaleDateString()}`,
         projectId: selectedProject, marginPct, nodes: nodesData, staff: staffData, equipment: equipmentData
-      })
-      alert('Quote Saved Successfully!')
-    } catch (err) { console.error('Error saving quote:', err); alert('Error saving quote data.') }
+      };
+
+      await syncManager.save('quotes', payload);
+      addNotification('success', 'Quote Saved (Offline Ready)', 'Your quote has been saved locally and will sync when online.');
+    } catch (err) { 
+        console.error('Error saving quote:', err); 
+        addNotification('error', 'Save Failed', 'There was an error saving your quote.'); 
+    } finally {
+        setIsSaving(false);
+    }
   }
 
-  const totalRevenue = useMemo(() => {
-      const cost = quoteItems.reduce((acc, item) => {
+  const financials = useMemo(() => {
+      let materials = 0, staff = 0, equipment = 0;
+      
+      quoteItems.forEach(item => {
           let rate = 0;
-          if (item.type === 'staff') rate = item.material.chargeRate;
+          if (item.customRate !== undefined) rate = item.customRate;
+          else if (item.type === 'staff') rate = item.material.chargeRate;
           else if (item.type === 'equipment') rate = item.material.costRate;
           else rate = item.material.pricePerUnit;
-          return acc + (rate * item.quantity);
-      }, 0);
-      return cost * (1 + (marginPct/100));
+          
+          const total = rate * item.quantity;
+          
+          if (item.type === 'staff') staff += total;
+          else if (item.type === 'equipment') equipment += total;
+          else materials += total;
+      });
+
+      const subtotal = materials + staff + equipment;
+      const total = subtotal * (1 + (marginPct/100));
+      
+      return { materials, staff, equipment, subtotal, total };
   }, [quoteItems, marginPct]);
 
   // --- RENDER ---
@@ -918,6 +1125,18 @@ const QuoteBuilderContent = () => {
       <div className={`absolute inset-0 z-10 flex flex-col transition-all duration-500 ${showMap ? 'bg-stone-900/40 backdrop-blur-sm' : ''}`}>
         <ConfigModal isOpen={!!pendingNode} item={pendingNode?.item} suggestedQuantity={pendingNode?.suggestedQuantity} onClose={() => setPendingNode(null)} onConfirm={handleAddNode} />
         
+        {/* LOADING OVERLAY */}
+        {(isGeneratingBlueprint || dataLoading) && (
+          <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in">
+             <div className="relative">
+                <div className="absolute inset-0 bg-indigo-500 rounded-full blur-xl opacity-20 animate-pulse"></div>
+                <Loader2 size={48} className="text-indigo-500 animate-spin relative z-10" />
+             </div>
+             <h2 className="mt-6 text-xl font-black text-white uppercase tracking-wider">{isGeneratingBlueprint ? 'Constructing Blueprint...' : 'Loading Resources...'}</h2>
+             <p className="text-gray-400 text-sm mt-2 font-medium">{isGeneratingBlueprint ? 'AI is analyzing requirements and drafting layout' : 'Syncing with project database'}</p>
+          </div>
+        )}
+
         {/* --- TOP BAR --- */}
         <div className={`h-auto py-3 px-4 md:px-6 border-b border-white/10 ${showMap ? 'bg-stone-900/60' : 'bg-stone-900/80'} backdrop-blur-md z-30 flex flex-wrap justify-between items-center shadow-lg transition-colors gap-2`}>
           <div className="flex items-center gap-2">
@@ -937,8 +1156,24 @@ const QuoteBuilderContent = () => {
 
           {/* Revenue/Margin Display - Conditionally visible */}
           {showFinancials && (
-            <div className={`flex items-center gap-4 ${showMap ? 'bg-stone-900/80' : 'bg-stone-900/90'} p-2 rounded-xl border border-white/10 shadow-2xl transition-colors`}>
-               <div className="px-2"><div className="text-[9px] font-bold text-gray-400 uppercase">Revenue</div><div className="text-sm font-mono font-bold text-emerald-400"><CountUp end={totalRevenue} prefix="$" separator="," /></div></div>
+            <div className={`flex items-center gap-2 ${showMap ? 'bg-stone-900/80' : 'bg-stone-900/90'} p-1.5 rounded-xl border border-white/10 shadow-2xl transition-colors overflow-x-auto`}>
+               {/* Breakdown Pills */}
+               <div className="hidden md:flex items-center gap-2 px-2 border-r border-white/10 pr-3">
+                   <div className="flex flex-col items-center min-w-[60px]" title="Materials Cost">
+                       <span className="text-[8px] font-bold text-indigo-400 uppercase flex gap-1"><Package size={8}/> Mat</span>
+                       <span className="text-xs font-mono font-bold text-white">{formatCurrency(financials.materials)}</span>
+                   </div>
+                   <div className="flex flex-col items-center min-w-[60px]" title="Staff Cost">
+                       <span className="text-[8px] font-bold text-emerald-400 uppercase flex gap-1"><User size={8}/> Lab</span>
+                       <span className="text-xs font-mono font-bold text-white">{formatCurrency(financials.staff)}</span>
+                   </div>
+                   <div className="flex flex-col items-center min-w-[60px]" title="Equipment Cost">
+                       <span className="text-[8px] font-bold text-amber-400 uppercase flex gap-1"><Wrench size={8}/> Eqp</span>
+                       <span className="text-xs font-mono font-bold text-white">{formatCurrency(financials.equipment)}</span>
+                   </div>
+               </div>
+
+               <div className="px-2"><div className="text-[9px] font-bold text-gray-400 uppercase">Total Quote</div><div className="text-sm font-mono font-bold text-emerald-400"><CountUp end={financials.total} prefix="$" separator="," /></div></div>
                <div className="w-px h-6 bg-white/10" />
                <div className="px-2 flex items-center gap-1.5"><span className="text-[9px] font-bold text-indigo-300">Margin {marginPct}%</span><input type="range" min="0" max="100" value={marginPct} onChange={(e) => setMarginPct(Number(e.target.value))} className="w-16 h-1 bg-stone-800 rounded-lg accent-indigo-500" /></div>
             </div>
@@ -977,7 +1212,10 @@ const QuoteBuilderContent = () => {
             
             <button onClick={() => navigate('/invoices', { state: { quoteItems: quoteItems, projectId: selectedProject, clientId: quoteSettings.clientId } })} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-purple-400 hover:text-white transition-colors" title="Convert to Invoice"><FileText size={20} /></button>
             <button onClick={() => generateQuotePDF({ id: 'DRAFT', name: 'Quote', items: quoteItems.map(i => ({ name: i.material.name, type: i.type, quantity: i.quantity, rate: i.type==='staff'?i.material.chargeRate:i.type==='equipment'?i.material.costRate:i.material.pricePerUnit })), totalRevenue, marginPct }, projects.find(p=>p.id===selectedProject), quoteSettings)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-300 hover:text-white"><Download size={20} /></button>
-            <button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg border border-indigo-400/50 flex items-center gap-2 active:scale-95"><Save size={16} /> Save</button>
+            <button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg border border-indigo-400/50 flex items-center gap-2 active:scale-95 transition-all">
+                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
+                {isSaving ? 'Saving...' : 'Save'}
+            </button>
           </div>
         </div>
 
@@ -1010,9 +1248,38 @@ const QuoteBuilderContent = () => {
               <button onClick={() => setShowSidebar(false)} className="lg:hidden p-2 text-gray-400 hover:text-white"><X size={20}/></button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-              <div className="space-y-2">{materials.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}</div>
-              <div className="border-t border-white/10 my-2 pt-2"><div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Staff</div>{staff.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}</div>
-              <div className="border-t border-white/10 my-2 pt-2"><div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Equipment</div>{equipment.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}</div>
+              {/* Materials */}
+              <div>
+                <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Materials</div>
+                <div className="space-y-2">
+                  {materials.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, visibleMaterials).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}
+                </div>
+                {materials.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length > visibleMaterials && (
+                  <button onClick={() => setVisibleMaterials(prev => prev + 20)} className="w-full mt-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg text-xs font-bold text-indigo-400 transition-colors">Load More ({materials.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length - visibleMaterials})</button>
+                )}
+              </div>
+
+              {/* Staff */}
+              <div className="border-t border-white/10 my-2 pt-2">
+                <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Staff</div>
+                <div className="space-y-2">
+                  {staff.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, visibleStaff).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}
+                </div>
+                {staff.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length > visibleStaff && (
+                  <button onClick={() => setVisibleStaff(prev => prev + 10)} className="w-full mt-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg text-xs font-bold text-emerald-400 transition-colors">Load More ({staff.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length - visibleStaff})</button>
+                )}
+              </div>
+
+              {/* Equipment */}
+              <div className="border-t border-white/10 my-2 pt-2">
+                <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Equipment</div>
+                <div className="space-y-2">
+                  {equipment.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, visibleEquipment).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}
+                </div>
+                {equipment.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length > visibleEquipment && (
+                  <button onClick={() => setVisibleEquipment(prev => prev + 10)} className="w-full mt-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg text-xs font-bold text-amber-400 transition-colors">Load More ({equipment.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length - visibleEquipment})</button>
+                )}
+              </div>
             </div>
           </div>
 

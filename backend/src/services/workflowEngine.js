@@ -42,6 +42,32 @@ class WorkflowEngine extends EventEmitter {
     }
   }
 
+  async startWorkflow(workflowId, context = {}) {
+      console.log(`[WorkflowEngine] Manually starting workflow: ${workflowId}`);
+      try {
+          const workflow = await db.Workflow.findByPk(workflowId);
+          if (!workflow) throw new Error("Workflow not found");
+
+          const nodes = workflow.nodes || [];
+          const edges = workflow.edges || [];
+
+          // Find Start Nodes (Trigger or Input or Nodes with NO incoming edges)
+          const targetIds = new Set(edges.map(e => e.target));
+          const startNodes = nodes.filter(n => !targetIds.has(n.id));
+
+          if (startNodes.length === 0) throw new Error("No valid start node found (circular or empty).");
+
+          for (const node of startNodes) {
+              await this.executeNodeChain(node, context, workflow, nodes, edges, new Set());
+          }
+          
+          return { status: 'started', message: 'Workflow initiated.' };
+      } catch (err) {
+          console.error("Start Workflow Error:", err);
+          throw err;
+      }
+  }
+
   // Recursive Graph Traversal
   async executeNodeChain(currentNode, payload, workflow, allNodes, allEdges, visited) {
       if (visited.has(currentNode.id)) return; // Prevent loops

@@ -249,8 +249,8 @@ const DiaryCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
   if (!isOpen) return null
 
   return (
-    <div className="fixed bottom-24 right-6 w-96 h-[600px] max-h-[70vh] bg-stone-900/95 border border-white/20 rounded-2xl shadow-2xl flex flex-col z-[100] backdrop-blur-xl animate-fade-in origin-bottom-right">
-      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-emerald-900/50 to-teal-900/50 rounded-t-2xl">
+    <div className="fixed bottom-24 right-6 w-96 h-[600px] max-h-[70vh] bg-stone-900 border border-white/20 rounded-2xl shadow-2xl flex flex-col z-[100] animate-fade-in origin-bottom-right">
+      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-stone-800 rounded-t-2xl">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg ring-1 ring-white/20">
             <Sparkles size={20} className="text-white" />
@@ -615,7 +615,7 @@ const PaintDiary = () => {
               setCurrentEntry(prev => ({ 
                   ...prev, 
                   items: [...prev.items, ...newItems],
-                  note: res.data.result.note || prev.note // Auto-fill note if provided
+                  note: res.data.note || prev.note // Auto-fill note if provided
               }));
               setShowSmartLog(false);
               setIsSaved(false);
@@ -849,7 +849,11 @@ const PaintDiary = () => {
 
             {/* Content */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-              <div className={`lg:col-span-1 ${showTools ? 'block' : 'hidden lg:block'}`}><div className="bg-stone-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-5 sticky top-4 shadow-xl"><ConstructionToolbar staff={staff} equipment={equipment} materials={materials} formatCurrency={formatCurrency} searchTerm={searchTerm} setSearchTerm={setSearchTerm} filterType={filterType} setFilterType={setFilterType} weather={weather} /></div></div>
+              <div className={`lg:col-span-1 h-full ${showTools ? 'block' : 'hidden lg:block'}`}>
+                  <div className="bg-stone-900 border border-white/10 rounded-3xl p-5 sticky top-8 shadow-xl h-fit">
+                      <ConstructionToolbar staff={staff} equipment={equipment} materials={materials} formatCurrency={formatCurrency} searchTerm={searchTerm} setSearchTerm={setSearchTerm} filterType={filterType} setFilterType={setFilterType} weather={weather} />
+                  </div>
+              </div>
               
               <div className="lg:col-span-3">
                 <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
