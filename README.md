@@ -1,105 +1,58 @@
-# MasterDiaryApp OS (Pinnacle Edition) v2.0
+# MasterDiaryOS — The AI-Native Construction Operating System 🚀
 
-**The World's Most Advanced Construction Management Operating System.**
-
-MasterDiaryApp OS is a high-fidelity, AI-powered SaaS platform designed to replace fragmented spreadsheets with a unified, visual, and intelligent interface. Built for speed, precision, and automation using a "Zero-Context" AI architecture.
+**MasterDiaryOS** is a visual, graph-based construction operating system that unifies quoting, execution, safety, and invoicing into a single high-performance engine. Designed to feel like the **Unreal Engine of Project Management**, it transforms complex natural language into actionable operational nodes.
 
 ---
 
-## 🚀 Key Innovation: "Zero-Context" AI Engine
-We have pioneered a **"Zero-Context" AI Engine** (powered by **Google Gemini** & **Pinnacle AI**) that delivers complex generative tasks in **under 6 seconds**.
-
-*   **⚡ Ultra-Fast Quote Builder:** `generateQuote` endpoint utilizes a "Zero-Context" strategy with a strict 1000-token limit to instantly generate visual node graphs (Materials, Labor, Equipment) from simple prompts.
-*   **🧠 Smart Diary Copilot:** Optimized with a 300-token limit to parse natural language site logs ("Crew of 3 did 50m fencing") into structured data in real-time.
-*   **🤖 Neural Core:** The "Chief Construction Analyst" module (`analyzeMapZone`, `dashboardInsights`) performs deep strategic reviews of project financials and risks.
-
----
-
-## 💎 Core Modules & Capabilities
-
-### 1. 🏗️ Visual Quote Builder (`/quotes`)
-*   **Infinite Canvas:** React Flow-powered drag-and-drop interface.
-*   **AI "Blueprint Mode":** Generates entire project structures (Nodes & Edges) with "Systems Thinking" (e.g., auto-adding Labor/Plant to Materials).
-*   **Smart Links:** Actionable nodes that link directly to app functions.
-*   **Real-time Costing:** Instant margin and tax calculations.
-
-### 2. ⚡ Workflow Automation Engine (`/workflows`)
-*   **Visual Logic:** Drag-and-drop builder for business logic (Triggers, Actions, Decisions).
-*   **Integrated Actions:**
-    *   `create_invoice`: Auto-draft invoices based on milestones.
-    *   `assign_staff`: Auto-allocate resources.
-    *   `send_notification`: Real-time alerts.
-*   **AI Architect:** "Generate Workflow" builds complex logic chains from a single sentence.
-
-### 3. 📅 Smart Site Diary (`/diary`)
-*   **Natural Language Entry:** Type freely; AI extracts Staff, Activities, and Asset usage.
-*   **Offline-First Architecture:** Powered by **Dexie.js** (IndexedDB), enabling full functionality without internet access. Data syncs automatically when online.
-*   **Weather Integration:** Auto-fetches site weather context.
-
-### 4. 🛡️ Safety & Compliance (`/safety`)
-*   **AI Safety Officer:** Generates ISO 45001-compliant Task Hazard Analyses (THA) via `analyzeSafetyTask`.
-*   **Document Intelligence:** `analyzeDocument` scans PDFs/Images to extract key risks and compliance dates.
-
-### 5. 🌍 GeoCore Map Layer (`/map`)
-*   **AI Spatial Analysis:** `generateMapElements` creates site zones (Logistics, Safety, Exclusion) and configures 3D/Satellite views based on context.
+## 🧠 Core Philosophy: The "Power Layout"
+Every module in MasterDiaryOS follows a unified 3-section **Power Layout** designed for high-density professional work:
+1.  **Top: PowerHeader** — Real-time financial pulses and AI status.
+2.  **Middle: Fixed Sidebar & Infinite Canvas** — Drag-and-drop resource library paired with a fluid node-graph workspace.
+3.  **Bottom: Data Manifest** — A full-width ledger of every item, quantity, and cost on the canvas.
 
 ---
 
-## 🛠️ Technical Stack (The "Pinnacle" Stack)
+## 🧩 Integrated Engines
 
-*   **Frontend:** React 18, Vite, TailwindCSS, Framer Motion, React Flow.
-*   **State & Storage:** Redux Toolkit + **Dexie.js (IndexedDB)** for robust offline support.
-*   **PWA:** `vite-plugin-pwa` integrated for installable app capabilities.
-*   **Backend:** Node.js, Express.
-*   **Database:** Sequelize ORM (supporting **SQLite** & **PostgreSQL**).
-*   **AI Layer:** Google Gemini (via `@google/generative-ai`) managed by `grokService.js`.
-*   **Deployment:** Docker, Google Cloud Run.
+### 1. AI Blueprint Engine (Quote Builder) 🏗️
+*   **Aesthetic:** *Arctic Blue & Purple ("The Architect")*
+*   **Function:** Converts natural language into 3D-styled node blueprints.
+*   **Logic:** Includes "Auto-Fit" logic where rooms (Dimension Nodes) automatically calculate material requirements (Paint, Flooring) based on area.
+*   **Visuals:** Features a "Blueprint Grid" motif and Indigo neon accents.
 
----
+### 2. AI Diary Engine (Paint Your Day) 🎨
+*   **Aesthetic:** *Jade Emerald & Teal ("The Pulse")*
+*   **Function:** Real-time operational logging with automatic cost and productivity tracking.
+*   **Chronos System:** A "Time Hub" node that dictates the schedule for all attached resources.
+*   **Logic:** Connecting a "Break" or "Delay" node to a Chronos node automatically propagates time subtractions across all linked staff and equipment.
 
-## 📦 Installation & Setup
+### 3. AI Safety & Workflow 🛡️
+*   **Safety:** Custom form builder with AI verification badges for compliance.
+*   **Workflow:** A "Zapier for Construction" visual graph where triggers spawn automated actions (Invoicing, Notifications).
 
-1.  **Clone the Repository**
-    ```bash
-    git clone https://github.com/Billyfr77/MasterDiaryAppOfficialV2.git
-    cd MasterDiaryAppOfficialV2
-    ```
-
-2.  **Install Dependencies**
-    ```bash
-    # Install Backend
-    cd backend
-    npm install
-
-    # Install Frontend
-    cd ../frontend
-    npm install
-    ```
-
-3.  **Run Development Servers**
-    ```bash
-    # Terminal 1 (Backend - Port 5003)
-    cd backend
-    npm run dev
-
-    # Terminal 2 (Frontend - Port 5173)
-    cd frontend
-    npm run dev
-    ```
-
-4.  **Environment Variables**
-    Ensure your `.env` file in `backend/` is configured with:
-    *   `GEMINI_API_KEY` (for AI features)
-    *   `DB_DIALECT` (sqlite/postgres)
+### 4. Financial & Map Engines 🗺️
+*   **Map Builder:** Geo-spatial planning with AI-generated site plans and resource placement.
+*   **Invoice Builder:** Automatically harvests nodes from the Diary/Quote canvas to generate branded, invoice-ready PDFs.
 
 ---
 
-## 🔮 Roadmap to Perfection
-
-1.  **Multiplayer Collaboration:** Integrate Yjs for real-time concurrent editing on the Quote Canvas.
-2.  **Financial Sync:** Two-way sync with Xero/QuickBooks APIs.
-3.  **Mobile Native:** Wrap the PWA in Capacitor for App Store deployment.
+## ✨ Tactile Experience (UX)
+*   **Shockwave Drops:** Every node dropped onto the canvas triggers a visual "Ping" ripple for deep interaction satisfaction.
+*   **Node Snapping:** High-performance snapping to a 20px grid for pixel-perfect organization.
+*   **Glassmorphism:** Every UI box component utilizes backdrop-blur and border-glow effects to maintain depth and clarity.
 
 ---
 
-**MasterDiaryApp OS** - Build Faster. Quote Smarter. Automate Everything.
+## 🛠️ Technical Stack
+*   **Frontend:** React, Tailwind CSS, Framer Motion.
+*   **Graph Engine:** @xyflow/react (React Flow).
+*   **Backend:** Node.js, Express, Grok/Gemini AI Models.
+*   **Database:** PostgreSQL / Cloud SQL.
+
+---
+
+## 🚀 Vision Progress: 95%
+MasterDiaryOS has moved beyond a "software tool" into a true **Category-Defining OS**. It replaces fragmented systems (Simpro, AroFlo, Procore SME) with a single, intelligent central brain.
+
+**Founder:** Billy Fraser  
+**Status:** Pre-Launch Polish / Functional Masterpiece
