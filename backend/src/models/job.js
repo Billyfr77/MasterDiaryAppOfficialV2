@@ -5,8 +5,8 @@ module.exports = (sequelize, DataTypes) => {
   class Job extends Model {
     static associate(models) {
       Job.belongsTo(models.Client, { foreignKey: 'clientId', as: 'clientDetails' });
-      // Optional: Link to Staff/Equipment if needed for strict integrity, 
-      // but 'resourceId' often polymorphic here so we keep it loose or manage manually.
+      Job.belongsTo(models.Project, { foreignKey: 'projectId', as: 'project' });
+      Job.hasMany(models.Diary, { foreignKey: 'jobId', as: 'diaries' });
     }
   }
 
@@ -29,6 +29,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       references: {
         model: 'Clients',
+        key: 'id'
+      }
+    },
+    projectId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Projects',
         key: 'id'
       }
     },

@@ -24,6 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       Project.hasMany(models.Allocation, { foreignKey: 'projectId' }); // Added Allocation Association
       Project.hasMany(models.SafetyForm, { foreignKey: 'projectId', as: 'safetyForms' }); // Added Safety Association
       Project.hasMany(models.Quote, { foreignKey: 'projectId', as: 'quotes' }); // Explicit Quote Association
+      Project.hasMany(models.Job, { foreignKey: 'projectId', as: 'jobs' }); // Added Job Association
       
       // Polymorphic association for Documents
       Project.hasMany(models.Document, { 

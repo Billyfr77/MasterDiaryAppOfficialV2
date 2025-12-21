@@ -9,7 +9,7 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Invoice extends Model {
     static associate(models) {
-      Invoice.belongsTo(models.Diary, { foreignKey: 'diaryId' });
+      Invoice.hasMany(models.Diary, { foreignKey: 'invoiceId' }); // Changed to HasMany
       Invoice.belongsTo(models.Project, { foreignKey: 'projectId' });
       Invoice.belongsTo(models.Client, { foreignKey: 'clientId' });
     }
@@ -21,9 +21,10 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       defaultValue: DataTypes.UUIDV4
     },
+    // diaryId is now optional or removed in favor of hasMany relationship on Diary side
     diaryId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Relaxed constraint
       references: {
         model: 'Diaries',
         key: 'id'
@@ -31,7 +32,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     projectId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Relaxed for general invoices
       references: {
         model: 'Projects',
         key: 'id'
@@ -67,7 +68,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     status: {
-      type: DataTypes.ENUM('draft', 'sent', 'paid', 'overdue'),
+      type: DataTypes.ENUM('draft', 'approved', 'sent', 'paid', 'overdue'), // Added 'approved'
       allowNull: false,
       defaultValue: 'draft'
     },

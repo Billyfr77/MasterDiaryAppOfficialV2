@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 
 const getAllJobs = async (req, res) => {
   try {
-    const { start, end } = req.query;
+    const { start, end, projectId } = req.query;
     const where = {};
     
     // Date filtering if provided
@@ -11,9 +11,13 @@ const getAllJobs = async (req, res) => {
         where.date = { [Op.between]: [start, end] };
     }
 
+    if (projectId) {
+        where.projectId = projectId;
+    }
+
     const jobs = await Job.findAll({
         where,
-        order: [['date', 'ASC']]
+        order: [['createdAt', 'DESC']]
     });
     res.json(jobs);
   } catch (error) {

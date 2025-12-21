@@ -149,7 +149,9 @@ const getProjectById = async (req, res) => {
         { model: Diary, required: false },
         { model: Document, as: 'documents', required: false },
         { model: SafetyForm, as: 'safetyForms', required: false },
-        { model: Allocation, required: false }
+        { model: Invoice, as: 'invoices', required: false },
+        { model: Allocation, required: false },
+        { model: Job, as: 'jobs', required: false }
       ]
     });
 

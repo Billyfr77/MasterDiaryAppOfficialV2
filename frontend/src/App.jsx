@@ -35,7 +35,6 @@ import QuoteBuilder from './components/QuoteBuilder'
 import VisualMapBuilder from './components/VisualMapBuilder'
 import WorkflowBuilder from './components/WorkflowBuilder/WorkflowBuilder'
 import InvoiceBuilder from './components/InvoiceBuilder'
-import JobBoard from './components/JobBoard'
 import XeroCallback from './components/XeroCallback'
 import PinnacleCopilot from './components/PinnacleCopilot'
 import SafetyDashboard from './components/Safety/SafetyDashboard'
@@ -55,11 +54,8 @@ function App() {
     return () => window.removeEventListener('auth:logout', handleLogout);
   }, []);
 
-  // --- DRAG TO SCROLL NAV ---
+  // --- NAV SCROLL REFS ---
   const navRef = useRef(null);
-  const [isNavDragging, setIsNavDragging] = useState(false);
-  const [navStartX, setNavStartX] = useState(0);
-  const [navScrollLeft, setNavScrollLeft] = useState(0);
 
   // --- CUSTOM SCROLLBAR STATE ---
   const [scrollThumbWidth, setScrollThumbWidth] = useState(0);
@@ -85,26 +81,19 @@ function App() {
   }, []);
 
   const handleNavScroll = (e) => {
-    const { scrollWidth, scrollLeft } = e.target;
-    setScrollThumbLeft((scrollLeft / scrollWidth) * 100);
+    const { scrollWidth, clientWidth, scrollLeft } = e.target;
+    // Calculate thumb width percentage
+    const widthPct = (clientWidth / scrollWidth) * 100;
+    setScrollThumbWidth(widthPct < 100 ? widthPct : 0);
+    
+    // Calculate thumb position percentage
+    // Max scroll left is scrollWidth - clientWidth
+    const maxScrollLeft = scrollWidth - clientWidth;
+    const scrollRatio = scrollLeft / maxScrollLeft;
+    // Max thumb left is 100% - thumbWidth%
+    const maxThumbLeft = 100 - widthPct;
+    setScrollThumbLeft(scrollRatio * maxThumbLeft);
   };
-
-  const handleNavMouseDown = (e) => {
-    setIsNavDragging(true);
-    setNavStartX(e.pageX - navRef.current.offsetLeft);
-    setNavScrollLeft(navRef.current.scrollLeft);
-  };
-
-  const handleNavMouseMove = (e) => {
-    if (!isNavDragging) return;
-    e.preventDefault();
-    const x = e.pageX - navRef.current.offsetLeft;
-    const walk = (x - navStartX) * 2; 
-    navRef.current.scrollLeft = navScrollLeft - walk;
-  };
-
-  const handleNavMouseUp = () => setIsNavDragging(false);
-  const handleNavMouseLeave = () => setIsNavDragging(false);
 
   // Thumb Drag Handlers
   const handleThumbMouseDown = (e) => {
@@ -143,7 +132,9 @@ function App() {
     setToken(newToken);
   };
 
-  const isPortal = window.location.pathname.startsWith('/portal');
+  const location = useLocation();
+  const isPortal = location.pathname.startsWith('/portal');
+  const isLanding = location.pathname === '/';
 
   if (!token && !isPortal) {
     return <Login onLogin={handleLogin} />
@@ -156,23 +147,37 @@ function App() {
           <SettingsProvider>
             <DataProvider>
               <DndProvider backend={HTML5Backend}>
-                <div className="min-h-screen flex flex-col text-gray-900 dark:text-gray-100 font-sans bg-fixed bg-cover bg-center transition-all duration-500"
-             style={{
-               backgroundImage: darkMode 
-                 ? 'url("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop")' 
-                 : 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)'
-             }}
-        >
+                <div className={`min-h-screen flex flex-col text-gray-900 dark:text-gray-100 font-sans transition-all duration-500 ${isLanding ? 'bg-transparent' : 'bg-[#0a0a0c]'}`}>
           <style>{`
-            .custom-scrollbar-x::-webkit-scrollbar {
-              height: 0px; /* Hide default scrollbar since we have custom one */
-            }
-            .custom-scrollbar-x {
-              scrollbar-width: none; /* Firefox */
+            .custom-scrollbar-x::-webkit-scrollbar { height: 0px; }
+            .custom-scrollbar-x { scrollbar-width: none; }
+            
+            @keyframes pulse-glow {
+              0%, 100% { opacity: 0.3; transform: scale(1); }
+              50% { opacity: 0.6; transform: scale(1.1); }
             }
           `}</style>
-          {/* Dark Overlay for readability */}
-          {darkMode && <div className="fixed inset-0 bg-stone-950/85 z-[-1] pointer-events-none" />}
+          
+          {/* --- PREMIUM APP BACKGROUND --- */}
+          {!isPortal && !isLanding && (
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+               {/* 1. Base Gradient & Noise */}
+               <div className="absolute inset-0 bg-gradient-to-br from-[#0f1115] via-[#050505] to-[#0a0a0c]"></div>
+               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] mix-blend-overlay"></div>
+               
+               {/* 2. Cyber Grid (50px) */}
+               <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:50px_50px] opacity-[0.03]"></div>
+               
+               {/* 3. High-Contrast Multi-Color Glows */}
+               <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[radial-gradient(circle,rgba(99,102,241,0.15)_0%,transparent_70%)] blur-[100px] animate-[pulse-glow_8s_ease-in-out_infinite]" /> {/* Indigo */}
+               <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[radial-gradient(circle,rgba(139,92,246,0.15)_0%,transparent_70%)] blur-[100px] animate-[pulse-glow_10s_ease-in-out_infinite_reverse]" /> {/* Violet */}
+               <div className="absolute top-[30%] left-[40%] w-[50%] h-[50%] bg-[radial-gradient(circle,rgba(16,185,129,0.12)_0%,transparent_70%)] blur-[120px] animate-[pulse-glow_12s_ease-in-out_infinite]" /> {/* Emerald */}
+
+               {/* 4. Deep Vignette */}
+               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(0,0,0,0.4)_100%)]"></div>
+            </div>
+          )}
+          {/* Dark Overlay for readability removed in favor of premium background */}
 
           {/* Shell Components */}
           {!isPortal && <CommandPalette />}
@@ -201,7 +206,6 @@ function App() {
                     <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-2">Core</div>
                     <NavLink to="/pulse" icon={<Activity size={18} />} label="Pulse Dashboard" onClick={() => setMobileMenuOpen(false)} />
                     <NavLink to="/projects" icon={<Briefcase size={18} />} label="Projects" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/jobs" icon={<Layout size={18} />} label="Job Board" onClick={() => setMobileMenuOpen(false)} />
                     <NavLink to="/diary" icon={<PenTool size={18} />} label="Site Diary" onClick={() => setMobileMenuOpen(false)} />
                     
                     <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-4">Finance</div>
@@ -227,7 +231,7 @@ function App() {
           )}
 
           {/* Header */}
-          {!isPortal && (
+          {!isPortal && !isLanding && (
             <header className="sticky top-0 z-50 glass-panel border-b-0 rounded-none shadow-lg transition-all duration-300">
               <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-4 md:gap-8 flex-1 min-w-0">
@@ -250,16 +254,11 @@ function App() {
                   <div className="hidden md:flex flex-col flex-1 min-w-0 relative group/nav h-full justify-center">
                       <nav 
                         ref={navRef}
-                        className="flex items-center gap-1 overflow-x-auto custom-scrollbar-x cursor-grab active:cursor-grabbing select-none h-full items-center"
-                        onMouseDown={handleNavMouseDown}
-                        onMouseLeave={handleNavMouseLeave}
-                        onMouseUp={handleNavMouseUp}
-                        onMouseMove={handleNavMouseMove}
+                        className="flex items-center gap-1 overflow-x-auto custom-scrollbar-x h-full items-center"
                         onScroll={handleNavScroll}
                       >
                         <NavLink to="/pulse" icon={<Activity size={16} />} label="Pulse" />
                         <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" />
-                        <NavLink to="/jobs" icon={<Layout size={16} />} label="Jobs" />
                         <NavLink to="/diary" icon={<PenTool size={16} />} label="Diary" />
                         <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" />
                         <NavLink to="/quotes" icon={<DollarSign size={16} />} label="Quotes" />
@@ -304,14 +303,13 @@ function App() {
           )}
 
           {/* Main Content */}
-          <main className={`flex-1 ${!isPortal ? 'container mx-auto px-4 py-8' : ''} animate-fade-in`}>
+          <main className={`flex-1 ${(!isPortal && !isLanding) ? 'container mx-auto px-4 py-8' : ''} animate-fade-in`}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login onLogin={handleLogin} />} />
               <Route path="/pulse" element={<UltimatePulseDashboard />} />
               <Route path="/dashboard" element={<UltimatePulseDashboard />} />
               <Route path="/projects" element={<EnhancedProjects />} />
-              <Route path="/jobs" element={<JobBoard />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/staff" element={<EnhancedStaff />} />
               <Route path="/diary" element={<PaintDiary />} />

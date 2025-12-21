@@ -9,7 +9,11 @@ import { useNavigate } from 'react-router-dom'
 import { DndProvider, useDrag, useDrop } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { api } from '../utils/api'
-import { Calendar, Users, Wrench, DollarSign, Save, Trash2, Plus, Clock, TrendingUp, BarChart3, Edit3, FileText, Palette, MapPin, Eye, EyeOff, UploadCloud } from 'lucide-react'
+import {
+  Plus, Calendar, Save, Trash2, DollarSign, TrendingUp, BarChart3,
+  FileText, Users, Wrench, Palette, Clock, Eye, EyeOff, MapPin, UploadCloud,
+  Search, Package
+} from 'lucide-react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import MapBackground from './MapBackground'
@@ -181,16 +185,19 @@ const DiaryEntry = ({ entry, onUpdate, onDelete, onDropItem, isDropTarget }) => 
 }
 
 // Toolbar Component with draggable elements
+// Integrated Toolbar with Search & Beautiful Cards
 const DiaryToolbar = () => {
   const [staff, setStaff] = useState([])
   const [equipment, setEquipment] = useState([])
   const [materials, setMaterials] = useState([])
+  const [activeTab, setActiveTab] = useState('all') // all, mat, lab, eqp
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    fetchData()
+    fetchToolbarData()
   }, [])
 
-  const fetchData = async () => {
+  const fetchToolbarData = async () => {
     try {
       const [staffRes, equipmentRes, nodesRes] = await Promise.all([
         api.get('/staff'),
@@ -205,71 +212,110 @@ const DiaryToolbar = () => {
     }
   }
 
+  const filterItems = (items) => items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const renderCard = (item, type) => {
+      let wrapperClass = "bg-gradient-to-r from-indigo-600/20 to-indigo-900/20 border-indigo-500/30 hover:border-indigo-400";
+      let iconClass = "bg-indigo-500/20 text-indigo-400";
+      let icon = <Package size={16} />;
+
+      if (type === 'staff') {
+        wrapperClass = "bg-gradient-to-r from-emerald-600/20 to-emerald-900/20 border-emerald-500/30 hover:border-emerald-400";
+        iconClass = "bg-emerald-500/20 text-emerald-400";
+        icon = <Users size={16} />;
+      } else if (type === 'equipment') {
+        wrapperClass = "bg-gradient-to-r from-amber-600/20 to-amber-900/20 border-amber-500/30 hover:border-amber-400";
+        iconClass = "bg-amber-500/20 text-amber-400";
+        icon = <Wrench size={16} />;
+      }
+
+      return (
+        <div className={`group relative flex items-center gap-3 p-3 rounded-xl border cursor-grab active:cursor-grabbing transition-all hover:translate-x-1 hover:shadow-lg ${wrapperClass} mb-2`}>
+          <div className={`p-2 rounded-lg ${iconClass} group-hover:scale-110 transition-transform`}>
+            {icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate group-hover:text-primary dark:group-hover:text-white transition-colors">{item.name}</div>
+            <div className="text-[10px] text-gray-500 font-mono mt-0.5">
+                {type === 'staff' ? `${item.chargeOutBase || 0}/hr` : 
+                 type === 'equipment' ? `${item.costRateBase || 0}/day` : 
+                 `${item.pricePerUnit || 0}/unit`}
+            </div>
+          </div>
+        </div>
+      );
+  };
+
   return (
-    <div className="w-full md:w-80 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm sticky top-6 h-fit overflow-y-auto max-h-[calc(100vh-4rem)]">
-      <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-6 text-center flex items-center justify-center gap-2">
-        <Palette size={20} className="text-primary" />
-        Drag to Diary
-      </h3>
+    <div className="w-full lg:w-80 bg-[#0a0a0c]/95 backdrop-blur-xl border border-white/5 shadow-2xl sticky top-6 h-[calc(100vh-4rem)] flex flex-col rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="p-5 border-b border-white/5 bg-stone-900/50">
+        <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Palette size={16} className="text-indigo-500" /> Resources
+            </h3>
+        </div>
+        
+        {/* Search */}
+        <div className="relative group">
+            <Search className="absolute left-3 top-2.5 text-gray-500 group-focus-within:text-indigo-500 transition-colors" size={14} />
+            <input 
+                type="text" 
+                placeholder="Search resources..." 
+                value={searchTerm} 
+                onChange={e => setSearchTerm(e.target.value)} 
+                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-white focus:border-indigo-500 outline-none transition-all placeholder-gray-600" 
+            />
+        </div>
 
-      {/* Staff Section */}
-      <div className="mb-6">
-        <h4 className="text-sm font-bold text-primary mb-3 flex items-center gap-2 uppercase tracking-wider">
-          <Users size={16} />
-          Team Members
-        </h4>
-        <div className="flex flex-col gap-2">
-          {staff.slice(0, 4).map(member => (
-            <DraggableElement
-              key={member.id}
-              item={{ type: 'staff', id: member.id, name: member.name, data: member }}
-            >
-              <div className="px-4 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-medium cursor-grab active:cursor-grabbing transition-colors text-center">
-                {member.name}
-              </div>
-            </DraggableElement>
-          ))}
+        {/* Tabs */}
+        <div className="flex gap-1 mt-4 p-1 bg-black/40 rounded-lg">
+            {['all', 'mat', 'lab', 'eqp'].map(tab => (
+                <button 
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
+                >
+                    {tab === 'mat' ? 'Mat' : tab === 'lab' ? 'Lab' : tab === 'eqp' ? 'Eqp' : 'All'}
+                </button>
+            ))}
         </div>
       </div>
 
-      {/* Equipment Section */}
-      <div className="mb-6">
-        <h4 className="text-sm font-bold text-warning mb-3 flex items-center gap-2 uppercase tracking-wider">
-          <Wrench size={16} />
-          Equipment
-        </h4>
-        <div className="flex flex-col gap-2">
-          {equipment.slice(0, 4).map(item => (
-            <DraggableElement
-              key={item.id}
-              item={{ type: 'equipment', id: item.id, name: item.name, data: item }}
-            >
-              <div className="px-4 py-3 bg-warning/10 hover:bg-warning/20 text-warning rounded-lg font-medium cursor-grab active:cursor-grabbing transition-colors text-center">
-                {item.name}
-              </div>
-            </DraggableElement>
-          ))}
-        </div>
-      </div>
+      {/* List */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        {(activeTab === 'all' || activeTab === 'lab') && (
+            <div>
+                <div className="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest px-1 mb-2">Staff</div>
+                {filterItems(staff).map(member => (
+                    <DraggableElement key={member.id} item={{ type: 'staff', id: member.id, name: member.name, data: member }}>
+                        {renderCard(member, 'staff')}
+                    </DraggableElement>
+                ))}
+            </div>
+        )}
 
-      {/* Materials Section */}
-      <div>
-        <h4 className="text-sm font-bold text-purple-500 mb-3 flex items-center gap-2 uppercase tracking-wider">
-          <DollarSign size={16} />
-          Materials
-        </h4>
-        <div className="flex flex-col gap-2">
-          {materials.slice(0, 4).map(item => (
-            <DraggableElement
-              key={item.id}
-              item={{ type: 'material', id: item.id, name: item.name, data: item }}
-            >
-              <div className="px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 rounded-lg font-medium cursor-grab active:cursor-grabbing transition-colors text-center">
-                {item.name}
-              </div>
-            </DraggableElement>
-          ))}
-        </div>
+        {(activeTab === 'all' || activeTab === 'eqp') && (
+            <div>
+                <div className="text-[10px] font-black text-amber-500/80 uppercase tracking-widest px-1 mb-2 pt-2 border-t border-white/5">Equipment</div>
+                {filterItems(equipment).map(item => (
+                    <DraggableElement key={item.id} item={{ type: 'equipment', id: item.id, name: item.name, data: item }}>
+                        {renderCard(item, 'equipment')}
+                    </DraggableElement>
+                ))}
+            </div>
+        )}
+
+        {(activeTab === 'all' || activeTab === 'mat') && (
+            <div>
+                <div className="text-[10px] font-black text-indigo-500/80 uppercase tracking-widest px-1 mb-2 pt-2 border-t border-white/5">Materials</div>
+                {filterItems(materials).map(item => (
+                    <DraggableElement key={item.id} item={{ type: 'material', id: item.id, name: item.name, data: item }}>
+                        {renderCard(item, 'material')}
+                    </DraggableElement>
+                ))}
+            </div>
+        )}
       </div>
     </div>
   )

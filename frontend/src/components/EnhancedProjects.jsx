@@ -777,7 +777,53 @@ const EnhancedProjects = () => {
                   >
                       Documents & Files
                   </button>
+                  <button 
+                    onClick={() => setActiveTab('jobs')}
+                    className={`pb-3 px-2 text-sm font-bold transition-all ${activeTab === 'jobs' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-400 hover:text-white'}`}
+                  >
+                      Variations & Jobs
+                  </button>
               </div>
+
+              {activeTab === 'jobs' && (
+                  <div className="space-y-6 animate-fade-in">
+                      <div className="flex justify-between items-center">
+                          <h4 className="text-xs font-black text-gray-500 uppercase tracking-wider">Project Variations</h4>
+                          <button 
+                              onClick={async () => {
+                                  const ref = prompt("Enter Variation/Job Reference (e.g. V-001):");
+                                  if (!ref) return;
+                                  const desc = prompt("Enter Description:");
+                                  if (!desc) return;
+                                  try {
+                                      await api.post('/jobs', { projectId: selectedProject.id, jobNumber: ref, serviceType: desc, status: 'active' });
+                                      fetchProjectDetails(selectedProject.id); // Refresh
+                                  } catch(e) { alert("Failed to create job"); }
+                              }}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-lg"
+                          >
+                              + New Variation
+                          </button>
+                      </div>
+                      
+                      <div className="grid gap-3">
+                          {(selectedProject.jobs || []).map(job => (
+                              <div key={job.id} className="bg-stone-800 p-4 rounded-xl border border-white/5 flex justify-between items-center">
+                                  <div>
+                                      <div className="font-bold text-white text-sm">#{job.jobNumber}</div>
+                                      <div className="text-xs text-gray-400">{job.serviceType}</div>
+                                  </div>
+                                  <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${job.status==='active'?'bg-emerald-500/20 text-emerald-400':'bg-gray-700 text-gray-400'}`}>
+                                      {job.status}
+                                  </span>
+                              </div>
+                          ))}
+                          {(!selectedProject.jobs || selectedProject.jobs.length === 0) && (
+                              <div className="text-center py-10 text-gray-500 text-sm italic">No variations created yet.</div>
+                          )}
+                      </div>
+                  </div>
+              )}
 
               {activeTab === 'overview' && (
                   <div className="space-y-6 animate-fade-in">
@@ -940,6 +986,25 @@ const EnhancedProjects = () => {
                                   </div>
                               ))}
                               {documents.length === 0 && <div className="text-gray-500 text-xs italic">No files uploaded.</div>}
+                          </div>
+
+                          {/* Invoices */}
+                          <div className="space-y-3">
+                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Invoices</h4>
+                              {(selectedProject.invoices || []).map((inv, idx) => (
+                                  <div key={idx} className="bg-stone-800 p-3 rounded-xl border border-white/5 flex items-center gap-3 hover:border-indigo-500/50 transition-all cursor-pointer" onClick={() => navigate('/invoices', { state: { invoice: inv } })}>
+                                      <div className="p-2 bg-indigo-500/10 rounded-lg"><CreditCard className="text-indigo-400" size={16} /></div>
+                                      <div className="flex-1 min-w-0">
+                                          <div className="font-bold text-white truncate text-sm">#{inv.invoiceNumber}</div>
+                                          <div className="text-[10px] text-gray-500 flex gap-2">
+                                              <span>{new Date(inv.createdAt).toLocaleDateString()}</span>
+                                              <span className={`uppercase font-bold ${inv.status==='paid'?'text-emerald-400':inv.status==='sent'?'text-blue-400':'text-gray-400'}`}>{inv.status}</span>
+                                          </div>
+                                      </div>
+                                      <div className="text-right font-mono font-bold text-white">${parseFloat(inv.totalAmount).toLocaleString()}</div>
+                                  </div>
+                              ))}
+                              {(!selectedProject.invoices || selectedProject.invoices.length === 0) && <div className="text-gray-500 text-xs italic">No invoices found.</div>}
                           </div>
 
                           {/* Quotes */}

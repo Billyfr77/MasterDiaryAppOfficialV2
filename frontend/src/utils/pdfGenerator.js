@@ -52,53 +52,51 @@ export const generateQuotePDF = (quoteData, projectData, settings) => {
   doc.setFont('helvetica', 'bold');
   doc.text(settings.clientName || projectData?.client || "Valued Client", 20, 72);
   
-  if (projectData?.name) {
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Project: ${projectData.name}`, 20, 78);
+  doc.setFont('helvetica', 'normal');
+  if (settings.clientAddress) {
+      doc.text(settings.clientAddress, 20, 78);
+  } else if (projectData?.name) {
+      doc.text(`Project: ${projectData.name}`, 20, 78);
   }
-  if (projectData?.site) {
-    doc.text(`Site: ${projectData.site}`, 20, 84);
+
+  if (settings.clientAddress && projectData?.name) {
+      doc.text(`Project: ${projectData.name}`, 20, 84);
+      if (projectData?.site) doc.text(`Site: ${projectData.site}`, 20, 90);
+  } else if (projectData?.site) {
+      doc.text(`Site: ${projectData.site}`, 20, 84);
+  }
+
+  // --- SCOPE OF WORKS (AI Generated) ---
+  let tableStartY = 95;
+  if (quoteData.scope) {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...themeColor);
+      doc.text("SCOPE OF WORKS", 20, 95);
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(50);
+      
+      const splitScope = doc.splitTextToSize(quoteData.scope, 170);
+      doc.text(splitScope, 20, 102);
+      
+      tableStartY = 105 + (splitScope.length * 4);
+      // Check for page overflow
+      if (tableStartY > 260) {
+          doc.addPage();
+          tableStartY = 20;
+      }
   }
 
   // --- ITEMS TABLE ---
   const tableColumn = ["Item", "Type", "Qty", "Rate", "Total"];
   const tableRows = [];
 
-  // Combine and sort items
-  const allItems = [
-    ...(quoteData.staff || []).map(i => ({...i, category: 'Staff', rate: i.chargeRate || 0})),
-    ...(quoteData.equipment || []).map(i => ({...i, category: 'Equipment', rate: i.costRate || 0})), // Note: Equipment usually has margin added?
-    ...(quoteData.nodes || []).map(i => ({...i, category: 'Material', rate: i.pricePerUnit || 0}))
-  ];
-
-  // We need to use the calculated revenue for the rate shown to client?
-  // Or do we show base rate? Usually quotes show the sell price.
-  // The current component calculates revenue as: cost * (1 + margin/100)
-  // But wait, the component passes `quoteItems` which has `material` inside.
-  // Let's rely on the passed `items` array which we will structure properly in the component.
-
-  quoteData.items.forEach(item => {
-    // Calculate sell price
-    const baseRate = item.rate || 0; 
-    // If the item doesn't have a specific sell rate, we apply the global margin
-    // But ideally the quote items passed here should already have the final sell price.
-    // We'll assume the component passes the *Sell Price* in 'rate' or we calculate it.
-    // Let's calculate it here based on margin for now to be safe, or use a passed 'unitPrice'.
-    
-    const unitPrice = item.unitPrice || (baseRate * (1 + (quoteData.marginPct || 0) / 100));
-    const total = unitPrice * item.quantity;
-
-    tableRows.push([
-      item.name,
-      item.type.toUpperCase(),
-      item.quantity,
-      formatCurrency(unitPrice),
-      formatCurrency(total)
-    ]);
-  });
+  // ... (rest of the code)
 
   doc.autoTable({
-    startY: 95,
+    startY: tableStartY,
     head: [tableColumn],
     body: tableRows,
     theme: 'grid',

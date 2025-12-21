@@ -756,6 +756,20 @@ const WorkflowBuilderContent = () => {
             </div>
 
             <button 
+              onClick={() => {
+                  if (nodes.length > 0 && !window.confirm("Discard current workflow?")) return;
+                  setWorkflowId(null);
+                  setWorkflowName('New Workflow');
+                  setNodes([]);
+                  setEdges([]);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-sm transition-all border border-white/5"
+            >
+              <Plus size={16} />
+              New
+            </button>
+
+            <button 
               onClick={fetchWorkflows}
               className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-sm transition-all border border-white/5"
             >

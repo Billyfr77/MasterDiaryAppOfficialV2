@@ -23,6 +23,8 @@ module.exports = (sequelize, DataTypes) => {
       Diary.belongsTo(models.Project, { foreignKey: 'projectId' });
       Diary.belongsTo(models.Staff, { foreignKey: 'workerId' });
       Diary.belongsTo(models.Client, { foreignKey: 'clientId' });
+      Diary.belongsTo(models.Job, { foreignKey: 'jobId', as: 'job' });
+      Diary.belongsTo(models.Invoice, { foreignKey: 'invoiceId' }); // Added Invoice Association
     }
   }
 
@@ -57,6 +59,22 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true, // Optional for Paint Diary
       references: {
         model: 'Staff',
+        key: 'id'
+      }
+    },
+    jobId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Jobs',
+        key: 'id'
+      }
+    },
+    invoiceId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Invoices',
         key: 'id'
       }
     },

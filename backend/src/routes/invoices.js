@@ -11,10 +11,16 @@ const {
   getInvoiceById,
   getInvoices,
   updateInvoiceStatus,
-  downloadInvoicePDF
+  downloadInvoicePDF,
+  bulkUpdateStatus,
+  getUninvoicedDiaries
 } = require('../controllers/invoiceController');
 
 router.use(authenticateToken);
+
+// Special routes first to avoid ID collision
+router.put('/bulk-status', bulkUpdateStatus);
+router.get('/uninvoiced-diaries', getUninvoicedDiaries);
 
 // Invoice CRUD routes
 router.get('/', getInvoices);

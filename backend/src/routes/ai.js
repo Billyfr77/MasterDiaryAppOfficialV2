@@ -27,11 +27,12 @@ router.post('/safety-analysis', aiController.analyzeSafetyTask);
 // NEW: Route for AI Quote Generation
 router.post('/quote', aiController.generateQuote); // Matches frontend /ai/quote
 router.post('/generate-quote', aiController.generateQuote); // Legacy/Alt alias
-
+router.post('/generate-scope', aiController.generateQuoteScope);
 router.post('/map-analysis', aiController.analyzeMapZone);
 router.post('/map-elements', aiController.generateMapElements); // Genesis Mode
 router.post('/parse-diary', aiController.parseDiaryLog); // Smart Log
 router.post('/dashboard-insights', aiController.generateDashboardInsights); // Neural Core
+router.post('/node-suggestions', aiController.generateNodeSuggestions); // Ghost Node Pulse
 
 // Chat Aliases
 router.post('/chat-quote', aiController.chatQuoteAssistant);

@@ -1,412 +1,677 @@
 /*
- * MasterDiaryApp Official - Construction SaaS Platform
+ * MasterDiaryApp Official - The Ultimate Landing Experience
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
+ * 
+ * "The Carnival of Enterprise Intelligence"
  */
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, Users, Calendar, FileText, CheckCircle, Star, ArrowRight, Zap, Target, Sparkles, MousePointer, Layers, Wand2, Rocket, Award, TrendingUp, Shield, Play, Pause, Volume2, VolumeX, Trophy, Crown, Diamond, ChevronDown, Check } from 'lucide-react'
+import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion'
+import { 
+  Terminal, Cpu, Zap, Shield, Rocket, ChevronRight, 
+  Play, MousePointer2, Activity, Code2, Database, 
+  Wifi, Lock, Layout, Star, Trophy, Users, CheckCircle2, 
+  ArrowRight, Sparkles, Command, Box, X, Hammer, Briefcase, Wrench,
+  Globe, Layers, PenTool, CreditCard, GitBranch, FileText, Palette, AlertTriangle, Settings,
+  User, Timer, Package
+} from 'lucide-react'
+
+// --- ASSETS & CONFIG ---
+const GRADIENTS = {
+    hero: "bg-gradient-to-b from-[#0f1115] via-[#0a0a0c] to-black",
+    glass: "bg-white/5 backdrop-blur-xl border border-white/10",
+    primary: "bg-gradient-to-r from-indigo-600 to-violet-600",
+    text: "bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400"
+};
+
+// --- MICRO-COMPONENTS ---
+
+const GridBackground = () => (
+    <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        <div className="absolute top-0 left-0 right-0 h-[500px] bg-indigo-500/10 blur-[120px] rounded-full mix-blend-screen"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 blur-[100px] rounded-full mix-blend-screen"></div>
+    </div>
+);
+
+const Nav = () => {
+    const navigate = useNavigate();
+    const [scrolled, setScrolled] = useState(false);
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 50);
+        window.addEventListener('scroll', onScroll);
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
+
+    return (
+        <nav className={`fixed top-0 w-full z-50 px-6 py-4 transition-all duration-300 ${scrolled ? 'bg-black/80 backdrop-blur-md border-b border-white/5' : 'bg-transparent'}`}>
+            <div className="max-w-7xl mx-auto flex justify-between items-center">
+                <div className="flex items-center gap-2 cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-110 transition-transform">
+                        <Terminal size={20} className="text-white" />
+                    </div>
+                    <span className="font-black text-xl tracking-tighter text-white">MasterDiary<span className="text-indigo-500">OS</span></span>
+                </div>
+                <div className="hidden md:flex items-center gap-8 text-sm font-bold text-gray-400">
+                    {['Features', 'Solutions', 'Pricing', 'Docs'].map(item => (
+                        <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-white transition-colors">{item}</a>
+                    ))}
+                </div>
+                <div className="flex gap-4">
+                    <button onClick={() => navigate('/login')} className="px-5 py-2.5 text-sm font-bold text-gray-300 hover:text-white transition-colors">Login</button>
+                    <button onClick={() => navigate('/login')} className="px-6 py-2.5 text-sm font-bold bg-white text-black rounded-xl hover:bg-gray-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95">
+                        Get Started
+                    </button>
+                </div>
+            </div>
+        </nav>
+    );
+};
+
+// --- HERO SECTION COMPONENTS ---
+
+const SimulatedTerminal = () => {
+    const [lines, setLines] = useState([
+        { text: "Initializing MasterDiaryOS Kernel...", color: "text-gray-500" },
+        { text: "Loading Modules: [Quote, Diary, Safety, Map]...", color: "text-indigo-400" },
+        { text: "Connection Established: Neural Core v4.0", color: "text-emerald-500" },
+        { text: "System Ready. Waiting for input...", color: "text-white animate-pulse" }
+    ]);
+
+    useEffect(() => {
+        const sequence = [
+            { text: "Analyzing project scope: 'Highrise Tower A'", delay: 2000, color: "text-blue-400" },
+            { text: "Detected 450 required safety checks.", delay: 3000, color: "text-amber-400" },
+            { text: "Optimizing schedule... Saved 14 days.", delay: 4500, color: "text-emerald-400 font-bold" },
+            { text: "Generating Invoice #INV-2025-001...", delay: 6000, color: "text-purple-400" },
+            { text: ">>> PROCESS COMPLETE", delay: 7000, color: "text-white bg-indigo-500/20 px-2 py-1 rounded w-fit" }
+        ];
+
+        let timeouts = [];
+        sequence.forEach(({ text, delay, color }) => {
+            timeouts.push(setTimeout(() => {
+                setLines(prev => {
+                    const newLines = [...prev, { text, color }];
+                    return newLines.slice(-6); // Keep last 6 lines
+                });
+            }, delay));
+        });
+
+        return () => timeouts.forEach(clearTimeout);
+    }, []);
+
+    return (
+        <div className="font-mono text-xs md:text-sm space-y-2 p-4 h-full flex flex-col justify-end">
+            {lines.map((line, i) => (
+                <motion.div 
+                    key={i} 
+                    initial={{ opacity: 0, x: -10 }} 
+                    animate={{ opacity: 1, x: 0 }} 
+                    className={line.color}
+                >
+                    <span className="opacity-50 mr-2">$</span>{line.text}
+                </motion.div>
+            ))}
+        </div>
+    );
+};
+
+const HeroShowcase = () => {
+    return (
+        <div className="relative w-full max-w-5xl mx-auto h-[500px] md:h-[600px] perspective-1000 mt-20 group">
+            {/* Main Holographic Interface */}
+            <motion.div 
+                initial={{ rotateX: 20, opacity: 0, y: 100 }}
+                animate={{ rotateX: 10, opacity: 1, y: 0 }}
+                transition={{ duration: 1, type: "spring" }}
+                className="w-full h-full bg-[#0f1115]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative transform-style-3d group-hover:rotate-x-0 transition-transform duration-1000"
+            >
+                {/* Header */}
+                <div className="h-12 border-b border-white/10 flex items-center px-4 gap-2 bg-white/5">
+                    <div className="flex gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500/50" />
+                        <div className="w-3 h-3 rounded-full bg-amber-500/50" />
+                        <div className="w-3 h-3 rounded-full bg-emerald-500/50" />
+                    </div>
+                    <div className="flex-1 text-center text-xs font-bold text-gray-500 uppercase tracking-widest">MasterDiaryOS Dashboard</div>
+                </div>
+
+                {/* Grid Layout */}
+                <div className="grid grid-cols-12 h-[calc(100%-48px)]">
+                    {/* Sidebar */}
+                    <div className="col-span-2 border-r border-white/10 p-4 space-y-4 hidden md:block bg-black/20">
+                        {[Activity, Layout, Users, FileText, Settings].map((Icon, i) => (
+                            <div key={i} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-500 hover:bg-indigo-600 hover:text-white transition-all cursor-pointer">
+                                <Icon size={20} />
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Main Content Area */}
+                    <div className="col-span-12 md:col-span-7 p-6 space-y-6 relative overflow-hidden">
+                        {/* Live Graph Simulation */}
+                        <div className="h-48 rounded-xl border border-white/10 bg-gradient-to-br from-indigo-900/20 to-transparent p-4 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+                            <div className="text-xs font-bold text-indigo-300 mb-2 uppercase">Project Velocity</div>
+                            <div className="flex items-end gap-1 h-32">
+                                {[40, 65, 50, 80, 55, 90, 70, 85, 60, 95].map((h, i) => (
+                                    <motion.div 
+                                        key={i}
+                                        initial={{ height: 0 }}
+                                        animate={{ height: `${h}%` }}
+                                        transition={{ duration: 1, delay: i * 0.1, repeat: Infinity, repeatType: "reverse", repeatDelay: 2 }}
+                                        className="flex-1 bg-indigo-500/50 rounded-t-sm hover:bg-indigo-400 transition-colors"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Node Graph Preview */}
+                        <div className="flex gap-4">
+                            <div className="flex-1 h-32 rounded-xl border border-white/10 bg-stone-900/50 p-4 relative overflow-hidden">
+                                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                                <motion.div 
+                                    animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
+                                    transition={{ duration: 3, repeat: Infinity }}
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-emerald-500/20 rounded-full border border-emerald-500 flex items-center justify-center"
+                                >
+                                    <Zap size={24} className="text-emerald-400" />
+                                </motion.div>
+                            </div>
+                            <div className="flex-1 h-32 rounded-xl border border-white/10 bg-stone-900/50 p-4 flex flex-col justify-center items-center">
+                                <div className="text-3xl font-black text-white">$1.2M</div>
+                                <div className="text-xs text-gray-500 uppercase font-bold">Active Pipeline</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Panel / Terminal */}
+                    <div className="col-span-12 md:col-span-3 border-l border-white/10 bg-black/40">
+                        <SimulatedTerminal />
+                    </div>
+                </div>
+
+                {/* Floating Elements (3D Effect) */}
+                <motion.div 
+                    animate={{ y: [0, -20, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute -right-10 top-20 bg-stone-900 border border-white/20 p-4 rounded-xl shadow-2xl z-20 flex items-center gap-3 w-64"
+                >
+                    <div className="p-2 bg-emerald-500/20 rounded-lg"><CheckCircle2 className="text-emerald-400" size={20} /></div>
+                    <div>
+                        <div className="text-xs font-bold text-gray-400 uppercase">Quote Approved</div>
+                        <div className="text-sm font-black text-white">Skyline Renovation</div>
+                    </div>
+                </motion.div>
+
+                <motion.div 
+                    animate={{ y: [0, 20, 0] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    className="absolute -left-10 bottom-20 bg-stone-900 border border-white/20 p-4 rounded-xl shadow-2xl z-20 flex items-center gap-3 w-64"
+                >
+                    <div className="p-2 bg-amber-500/20 rounded-lg"><AlertTriangle className="text-amber-400" size={20} /></div>
+                    <div>
+                        <div className="text-xs font-bold text-gray-400 uppercase">Safety Alert</div>
+                        <div className="text-sm font-black text-white">High Wind Detected</div>
+                    </div>
+                </motion.div>
+            </motion.div>
+            
+            {/* Glow backing */}
+            <div className="absolute inset-0 bg-indigo-600/20 blur-[100px] -z-10 rounded-full transform translate-y-20"></div>
+        </div>
+    );
+};
+
+// --- INTERACTIVE QUOTE SIMULATOR (PLAYGROUND) ---
+
+const DraggableItemMock = ({ name, type, icon: Icon, colorClass }) => {
+    const onDragStart = (e) => {
+        e.dataTransfer.setData('playground-item', JSON.stringify({ name, type, colorClass }));
+    };
+    return (
+        <div 
+            draggable 
+            onDragStart={onDragStart}
+            className={`p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center gap-3 cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all group`}
+        >
+            <div className={`p-2 rounded-lg bg-black/20 ${colorClass}`}>
+                <Icon size={18} />
+            </div>
+            <div className="flex-1">
+                <div className="text-sm font-bold text-white uppercase tracking-tight">{name}</div>
+                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{type}</div>
+            </div>
+            <MousePointer2 size={14} className="text-gray-600 group-hover:text-white opacity-0 group-hover:opacity-100 transition-all" />
+        </div>
+    );
+};
+
+const InteractiveQuoteSim = () => {
+    const [nodes, setNodes] = useState([
+        { id: '1', name: 'Project Start', type: 'Chronos', x: 100, y: 100, color: 'text-violet-400', icon: Timer }
+    ]);
+    const [connections, setConnections] = useState([]);
+    const canvasRef = useRef(null);
+
+    const onDrop = (e) => {
+        e.preventDefault();
+        const data = JSON.parse(e.dataTransfer.getData('playground-item'));
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const newNode = {
+            id: Math.random().toString(36).substr(2, 9),
+            ...data,
+            x, y,
+            icon: data.type === 'staff' ? User : data.type === 'equipment' ? Wrench : Package
+        };
+        
+        setNodes(prev => [...prev, newNode]);
+        // Auto-connect to first chronos for visual flair
+        if (nodes.length > 0) {
+            setConnections(prev => [...prev, { source: '1', target: newNode.id, type: data.type }]);
+        }
+    };
+
+    return (
+        <div className="w-full py-24 relative overflow-hidden bg-black/20">
+            <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-12 items-center">
+                <div className="space-y-8">
+                    <div>
+                        <h2 className="text-4xl font-black mb-4 uppercase tracking-tighter">The Playground</h2>
+                        <p className="text-gray-400 leading-relaxed">
+                            Experience the <span className="text-white font-bold">Operational Art</span>. Drag resources from the library onto the canvas to see the Masterpiece Engine in action.
+                        </p>
+                    </div>
+                    
+                    <div className="space-y-3 bg-stone-900/40 p-6 rounded-[2rem] border border-white/5 backdrop-blur-xl">
+                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-4 px-2">Resource Library</div>
+                        <DraggableItemMock name="Senior Foreman" type="staff" icon={User} colorClass="text-emerald-400" />
+                        <DraggableItemMock name="Excavator 5T" type="equipment" icon={Wrench} colorClass="text-amber-400" />
+                        <DraggableItemMock name="Premix Concrete" type="material" icon={Package} colorClass="text-indigo-400" />
+                    </div>
+
+                    <div className="p-6 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-4">
+                        <Sparkles className="text-indigo-400" />
+                        <div className="text-xs font-bold text-gray-300">AI is actively monitoring this simulation...</div>
+                    </div>
+                </div>
+
+                {/* SIMULATED CANVAS */}
+                <div 
+                    ref={canvasRef}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={onDrop}
+                    className="h-[600px] bg-[#050507] rounded-[3rem] border border-white/10 relative overflow-hidden shadow-2xl group/canvas"
+                >
+                    {/* Grid Background */}
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.05),transparent_70%)]"></div>
+
+                    {/* SVG Connections */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                        {connections.map((conn, i) => {
+                            const source = nodes.find(n => n.id === conn.source);
+                            const target = nodes.find(n => n.id === conn.target);
+                            if (!source || !target) return null;
+                            
+                            const color = conn.type === 'staff' ? '#10b981' : conn.type === 'equipment' ? '#f59e0b' : '#6366f1';
+                            
+                            return (
+                                <g key={i}>
+                                    <motion.path 
+                                        initial={{ pathLength: 0, opacity: 0 }}
+                                        animate={{ pathLength: 1, opacity: 0.3 }}
+                                        transition={{ duration: 1 }}
+                                        d={`M ${source.x + 100} ${source.y + 40} Q ${(source.x + target.x) / 2} ${(source.y + target.y) / 2 + 50} ${target.x + 100} ${target.y + 40}`}
+                                        stroke={color}
+                                        strokeWidth="2"
+                                        fill="transparent"
+                                    />
+                                    <circle r="3" fill="#fff">
+                                        <animateMotion dur="2s" repeatCount="indefinite" path={`M ${source.x + 100} ${source.y + 40} Q ${(source.x + target.x) / 2} ${(source.y + target.y) / 2 + 50} ${target.x + 100} ${target.y + 40}`} />
+                                    </circle>
+                                </g>
+                            );
+                        })}
+                    </svg>
+
+                    {/* Nodes */}
+                    <AnimatePresence>
+                        {nodes.map((node) => (
+                            <motion.div
+                                key={node.id}
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                style={{ left: node.x, top: node.y }}
+                                className="absolute w-[200px] p-1 bg-gradient-to-br from-indigo-600/20 to-black backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl z-10 pointer-events-none"
+                            >
+                                <div className="p-4 flex flex-col gap-3">
+                                    <div className="flex justify-between items-center">
+                                        <div className={`p-2 rounded-lg bg-white/5 ${node.colorClass || 'text-violet-400'}`}>
+                                            <node.icon size={16} />
+                                        </div>
+                                        <Zap size={12} className="text-indigo-500 animate-pulse" />
+                                    </div>
+                                    <div>
+                                        <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest">{node.type}</div>
+                                        <div className="text-xs font-black text-white uppercase truncate">{node.name}</div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+
+                    {/* HUD */}
+                    <div className="absolute top-6 left-6 flex gap-2">
+                        <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-[0.2em] backdrop-blur-md">Live_Sim</div>
+                        <div className="px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] backdrop-blur-md">Operational_Masterpiece</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- DEEP FEATURE SHOWCASE ---
+
+const FeatureSection = ({ title, subtitle, desc, icon: Icon, color, alignment = 'left', children }) => (
+    <div className="py-32 relative overflow-hidden border-b border-white/5">
+        <div className={`max-w-7xl mx-auto px-6 flex flex-col ${alignment === 'right' ? 'lg:flex-row-reverse' : 'lg:flex-row'} gap-20 items-center`}>
+            <motion.div 
+                initial={{ opacity: 0, x: alignment === 'left' ? -50 : 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="flex-1 space-y-8"
+            >
+                <div className="space-y-4">
+                    <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-${color}-500/10 border border-${color}-500/30 text-xs font-bold text-${color}-400 uppercase tracking-widest`}>
+                        <Icon size={14} /> {subtitle}
+                    </div>
+                    <h2 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9]">{title}</h2>
+                </div>
+                <p className="text-xl text-gray-400 leading-relaxed max-w-xl">
+                    {desc}
+                </p>
+                <div className="flex gap-6">
+                    <button className="flex items-center gap-2 text-white font-black uppercase tracking-widest text-xs hover:gap-4 transition-all">
+                        Learn More <ArrowRight size={16} className="text-indigo-500" />
+                    </button>
+                </div>
+            </motion.div>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                className="flex-1 w-full"
+            >
+                {children}
+            </motion.div>
+        </div>
+    </div>
+);
+
+const DeepFeatureShowcase = () => {
+    return (
+        <section id="features" className="bg-[#0a0a0c]">
+            {/* Visual Quote Builder */}
+            <FeatureSection 
+                title="Visual Blueprint Engine"
+                subtitle="Quote Builder v2.0"
+                desc="Replace fragmented spreadsheets with a high-fidelity operational map. Drag and drop Staff, Equipment, and Materials to build a living estimate that updates in real-time."
+                icon={Layout}
+                color="indigo"
+            >
+                <div className="relative rounded-[2.5rem] overflow-hidden border border-white/10 bg-black aspect-video group">
+                    <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=2070&auto=format&fit=crop" className="w-full h-full object-cover opacity-40 group-hover:scale-110 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                    <div className="absolute bottom-10 left-10 right-10">
+                        <div className="flex gap-4 mb-4">
+                            <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20"><MousePointer2 size={24} className="text-white" /></div>
+                            <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/40 border border-white/20"><Sparkles size={24} className="text-white" /></div>
+                        </div>
+                        <h4 className="text-2xl font-black text-white uppercase tracking-tight">Infinite Canvas Technology</h4>
+                        <p className="text-gray-400 text-sm mt-2">Zero boundaries. Maximum precision. Fully connected logic.</p>
+                    </div>
+                </div>
+            </FeatureSection>
+
+            {/* Smart Site Diary */}
+            <FeatureSection 
+                title="Paint Your Workday"
+                subtitle="Smart Site Diary"
+                desc="Log time visually with our unique 'Paint' interface. AI parses your natural language descriptions into structured data clusters automatically."
+                icon={Palette}
+                color="emerald"
+                alignment="right"
+            >
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="h-64 rounded-[2rem] bg-emerald-500/10 border border-emerald-500/20 p-8 flex flex-col justify-between">
+                        <Activity className="text-emerald-400" size={32} />
+                        <div>
+                            <div className="text-2xl font-black text-white">100%</div>
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Data Accuracy</div>
+                        </div>
+                    </div>
+                    <div className="h-64 rounded-[2rem] bg-white/5 border border-white/10 p-8 flex flex-col justify-between overflow-hidden relative">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.1),transparent_70%)]"></div>
+                        <Users className="text-emerald-400" size={32} />
+                        <div>
+                            <div className="text-2xl font-black text-white">Auto-Group</div>
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Resource Clusters</div>
+                        </div>
+                    </div>
+                </div>
+            </FeatureSection>
+
+            {/* Impact Anchors & Chronos */}
+            <FeatureSection 
+                title="Contextual Intelligence"
+                subtitle="Impact Anchors & Chronos"
+                desc="Automatically account for site delays, weather impacts, and operational friction. Our new node types dynamically adjust project financials based on real-world conditions."
+                icon={Zap}
+                color="amber"
+            >
+                <div className="space-y-4">
+                    {[
+                        { label: "Heavy Rain Impact", val: "+1.5x Duration", color: "text-rose-400" },
+                        { label: "Site Access Delay", val: "+4.0h Stoppage", color: "text-amber-400" },
+                        { label: "Night Shift Multiplier", val: "+25% Charge Out", color: "text-emerald-400" }
+                    ].map((item, i) => (
+                        <div key={i} className="p-6 rounded-2xl bg-black border border-white/5 flex justify-between items-center hover:border-white/20 transition-all">
+                            <span className="font-bold text-gray-300">{item.label}</span>
+                            <span className={`font-mono font-black ${item.color}`}>{item.val}</span>
+                        </div>
+                    ))}
+                </div>
+            </FeatureSection>
+        </section>
+    );
+};
+
+// --- TESTIMONIALS ---
+const InfiniteTestimonials = () => {
+    const testimonials = [
+        { name: "Sarah Jenkins", role: "Project Director", text: "MasterDiaryOS has completely transformed our project visibility. The visual quoting is a game-changer.", company: "BuildCorp" },
+        { name: "Mark Thompson", role: "Senior Estimator", text: "I can't imagine going back to spreadsheets. The precision and speed are unmatched.", company: "Metro Infra" },
+        { name: "Elena Rodriguez", role: "Operations Manager", text: "The AI suggestions saved us 15% on our last major tender. It's like having a senior consultant in your pocket.", company: "Skyline Developments" }
+    ];
+
+    return (
+        <section className="py-24 bg-black/40 overflow-hidden">
+            <div className="max-w-7xl mx-auto px-6 mb-16 text-center">
+                <h2 className="text-4xl font-black uppercase tracking-tighter mb-4">The Voice of the Industry</h2>
+                <div className="w-20 h-1 bg-indigo-600 mx-auto"></div>
+            </div>
+            <div className="flex gap-8 animate-scroll whitespace-nowrap">
+                {[...testimonials, ...testimonials].map((t, i) => (
+                    <div key={i} className="inline-block w-[400px] p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center font-black text-xl">
+                                {t.name[0]}
+                            </div>
+                            <div>
+                                <div className="text-white font-bold">{t.name}</div>
+                                <div className="text-gray-500 text-xs uppercase tracking-widest">{t.role}</div>
+                            </div>
+                        </div>
+                        <p className="text-gray-400 italic mb-6 break-words whitespace-normal">"{t.text}"</p>
+                        <div className="text-indigo-400 text-xs font-black uppercase tracking-widest">{t.company}</div>
+                    </div>
+                ))}
+            </div>
+        </section>
+    );
+};
+
+// --- CTA SECTION ---
+const CTA = () => {
+    const navigate = useNavigate();
+    return (
+        <section className="py-32 relative overflow-hidden bg-indigo-600">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.2),transparent_70%)]"></div>
+            <div className="max-w-5xl mx-auto px-6 text-center relative z-10">
+                <h2 className="text-5xl md:text-7xl font-black text-white uppercase tracking-tighter mb-8 leading-none">
+                    Ready to build <br /> the future?
+                </h2>
+                <p className="text-xl text-indigo-100 mb-12 max-w-2xl mx-auto font-medium opacity-90">
+                    Join the elite firms using MasterDiaryOS to dominate the construction landscape. Deploy your system today.
+                </p>
+                <div className="flex flex-wrap justify-center gap-6">
+                    <button onClick={() => navigate('/login')} className="px-10 py-5 bg-white text-indigo-600 rounded-full font-black uppercase tracking-[0.2em] text-sm shadow-2xl hover:scale-105 active:scale-95 transition-all">
+                        Get Started Now
+                    </button>
+                    <button className="px-10 py-5 bg-transparent border-2 border-white text-white rounded-full font-black uppercase tracking-[0.2em] text-sm hover:bg-white/10 transition-all">
+                        Contact Sales
+                    </button>
+                </div>
+            </div>
+        </section>
+    );
+};
+
+// --- MAIN LANDING PAGE ---
 
 const Landing = () => {
-  const navigate = useNavigate()
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const [scrollY, setScrollY] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentStep, setCurrentStep] = useState(0)
-  const demoRef = useRef(null)
+    const navigate = useNavigate();
+    return (
+        <div className={`min-h-screen ${GRADIENTS.hero} text-white font-sans selection:bg-indigo-500 selection:text-white overflow-x-hidden`}>
+            <GridBackground />
+            <Nav />
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY })
-    }
-    const handleScroll = () => setScrollY(window.scrollY)
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('scroll', handleScroll)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('scroll', handleScroll)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isPlaying) {
-      const interval = setInterval(() => {
-        setCurrentStep(prev => (prev + 1) % 4)
-      }, 2000)
-      return () => clearInterval(interval)
-    }
-  }, [isPlaying])
-
-  const demoSteps = [
-    {
-      title: "Drag Materials",
-      description: "Simply drag concrete, gravel, or any material onto the canvas",
-      icon: "🧱",
-      position: { left: '10%', top: '25%' }
-    },
-    {
-      title: "Add Labor",
-      description: "Drop staff members with their hourly rates",
-      icon: "👷",
-      position: { left: '50%', top: '15%' }
-    },
-    {
-      title: "Include Equipment",
-      description: "Add machinery and tools with daily costs",
-      icon: "🚜",
-      position: { left: '30%', top: '55%' }
-    },
-    {
-      title: "Watch Profits",
-      description: "Real-time calculations show your projected profits instantly",
-      icon: "💰",
-      position: { left: '70%', top: '35%' }
-    }
-  ]
-
-  const features = [
-    {
-      icon: <Zap size={48} className="text-primary" />,
-      title: 'Revolutionary Drag-Drop Quote Builder',
-      description: 'Intuitively drag materials, staff, and equipment onto a visual canvas to create quotes in seconds. No forms, no complexity—just pure innovation.',
-      badge: 'PATENT PENDING'
-    },
-    {
-      icon: <Target size={48} className="text-secondary" />,
-      title: 'Precision Calculations',
-      description: 'Real-time cost analysis, margin optimization, and financial forecasting with every drag. See profits update instantly.',
-      badge: '99.9% ACCURACY'
-    },
-    {
-      icon: <Layers size={48} className="text-pink-400" />,
-      title: 'Visual Project Flow',
-      description: 'Map out entire projects visually with interconnected nodes. Equipment, labor, materials—all flowing together seamlessly.',
-      badge: 'GAME CHANGER'
-    },
-    {
-      icon: <Wand2 size={48} className="text-success" />,
-      title: 'AI-Powered Insights',
-      description: 'Smart suggestions for optimal pricing, cost-saving opportunities, and project efficiency improvements.',
-      badge: 'SMART TECH'
-    }
-  ]
-
-  const testimonials = [
-    {
-      name: 'Sarah Chen',
-      role: 'Senior Estimator',
-      content: 'The drag-drop quote builder changed everything. What used to take hours now takes minutes. It\'s revolutionary!',
-      rating: 5,
-      highlight: 'Revolutionary',
-      company: 'Chen Construction',
-      avatar: 'SC'
-    },
-    {
-      name: 'Marcus Rodriguez',
-      role: 'Construction CEO',
-      content: 'Our quoting accuracy improved 40% overnight. The visual interface makes complex estimates intuitive.',
-      rating: 5,
-      highlight: '40% More Accurate',
-      company: 'Rodriguez Builders',
-      avatar: 'MR'
-    },
-    {
-      name: 'Emma Thompson',
-      role: 'Project Manager',
-      content: 'Finally, a tool that matches how we think about construction. Drag, drop, done. Pure genius.',
-      rating: 5,
-      highlight: 'Intuitive Genius',
-      company: 'Thompson Projects',
-      avatar: 'ET'
-    }
-  ]
-
-  const awards = [
-    { icon: <Trophy size={32} />, title: 'Best Innovation 2024', org: 'Construction Tech Awards' },
-    { icon: <Crown size={32} />, title: '#1 SaaS Solution', org: 'Industry Leaders' },
-    { icon: <Diamond size={32} />, title: 'Excellence Award', org: 'Tech Excellence' }
-  ]
-
-  return (
-    <div className="min-h-screen overflow-x-hidden bg-transparent text-white font-sans selection:bg-indigo-500 selection:text-white">
-      {/* Professional Particles */}
-      <div className="fixed inset-0 pointer-events-none z-10">
-        {[...Array(12)].map((_, i) => (
-          <div key={i} className="absolute w-1 h-1 rounded-full bg-indigo-400/30 animate-float" style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDuration: `${20 + Math.random() * 20}s`,
-            animationDelay: `${Math.random() * 10}s`
-          }} />
-        ))}
-      </div>
-
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-20 pb-32 overflow-hidden">
-        <div className="container mx-auto px-6 relative z-20 flex flex-col items-center text-center">
-          
-          <div className="flex flex-wrap justify-center gap-4 mb-10 animate-fade-in-up">
-            <div className="flex items-center gap-2 px-5 py-2.5 bg-stone-900/60 backdrop-blur-lg border border-white/10 rounded-full text-xs font-black text-indigo-300 shadow-xl uppercase tracking-widest hover:scale-105 transition-transform">
-              <Sparkles size={14} />
-              <span>Revolutionary Innovation</span>
-            </div>
-            <div className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600/20 border border-indigo-500/30 rounded-full text-xs font-black text-indigo-200 shadow-xl uppercase tracking-widest hover:scale-105 transition-transform">
-              <Diamond size={14} />
-              <span>Premium Solution</span>
-            </div>
-          </div>
-
-          <h1 className="text-6xl md:text-8xl font-black mb-8 leading-tight tracking-tighter text-white animate-fade-in-up delay-100 drop-shadow-2xl">
-            The Future of Quoting is <br/>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">Drag & Drop</span>
-          </h1>
-
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl leading-relaxed font-medium animate-fade-in-up delay-200">
-            MasterDiaryApp's revolutionary drag-drop quote builder transforms complex estimates into intuitive visual experiences. Drag materials, staff, and equipment onto an interactive canvas—watch profits calculate in real-time.
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-8 mb-16 animate-fade-in-up delay-300">
-            {[ 
-              { val: "10x", label: "Faster Quoting", trend: "↑ 1000%" },
-              { val: "99%", label: "Accuracy", trend: "↑ 95%" },
-              { val: "∞", label: "Innovation", trend: "UNLIMITED" }
-            ].map((stat, i) => (
-              <div key={i} className="bg-stone-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 min-w-[180px] hover:border-indigo-500/50 transition-all hover:-translate-y-1">
-                <div className="text-5xl font-black text-white mb-2 tracking-tight">{stat.val}</div>
-                <div className="text-sm text-gray-400 font-bold uppercase tracking-wider">{stat.label}</div>
-                <div className="text-xs text-emerald-400 font-black mt-2 bg-emerald-500/10 px-2 py-1 rounded inline-block">{stat.trend}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-6 mb-16 animate-fade-in-up delay-400">
-            {awards.map((award, index) => (
-              <div key={index} className="flex items-center gap-4 bg-stone-900/40 backdrop-blur-md border border-white/10 px-6 py-4 rounded-2xl hover:bg-stone-800/40 transition-colors">
-                <div className="text-amber-400">{award.icon}</div>
-                <div className="text-left">
-                  <div className="text-sm font-black text-white uppercase tracking-wide">{award.title}</div>
-                  <div className="text-[10px] text-gray-500 font-bold">{award.org}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-6 animate-fade-in-up delay-500">
-            <button className="px-10 py-5 bg-white hover:bg-gray-100 text-indigo-900 rounded-full font-black text-xl flex items-center gap-3 shadow-2xl shadow-white/10 transition-all hover:-translate-y-1 hover:scale-105" onClick={() => navigate('/quote-builder')}> 
-              <MousePointer size={24} />
-              Experience the Revolution <ArrowRight size={24} />
-            </button>
-            <button className="px-10 py-5 bg-stone-900/60 hover:bg-stone-800 text-white border border-white/20 rounded-full font-bold text-xl flex items-center gap-3 transition-all hover:-translate-y-1 backdrop-blur-md" onClick={() => document.getElementById('demo').scrollIntoView({ behavior: 'smooth' })}>
-              <Play size={24} className="fill-white" />
-              Watch Live Demo
-            </button>
-          </div>
-
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce text-gray-500 flex flex-col items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest opacity-50">Scroll to explore</span>
-            <ChevronDown size={24} />
-          </div>
-        </div>
-      </section>
-
-      {/* Live Demo Section */}
-      <section id="demo" className="py-32 relative bg-stone-950/80 backdrop-blur-xl border-y border-white/5">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-20">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-black uppercase tracking-widest mb-6">
-              <Play size={14} className="fill-current" />
-              <span>Live Interactive Demo</span>
-            </div>
-            <h2 className="text-5xl md:text-6xl font-black mb-6 text-white tracking-tight">See It In Action</h2>
-            <p className="text-gray-400 text-xl max-w-2xl mx-auto leading-relaxed">
-              Watch how revolutionary drag-drop quoting transforms construction estimating in real-time
-            </p>
-          </div>
-
-          <div className="relative max-w-6xl mx-auto bg-stone-900/60 border border-white/10 rounded-3xl p-8 shadow-2xl overflow-hidden h-[700px] flex flex-col md:flex-row gap-8 backdrop-blur-2xl ring-1 ring-white/5">
-            {/* Sidebar Mockup */}
-            <div className="w-full md:w-72 bg-black/20 rounded-2xl p-6 flex flex-col gap-4 border border-white/5">
-               <div className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Tools Panel</div>
-               <div className="p-4 bg-stone-800/50 rounded-xl flex items-center gap-4 cursor-grab hover:bg-stone-700/50 transition-all border border-white/5 hover:border-indigo-500/50 group">
-                 <span className="text-2xl grayscale group-hover:grayscale-0 transition-all">🧱</span>
-                 <div>
-                   <div className="font-bold text-white text-sm">Materials</div>
-                   <div className="text-xs text-gray-500 font-mono">Drag to add</div>
-                 </div>
-               </div>
-               <div className="p-4 bg-stone-800/50 rounded-xl flex items-center gap-4 cursor-grab hover:bg-stone-700/50 transition-all border border-white/5 hover:border-emerald-500/50 group">
-                 <span className="text-2xl grayscale group-hover:grayscale-0 transition-all">👷</span>
-                 <div>
-                   <div className="font-bold text-white text-sm">Staff</div>
-                   <div className="text-xs text-gray-500 font-mono">$85/hr</div>
-                 </div>
-               </div>
-               <div className="p-4 bg-stone-800/50 rounded-xl flex items-center gap-4 cursor-grab hover:bg-stone-700/50 transition-all border border-white/5 hover:border-amber-500/50 group">
-                 <span className="text-2xl grayscale group-hover:grayscale-0 transition-all">🚜</span>
-                 <div>
-                   <div className="font-bold text-white text-sm">Equipment</div>
-                   <div className="text-xs text-gray-500 font-mono">$200/day</div>
-                 </div>
-               </div>
-               
-               <div className="mt-auto p-6 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 rounded-2xl border border-indigo-500/30 text-center relative overflow-hidden">
-                 <div className="relative z-10">
-                   <div className="text-3xl font-black text-white tracking-tight">$127,450</div>
-                   <div className="text-[10px] text-indigo-200 uppercase tracking-widest font-bold mt-1">Projected Profit</div>
-                 </div>
-               </div>
-            </div>
-
-            {/* Canvas Mockup */}
-            <div className="flex-1 relative bg-stone-950/50 rounded-2xl border border-white/5 overflow-hidden">
-              <div className="absolute inset-0 opacity-10 bg-[size:40px_40px] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] pointer-events-none" />
-              
-              {demoSteps.map((step, index) => (
-                <div
-                  key={index}
-                  className={`absolute transition-all duration-500 transform
-                    ${currentStep === index ? 'opacity-100 scale-110 z-10' : 'opacity-30 scale-90 z-0 blur-sm'}
-                  `}
-                  style={{ left: step.position.left, top: step.position.top }}
+            {/* HERO */}
+            <section className="relative pt-32 pb-20 px-6 min-h-[90vh] flex flex-col items-center">
+                <motion.div 
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="text-center relative z-10 max-w-5xl mx-auto w-full"
                 >
-                  <div className="bg-stone-900/90 border border-white/10 p-5 rounded-2xl shadow-2xl flex flex-col items-center gap-3 w-48 backdrop-blur-md">
-                    <div className="text-5xl mb-2">{step.icon}</div>
-                    <div className="text-xs font-black text-center text-white uppercase tracking-wide">{step.title}</div>
-                  </div>
-                </div>
-              ))}
-              
-              <div className="absolute bottom-8 right-8 flex gap-2">
-                <button 
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="w-14 h-14 rounded-full bg-white text-indigo-900 flex items-center justify-center shadow-2xl hover:scale-110 transition-all"
-                >
-                   {isPlaying ? <Pause size={24} className="fill-current" /> : <Play size={24} className="fill-current ml-1" />}
-                </button>
-              </div>
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-indigo-300 uppercase tracking-widest mb-8 hover:bg-white/10 transition-colors cursor-default backdrop-blur-md">
+                        <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                        MasterDiaryOS v2.5 Enterprise Edition
+                    </div>
+                    
+                    <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter mb-8 leading-none">
+                        <span className="block bg-clip-text text-transparent bg-gradient-to-b from-white via-gray-200 to-gray-500 uppercase">Construct.</span>
+                        <span className="block bg-clip-text text-transparent bg-gradient-to-b from-indigo-400 via-purple-400 to-gray-500 uppercase italic">Masterpiece.</span>
+                    </h1>
+                    
+                    <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed font-medium">
+                        The elite operating system for construction management. Powered by <span className="text-white font-bold underline decoration-indigo-500 decoration-2">Zero-Context AI</span> and high-fidelity operational graphing.
+                    </p>
 
-              <div className="absolute top-6 left-6 flex items-center gap-2 text-white/30 text-xs font-mono font-bold uppercase tracking-widest">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                Canvas Active
-              </div>
-            </div>
-          </div>
+                    <div className="flex flex-wrap justify-center gap-6 mb-20">
+                        <button onClick={() => navigate('/login')} className="px-10 py-5 bg-white text-black rounded-full font-black uppercase tracking-[0.2em] text-sm shadow-[0_0_50px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95 transition-all">
+                            Deploy System
+                        </button>
+                        <button className="px-10 py-5 bg-white/5 border border-white/10 rounded-full font-black uppercase tracking-[0.2em] text-sm hover:bg-white/10 transition-all">
+                            Watch Keynote
+                        </button>
+                    </div>
+
+                    <HeroShowcase />
+                </motion.div>
+            </section>
+
+            {/* INTERACTIVE PLAYGROUND */}
+            <InteractiveQuoteSim />
+
+            {/* DEEP SHOWCASE */}
+            <DeepFeatureShowcase />
+
+            {/* LOGOS / SOCIAL PROOF */}
+            <section className="py-20 border-y border-white/5 bg-black/40 backdrop-blur-sm">
+                <div className="max-w-7xl mx-auto px-6 text-center mb-12">
+                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.5em]">Global_Architecture_Registry</div>
+                </div>
+                <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center gap-12 md:gap-24 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+                    {['ACME Corp', 'BuildTech', 'Global Construct', 'Structura', 'MegaWorks'].map(logo => (
+                        <div key={logo} className="text-2xl font-black font-mono tracking-tighter">{logo}</div>
+                    ))}
+                </div>
+            </section>
+
+            {/* TESTIMONIALS */}
+            <section id="testimonials">
+                <InfiniteTestimonials />
+            </section>
+
+            {/* CTA */}
+            <CTA />
+
+            {/* FOOTER */}
+            <footer className="bg-black py-20 border-t border-white/10 px-6">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
+                    <div>
+                        <div className="flex items-center gap-2 mb-4">
+                            <Terminal size={24} className="text-indigo-600" />
+                            <span className="font-black text-2xl tracking-tighter">MasterDiary<span className="text-indigo-500">OS</span></span>
+                        </div>
+                        <p className="text-gray-500 text-sm">© 2025 Billy Fraser. All systems operational.</p>
+                    </div>
+                    <div className="flex gap-8 text-sm font-bold text-gray-500">
+                        <a href="#" className="hover:text-white transition-colors uppercase tracking-widest">Privacy</a>
+                        <a href="#" className="hover:text-white transition-colors uppercase tracking-widest">Terms</a>
+                        <a href="#" className="hover:text-white transition-colors uppercase tracking-widest">Security</a>
+                        <a href="#" className="hover:text-white transition-colors uppercase tracking-widest">Contact</a>
+                    </div>
+                </div>
+            </footer>
+
+            <style>{`
+                @keyframes scroll {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .animate-scroll {
+                    animation: scroll 40s linear infinite;
+                }
+                .perspective-1000 {
+                    perspective: 1000px;
+                }
+                .transform-style-3d {
+                    transform-style: preserve-3d;
+                }
+                @keyframes shimmer {
+                    from { background-position: 200% center; }
+                    to { background-position: -200% center; }
+                }
+                .animate-shimmer {
+                    animation: shimmer 8s linear infinite;
+                }
+                @keyframes bounce-slow {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+                .animate-bounce-slow {
+                    animation: bounce-slow 3s ease-in-out infinite;
+                }
+            `}</style>
         </div>
-      </section>
+    );
+};
 
-      {/* Features Grid */}
-      <section className="py-32 bg-transparent">
-        <div className="container mx-auto px-6">
-          <h2 className="text-5xl font-black text-center mb-6 text-white tracking-tight">Built Around the Revolution</h2>
-          <p className="text-gray-400 text-center mb-20 max-w-2xl mx-auto text-lg">Everything in MasterDiaryApp enhances your drag-drop quoting experience</p>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            {features.map((feature, index) => (
-              <div key={index} className="group bg-stone-900/40 backdrop-blur-md border border-white/10 p-10 rounded-3xl transition-all hover:-translate-y-2 hover:border-indigo-500/30 relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-white/5 px-6 py-3 rounded-bl-3xl text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-l border-white/5">
-                  {feature.badge}
-                </div>
-                <div className="mb-8 p-5 bg-black/30 rounded-2xl w-fit group-hover:scale-110 transition-transform border border-white/5">
-                  {feature.icon}
-                </div>
-                <h3 className="text-2xl font-black mb-4 text-white tracking-tight">{feature.title}</h3>
-                <p className="text-gray-400 leading-relaxed font-medium">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-32 bg-gradient-to-b from-transparent to-black/80">
-        <div className="container mx-auto px-6">
-          <h2 className="text-5xl font-black text-center mb-20 text-white tracking-tight">The Revolution Speaks</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-stone-900/40 backdrop-blur-md border border-white/10 p-10 rounded-3xl hover:border-indigo-500/30 transition-colors">
-                <div className="flex items-center gap-5 mb-8">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-black text-xl text-white shadow-lg">
-                    {testimonial.avatar}
-                  </div>
-                  <div>
-                    <div className="font-bold text-white text-lg">{testimonial.name}</div>
-                    <div className="text-xs text-gray-400 font-bold uppercase tracking-wide">{testimonial.role}</div>
-                    <div className="text-[10px] text-indigo-400 uppercase tracking-widest mt-1 font-black">{testimonial.company}</div>
-                  </div>
-                </div>
-                <div className="flex gap-1 mb-6">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} size={16} className="fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-gray-300 italic text-lg leading-relaxed font-medium">"{testimonial.content}"</p>
-                <div className="mt-8 inline-block px-4 py-1.5 bg-white/5 border border-white/10 text-white text-xs font-black uppercase tracking-widest rounded-full">
-                  {testimonial.highlight}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-indigo-900/20 backdrop-blur-3xl"></div>
-        <div className="container mx-auto px-6 relative z-10 text-center">
-          <h2 className="text-6xl font-black mb-8 text-white tracking-tighter">Ready to Join the Revolution?</h2>
-          <p className="text-2xl text-gray-300 mb-12 max-w-3xl mx-auto font-medium">
-            Experience the future of construction quoting. Drag-drop your way to better profits.
-          </p>
-          
-          <div className="flex flex-wrap justify-center gap-10 mb-16">
-            <div className="flex items-center gap-3 text-white font-bold">
-              <CheckCircle size={24} className="text-emerald-500 fill-emerald-500/20" /> Free 14-day trial
-            </div>
-            <div className="flex items-center gap-3 text-white font-bold">
-              <CheckCircle size={24} className="text-emerald-500 fill-emerald-500/20" /> No credit card required
-            </div>
-            <div className="flex items-center gap-3 text-white font-bold">
-              <CheckCircle size={24} className="text-emerald-500 fill-emerald-500/20" /> Full access
-            </div>
-          </div>
-
-          <button 
-            onClick={() => navigate('/quote-builder')}
-            className="px-12 py-6 bg-white text-indigo-900 hover:bg-gray-100 rounded-full font-black text-2xl shadow-2xl hover:shadow-white/20 hover:-translate-y-1 transition-all flex items-center gap-4 mx-auto transform hover:scale-105"
-          >
-            <Rocket size={28} />
-            Start Your Revolution
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-black py-20 border-t border-white/10">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-10 mb-16">
-            <div className="text-center md:text-left">
-              <h3 className="text-3xl font-black text-white tracking-tight mb-3">
-                MasterDiary<span className="text-indigo-500">App</span>
-              </h3>
-              <p className="text-gray-500 text-sm font-medium">Revolutionizing construction with drag-drop innovation</p>
-            </div>
-            <div className="flex gap-8 font-bold text-sm">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Features</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Testimonials</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Pricing</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Login</a>
-            </div>
-          </div>
-          <div className="border-t border-white/10 pt-10 flex flex-col md:flex-row justify-between items-center gap-6 text-xs text-gray-600 font-bold uppercase tracking-widest">
-            <p>&copy; 2025 MasterDiaryApp. All rights reserved.</p>
-            <div className="flex gap-8">
-              <a href="#" className="hover:text-gray-400">Privacy Policy</a>
-              <a href="#" className="hover:text-gray-400">Terms of Service</a>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
-  )
-}
-
-export default Landing
+export default Landing;

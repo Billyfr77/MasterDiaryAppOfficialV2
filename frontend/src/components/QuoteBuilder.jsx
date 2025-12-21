@@ -26,7 +26,7 @@ import {
   User, Wrench, Package, Plus, Save, Search, Trash2,
   Crown, List, GripVertical, CheckCircle2, X, Sparkles, MapPin, Eye, EyeOff, UploadCloud,
   Settings, FileText, Download, Calendar, FileType, Ruler, PenTool, MessageSquare, Send, Calculator, Maximize, Minimize,
-  Layout, Focus, Image as ImageIcon, Zap, DollarSign, Wand2, ArrowRight, Loader2
+  Layout, Focus, Image as ImageIcon, Zap, DollarSign, Wand2, ArrowRight, Loader2, Folder
 } from 'lucide-react'
 import { useNotification } from '../context/NotificationContext'
 import { api } from '../utils/api'
@@ -37,6 +37,12 @@ import GoogleServicesSuggestions from './GoogleServicesSuggestions'
 import { generateQuotePDF } from '../utils/pdfGenerator'
 import ClientSelector from './Clients/ClientSelector'
 import { syncManager } from '../utils/syncManager'
+import PowerHeader from './ui/PowerHeader'
+import QuoteSettingsModal from './Quotes/QuoteSettingsModal'
+import ConfigModal from './ConfigModal'
+import { DiaryNode, ChronosNode, ZoneNode, ImpactNode, DelayNode, DimensionNode } from './TimelineCanvas/TimelineNodes';
+import { SmartEdgeTypes } from './TimelineCanvas/SmartEdges' // Import Visual Edges
+import ResourceSidebar from './ResourceSidebar'
 
 // ================================
 // UTILITIES
@@ -52,17 +58,14 @@ const formatCurrency = (amount) => {
 
 // SMART MATERIAL DATABASE
 const MATERIAL_COVERAGE = {
-  // Floor
   'flooring': { coverage: 15, unit: 'sq ft/box', waste: 1.1, type: 'floor' },
   'carpet': { coverage: 12, unit: 'sq ft/roll', waste: 1.15, type: 'floor' },
   'tile': { coverage: 10, unit: 'sq ft/box', waste: 1.1, type: 'floor' },
   'concrete': { coverage: 80, unit: 'sq ft/yd (4in)', waste: 1.05, type: 'floor' },
-  // Wall
   'paint': { coverage: 350, unit: 'sq ft/gal', waste: 1.1, type: 'wall' },
   'drywall': { coverage: 32, unit: 'sq ft/sheet', waste: 1.15, type: 'wall' },
   'plaster': { coverage: 50, unit: 'sq ft/bag', waste: 1.1, type: 'wall' },
   'insulation': { coverage: 40, unit: 'sq ft/roll', waste: 1.05, type: 'wall' },
-  // Linear
   'skirting': { unit: 'linear ft', waste: 1.1, type: 'linear' },
   'cornice': { unit: 'linear ft', waste: 1.1, type: 'linear' },
   'framing': { unit: 'linear ft', waste: 1.15, type: 'linear' } 
@@ -131,8 +134,6 @@ const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
             <div className={`max-w-[90%] p-3 rounded-2xl text-sm mb-1 ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-stone-800 text-gray-200 border border-white/10 rounded-tl-sm'}`}>
               {msg.content}
             </div>
-            
-            {/* Action Chips */}
             {msg.actions && msg.actions.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2 max-w-[90%]">
                     {msg.actions.map((action, i) => (
@@ -178,7 +179,6 @@ const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
             <ArrowRight size={18} />
           </button>
         </div>
-        {/* Full Build Button */}
         <button 
             onClick={() => { if(input.trim()) { onGenerateBlueprint(input); setInput(''); } else { alert("Please describe what to build first."); } }}
             className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl text-white text-xs font-bold uppercase tracking-wider shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
@@ -190,108 +190,21 @@ const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
   )
 }
 
-// ... Node Components ...
+// DimensionNode replaced by masterpiece library version
 
-const DimensionNode = ({ id, data, selected, position }) => {
-  const { width = 200, height = 200, label, onDelete, onResize, onAutoFit } = data
-  const realWidth = (width / 20).toFixed(1)
-  const realHeight = (height / 20).toFixed(1)
-  
-  const [localLabel, setLocalLabel] = useState(label || 'Room Area');
 
-  return (
-    <div className={`relative rounded-xl border-2 border-dashed transition-all ${selected ? 'border-blue-400 bg-blue-500/10 ring-4 ring-blue-500/20' : 'border-blue-400/30 bg-blue-500/5'}`} style={{ width: '100%', height: '100%', minWidth: 50, minHeight: 50 }}>
-      {selected && onAutoFit && <SmartActionsMenu node={{ id, position, data }} onAutoFit={onAutoFit} />}
-      
-      <NodeResizer 
-        minWidth={50} minHeight={50} isVisible={selected} 
-        lineClassName="border-blue-400" 
-        handleClassName="h-4 w-4 bg-blue-500 border-2 border-white rounded-full shadow-md hover:scale-125 transition-transform" 
-      />
-      
-      <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center pointer-events-none">
-         <div className="bg-slate-900/80 px-2 py-1 rounded border border-blue-500/30 mb-1 pointer-events-auto">
-             <input 
-                className="bg-transparent text-[10px] font-black text-blue-300 uppercase tracking-widest text-center w-24 outline-none"
-                value={localLabel}
-                onChange={(e) => setLocalLabel(e.target.value)}
-                placeholder="LABEL"
-             />
-         </div>
-         
-         <div className="text-3xl font-black text-white drop-shadow-xl flex flex-col items-center leading-none">
-            {((realWidth * realHeight)).toFixed(0)} 
-            <span className="text-[9px] font-bold opacity-70 uppercase tracking-wide mt-1">sq. ft.</span>
-         </div>
-         
-         <div className="mt-2 flex gap-2 text-[9px] font-mono text-blue-200 bg-black/40 px-2 py-1 rounded-full backdrop-blur-md">
-             <span>{realWidth}'</span>
-             <span className="opacity-50">x</span>
-             <span>{realHeight}'</span>
-         </div>
-      </div>
-      
-      {/* Delete Button */}
-      {selected && (
-        <button onClick={(e) => { e.stopPropagation(); onDelete?.() }} className="absolute -top-3 -right-3 p-1.5 rounded-full bg-red-500 text-white shadow-lg z-50 pointer-events-auto hover:scale-110 transition-transform">
-            <X size={12} strokeWidth={3} />
-        </button>
-      )}
-      <Handle type="target" position={Position.Top} className="!w-full !h-full !opacity-0 !bg-transparent !border-none !rounded-none" />
-    </div>
-  )
-}
+// ZoneNode replaced by masterpiece library version
 
-const ZoneNode = ({ data, selected }) => {
-  const { label, onDelete, width, height } = data
-  return (
-    <div className={`relative rounded-3xl border-2 border-white/10 bg-white/5 group transition-all duration-300 ${selected ? 'border-indigo-500/50 bg-indigo-500/5 ring-2 ring-indigo-500/20' : ''}`} style={{ width: '100%', height: '100%', minWidth: 100, minHeight: 100 }}>
-       <NodeResizer minWidth={100} minHeight={100} isVisible={selected} lineClassName="border-indigo-400/30" handleClassName="h-2 w-2 bg-indigo-500/50 border border-white/50 rounded-full" />
-      <div className="absolute top-4 left-4 pointer-events-none"><span className="text-xs font-black text-white/20 uppercase tracking-[0.2em]">{label || 'ZONE'}</span></div>
-       <button onClick={(e) => { e.stopPropagation(); onDelete?.() }} className="absolute -top-2 -right-2 p-1 rounded-full bg-stone-800 text-gray-500 hover:text-white border border-white/10 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto"><X size={10} strokeWidth={3} /></button>
-    </div>
-  )
-}
 
-const GlassNode = ({ data, selected }) => {
-  const { label, subLabel, quantity, type, onDelete } = data
-  let containerClass = "bg-gradient-to-br from-indigo-600 to-violet-700 border-2 border-indigo-300 shadow-[0_10px_30px_-5px_rgba(79,70,229,0.6)]"
-  let iconBg = "bg-white/20"
-  let badgeClass = "bg-black/20 text-indigo-100 border border-white/20"
-  let glowClass = "shadow-indigo-500/80"
-  if (type === 'staff') { containerClass = "bg-gradient-to-br from-emerald-500 to-teal-700 border-2 border-emerald-200 shadow-[0_10px_30px_-5px_rgba(16,185,129,0.6)]"; badgeClass = "bg-black/20 text-emerald-100 border border-white/20"; glowClass = "shadow-emerald-500/80" }
-  else if (type === 'equipment') { containerClass = "bg-gradient-to-br from-orange-500 to-amber-600 border-2 border-orange-200 shadow-[0_10px_30px_-5px_rgba(249,115,22,0.6)]"; badgeClass = "bg-black/20 text-orange-100 border border-white/20"; glowClass = "shadow-orange-500/80" }
-  const getIcon = () => { if (type === 'staff') return <User size={22} className="text-white" strokeWidth={2.5} />; if (type === 'equipment') return <Wrench size={22} className="text-white" strokeWidth={2.5} />; return <Package size={22} className="text-white" strokeWidth={2.5} /> }
-  return (
-    <div className={`relative min-w-[280px] rounded-[2rem] transition-all duration-300 group ${containerClass} ${selected ? `scale-110 -translate-y-2 z-50 ring-4 ring-white/60 ${glowClass}` : 'hover:scale-105 hover:-translate-y-1 hover:shadow-2xl'}`}>
-      <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-white/30 via-white/5 to-transparent pointer-events-none" />
-      <Handle type="target" position={Position.Top} className="!w-4 !h-4 !bg-white !border-4 !border-slate-900 transition-transform hover:scale-150" />
-      <div className="relative p-5">
-        <div className="flex justify-between items-start mb-4"><div className={`p-3 rounded-2xl ${iconBg} backdrop-blur-sm border border-white/30 shadow-inner`}>{getIcon()}</div><button onClick={(e) => { e.stopPropagation(); onDelete?.() }} className="p-2 rounded-full bg-black/10 text-white/70 hover:bg-red-500 hover:text-white hover:shadow-lg transition-all backdrop-blur-md"><X size={18} strokeWidth={3} /></button></div>
-        <div className="mb-4"><div className="flex items-center gap-2 mb-1"><span className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase ${badgeClass}`}>{type}</span>{selected && <span className="flex items-center gap-1 text-[10px] font-bold text-white animate-pulse"><Sparkles size={10}/> ACTIVE</span>}</div><div className="text-2xl font-black leading-none text-white drop-shadow-md tracking-tight">{label}</div></div>
-        <div className="flex items-center justify-between pt-3 border-t border-white/20"><div className="flex flex-col"><span className="text-[9px] text-white/80 font-bold uppercase tracking-wider">Quantity</span><span className="text-xl font-mono font-bold text-white drop-shadow-sm">{quantity}</span></div><div className={`px-3 py-1.5 rounded-xl ${badgeClass} backdrop-blur-md`}><div className="text-xs font-bold text-white/90 truncate max-w-[120px]">{subLabel}</div></div></div>
-      </div>
-      <Handle type="source" position={Position.Bottom} className="!w-4 !h-4 !bg-white !border-4 !border-slate-900 transition-transform hover:scale-150" />
-    </div>
-  )
-}
+// GlassNode replaced by masterpiece library version
 
-const ConfigModal = ({ isOpen, onClose, onConfirm, item, suggestedQuantity }) => {
-  const [value, setValue] = useState(suggestedQuantity || 1); const inputRef = useRef(null);
-  useEffect(() => { if (isOpen) { setValue(suggestedQuantity || 1); if (inputRef.current) setTimeout(() => inputRef.current.focus(), 100); } }, [isOpen, suggestedQuantity]);
-  if (!isOpen || !item) return null;
-  const isTimeBased = item.type === 'staff' || item.type === 'equipment';
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"><div className="bg-stone-900 border border-white/10 rounded-2xl p-6 w-80 shadow-2xl transform transition-all scale-100"><div className="flex justify-between items-center mb-4"><h3 className="text-lg font-black text-white uppercase tracking-wide">Add {item.type}</h3><button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button></div><div className="mb-6"><div className="text-sm font-bold text-gray-300 mb-2">{item.name}</div><div className="flex items-center gap-3"><input ref={inputRef} type="number" min="0.1" step="0.5" value={value} onChange={(e) => setValue(parseFloat(e.target.value) || 0)} onKeyDown={(e) => e.key === 'Enter' && onConfirm(value)} className="flex-1 bg-black/30 border-2 border-indigo-500/50 rounded-xl px-4 py-2 text-xl font-mono font-bold text-white focus:border-indigo-500 focus:outline-none text-center" /><span className="text-sm font-bold text-gray-500">{isTimeBased ? 'hrs' : 'units'}</span></div></div><div className="flex gap-3"><button onClick={onClose} className="flex-1 px-4 py-2 rounded-xl font-bold text-gray-400 hover:bg-white/5 transition-colors">Cancel</button><button onClick={() => onConfirm(value)} className="flex-1 px-4 py-2 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/30 transition-all">Add Item</button></div></div></div>
-  )
-}
 
-const QuoteSettingsModal = ({ isOpen, onClose, settings, setSettings, projects, selectedProject }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"><div className="bg-stone-900 border border-white/10 rounded-2xl p-6 w-[500px] shadow-2xl"><div className="flex justify-between items-center mb-6"><div className="flex items-center gap-2"><Settings className="text-indigo-500" size={24} /><h3 className="text-xl font-black text-white uppercase tracking-wide">Quote Settings</h3></div><button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button></div><div className="space-y-4"><div><label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Client</label><ClientSelector selectedClient={settings.clientId ? { id: settings.clientId, name: settings.clientName } : null} onSelect={(client) => setSettings({ ...settings, clientId: client?.id || null, clientName: client?.name || '' })} /></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Valid Until</label><input type="date" value={settings.validUntil} onChange={e => setSettings({...settings, validUntil: e.target.value})} className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none" /></div><div><label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Status</label><select value={settings.status} onChange={e => setSettings({...settings, status: e.target.value})} className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none"><option value="DRAFT">Draft</option><option value="SENT">Sent</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select></div></div><div><label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Terms & Conditions</label><textarea value={settings.terms} onChange={e => setSettings({...settings, terms: e.target.value})} className="w-full bg-stone-800 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-indigo-500 outline-none h-24" placeholder="Standard terms apply..." /></div></div><div className="flex justify-end gap-3 mt-6"><button onClick={onClose} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5 transition-colors">Close</button></div></div></div>
-  )
-}
+// ConfigModal removed
+
+
+// QuoteSettingsModal removed
+
+
 
 const DraggableItem = ({ item, onClick }) => {
   const onDragStart = (event) => { event.dataTransfer.setData('application/reactflow', JSON.stringify(item)); event.dataTransfer.effectAllowed = 'move'; }
@@ -311,9 +224,7 @@ const DraggableItem = ({ item, onClick }) => {
 
 const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
   const [isEditing, setIsEditing] = useState(false)
-  // Use customRate if set, otherwise fallback to material default
   const rate = item.customRate !== undefined ? item.customRate : (item.type === 'staff' ? item.material.chargeRate : item.type === 'equipment' ? item.material.costRate : item.material.pricePerUnit);
-  
   return (
     <div className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 group hover:shadow-md ${item.type === 'staff' ? 'bg-emerald-900/20 border-emerald-500/30' : item.type === 'equipment' ? 'bg-amber-900/20 border-amber-500/30' : 'bg-indigo-900/20 border-indigo-500/30'}`}>
       <div className="flex items-center gap-3 overflow-hidden">
@@ -355,12 +266,48 @@ const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
   )
 }
 
-// ================================
-// MAIN COMPONENT
-// ================================
-
 const initialNodes = []
 const initialEdges = []
+
+// ================================
+// LOAD QUOTE MODAL
+// ================================
+const LoadQuoteModal = ({ isOpen, onClose, onLoad, quotes, isLoading }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
+            <div className="w-[600px] max-h-[80vh] bg-stone-900 border border-white/10 rounded-2xl shadow-2xl flex flex-col">
+                <div className="p-4 border-b border-white/10 flex justify-between items-center bg-stone-900">
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">Load Previous Quote</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={18} /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-indigo-500" /></div>
+                    ) : quotes.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500 text-sm">No quotes found.</div>
+                    ) : (
+                        quotes.map(q => (
+                            <div key={q.id} onClick={() => onLoad(q)} className="p-3 bg-stone-800 hover:bg-stone-700 border border-white/5 hover:border-indigo-500/50 rounded-xl cursor-pointer transition-all group">
+                                <div className="flex justify-between items-start mb-1">
+                                    <div className="font-bold text-white text-sm">{q.name || 'Untitled Quote'}</div>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${q.status==='approved'?'bg-emerald-500/10 text-emerald-400 border-emerald-500/20':'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>{q.status}</span>
+                                </div>
+                                <div className="flex justify-between items-end text-xs text-gray-400">
+                                    <div>
+                                        <div>Project: {q.project?.name || 'N/A'}</div>
+                                        <div>Last Updated: {new Date(q.updatedAt).toLocaleDateString()}</div>
+                                    </div>
+                                    <div className="font-mono text-indigo-400">{formatCurrency(q.totalRevenue)}</div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const QuoteBuilderContent = () => {
   const navigate = useNavigate()
@@ -370,7 +317,15 @@ const QuoteBuilderContent = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [isGeneratingBlueprint, setIsGeneratingBlueprint] = useState(false)
   const [dataLoading, setDataLoading] = useState(true)
-  const nodeTypes = useMemo(() => ({ glass: GlassNode, dimension: DimensionNode, zone: ZoneNode }), [])
+  const nodeTypes = useMemo(() => ({ 
+      glass: DiaryNode, 
+      dimension: DimensionNode, 
+      zone: ZoneNode,
+      chronos: ChronosNode,
+      impact: ImpactNode,
+      delay: DelayNode
+  }), [])
+  const edgeTypes = useMemo(() => SmartEdgeTypes, []) // Register Smart Edges
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   
@@ -389,9 +344,9 @@ const QuoteBuilderContent = () => {
   const [dropSuccess, setDropSuccess] = useState(false)
   const [pendingNode, setPendingNode] = useState(null)
   const [showSettings, setShowSettings] = useState(false)
-  const [quoteSettings, setQuoteSettings] = useState({ clientName: '', clientId: null, validUntil: '', terms: '', status: 'DRAFT' })
+  const [quoteSettings, setQuoteSettings] = useState({ clientName: '', clientAddress: '', clientId: null, validUntil: '', terms: '', status: 'DRAFT' })
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [showFinancials, setShowFinancials] = useState(true) // Default to true
+  const [showFinancials, setShowFinancials] = useState(true)
   const [showSidebar, setShowSidebar] = useState(true)
 
   // Feature State
@@ -400,13 +355,25 @@ const QuoteBuilderContent = () => {
   const [showGeoModal, setShowGeoModal] = useState(false)
   const [sitePlan, setSitePlan] = useState(null)
   const [showStreetView, setShowStreetView] = useState(false)
+  const [quoteScope, setQuoteScope] = useState('')
+  const [isGeneratingScope, setIsGeneratingScope] = useState(false)
+  
+  // Load Quote State
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [existingQuotes, setExistingQuotes] = useState([]);
+  const [quotesLoading, setQuotesLoading] = useState(false);
 
   // Chat State
   const [showChat, setShowChat] = useState(false)
   const [chatMessages, setChatMessages] = useState([])
   const [chatTyping, setChatTyping] = useState(false)
+  
+  // Pulse & Power Header
+  const [isPulseActive, setIsPulseActive] = useState(false);
+  const handleAiSuggest = () => { 
+      handleAIChat("Review this quote layout and items. Suggest missing systems, safety requirements, or optimizations. Return specific add_node actions if applicable."); 
+  };
 
-  // --- UI State for Pagination ---
   const [visibleMaterials, setVisibleMaterials] = useState(20);
   const [visibleStaff, setVisibleStaff] = useState(10);
   const [visibleEquipment, setVisibleEquipment] = useState(10);
@@ -414,17 +381,129 @@ const QuoteBuilderContent = () => {
   const canvasRef = useRef(null)
   const { screenToFlowPosition, getNodes, fitView } = useReactFlow()
 
-  // --- HELPER FOR RE-ATTACHING EVENTS ---
+  // Helper to determine edge style
+  const getSmartEdgeParams = useCallback((sourceId) => {
+      const sourceNode = nodes.find(n => n.id === sourceId);
+      const type = sourceNode?.data?.type || 'material';
+      
+      let edgeType = 'default';
+      if (type === 'staff' || type === 'equipment') edgeType = 'orbit';
+      else if (type === 'material') edgeType = 'gradient';
+      
+      return { type: edgeType, data: { type, sourceType: type } };
+  }, [nodes]);
+
+  // --- MISSING FUNCTIONS FIX ---
+  const onConnect = useCallback((params) => {
+      const smartParams = getSmartEdgeParams(params.source);
+      setEdges((eds) => addEdge({ ...params, ...smartParams, animated: true }, eds));
+  }, [setEdges, getSmartEdgeParams]);
+
+  const updateItem = useCallback((tempId, updates) => {
+      setQuoteItems(items => items.map(item => item.tempId === tempId ? { ...item, ...updates } : item));
+  }, [setQuoteItems]);
+
+  const handleGenerateScope = async () => {
+      if (quoteItems.length === 0) return addNotification('warning', 'Empty Quote', 'Add items before generating scope.');
+      setIsGeneratingScope(true);
+      try {
+          const project = projects.find(p => p.id === selectedProject);
+          const res = await api.post('/ai/generate-scope', { 
+              items: quoteItems.map(i => ({ name: i.material.name, qty: i.quantity, type: i.type })),
+              projectName: project?.name
+          });
+          setQuoteScope(res.data.scope);
+          addNotification('success', 'Scope Generated', 'Professional scope of works ready.');
+          setChatMessages(prev => [...prev, { role: 'assistant', content: "I've generated a professional Scope of Works for you. You can review it in the Quote Settings or download it with the PDF." }]);
+      } catch (err) {
+          console.error(err);
+          addNotification('error', 'Generation Error', 'Failed to generate scope.');
+      } finally {
+          setIsGeneratingScope(false);
+      }
+  };
+
+  const openLoadModal = async () => {
+      setShowLoadModal(true);
+      setQuotesLoading(true);
+      try {
+          const res = await api.get('/quotes?limit=50'); // Fetch last 50 quotes
+          setExistingQuotes(res.data.data || []);
+      } catch (err) {
+          console.error("Failed to load quotes:", err);
+          addNotification('error', 'Load Error', 'Could not fetch existing quotes.');
+      } finally {
+          setQuotesLoading(false);
+      }
+  };
+
+  const handleLoadQuote = (quote) => {
+      if(quoteItems.length > 0 && !confirm("Overwrite current workspace?")) return;
+      navigate(`/quotes/${quote.id}`);
+      setShowLoadModal(false);
+  };
+
+  const handleSave = async () => {
+      if (quoteItems.length === 0) return addNotification('warning', 'Empty Quote', 'Add items before saving.');
+      if (!selectedProject) return addNotification('warning', 'Project Missing', 'Please select a project.');
+      
+      setIsSaving(true);
+      try {
+          const payload = {
+              projectId: selectedProject,
+              clientId: quoteSettings.clientId,
+              clientName: quoteSettings.clientName,
+              validUntil: quoteSettings.validUntil,
+              terms: quoteSettings.terms,
+              status: quoteSettings.status,
+              marginPct,
+              totalCost: financials.subtotal,
+              totalRevenue: financials.total,
+              items: quoteItems.map(i => ({
+                  type: i.type,
+                  quantity: i.quantity,
+                  nodeId: i.type === 'material' ? i.nodeId : undefined,
+                  staffId: i.type === 'staff' ? i.nodeId : undefined,
+                  equipmentId: i.type === 'equipment' ? i.nodeId : undefined,
+                  customRate: i.customRate, // Preserve overrides
+                  notes: i.notes
+              })),
+              nodes: nodes.map(n => ({
+                  id: n.id,
+                  type: n.type,
+                  position: n.position,
+                  data: n.data
+              })),
+              edges: edges
+          };
+
+          if (id) {
+              await api.put(`/quotes/${id}`, payload);
+              addNotification('success', 'Quote Updated', 'Changes saved successfully.');
+          } else {
+              const res = await api.post('/quotes', payload);
+              addNotification('success', 'Quote Created', 'New quote saved.');
+              navigate(`/quotes/${res.data.id}`);
+          }
+          // Clear draft
+          localStorage.removeItem(`quote_draft_${id || 'new'}`);
+      } catch (err) {
+          console.error("Save Error:", err);
+          addNotification('error', 'Save Failed', 'Could not save quote to database.');
+      } finally {
+          setIsSaving(false);
+      }
+  };
+  // -----------------------------
+
   const deleteNode = useCallback((id) => {
     setNodes((nds) => nds.filter(n => n.id !== id))
     setQuoteItems((items) => items.filter(i => i.tempId !== id))
   }, [setNodes])
 
-  // --- AUTO-FIT LOGIC ---
   const handleAutoFit = useCallback((node, mode) => {
       const width = node.data.width || 200;
       const height = node.data.height || 200;
-      // 20px = 1ft
       const realWidth = width / 20;
       const realLength = height / 20;
       const ceilingHeight = 8;
@@ -435,7 +514,6 @@ const QuoteBuilderContent = () => {
 
       const itemsToAdd = [];
 
-      // Helper to find or mock item
       const findItem = (key, type) => {
           const match = materials.find(m => m.name.toLowerCase().includes(key));
           if (match) return match;
@@ -456,7 +534,6 @@ const QuoteBuilderContent = () => {
           itemsToAdd.push({ item: flooring, qty, label: 'Flooring' });
       }
 
-      // Add nodes
       const newNodes = [];
       const newQuoteItems = [];
       
@@ -488,7 +565,6 @@ const QuoteBuilderContent = () => {
               type: 'material'
           });
           
-          // Link edge
           setEdges(eds => addEdge({ id: `e-${node.id}-${nodeId}`, source: node.id, target: nodeId, animated: true, style: { stroke: '#6366f1' } }, eds));
       });
 
@@ -496,25 +572,81 @@ const QuoteBuilderContent = () => {
       setQuoteItems(prev => [...prev, ...newQuoteItems]);
   }, [materials, deleteNode, setNodes, setEdges, setQuoteItems]);
 
-  // --- EFFECT: HYDRATE HANDLERS (PERSISTENCE SUPPORT) ---
+  // --- GHOST NODE LOGIC ---
+  const confirmGhostNode = useCallback((node) => {
+      setNodes(nds => nds.map(n => n.id === node.id ? { ...n, data: { ...n.data, isGhost: false, subLabel: 'Confirmed Item' } } : n));
+      const newItem = {
+          nodeId: node.id,
+          tempId: node.id,
+          quantity: node.data.quantity || 1,
+          material: { name: node.data.label, price: 0 },
+          type: node.data.type || 'material',
+          isEstimated: true
+      };
+      setQuoteItems(prev => [...prev, newItem]);
+      addNotification('Item confirmed and added to quote', 'success');
+  }, [setNodes, setQuoteItems, addNotification]);
+
+  const fetchGhostSuggestions = useCallback(async (node) => {
+      if (!node) return;
+      try {
+          const res = await api.post('/ai/node-suggestions', { selectedNode: node, existingNodes: nodes });
+          if (res.data?.suggestions) {
+              const newNodes = [];
+              const newEdges = [];
+              res.data.suggestions.forEach((sugg, i) => {
+                  const ghostId = `ghost-${Date.now()}-${i}`;
+                  const offset = (i + 1) * 100;
+                  const position = { 
+                      x: node.position.x + (i % 2 === 0 ? 300 : -300), 
+                      y: node.position.y + offset
+                  };
+                  newNodes.push({
+                      id: ghostId,
+                      type: 'glass',
+                      position,
+                      data: {
+                          label: sugg.label,
+                          subLabel: 'AI Suggestion',
+                          type: sugg.type || 'material',
+                          quantity: 1,
+                          isGhost: true,
+                          onDelete: () => deleteNode(ghostId)
+                      }
+                  });
+                  newEdges.push({
+                      id: `e-ghost-${node.id}-${ghostId}`,
+                      source: node.id,
+                      target: ghostId,
+                      type: 'neon',
+                      animated: true,
+                      style: { strokeDasharray: '5,5', opacity: 0.5 }
+                  });
+              });
+              setNodes(prev => [...prev, ...newNodes]);
+              setEdges(prev => [...prev, ...newEdges]);
+          }
+      } catch (err) { console.error("Ghost Node Error:", err); }
+  }, [nodes, setNodes, setEdges, deleteNode]);
+
+  const handleNodeClick = useCallback((event, node) => {
+      if (!isPulseActive) return;
+      if (node.data?.isGhost) { confirmGhostNode(node); } 
+      else { fetchGhostSuggestions(node); }
+  }, [isPulseActive, confirmGhostNode, fetchGhostSuggestions]);
+
   useEffect(() => {
       setNodes(nds => nds.map(n => {
           const newData = { ...n.data };
           let changed = false;
-
-          // Hydrate onDelete (All nodes)
           if (!newData.onDelete) {
               newData.onDelete = () => deleteNode(n.id);
               changed = true;
           }
-
-          // Hydrate onAutoFit (Dimension)
           if (n.type === 'dimension' && !newData.onAutoFit) {
               newData.onAutoFit = handleAutoFit;
               changed = true;
           }
-          
-          // Hydrate onResize (Dimension/Zone)
           if ((n.type === 'dimension' || n.type === 'zone') && !newData.onResize) {
                newData.onResize = (e, params) => {
                    setNodes(curr => curr.map(cn => cn.id === n.id ? { 
@@ -525,19 +657,16 @@ const QuoteBuilderContent = () => {
                };
                changed = true;
           }
-
           return changed ? { ...n, data: newData } : n;
       }));
   }, [handleAutoFit, deleteNode, setNodes, nodes.length]);
 
-  // --- PERSISTENCE: LOAD NEW DRAFT ---
   useEffect(() => {
       if (!id) { 
           const savedData = localStorage.getItem('quote_draft_new');
           if (savedData) {
               try {
                   const parsed = JSON.parse(savedData);
-                  // Restore if we have data and current state is empty
                   if (parsed.nodes && nodes.length === 0) {
                       setNodes(parsed.nodes);
                       if (parsed.edges) setEdges(parsed.edges);
@@ -551,7 +680,6 @@ const QuoteBuilderContent = () => {
       }
   }, [id]);
 
-  // --- PERSISTENCE: AUTO-SAVE ---
   useEffect(() => {
       const draftKey = `quote_draft_${id || 'new'}`;
       const timeout = setTimeout(() => {
@@ -566,7 +694,6 @@ const QuoteBuilderContent = () => {
       return () => clearTimeout(timeout);
   }, [nodes, edges, quoteItems, chatMessages, quoteSettings, selectedProject, id]);
 
-  // --- AUTO-SYNC CLIENT & LOCATION FROM PROJECT ---
   useEffect(() => {
     if (selectedProject && projects.length > 0) {
        const proj = projects.find(p => p.id === selectedProject)
@@ -574,17 +701,16 @@ const QuoteBuilderContent = () => {
          setQuoteSettings(prev => ({
             ...prev,
             clientId: proj.clientId || prev.clientId, 
-            clientName: proj.client || proj.clientDetails?.name || prev.clientName
+            clientName: proj.client || proj.clientDetails?.name || prev.clientName,
+            clientAddress: proj.clientDetails?.address || prev.clientAddress
          }))
-
-         // Auto-resolve location for map background
          if (proj.site && window.google) {
              const geocoder = new window.google.maps.Geocoder();
              geocoder.geocode({ address: proj.site }, (results, status) => {
                  if (status === 'OK' && results[0]) {
                      const loc = results[0].geometry.location;
                      setProjectLocation({ lat: loc.lat(), lng: loc.lng() });
-                     setShowMap(true); // Auto-show map if location found
+                     setShowMap(true);
                  }
              });
          }
@@ -592,7 +718,6 @@ const QuoteBuilderContent = () => {
     }
   }, [selectedProject, projects])
 
-  // --- FETCH DATA ---
   useEffect(() => {
     const fetchData = async () => {
       setDataLoading(true)
@@ -614,53 +739,44 @@ const QuoteBuilderContent = () => {
     fetchData()
   }, [])
 
-  // --- LOAD EXISTING QUOTE ---
   useEffect(() => {
     if (!id || (materials.length === 0 && staff.length === 0 && equipment.length === 0)) return
-
     const loadQuote = async () => {
-      // CHECK FOR RECENT DRAFT (Client-Side Persistence)
       const draftKey = `quote_draft_${id}`;
       const savedDraft = localStorage.getItem(draftKey);
       if (savedDraft) {
           try {
              const parsed = JSON.parse(savedDraft);
-             if (parsed.timestamp > (Date.now() - 24*60*60*1000)) { // 24h validity
-                 console.log("Restoring Draft instead of DB:", draftKey);
+             if (parsed.timestamp > (Date.now() - 24*60*60*1000)) { 
                  setNodes(parsed.nodes);
                  if (parsed.edges) setEdges(parsed.edges);
                  if (parsed.items) setQuoteItems(parsed.items);
                  if (parsed.chat) setChatMessages(parsed.chat);
                  if (parsed.settings) setQuoteSettings(parsed.settings);
                  if (parsed.project) setSelectedProject(parsed.project);
-                 return; // SKIP DB LOAD
+                 return;
              }
           } catch(e) { console.error("Draft parsing failed, falling back to DB", e); }
       }
-
       try {
         const res = await api.get(`/quotes/${id}`)
         const quote = res.data
-
         setSelectedProject(quote.projectId)
         setMarginPct(quote.marginPct)
         setQuoteSettings({
            clientName: quote.clientName || quote.clientDetails?.name || '', 
+           clientAddress: quote.clientDetails?.address || '',
            clientId: quote.clientId || null,
            validUntil: quote.validUntil || '',
            terms: quote.terms || '',
            status: quote.status || 'DRAFT'
         })
-
         const loadedItems = []
         const loadedNodes = []
-
         const processItem = (item, type, list) => {
            const refItem = list.find(x => x.id === (item.nodeId || item.staffId || item.equipmentId))
            if (!refItem) return
-
            const tempId = `${type}-${refItem.id}-${Date.now()}-${Math.random()}`
-           
            loadedNodes.push({
               id: tempId,
               type: 'glass',
@@ -673,7 +789,6 @@ const QuoteBuilderContent = () => {
                  onDelete: () => deleteNode(tempId)
               }
            })
-
            loadedItems.push({
               nodeId: refItem.id,
               tempId: tempId,
@@ -682,16 +797,12 @@ const QuoteBuilderContent = () => {
               type: type
            })
         }
-
         quote.nodes?.forEach(i => processItem(i, 'material', materials))
         quote.staff?.forEach(i => processItem(i, 'staff', staff))
         quote.equipment?.forEach(i => processItem(i, 'equipment', equipment))
-
         setNodes(loadedNodes)
         setQuoteItems(loadedItems)
-        
         setTimeout(() => fitView({ padding: 0.2 }), 100)
-
       } catch (err) {
         console.error('Error loading quote:', err)
         alert('Failed to load quote details.')
@@ -700,12 +811,10 @@ const QuoteBuilderContent = () => {
     loadQuote()
   }, [id, materials, staff, equipment, fitView])
 
-  // --- AI COPILOT LOGIC ---
   const handleAIChat = async (message) => {
     if (!message.trim()) return
     setChatMessages(prev => [...prev, { role: 'user', content: message }])
     setChatTyping(true)
-    
     try {
       const context = {
         project: projects.find(p => p.id === selectedProject) || {},
@@ -716,16 +825,9 @@ const QuoteBuilderContent = () => {
         })),
         settings: quoteSettings
       }
-
-      // Use the new Actionable Chat endpoint
       const res = await api.post('/ai/chat-quote', { message, context })
       const { reply, suggestedActions } = res.data;
-
-      setChatMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: reply, 
-          actions: suggestedActions 
-      }])
+      setChatMessages(prev => [...prev, { role: 'assistant', content: reply, actions: suggestedActions }])
     } catch (err) {
       setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting to the server." }])
     } finally {
@@ -733,30 +835,22 @@ const QuoteBuilderContent = () => {
     }
   }
 
-  // --- FULL BLUEPRINT GENERATION ---
   const handleGenerateBlueprint = async (prompt) => {
       setIsGeneratingBlueprint(true);
       setChatMessages(prev => [...prev, { role: 'user', content: `Generate Blueprint: ${prompt}` }]);
-      
       try {
           const res = await api.post('/ai/quote', { prompt });
           const { nodes: aiNodes, edges: aiEdges } = res.data;
-
           if (aiNodes && aiNodes.length > 0) {
-              console.log("[Blueprint] Received:", { nodes: aiNodes, edges: aiEdges });
               addNotification('success', 'Blueprint Generated', 'AI has constructed the visual quote.');
               const newNodes = [];
               const newItems = [];
-              
-              // Helper to map backend types to frontend
               const mapType = (t) => {
                   if (t === 'staff-resource') return 'staff';
                   if (t === 'equipment-resource') return 'equipment';
-                  return 'material'; // default for 'glass'
+                  return 'material';
               };
-
               aiNodes.forEach(rawNode => {
-                  // Normalize Node Structure (Handle flat AI output)
                   let n = rawNode;
                   if (!n.data) {
                       n = {
@@ -766,17 +860,12 @@ const QuoteBuilderContent = () => {
                           data: rawNode
                       };
                   }
-
-                  if (!n.data) return; // Skip invalid nodes
-
+                  if (!n.data) return;
                   const frontendType = n.type === 'dimension' ? 'dimension' : 'glass';
                   const itemType = mapType(n.type);
-                  
-                  // Try to find matching real resource
                   let refItem = null;
                   const targetId = n.data.nodeId;
                   const targetName = n.data.label;
-
                   if (itemType === 'staff') {
                       refItem = staff.find(s => s.id === targetId) || (targetName ? staff.find(s => s.name === targetName) : null);
                   } else if (itemType === 'equipment') {
@@ -784,8 +873,6 @@ const QuoteBuilderContent = () => {
                   } else if (n.type !== 'dimension') {
                       refItem = materials.find(m => m.id === targetId) || (targetName ? materials.find(m => m.name === targetName) : null);
                   }
-
-                  // Create mock if not found
                   if (!refItem && n.type !== 'dimension') {
                       refItem = {
                           id: `ai-${Date.now()}-${Math.random()}`,
@@ -796,13 +883,10 @@ const QuoteBuilderContent = () => {
                           type: itemType
                       };
                   }
-
                   const nodeId = n.id; 
-                  
                   newNodes.push({
                       id: nodeId,
                       type: frontendType,
-                      // Fallback layout if AI fails at positioning
                       position: (n.position && typeof n.position.x === 'number') ? n.position : { x: 0, y: newNodes.length * 250 },
                       data: {
                           ...n.data,
@@ -814,7 +898,6 @@ const QuoteBuilderContent = () => {
                       },
                       style: n.type === 'dimension' ? { width: 200, height: 200 } : undefined
                   });
-
                   if (n.type !== 'dimension' && refItem) {
                       newItems.push({
                           nodeId: refItem.id,
@@ -822,24 +905,42 @@ const QuoteBuilderContent = () => {
                           quantity: n.data.quantity,
                           material: refItem,
                           type: itemType,
-                          customRate: n.data.cost > 0 ? n.data.cost : undefined // AI Override
+                          customRate: n.data.cost > 0 ? n.data.cost : undefined 
                       });
                   }
               });
-
               setNodes(prev => [...prev, ...newNodes]);
-              setEdges(prev => [...prev, ...aiEdges.map(e => ({ ...e, id: `e-${window.crypto.randomUUID()}`, type: 'smoothstep', animated: true }))]);
-              setQuoteItems(prev => [...prev, ...newItems]);
               
-              setChatMessages(prev => [...prev, { role: 'assistant', content: "Blueprint generated successfully! I've added the requested systems to the canvas." }]);
-              setTimeout(() => fitView({ padding: 0.2 }), 500);
-          } else {
-              throw new Error("AI did not return a valid structure.");
-          }
+              // --- SMART EDGE MAPPING ---
+              const enhancedEdges = aiEdges.map(e => {
+                  let edgeType = 'default';
+                  const source = newNodes.find(n => n.id === e.source);
+                  if (source) {
+                      const type = source.data.type;
+                      if (type === 'staff' || type === 'equipment') edgeType = 'orbit';
+                      else if (type === 'material') edgeType = 'gradient';
+                  }
+                  return { 
+                      ...e, 
+                      id: `e-${window.crypto.randomUUID()}`, 
+                      type: edgeType,
+                      animated: true 
+                  };
+              });
+              setEdges(prev => [...prev, ...enhancedEdges]);
+              // --------------------------
 
+              setQuoteItems(prev => [...prev, ...newItems]);
+              setChatMessages(prev => [
+                  ...prev, 
+                  { role: 'assistant', content: "Blueprint generated successfully! I've applied standard construction logic, waste factors, and productivity rates." },
+                  { role: 'assistant', content: "⚠️ IMPORTANT: Please review all quantities and costs. While I use industry benchmarks, site-specific conditions may require adjustments. You have final responsibility for this quote." }
+              ]);
+              setTimeout(() => fitView({ padding: 0.2 }), 500);
+          }
       } catch (err) {
           console.error(err);
-          setChatMessages(prev => [...prev, { role: 'assistant', content: "I encountered an error generating the blueprint. Please try again." }]);
+          setChatMessages(prev => [...prev, { role: 'assistant', content: "I encountered an error generating the blueprint." }]);
           addNotification('error', 'Generation Error', 'Failed to generate blueprint.');
       } finally {
           setChatTyping(false);
@@ -847,16 +948,12 @@ const QuoteBuilderContent = () => {
       }
   };
 
-  // --- SMART ACTION EXECUTION ---
   const handleCopilotAction = (action) => {
       if (action.type === 'add_node') {
-          // Find resource
           let item = null;
           if (action.category === 'staff') item = staff.find(s => s.name.toLowerCase().includes(action.label.toLowerCase()));
           else if (action.category === 'equipment') item = equipment.find(e => e.name.toLowerCase().includes(action.label.toLowerCase()));
           else item = materials.find(m => m.name.toLowerCase().includes(action.label.toLowerCase()));
-
-          // If not found, create a mock item
           if (!item) {
               item = {
                   id: `ai-${Date.now()}`,
@@ -867,8 +964,6 @@ const QuoteBuilderContent = () => {
                   type: action.category
               };
           }
-
-          // Use the Drawing Action
           setPendingNode({ 
               item, 
               position: screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }), 
@@ -877,21 +972,15 @@ const QuoteBuilderContent = () => {
       }
   };
 
-  // --- DRAWING ACTIONS ---
   const onTapAdd = (item) => {
-    // Center of screen
     const position = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
-    
-    // Suggest quantity logic (same as drop)
     let suggestedQty = null
     const coverageKey = Object.keys(MATERIAL_COVERAGE).find(k => item.name.toLowerCase().includes(k))
     if (coverageKey) {
-       // Default 10x10 room if no specific target
        suggestedQty = Math.ceil((100 * MATERIAL_COVERAGE[coverageKey].waste) / MATERIAL_COVERAGE[coverageKey].coverage)
     } else {
        suggestedQty = 1
     }
-
     setPendingNode({ item, position, suggestedQuantity: suggestedQty })
     if (window.innerWidth < 1024) setShowSidebar(false)
   }
@@ -927,7 +1016,7 @@ const QuoteBuilderContent = () => {
        id, 
        type: 'zone',
        position: screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }),
-       style: { width: 400, height: 400, zIndex: -1 }, // Behind other nodes
+       style: { width: 400, height: 400, zIndex: -1 },
        data: {
           label: `Zone ${nodes.filter(n => n.type === 'zone').length + 1}`,
           onDelete: () => deleteNode(id)
@@ -936,7 +1025,6 @@ const QuoteBuilderContent = () => {
     setNodes(nds => nds.concat(newNode))
   }
 
-  // --- DRAG & DROP & AUTO-CALC ---
   const onDragOver = useCallback((event) => {
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
@@ -945,51 +1033,77 @@ const QuoteBuilderContent = () => {
 
   const onDragLeave = () => setIsDragOver(false)
 
+  // --- MASTERPIECE RESTRUCTURE ENGINE ---
+  const restructureLayout = useCallback(() => {
+      const zones = nodes.filter(n => n.type === 'zone');
+      const dimensions = nodes.filter(n => n.type === 'dimension');
+      const resources = nodes.filter(n => n.type === 'glass');
+      
+      const newNodes = nodes.map(node => {
+          let position = { ...node.position };
+          
+          if (node.type === 'zone') {
+              const idx = zones.findIndex(n => n.id === node.id);
+              position = { x: idx * 800, y: 0 };
+          } else if (node.type === 'dimension') {
+              const idx = dimensions.findIndex(n => n.id === node.id);
+              position = { x: idx * 400, y: -400 }; // Header row
+          } else if (node.type === 'glass') {
+              const parentEdge = edges.find(e => e.target === node.id);
+              if (parentEdge) {
+                  const siblings = edges.filter(e => e.source === parentEdge.source);
+                  const sibIdx = siblings.findIndex(e => e.target === node.id);
+                  const parentNode = nodes.find(n => n.id === parentEdge.source);
+                  
+                  if (parentNode) {
+                      position = { 
+                          x: parentNode.position.x + (sibIdx % 2 === 0 ? 200 : -200), 
+                          y: parentNode.position.y + 350 + (Math.floor(sibIdx / 2) * 250) 
+                      };
+                  }
+              }
+          }
+          return { ...node, position };
+      });
+
+      setNodes(newNodes);
+      setTimeout(() => fitView({ padding: 0.2, duration: 800 }), 100);
+      addNotification('success', 'Layout Restructured', 'Operational graph organized.');
+  }, [nodes, edges, setNodes, fitView, addNotification]);
+
   const onDrop = useCallback((event) => {
     event.preventDefault()
     setIsDragOver(false)
     const type = event.dataTransfer.getData('application/reactflow')
     if (!type) return
-
     const item = JSON.parse(type)
     const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
-
     const droppedOnNode = getNodes().find(n => 
        n.type === 'dimension' && 
        position.x >= n.position.x && position.x <= n.position.x + (n.style?.width || 200) &&
        position.y >= n.position.y && position.y <= n.position.y + (n.style?.height || 200)
     )
-
     let suggestedQty = null
     if (droppedOnNode) {
        const width = droppedOnNode.data.width || 200
        const height = droppedOnNode.data.height || 200
-       
-       // Calc Metrics
        const realWidth = width / 20;
        const realLength = height / 20;
        const floorArea = realWidth * realLength;
        const perimeter = (realWidth + realLength) * 2;
-       const wallArea = perimeter * 8; // Default 8ft ceiling
-
-       // Detect Material Type
+       const wallArea = perimeter * 8; 
        const coverageKey = Object.keys(MATERIAL_COVERAGE).find(k => item.name.toLowerCase().includes(k))
-       
        if (coverageKey) {
          const info = MATERIAL_COVERAGE[coverageKey]
-         let metric = floorArea; // Default
+         let metric = floorArea; 
          if (info.type === 'wall') metric = wallArea;
          if (info.type === 'linear') metric = perimeter;
-
-         // Linear unit check (if info.unit is 'linear ft', coverage usually 1:1, just waste)
          const denom = info.coverage || 1; 
          suggestedQty = Math.ceil((metric * info.waste) / denom)
        } else {
-         // Fallback to Floor Area if unknown
          suggestedQty = Math.ceil(floorArea) 
        }
     }
-    
     setPendingNode({ item, position, suggestedQuantity: suggestedQty })
   }, [screenToFlowPosition, getNodes])
 
@@ -997,8 +1111,6 @@ const QuoteBuilderContent = () => {
     if (!pendingNode) return
     const { item, position } = pendingNode
     const nodeId = `${item.type || 'material'}-${item.id}-${Date.now()}`
-    
-    // Create node data
     const newNode = {
       id: nodeId,
       type: 'glass',
@@ -1011,121 +1123,59 @@ const QuoteBuilderContent = () => {
         onDelete: () => deleteNode(nodeId)
       }
     }
-
     setNodes(nds => nds.concat(newNode))
-    
-    // Create quote item with custom rates
     const newItem = { 
         nodeId: item.id, 
         tempId: nodeId, 
         quantity: quantity, 
         material: item, 
         type: item.type || 'material',
-        customRate: charge > 0 ? charge : undefined // Use Charge as the rate for the quote
+        customRate: charge > 0 ? charge : undefined 
     }
-    // Also store internal cost if needed for margin calculation later, but QuoteItem primarily uses 'rate' (revenue).
-    // If we want to track cost margin per item, we'd need 'customCost'.
-    
     setQuoteItems(prev => [...prev, newItem])
-    
     setDropSuccess(true)
     setTimeout(() => setDropSuccess(false), 600)
     setPendingNode(null)
   }
 
-  const updateItem = useCallback((tempId, updates) => {
-    setQuoteItems(prev => prev.map(i => i.tempId === tempId ? { ...i, ...updates } : i))
-    setNodes(nds => nds.map(n => n.id === tempId ? { ...n, data: { ...n.data, ...updates } } : n))
-  }, [setNodes])
-
-  const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges])
-
-  const handleSave = async () => {
-    if (!selectedProject) return addNotification('warning', 'Project Required', 'Please select a project before saving.');
-    setIsSaving(true);
-    try {
-      if (projectLocation) await api.put(`/projects/${selectedProject}`, { latitude: projectLocation.lat, longitude: projectLocation.lng })
-
-      const metadataNode = { nodeId: 'METADATA', quantity: 0, type: 'metadata', ...quoteSettings }
-      
-      const nodesData = [
-          ...quoteItems.filter(i => i.type !== 'staff' && i.type !== 'equipment').map(i => ({ 
-              nodeId: i.nodeId, 
-              name: i.material.name, // Pass name for creation
-              isNew: String(i.nodeId).startsWith('ai-'), // Flag
-              quantity: i.quantity,
-              pricePerUnit: i.material.pricePerUnit
-          })), 
-          metadataNode
-      ]
-      
-      const staffData = quoteItems.filter(i => i.type === 'staff').map(i => ({ 
-          staffId: i.nodeId, 
-          name: i.material.name,
-          isNew: String(i.nodeId).startsWith('ai-'),
-          hours: i.quantity,
-          chargeRate: i.material.chargeRate
-      }))
-      
-      const equipmentData = quoteItems.filter(i => i.type === 'equipment').map(i => ({ 
-          equipmentId: i.nodeId, 
-          name: i.material.name,
-          isNew: String(i.nodeId).startsWith('ai-'),
-          hours: i.quantity,
-          costRate: i.material.costRate
-      }))
-
-      const payload = {
-        name: `Quote for ${projects.find(p => p.id === selectedProject)?.name} - ${new Date().toLocaleDateString()}`,
-        projectId: selectedProject, marginPct, nodes: nodesData, staff: staffData, equipment: equipmentData
-      };
-
-      await syncManager.save('quotes', payload);
-      addNotification('success', 'Quote Saved (Offline Ready)', 'Your quote has been saved locally and will sync when online.');
-    } catch (err) { 
-        console.error('Error saving quote:', err); 
-        addNotification('error', 'Save Failed', 'There was an error saving your quote.'); 
-    } finally {
-        setIsSaving(false);
-    }
-  }
+  const handleNewQuote = () => {
+      if(quoteItems.length > 0 && !confirm("Discard current quote?")) return;
+      setNodes([]);
+      setEdges([]);
+      setQuoteItems([]);
+      setSelectedProject('');
+      setQuoteSettings({ clientName: '', clientId: null, validUntil: '', terms: '', status: 'DRAFT' });
+  };
 
   const financials = useMemo(() => {
-      let materials = 0, staff = 0, equipment = 0;
-      
-      quoteItems.forEach(item => {
-          let rate = 0;
-          if (item.customRate !== undefined) rate = item.customRate;
-          else if (item.type === 'staff') rate = item.material.chargeRate;
-          else if (item.type === 'equipment') rate = item.material.costRate;
-          else rate = item.material.pricePerUnit;
-          
-          const total = rate * item.quantity;
-          
-          if (item.type === 'staff') staff += total;
-          else if (item.type === 'equipment') equipment += total;
-          else materials += total;
-      });
-
+      const materials = quoteItems.filter(i => i.type === 'material').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.price || 0)), 0);
+      const staff = quoteItems.filter(i => i.type === 'staff').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.hourlyRate || 0)), 0);
+      const equipment = quoteItems.filter(i => i.type === 'equipment').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.dailyRate || 0)), 0);
       const subtotal = materials + staff + equipment;
-      const total = subtotal * (1 + (marginPct/100));
-      
+      const total = subtotal * (1 + marginPct / 100);
       return { materials, staff, equipment, subtotal, total };
   }, [quoteItems, marginPct]);
 
-  // --- RENDER ---
+  const stats = [
+      { label: 'Materials', value: formatCurrency(financials.materials), color: 'text-indigo-400' },
+      { label: 'Labor', value: formatCurrency(financials.staff), color: 'text-emerald-400' },
+      { label: 'Equipment', value: formatCurrency(financials.equipment), color: 'text-amber-400' },
+      { label: 'Total', value: formatCurrency(financials.total), color: 'text-white' },
+      { label: 'Margin', value: `${marginPct}%`, color: 'text-blue-400' }
+  ];
+
   return (
     <div className="h-[calc(100vh-80px)] bg-transparent flex flex-col font-sans overflow-hidden text-white relative">
       <GeoreferenceModal isOpen={showGeoModal} onClose={() => setShowGeoModal(false)} onSave={(data) => { setSitePlan(data); setShowMap(true); if(data.bounds) setProjectLocation({ lat: (data.bounds.north+data.bounds.south)/2, lng: (data.bounds.east+data.bounds.west)/2 }); }} />
       <QuoteSettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={quoteSettings} setSettings={setQuoteSettings} projects={projects} selectedProject={selectedProject} />
       <GoogleServicesSuggestions isOpen={showSuggestions} onClose={() => setShowSuggestions(false)} />
+      <LoadQuoteModal isOpen={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadQuote} quotes={existingQuotes} isLoading={quotesLoading} />
       
       {showMap && <div className="absolute inset-0 z-0 animate-fade-in"><MapBackground activeLocation={projectLocation} onLocationSelect={setProjectLocation} overlayImage={sitePlan} /></div>}
 
       <div className={`absolute inset-0 z-10 flex flex-col transition-all duration-500 ${showMap ? 'bg-stone-900/40 backdrop-blur-sm' : ''}`}>
         <ConfigModal isOpen={!!pendingNode} item={pendingNode?.item} suggestedQuantity={pendingNode?.suggestedQuantity} onClose={() => setPendingNode(null)} onConfirm={handleAddNode} />
         
-        {/* LOADING OVERLAY */}
         {(isGeneratingBlueprint || dataLoading) && (
           <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in">
              <div className="relative">
@@ -1137,153 +1187,76 @@ const QuoteBuilderContent = () => {
           </div>
         )}
 
-        {/* --- TOP BAR --- */}
-        <div className={`h-auto py-3 px-4 md:px-6 border-b border-white/10 ${showMap ? 'bg-stone-900/60' : 'bg-stone-900/80'} backdrop-blur-md z-30 flex flex-wrap justify-between items-center shadow-lg transition-colors gap-2`}>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.4)] ring-1 ring-white/20">
-              <Crown className="text-white" size={16} />
-            </div>
-            <div>
-              <div className="bg-stone-900/80 px-1.5 py-0.5 rounded border border-white/10 inline-block mb-0.5">
-                <h1 className="text-xs font-black text-white tracking-tight">QUOTE BUILDER</h1>
-              </div>
-              <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-gray-400 bg-stone-900/60 px-1.5 py-0.5 rounded border border-white/5">
-                <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />
-                Enterprise Edition
-              </div>
-            </div>
-          </div>
+        <div className="max-w-[1800px] mx-auto w-full pt-4 px-4 relative z-20">
+            <PowerHeader 
+                title="Quote Builder" 
+                icon={Crown}
+                stats={stats}
+                isPulseActive={isPulseActive}
+                onPulseToggle={() => setIsPulseActive(!isPulseActive)}
+                onAiSuggest={handleAiSuggest}
+            >
+                {/* Controls */}
+                <div className="flex bg-black/40 rounded-xl p-1 border border-white/10 mr-2">
+                    <button onClick={restructureLayout} className="p-2.5 rounded-lg text-amber-400 hover:text-white hover:bg-amber-600/50 transition-colors" title="Restructure Masterpiece"><Zap size={18} /></button>
+                    <div className="w-px h-6 bg-white/10 mx-1 my-auto"></div>
+                    <button onClick={addDimensionNode} className="p-2.5 rounded-lg text-blue-400 hover:text-white hover:bg-blue-600/50 transition-colors" title="Add Room"><Ruler size={18} /></button>
+                    <button onClick={addZoneNode} className="p-2.5 rounded-lg text-purple-400 hover:text-white hover:bg-purple-600/50 transition-colors" title="Add Zone"><Layout size={18} /></button>
+                    <button onClick={() => setShowGeoModal(true)} className="p-2.5 rounded-lg text-emerald-400 hover:text-white hover:bg-emerald-600/50 transition-colors" title="Upload Plan"><UploadCloud size={18} /></button>
+                    <div className="w-px h-6 bg-white/10 mx-1 my-auto"></div>
+                    <button onClick={() => setShowMap(!showMap)} className={`p-2.5 rounded-lg transition-colors ${showMap ? 'text-white bg-indigo-600' : 'text-gray-400 hover:text-white'}`} title="Map Toggle"><MapPin size={18} /></button>
+                    <button onClick={() => fitView()} className="p-2.5 rounded-lg text-gray-400 hover:text-white transition-colors" title="Fit"><Focus size={18} /></button>
+                </div>
 
-          {/* Revenue/Margin Display - Conditionally visible */}
-          {showFinancials && (
-            <div className={`flex items-center gap-2 ${showMap ? 'bg-stone-900/80' : 'bg-stone-900/90'} p-1.5 rounded-xl border border-white/10 shadow-2xl transition-colors overflow-x-auto`}>
-               {/* Breakdown Pills */}
-               <div className="hidden md:flex items-center gap-2 px-2 border-r border-white/10 pr-3">
-                   <div className="flex flex-col items-center min-w-[60px]" title="Materials Cost">
-                       <span className="text-[8px] font-bold text-indigo-400 uppercase flex gap-1"><Package size={8}/> Mat</span>
-                       <span className="text-xs font-mono font-bold text-white">{formatCurrency(financials.materials)}</span>
-                   </div>
-                   <div className="flex flex-col items-center min-w-[60px]" title="Staff Cost">
-                       <span className="text-[8px] font-bold text-emerald-400 uppercase flex gap-1"><User size={8}/> Lab</span>
-                       <span className="text-xs font-mono font-bold text-white">{formatCurrency(financials.staff)}</span>
-                   </div>
-                   <div className="flex flex-col items-center min-w-[60px]" title="Equipment Cost">
-                       <span className="text-[8px] font-bold text-amber-400 uppercase flex gap-1"><Wrench size={8}/> Eqp</span>
-                       <span className="text-xs font-mono font-bold text-white">{formatCurrency(financials.equipment)}</span>
-                   </div>
-               </div>
-
-               <div className="px-2"><div className="text-[9px] font-bold text-gray-400 uppercase">Total Quote</div><div className="text-sm font-mono font-bold text-emerald-400"><CountUp end={financials.total} prefix="$" separator="," /></div></div>
-               <div className="w-px h-6 bg-white/10" />
-               <div className="px-2 flex items-center gap-1.5"><span className="text-[9px] font-bold text-indigo-300">Margin {marginPct}%</span><input type="range" min="0" max="100" value={marginPct} onChange={(e) => setMarginPct(Number(e.target.value))} className="w-16 h-1 bg-stone-800 rounded-lg accent-indigo-500" /></div>
-            </div>
-          )}
-          
-          {/* Toggle for financials on small screens */}
-          <button onClick={() => setShowFinancials(!showFinancials)} className="md:hidden p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-400 hover:text-white" title="Toggle Financials">
-            <DollarSign size={20} />
-          </button>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* TOOLBAR */}
-            <button onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-400 hover:text-white" title="Toggle Sidebar"><List size={20} /></button>
-            <button onClick={addDimensionNode} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-blue-400 hover:text-white hover:bg-blue-600/50 transition-colors" title="Add Room/Area"><Ruler size={20} /></button>
-            <button onClick={addZoneNode} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-purple-400 hover:text-white hover:bg-purple-600/50 transition-colors" title="Add Zone"><Layout size={20} /></button>
-            <button onClick={() => setShowGeoModal(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-emerald-400 hover:text-white transition-colors" title="Upload Site Plan"><UploadCloud size={20} /></button>
-            
-            <div className="h-8 w-px bg-white/10 mx-1"></div>
-            
-            <button onClick={() => setShowMap(!showMap)} className={`p-2 rounded-lg border transition-all ${showMap ? 'bg-indigo-600 text-white' : 'bg-stone-800 text-gray-400'}`} title="Map Toggle">{showMap ? <EyeOff size={20} /> : <MapPin size={20} />}</button>
-            {projectLocation && <button onClick={() => setShowStreetView(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-yellow-400 hover:text-white transition-colors" title="Street View"><ImageIcon size={20} /></button>}
-            
-            <select value={selectedProject} onChange={e => setSelectedProject(e.target.value)} className="bg-stone-900 border border-white/10 text-sm text-white rounded-lg px-3 py-2 outline-none shadow-inner w-40"><option value="">Project...</option>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
-            
-            {/* Client Indicator */}
-            {quoteSettings.clientName && (
-               <div className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
-                  <User size={14} className="text-indigo-400" />
-                  <span className="text-xs font-bold text-indigo-300 max-w-[100px] truncate" title={`Client: ${quoteSettings.clientName}`}>{quoteSettings.clientName}</span>
-               </div>
-            )}
-
-            <button onClick={() => fitView()} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-300 hover:text-white" title="Fit View"><Focus size={20} /></button>
-            <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-300 hover:text-white" title="Settings"><Settings size={20} /></button>
-            <button onClick={() => setShowSuggestions(true)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-amber-400 hover:text-white hover:bg-amber-500/20" title="Google Integrations"><Zap size={20} /></button>
-            
-            <button onClick={() => navigate('/invoices', { state: { quoteItems: quoteItems, projectId: selectedProject, clientId: quoteSettings.clientId } })} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-purple-400 hover:text-white transition-colors" title="Convert to Invoice"><FileText size={20} /></button>
-            <button onClick={() => generateQuotePDF({ id: 'DRAFT', name: 'Quote', items: quoteItems.map(i => ({ name: i.material.name, type: i.type, quantity: i.quantity, rate: i.type==='staff'?i.material.chargeRate:i.type==='equipment'?i.material.costRate:i.material.pricePerUnit })), totalRevenue, marginPct }, projects.find(p=>p.id===selectedProject), quoteSettings)} className="p-2 rounded-lg border border-white/10 bg-stone-800 text-gray-300 hover:text-white"><Download size={20} /></button>
-            <button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg border border-indigo-400/50 flex items-center gap-2 active:scale-95 transition-all">
-                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
-                {isSaving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+                <select value={selectedProject} onChange={e => setSelectedProject(e.target.value)} className="px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-white font-bold min-w-[180px] hover:border-indigo-500 transition-colors cursor-pointer text-sm"><option value="">Select Project...</option>{projects.map(p => (<option key={p.id} value={p.id}>{p.name}</option>))}</select>
+                
+                <button onClick={openLoadModal} className="px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-gray-300 border border-white/10 hover:text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><Folder size={16} /> Load</button>
+                <button onClick={handleNewQuote} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><Plus size={16} /> New</button>
+                <button onClick={handleGenerateScope} disabled={isGeneratingScope} className="px-4 py-2.5 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2">
+                    {isGeneratingScope ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} 
+                    Scope
+                </button>
+                <button onClick={() => navigate('/invoices', { state: { 
+                    quoteItems: quoteItems, 
+                    projectId: selectedProject, 
+                    clientId: quoteSettings.clientId,
+                    clientName: quoteSettings.clientName,
+                    clientAddress: quoteSettings.clientAddress
+                } })} className="px-4 py-2.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600 hover:text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><FileText size={16} /> Invoice</button>
+                <button onClick={() => generateQuotePDF({ 
+                    id: 'DRAFT', 
+                    name: 'Quote', 
+                    scope: quoteScope,
+                    items: quoteItems.map(i => ({ 
+                        name: i.material.name, 
+                        type: i.type, 
+                        quantity: i.quantity, 
+                        rate: i.type==='staff'?i.material.chargeRate:i.type==='equipment'?i.material.costRate:i.material.pricePerUnit 
+                    })), 
+                    totalRevenue: financials.total, 
+                    marginPct 
+                }, projects.find(p=>p.id===selectedProject), quoteSettings)} className="p-2.5 bg-stone-800 text-gray-300 hover:text-white rounded-xl border border-white/10 transition-all"><Download size={18} /></button>
+                <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase tracking-widest shadow-xl transition-all disabled:opacity-50 text-xs">{isSaving ? 'Saving...' : 'Save'}</button>
+                <button onClick={() => setShowSettings(true)} className="p-2.5 bg-stone-800 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all"><Settings size={18} /></button>
+            </PowerHeader>
         </div>
 
-        {/* --- MAIN AREA --- */}
         <div className="flex-1 flex overflow-hidden relative">
-          
-          {/* MOBILE BACKDROP */}
           <div 
             className={`fixed inset-0 z-40 bg-black/80 backdrop-blur-sm lg:hidden transition-opacity duration-300 ${showSidebar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             onClick={() => setShowSidebar(false)}
           />
 
-          {/* SIDEBAR */}
-          <div className={`
-              fixed inset-y-0 left-0 z-50 w-80 bg-stone-900/95 border-r border-white/5 flex flex-col shadow-2xl transition-transform duration-300 
-              lg:relative lg:translate-x-0 lg:z-0
-              ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
-          `}>
-            <div className="p-4 border-b border-white/5 bg-stone-900/50 flex justify-between items-center">
-              <div className="relative flex-1 mr-2">
-                <Search className="absolute left-3 top-2.5 text-gray-500" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="Search..." 
-                  value={searchTerm} 
-                  onChange={e => setSearchTerm(e.target.value)} 
-                  className="w-full bg-stone-800 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white focus:border-indigo-500 outline-none" 
-                />
-              </div>
-              <button onClick={() => setShowSidebar(false)} className="lg:hidden p-2 text-gray-400 hover:text-white"><X size={20}/></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-              {/* Materials */}
-              <div>
-                <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Materials</div>
-                <div className="space-y-2">
-                  {materials.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, visibleMaterials).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}
-                </div>
-                {materials.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length > visibleMaterials && (
-                  <button onClick={() => setVisibleMaterials(prev => prev + 20)} className="w-full mt-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg text-xs font-bold text-indigo-400 transition-colors">Load More ({materials.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length - visibleMaterials})</button>
-                )}
-              </div>
+          <ResourceSidebar 
+              isOpen={showSidebar} 
+              onClose={() => setShowSidebar(false)}
+              materials={materials}
+              staff={staff}
+              equipment={equipment}
+              onSearch={setSearchTerm}
+              onTapAdd={onTapAdd}
+          />
 
-              {/* Staff */}
-              <div className="border-t border-white/10 my-2 pt-2">
-                <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Staff</div>
-                <div className="space-y-2">
-                  {staff.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, visibleStaff).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}
-                </div>
-                {staff.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length > visibleStaff && (
-                  <button onClick={() => setVisibleStaff(prev => prev + 10)} className="w-full mt-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg text-xs font-bold text-emerald-400 transition-colors">Load More ({staff.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length - visibleStaff})</button>
-                )}
-              </div>
-
-              {/* Equipment */}
-              <div className="border-t border-white/10 my-2 pt-2">
-                <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">Equipment</div>
-                <div className="space-y-2">
-                  {equipment.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, visibleEquipment).map(x => <DraggableItem key={x.id} item={x} onClick={() => onTapAdd(x)} />)}
-                </div>
-                {equipment.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length > visibleEquipment && (
-                  <button onClick={() => setVisibleEquipment(prev => prev + 10)} className="w-full mt-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg text-xs font-bold text-amber-400 transition-colors">Load More ({equipment.filter(i=>i.name.toLowerCase().includes(searchTerm.toLowerCase())).length - visibleEquipment})</button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* CANVAS */}
           <div className="flex-1 flex flex-col relative bg-transparent overflow-hidden">
             <div className="absolute inset-0 opacity-20 pointer-events-none bg-[size:40px_40px] bg-[linear-gradient(to_right,#4f46e5_1px,transparent_1px),linear-gradient(to_bottom,#4f46e5_1px,transparent_1px)]" />
             <div ref={canvasRef} className={`flex-1 rounded-3xl relative overflow-hidden m-6 transition-all duration-500 ${isDragOver ? 'border-4 border-indigo-500 bg-indigo-900/20' : 'border-2 border-white/5 bg-stone-900/40 shadow-2xl'} backdrop-blur-sm`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
@@ -1292,33 +1265,45 @@ const QuoteBuilderContent = () => {
                    nodes={nodes} 
                    edges={edges} 
                    nodeTypes={nodeTypes} 
+                   edgeTypes={edgeTypes}
                    onNodesChange={onNodesChange} 
                    onEdgesChange={onEdgesChange} 
                    onConnect={onConnect} 
+                   onNodeClick={handleNodeClick}
                    snapToGrid={true} 
                    snapGrid={[20, 20]} 
                    fitView 
                    minZoom={0.05} // Infinite zoom out
                    maxZoom={2}
-                   // No translateExtent prop means it's infinite by default
                    proOptions={{ hideAttribution: true }}
                 >
                   <Background color="#6366f1" gap={40} size={1} className="opacity-[0.05]" />
                   <Controls className="!bg-stone-900 !border-white/10 !text-white !rounded-lg" />
                   <MiniMap className="!bg-stone-900 !border-white/10 !rounded-lg" nodeColor={n => n.type==='dimension'?'#3b82f6':n.type==='zone'?'#a855f7':'#6366f1'} />
                 </ReactFlow>
+
+                {/* AI DISCLAIMER BANNER */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                    <div className="bg-amber-500/10 backdrop-blur-md border border-amber-500/30 px-4 py-1.5 rounded-full flex items-center gap-2 shadow-xl">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span className="text-[10px] font-black text-amber-200 uppercase tracking-widest">Human Review Required</span>
+                    </div>
+                </div>
               </div>
             </div>
 
-            {/* BOTTOM SHEET */}
             <div className="h-64 bg-stone-900 border-t border-white/10 flex flex-col z-20 shadow-2xl">
-              <div className="px-6 py-2 border-b border-white/5 flex justify-between items-center bg-stone-900/95"><h3 className="text-xs font-black text-gray-300 uppercase">Items ({quoteItems.length})</h3></div>
+              <div className="px-6 py-2 border-b border-white/5 flex justify-between items-center bg-stone-900/95">
+                <h3 className="text-xs font-black text-gray-300 uppercase">Items ({quoteItems.length})</h3>
+                <div className="text-[9px] text-amber-500/80 font-bold uppercase flex items-center gap-1.5">
+                    <Sparkles size={10} /> AI Assisted Quantities - Verify Before Use
+                </div>
+              </div>
               <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-stone-950/50 space-y-2">{quoteItems.map(item => <QuoteItem key={item.tempId} item={item} onUpdate={updateItem} onRemove={deleteNode} formatCurrency={formatCurrency} />)}</div>
             </div>
           </div>
         </div>
 
-        {/* --- AI CHAT FLOATING BUTTON & WINDOW --- */}
         <div className="absolute bottom-24 right-6 z-50">
           {!showChat && (
             <button 

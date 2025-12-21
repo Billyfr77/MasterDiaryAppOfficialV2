@@ -3,69 +3,90 @@
  * PDF generation for customer and in-house invoices
  */
 
-const { Invoice, Diary, Project, Staff, Equipment, Node } = require('../models');
+const { Invoice, Diary, Project, Staff, Equipment, Node, Client, Job } = require('../models');
 const { sequelize } = require('../models');
 const jsPDF = require('jspdf');
 const fs = require('fs');
 const path = require('path');
+const { Op } = require('sequelize');
 
 const createInvoice = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { diaryId, invoiceType, notes } = req.body;
+    const { diaryId, diaryIds, projectId, clientId, invoiceType, notes, items: manualItems, status } = req.body;
 
-    // Get the diary with related data
-    const diary = await Diary.findByPk(diaryId, {
-      include: [
-        { model: Project, as: 'Project' }
-      ],
-      transaction
-    });
+    // Determine target diaries
+    let targetDiaryIds = [];
+    if (diaryIds && Array.isArray(diaryIds)) targetDiaryIds = diaryIds;
+    else if (diaryId) targetDiaryIds = [diaryId];
 
-    if (!diary) {
-      await transaction.rollback();
-      return res.status(404).json({ error: 'Diary not found' });
+    // Fetch diaries if any
+    let diaries = [];
+    if (targetDiaryIds.length > 0) {
+        diaries = await Diary.findAll({
+            where: { id: targetDiaryIds },
+            include: [{ model: Project, as: 'Project' }],
+            transaction
+        });
     }
 
-    // Calculate invoice data from canvas
-    const canvasData = diary.canvasData || [];
-    const invoiceItems = [];
+    // Calculate invoice data
+    const invoiceItems = manualItems || []; // Allow manual items if passed directly
     let totalAmount = 0;
 
-    for (const entry of canvasData) {
-      for (const item of entry.items || []) {
-        const cost = await calculateItemCost(item);
-        const revenue = invoiceType === 'customer' ? await calculateItemRevenue(item) : cost;
-
-        invoiceItems.push({
-          description: `${item.name} (${entry.time})`,
-          quantity: item.quantity || 1,
-          rate: revenue,
-          amount: revenue * (item.quantity || 1)
-        });
-
-        totalAmount += revenue * (item.quantity || 1);
-      }
-    }
-
-    // Additional costs
-    if (diary.additionalCosts) {
-      for (const cost of diary.additionalCosts) {
-        invoiceItems.push({
-          description: cost.description,
-          quantity: 1,
-          rate: cost.amount,
-          amount: cost.amount
-        });
-        totalAmount += cost.amount;
-      }
+    // If no manual items provided, calculate from diaries
+    if (invoiceItems.length === 0 && diaries.length > 0) {
+        for (const diary of diaries) {
+            const canvasData = diary.canvasData || [];
+            // Process Canvas Data
+            for (const entry of canvasData) {
+                for (const item of entry.items || []) {
+                    const cost = await calculateItemCost(item);
+                    const revenue = invoiceType === 'customer' ? await calculateItemRevenue(item) : cost;
+                    const amount = revenue * (item.quantity || 1);
+                    
+                    invoiceItems.push({
+                        description: `${item.name} (${diary.date})`,
+                        quantity: item.quantity || 1,
+                        rate: revenue,
+                        amount: amount
+                    });
+                    totalAmount += amount;
+                }
+            }
+            // Process Additional Costs
+            if (diary.additionalCosts) {
+                for (const cost of diary.additionalCosts) {
+                    invoiceItems.push({
+                        description: `${cost.description} (${diary.date})`,
+                        quantity: 1,
+                        rate: cost.amount,
+                        amount: cost.amount
+                    });
+                    totalAmount += cost.amount;
+                }
+            }
+            // Add Diary Base Cost/Revenue if stored directly
+            if (diary.totalRevenue && (!diary.canvasData || diary.canvasData.length === 0)) {
+                 invoiceItems.push({
+                    description: `Site Diary Entry - ${diary.date}`,
+                    quantity: 1,
+                    rate: diary.totalRevenue,
+                    amount: diary.totalRevenue
+                 });
+                 totalAmount += parseFloat(diary.totalRevenue);
+            }
+        }
+    } else {
+        // Recalculate total from passed manual items
+        totalAmount = invoiceItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
     }
 
     const invoiceData = {
       invoiceNumber: generateInvoiceNumber(),
       date: new Date().toISOString().split('T')[0],
-      project: diary.Project?.name || 'No Project',
+      project: diaries[0]?.Project?.name || 'Multiple/General',
       items: invoiceItems,
       totalAmount,
       notes: notes || ''
@@ -73,33 +94,34 @@ const createInvoice = async (req, res) => {
 
     // Create invoice record
     const invoice = await Invoice.create({
-      diaryId,
-      projectId: diary.projectId,
+      diaryId: targetDiaryIds.length === 1 ? targetDiaryIds[0] : null, // Keep for legacy if single
+      projectId: projectId || diaries[0]?.projectId,
+      clientId: clientId || diaries[0]?.clientId,
       invoiceType,
       invoiceData,
       totalAmount,
-      status: 'draft',
+      status: status || 'draft',
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 30 days
     }, { transaction });
 
+    // Link Diaries to Invoice
+    if (targetDiaryIds.length > 0) {
+        await Diary.update(
+            { invoiceId: invoice.id },
+            { where: { id: targetDiaryIds }, transaction }
+        );
+    }
+
     await transaction.commit();
 
-    // Generate PDF
-    const pdfPath = await generateInvoicePDF(invoice);
+    // Generate PDF (Optional: can be done on demand)
+    // const pdfPath = await generateInvoicePDF(invoice);
+    // await Invoice.update({ pdfUrl: `/invoices/${invoice.id}.pdf` }, { where: { id: invoice.id } });
 
-    // Update invoice with PDF URL
-    await Invoice.update(
-      { pdfUrl: `/invoices/${invoice.id}.pdf` },
-      { where: { id: invoice.id } }
-    );
-
-    res.status(201).json({
-      ...invoice.toJSON(),
-      pdfUrl: `/invoices/${invoice.id}.pdf`
-    });
+    res.status(201).json(invoice);
 
   } catch (error) {
-    await transaction.rollback();
+    if (transaction) await transaction.rollback();
     console.error('Create invoice error:', error);
     res.status(500).json({ error: error.message });
   }
@@ -109,7 +131,9 @@ const getInvoiceById = async (req, res) => {
   try {
     const invoice = await Invoice.findByPk(req.params.id, {
       include: [
-        { model: Diary, include: [{ model: Project }] }
+        { model: Diary }, // Now returns array due to hasMany
+        { model: Project },
+        { model: Client }
       ]
     });
 
@@ -125,24 +149,20 @@ const getInvoiceById = async (req, res) => {
 
 const getInvoices = async (req, res) => {
   try {
-    const { status, invoiceType } = req.query;
+    const { status, invoiceType, projectId, search } = req.query;
     const where = {};
 
     if (status) where.status = status;
     if (invoiceType) where.invoiceType = invoiceType;
-
-    const include = [];
-    if (Diary) {
-      const diaryInclude = [];
-      if (Project) {
-        diaryInclude.push({ model: Project });
-      }
-      include.push({ model: Diary, include: diaryInclude });
-    }
+    if (projectId) where.projectId = projectId;
+    if (search) where.invoiceNumber = { [Op.like]: `%${search}%` };
 
     const invoices = await Invoice.findAll({
       where,
-      include,
+      include: [
+          { model: Project },
+          { model: Client }
+      ],
       order: [['createdAt', 'DESC']]
     });
 
@@ -156,12 +176,10 @@ const getInvoices = async (req, res) => {
 const updateInvoiceStatus = async (req, res) => {
   try {
     const { status } = req.body;
-
     const [updated] = await Invoice.update(
       { status },
       { where: { id: req.params.id } }
     );
-
     if (updated) {
       const updatedInvoice = await Invoice.findByPk(req.params.id);
       res.json(updatedInvoice);
@@ -173,18 +191,59 @@ const updateInvoiceStatus = async (req, res) => {
   }
 };
 
+// NEW: Bulk Update Status
+const bulkUpdateStatus = async (req, res) => {
+    try {
+        const { ids, status } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'No IDs provided' });
+        
+        await Invoice.update(
+            { status },
+            { where: { id: ids } }
+        );
+        res.json({ message: 'Invoices updated successfully', count: ids.length });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// NEW: Get Uninvoiced Diaries
+const getUninvoicedDiaries = async (req, res) => {
+    try {
+        const { projectId, clientId, jobId } = req.query;
+        const where = { invoiceId: null }; // Only fetch diaries not yet linked to an invoice
+        
+        if (projectId) where.projectId = projectId;
+        if (clientId) where.clientId = clientId;
+        if (jobId) where.jobId = jobId;
+
+        const diaries = await Diary.findAll({
+            where,
+            include: [{ model: Project }, { model: Job, as: 'job' }],
+            order: [['date', 'DESC']]
+        });
+        res.json(diaries);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 const downloadInvoicePDF = async (req, res) => {
   try {
     const invoice = await Invoice.findByPk(req.params.id);
 
-    if (!invoice || !invoice.pdfUrl) {
-      return res.status(404).json({ error: 'Invoice PDF not found' });
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    
+    // Generate fresh if not exists
+    let pdfPath;
+    if (invoice.pdfUrl) {
+        pdfPath = path.join(__dirname, '../../invoices', path.basename(invoice.pdfUrl));
     }
-
-    const pdfPath = path.join(__dirname, '../../invoices', `${invoice.id}.pdf`);
-
-    if (!fs.existsSync(pdfPath)) {
-      return res.status(404).json({ error: 'PDF file not found' });
+    
+    if (!pdfPath || !fs.existsSync(pdfPath)) {
+        // Regenerate
+        pdfPath = await generateInvoicePDF(invoice);
+        await Invoice.update({ pdfUrl: `/invoices/${invoice.id}.pdf` }, { where: { id: invoice.id } });
     }
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -227,7 +286,7 @@ const generateInvoicePDF = async (invoice) => {
   // Project info
   doc.setFontSize(12);
   doc.text('Project:', 20, 70);
-  doc.text(invoice.invoiceData.project, 60, 70);
+  doc.text(invoice.invoiceData.project || '', 60, 70);
 
   // Items table
   let yPos = 90;
@@ -321,5 +380,7 @@ module.exports = {
   getInvoiceById,
   getInvoices,
   updateInvoiceStatus,
-  downloadInvoicePDF
+  downloadInvoicePDF,
+  bulkUpdateStatus,
+  getUninvoicedDiaries
 };

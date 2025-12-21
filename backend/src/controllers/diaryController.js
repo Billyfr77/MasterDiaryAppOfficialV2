@@ -50,15 +50,11 @@ const getAllDiaries = async (req, res) => {
     const diaries = await Diary.findAll({
       where,
       include: [
-        {
-          model: Project,
-          as: 'Project',
-          where: { userId: req.user.id },
-          required: true
-        },
-        { model: Staff, as: 'Staff' }
-      ],
-      order: [['date', 'DESC']]
+        { model: Project },
+        { model: Staff },
+        { model: Client },
+        { model: Job, as: 'job' }
+      ]
     });
     res.json(diaries);
   } catch (error) {
