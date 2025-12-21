@@ -149,32 +149,50 @@ function App() {
               <DndProvider backend={HTML5Backend}>
                 <div className={`min-h-screen flex flex-col text-gray-900 dark:text-gray-100 font-sans transition-all duration-500 ${isLanding ? 'bg-transparent' : 'bg-[#0a0a0c]'}`}>
           <style>{`
-            .custom-scrollbar-x::-webkit-scrollbar { height: 0px; }
-            .custom-scrollbar-x { scrollbar-width: none; }
+            @keyframes wave-flow {
+              0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.4; }
+              50% { transform: translate(2%, 5%) rotate(2deg) scale(1.1); opacity: 0.8; }
+              100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.4; }
+            }
+
+            @keyframes wave-drift-slow {
+              0% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+              100% { background-position: 0% 50%; }
+            }
             
-            @keyframes pulse-glow {
-              0%, 100% { opacity: 0.3; transform: scale(1); }
-              50% { opacity: 0.6; transform: scale(1.1); }
+            @keyframes grid-drift {
+              0% { background-position: 0 0; }
+              100% { background-position: 100px 100px; }
             }
           `}</style>
           
-          {/* --- PREMIUM APP BACKGROUND --- */}
+          {/* --- ULTIMATE BLACK SPACE & PURPLE AURORA --- */}
           {!isPortal && !isLanding && (
-            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-               {/* 1. Base Gradient & Noise */}
-               <div className="absolute inset-0 bg-gradient-to-br from-[#0f1115] via-[#050505] to-[#0a0a0c]"></div>
-               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] mix-blend-overlay"></div>
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#000000]">
+               {/* 1. Pure Space Base & Noise */}
+               <div className="absolute inset-0 bg-black"></div>
+               {/* Persistent Deep Glow (Prevents Abyss) */}
+               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(30,27,75,0.15)_0%,transparent_100%)]"></div>
+               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] mix-blend-overlay"></div>
                
-               {/* 2. Cyber Grid (50px) */}
-               <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:50px_50px] opacity-[0.03]"></div>
-               
-               {/* 3. High-Contrast Multi-Color Glows */}
-               <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[radial-gradient(circle,rgba(99,102,241,0.15)_0%,transparent_70%)] blur-[100px] animate-[pulse-glow_8s_ease-in-out_infinite]" /> {/* Indigo */}
-               <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[radial-gradient(circle,rgba(139,92,246,0.15)_0%,transparent_70%)] blur-[100px] animate-[pulse-glow_10s_ease-in-out_infinite_reverse]" /> {/* Violet */}
-               <div className="absolute top-[30%] left-[40%] w-[50%] h-[50%] bg-[radial-gradient(circle,rgba(16,185,129,0.12)_0%,transparent_70%)] blur-[120px] animate-[pulse-glow_12s_ease-in-out_infinite]" /> {/* Emerald */}
+               {/* 2. Cyber Perspective Grid (Subtle) */}
+               <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:100px_100px] opacity-10 animate-[grid-drift_60s_linear_infinite]"></div>
 
-               {/* 4. Deep Vignette */}
-               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(0,0,0,0.4)_100%)]"></div>
+               {/* 3. CASCADING NEON LIGHTS (AURORA) */}
+               <div className="absolute inset-0 mix-blend-screen filter blur-[140px]">
+                   {/* Massive Purple Wash (Full Left Side) */}
+                   <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[140%] bg-gradient-to-b from-transparent via-violet-600/30 to-transparent animate-[wave-flow_20s_ease-in-out_infinite] rotate-[25deg]" />
+                   
+                   {/* Massive Indigo Wash (Full Right Side) */}
+                   <div className="absolute top-[-10%] right-[-20%] w-[70%] h-[120%] bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent animate-[wave-flow_25s_ease-in-out_infinite_reverse] rotate-[-15deg]" />
+                   
+                   {/* Arctic Blue Core (Pulsing Center) */}
+                   <div className="absolute top-[10%] left-[10%] w-[80%] h-[80%] bg-[radial-gradient(circle,rgba(34,211,238,0.08)_0%,transparent_70%)] animate-[wave-flow_30s_ease-in-out_infinite]" />
+                   
+                   {/* Deep Base Violet (Grounding) */}
+                   <div className="absolute bottom-[-10%] left-[-10%] w-[120%] h-[60%] bg-[radial-gradient(circle,rgba(124,58,237,0.12)_0%,transparent_70%)] animate-[wave-flow_40s_ease-in-out_infinite_reverse]" />
+               </div>
             </div>
           )}
           {/* Dark Overlay for readability removed in favor of premium background */}

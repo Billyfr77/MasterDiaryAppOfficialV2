@@ -60,11 +60,13 @@ const HUB_COLORS = {
 };
 
 // --- RICH MARKER (OverlayView) ---
-const RichMarker = ({ position, type, onClick, label, isSelected, isZoneCenter, stats, zoom }) => {
+const RichMarker = ({ position, type, onClick, label, isSelected, isZoneCenter, stats, zoom, properties }) => {
     const getPixelPositionOffset = (width, height) => ({
         x: -(width / 2),
         y: isZoneCenter ? -(height / 1.2) : -(height / 2),
     });
+
+    const isAI = properties?.aiGenerated;
 
     let Icon = Briefcase;
     let colorClass = "bg-indigo-600 shadow-indigo-500/40";
@@ -102,6 +104,11 @@ const RichMarker = ({ position, type, onClick, label, isSelected, isZoneCenter, 
                         `}>
                             <Icon size={isZoomedIn ? 40 : 32} strokeWidth={2} className="drop-shadow-lg" />
                         </div>
+                        {isAI && (
+                            <div className="absolute -top-2 -left-2 bg-amber-500 rounded-full p-1 border-2 border-stone-900 shadow-lg" title="AI Generated Zone">
+                                <Sparkles size={10} className="text-black" strokeWidth={3} />
+                            </div>
+                        )}
                         <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-stone-950 flex items-center justify-center shadow-lg">
                             <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
                         </div>
@@ -109,8 +116,8 @@ const RichMarker = ({ position, type, onClick, label, isSelected, isZoneCenter, 
 
                     {isZoomedIn && stats ? (
                         <div className="flex flex-col gap-1 bg-stone-950/90 backdrop-blur-xl border border-white/10 p-3 rounded-xl shadow-2xl min-w-[200px] animate-fade-in-up">
-                            <div className="text-sm font-black text-white uppercase tracking-widest text-center leading-tight mb-2 border-b border-white/10 pb-2">
-                                {label}
+                            <div className="text-sm font-black text-white uppercase tracking-widest text-center leading-tight mb-2 border-b border-white/10 pb-2 flex items-center justify-center gap-2">
+                                {label} {isAI && <span className="text-[8px] bg-amber-500/20 text-amber-500 px-1 rounded">AI</span>}
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-[10px]">
                                 <div className="bg-emerald-900/30 p-1.5 rounded border border-emerald-500/20">
@@ -134,8 +141,8 @@ const RichMarker = ({ position, type, onClick, label, isSelected, isZoneCenter, 
                         </div>
                     ) : (
                         <div className="flex flex-col items-center gap-1 bg-stone-950/80 backdrop-blur-xl border border-white/10 p-2 rounded-xl shadow-2xl min-w-[140px] transition-all group-hover:scale-105 group-hover:border-indigo-500/50">
-                            <div className="text-xs font-black text-white uppercase tracking-widest text-center leading-tight max-w-[160px] truncate px-1">
-                                {label}
+                            <div className="text-xs font-black text-white uppercase tracking-widest text-center leading-tight max-w-[160px] truncate px-1 flex items-center justify-center gap-1">
+                                {isAI && <Sparkles size={10} className="text-amber-500" />} {label}
                             </div>
                         </div>
                     )}
@@ -1318,11 +1325,11 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
                           return (
                               <React.Fragment key={asset.id}>
                                   <Polygon paths={asset.coordinates} options={{ fillColor: asset.properties?.color || HUB_COLORS.active, fillOpacity: 0.2, strokeColor: asset.properties?.color || HUB_COLORS.active, strokeWeight: 2, zIndex: 1 }} onClick={(e) => { e.stop(); handleZoneClick(asset); }} />
-                                  {center && <RichMarker position={center} type={asset.properties?.type || 'ProjectZone'} label={asset.name} isSelected={selectedHub?.assetId === asset.id} isZoneCenter={true} stats={stats} onClick={() => handleZoneClick(asset)} />}
+                                  {center && <RichMarker position={center} type={asset.properties?.type || 'ProjectZone'} label={asset.name} isSelected={selectedHub?.assetId === asset.id} isZoneCenter={true} stats={stats} onClick={() => handleZoneClick(asset)} zoom={initialView.zoom} properties={asset.properties} />}
                               </React.Fragment>
                           );
                       } else if (asset.geometryType === 'POINT') {
-                          return <RichMarker key={asset.id} position={asset.coordinates[0]} type={asset.type} label={asset.name} isSelected={false} onClick={() => {}} />;
+                          return <RichMarker key={asset.id} position={asset.coordinates[0]} type={asset.type} label={asset.name} isSelected={false} onClick={() => {}} properties={asset.properties} />;
                       }
                       return null;
                   })}

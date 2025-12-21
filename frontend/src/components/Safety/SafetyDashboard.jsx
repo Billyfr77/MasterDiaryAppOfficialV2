@@ -58,6 +58,9 @@ const SafetyCopilot = ({ isOpen, onClose, onGenerate }) => {
                 
                 {/* Chat Area */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-black/20">
+                    <div className="bg-amber-500/10 border border-amber-500/20 p-2 rounded-lg text-[10px] text-amber-200/80 text-center">
+                        ⚠️ <strong>AI ASSISTANT:</strong> Content is generated automatically. You must verify compliance with local laws and site requirements before use.
+                    </div>
                     {messages.map((msg, idx) => (
                         <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[80%] p-3 rounded-xl text-sm leading-relaxed ${
@@ -223,7 +226,10 @@ const SafetyDashboard = () => {
           <h1 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
             <AlertTriangle className="text-orange-500" /> Safety Command Center
           </h1>
-          <p className="text-xs text-gray-500 font-bold tracking-widest mt-1">COMPLIANCE & RISK MANAGEMENT</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-xs text-gray-500 font-bold tracking-widest">COMPLIANCE & RISK MANAGEMENT</p>
+            <span className="text-[9px] bg-stone-800 text-gray-400 px-2 py-0.5 rounded border border-white/5">AI Assisted • Human Verification Required</span>
+          </div>
         </div>
         <div className="flex gap-3">
           <button 

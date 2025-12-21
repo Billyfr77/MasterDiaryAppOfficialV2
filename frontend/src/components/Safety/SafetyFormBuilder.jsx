@@ -11,6 +11,23 @@ const ItemTypes = {
 };
 
 // ==========================================
+// AI VERIFICATION BADGE
+// ==========================================
+const AIBadge = ({ onVerify }) => (
+    <div className="absolute top-2 right-2 flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-2 py-1 z-30 backdrop-blur-md">
+        <Sparkles size={10} className="text-amber-500" />
+        <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wide">AI Generated</span>
+        <button 
+            onClick={(e) => { e.stopPropagation(); onVerify(); }} 
+            className="ml-1 bg-amber-500 hover:bg-amber-400 text-black rounded-full p-0.5 transition-colors" 
+            title="Mark as Verified"
+        >
+            <CheckSquare size={10} strokeWidth={3} />
+        </button>
+    </div>
+);
+
+// ==========================================
 // FLOATING CONTEXT TOOLBAR
 // ==========================================
 const FloatingToolbar = ({ field, onUpdate, onDelete, onDuplicate, onAIPolish, isPolishing }) => {
@@ -352,9 +369,11 @@ const CanvasField = ({ field, index, moveField, onDelete, onSelect, onUpdate, is
         relative group mb-4 p-3 rounded-lg transition-all border-2 flex-shrink-0
         ${isSelected ? `border-[${accentColor || '#6366f1'}] bg-indigo-50/5 z-20 shadow-md` : 'border-transparent hover:border-gray-200 hover:bg-gray-50'}
         ${isDragging ? 'opacity-0' : 'opacity-100'}
+        ${field.isAI && !field.verified ? 'ring-1 ring-amber-500/30' : ''}
       `}
       data-handler-id={handlerId}
     >
+      {field.isAI && !field.verified && <AIBadge onVerify={() => onUpdate({ ...field, verified: true })} />}
       {isSelected && <FloatingToolbar field={field} onUpdate={onUpdate} onDelete={onDelete} onDuplicate={onDuplicate} onAIPolish={onAIPolish} isPolishing={isPolishing} />}
       <div className="absolute -left-8 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-gray-600 cursor-move opacity-0 group-hover:opacity-100 transition-opacity z-10"><GripVertical size={20} /></div>
       {renderContent()}
@@ -553,8 +572,8 @@ const SafetyFormBuilder = ({ onSave, initialData = [] }) => {
   const handleFieldUpdate = (updatedField) => { setFields(fields.map(f => f.id === updatedField.id ? updatedField : f)); setSelectedField(updatedField); };
   const addField = (type) => { const newField = { id: window.crypto.randomUUID(), type, label: type === 'header' ? 'New Section' : type === 'paragraph' ? '' : `New ${type}`, value: type === 'paragraph' ? 'Enter text here...' : '', required: false, width: '100%', fontSize: type === 'header' ? '2xl' : 'normal', options: type === 'checkbox' || type === 'select' || type === 'radio' ? ['Option 1', 'Option 2'] : [] }; setFields((prev) => [...prev, newField]); };
   const duplicateField = (field) => { const newField = { ...field, id: window.crypto.randomUUID() }; setFields(prev => [...prev, newField]); };
-  const handleAIPolish = async (field) => { if (!field.label && !field.value) return; setPolishingFieldId(field.id); try { const res = await api.post('/safety/ai-content', { prompt: `Polish and professionalize this text for a construction safety document: "${field.value || field.label}"`, mode: 'polish' }); const polishedText = res.data.result?.text || res.data.result || field.label; const updated = { ...field }; if (field.type === 'paragraph') updated.value = polishedText; else updated.label = polishedText; handleFieldUpdate(updated); } catch (e) { console.error("Polish failed", e); } finally { setPolishingFieldId(null); } };
-  const generateWithAI = async () => { if (!aiPrompt) return; setAiLoading(true); try { const res = await api.post('/safety/ai-content', { prompt: aiPrompt, mode: 'full_form' }); if (res.data.result && res.data.result.fields) { const aiFields = res.data.result.fields.map(f => ({ ...f, id: window.crypto.randomUUID(), width: '100%' })); setFields(aiFields); setShowAIModal(false); } else { alert("AI Response format invalid."); } } catch (err) { console.error("AI Error:", err); alert("Failed to generate form."); } finally { setAiLoading(false); } };
+  const handleAIPolish = async (field) => { if (!field.label && !field.value) return; setPolishingFieldId(field.id); try { const res = await api.post('/safety/ai-content', { prompt: `Polish and professionalize this text for a construction safety document: "${field.value || field.label}"`, mode: 'polish' }); const polishedText = res.data.result?.text || res.data.result || field.label; const updated = { ...field, isAI: true, verified: false }; if (field.type === 'paragraph') updated.value = polishedText; else updated.label = polishedText; handleFieldUpdate(updated); } catch (e) { console.error("Polish failed", e); } finally { setPolishingFieldId(null); } };
+  const generateWithAI = async () => { if (!aiPrompt) return; setAiLoading(true); try { const res = await api.post('/safety/ai-content', { prompt: aiPrompt, mode: 'full_form' }); if (res.data.result && res.data.result.fields) { const aiFields = res.data.result.fields.map(f => ({ ...f, id: window.crypto.randomUUID(), width: '100%', isAI: true, verified: false })); setFields(aiFields); setShowAIModal(false); } else { alert("AI Response format invalid."); } } catch (err) { console.error("AI Error:", err); alert("Failed to generate form."); } finally { setAiLoading(false); } };
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -562,7 +581,11 @@ const SafetyFormBuilder = ({ onSave, initialData = [] }) => {
         <div className="w-72 bg-stone-900 border-r border-white/5 flex flex-col">
           <div className="p-6 border-b border-white/5"><h2 className="text-lg font-black text-white tracking-tight flex items-center gap-2"><PenTool size={20} className="text-indigo-500" /> Form Builder</h2></div>
           <div className="p-6 overflow-y-auto flex-1">
-             <button onClick={() => setShowAIModal(true)} className="w-full mb-8 p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.02] hover:shadow-indigo-500/25 group"><Sparkles size={18} className="group-hover:animate-spin-slow" /><span className="font-bold text-sm uppercase tracking-wide">AI Generator</span></button>
+             <button onClick={() => setShowAIModal(true)} className="w-full mb-4 p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.02] hover:shadow-indigo-500/25 group"><Sparkles size={18} className="group-hover:animate-spin-slow" /><span className="font-bold text-sm uppercase tracking-wide">AI Generator</span></button>
+             <div className="mb-6 px-2 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2">
+                <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-amber-200/80 leading-tight">AI content requires human verification before use.</p>
+             </div>
              <div className="space-y-6">
                 <div><h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 pl-1">Structure</h3><div className="space-y-2"><DraggableField type="header" label="Header" icon={Type} onAdd={addField} /><DraggableField type="paragraph" label="Paragraph" icon={FileText} onAdd={addField} /></div></div>
                 <div><h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 pl-1">Inputs</h3><div className="space-y-2"><DraggableField type="text" label="Text Input" icon={Type} onAdd={addField} /><DraggableField type="select" label="Dropdown" icon={List} onAdd={addField} /><DraggableField type="checkbox" label="Checkboxes" icon={CheckSquare} onAdd={addField} /><DraggableField type="date" label="Date" icon={Calendar} onAdd={addField} /></div></div>

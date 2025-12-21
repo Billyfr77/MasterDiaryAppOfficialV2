@@ -3,7 +3,7 @@
  * The Global AI Super-Feature for MasterDiaryOS
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, X, Minimize, Maximize, BrainCircuit, MessageSquare, ChevronRight } from 'lucide-react';
+import { Sparkles, Send, X, Minimize, Maximize, BrainCircuit, MessageSquare, ChevronRight, AlertTriangle } from 'lucide-react';
 import { api } from '../utils/api';
 import { useLocation, useParams } from 'react-router-dom';
 
@@ -171,8 +171,9 @@ const PinnacleCopilot = () => {
                 </button>
             </div>
         </div>
-        <div className="text-[9px] text-center mt-2 text-gray-600 font-mono">
-            SECURE CONNECTION • GEN-AI ENABLED
+        <div className="text-[9px] text-center mt-3 text-stone-600 font-mono flex items-center justify-center gap-1.5">
+            <AlertTriangle size={10} className="text-amber-500/50" />
+            <span>AI responses require human verification. Usage logs are audited.</span>
         </div>
       </div>
     </div>
