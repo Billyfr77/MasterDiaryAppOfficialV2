@@ -19,8 +19,20 @@ const ResourceCard = ({ item, onClick, onDragStart }) => {
   const handleDragStart = (e) => {
       if (onDragStart) onDragStart(e, item);
       else {
-          e.dataTransfer.setData('application/reactflow', JSON.stringify(item));
-          e.dataTransfer.effectAllowed = 'move';
+          // Sanitize item to prevent circular references
+          const safeItem = {
+              id: item.id,
+              name: item.name,
+              type: item.type,
+              pricePerUnit: item.pricePerUnit || 0,
+              chargeRate: item.chargeRate || item.chargeOutBase || 0,
+              costRate: item.costRate || item.costRateBase || 0,
+              category: item.category || 'General'
+          };
+          const jsonItem = JSON.stringify(safeItem);
+          e.dataTransfer.setData('application/reactflow', jsonItem);
+          e.dataTransfer.setData('text/plain', jsonItem); // Fallback
+          e.dataTransfer.effectAllowed = 'copy';
       }
   };
 

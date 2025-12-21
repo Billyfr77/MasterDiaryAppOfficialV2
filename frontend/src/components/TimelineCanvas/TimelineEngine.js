@@ -80,13 +80,33 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
       const sourceNode = nodes.find(n => n.id === params.source);
       const targetNode = nodes.find(n => n.id === params.target);
 
-      // --- CHRONO-SYNC LOGIC ---
+      // --- CHRONO-SYNC LOGIC (Parent -> Child) ---
       if (sourceNode?.type === 'chronos' && targetNode?.type === 'diaryNode') {
           const { startTime, duration } = sourceNode.data;
           onUpdateItem(targetNode.id, { startTime, duration });
       } else if (targetNode?.type === 'chronos' && sourceNode?.type === 'diaryNode') {
           const { startTime, duration } = targetNode.data;
           onUpdateItem(sourceNode.id, { startTime, duration });
+      }
+
+      // --- CHRONO-MODIFIER LOGIC (Break -> Shift) ---
+      // If a Chronos node (Break) connects to another Chronos node (Shift), subtract duration
+      if (sourceNode?.type === 'chronos' && targetNode?.type === 'chronos') {
+          const breakDuration = sourceNode.data.duration || 0;
+          const shiftDuration = targetNode.data.duration || 8;
+          const newDuration = Math.max(0, shiftDuration - breakDuration);
+          
+          onUpdateItem(targetNode.id, { duration: newDuration, status: 'adjusted' });
+
+          // Propagate to children of the Shift
+          const attachedEdges = edges.filter(e => e.source === targetNode.id || e.target === targetNode.id);
+          attachedEdges.forEach(edge => {
+              const childId = edge.source === targetNode.id ? edge.target : edge.source;
+              const childNode = nodes.find(n => n.id === childId);
+              if (childNode && childNode.type === 'diaryNode') {
+                  onUpdateItem(childId, { duration: newDuration });
+              }
+          });
       }
 
       // --- IMPACT-SYNC LOGIC ---
@@ -97,16 +117,31 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           onUpdateItem(targetNode.id, { duration: newDuration, costRate: newCost });
       }
 
-      // --- DELAY-PROPAGATION LOGIC (NEW) ---
-      if (sourceNode?.type === 'delay' && targetNode?.type === 'chronos') {
-          const delayAmt = sourceNode.data.delayHours || 0;
-          // Shift the pillar's total footprint
+      // --- DELAY/IMPACT PROPAGATION LOGIC (Deep Update) ---
+      // Delay or Impact connects to Chronos -> Updates Chronos AND all its attached Children
+      if ((sourceNode?.type === 'delay' || sourceNode?.type === 'impact') && targetNode?.type === 'chronos') {
+          const delayAmt = sourceNode.data.duration || 1; // Use duration as impact amount
           const currentDuration = targetNode.data.duration || 8;
-          onUpdateItem(targetNode.id, { duration: currentDuration + delayAmt, status: 'delayed' });
+          // Subtract delay from effective duration
+          const newDuration = Math.max(0, currentDuration - delayAmt); 
+          
+          // Logic: Update Chronos
+          onUpdateItem(targetNode.id, { duration: newDuration, status: 'impacted' });
+
+          // Find all children connected to this Chronos
+          const attachedEdges = edges.filter(e => e.source === targetNode.id || e.target === targetNode.id);
+          attachedEdges.forEach(edge => {
+              const childId = edge.source === targetNode.id ? edge.target : edge.source;
+              const childNode = nodes.find(n => n.id === childId);
+              if (childNode && childNode.type === 'diaryNode') {
+                  // Propagate new duration to child
+                  onUpdateItem(childId, { duration: newDuration });
+              }
+          });
       }
 
       setEdges((eds) => addEdge({ ...params, animated: true }, eds));
-  }, [nodes, setEdges, onUpdateItem]);
+  }, [nodes, edges, setEdges, onUpdateItem]);
 
   return {
     nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange,

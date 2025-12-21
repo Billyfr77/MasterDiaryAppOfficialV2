@@ -13,7 +13,7 @@ import {
   Wifi, Lock, Layout, Star, Trophy, Users, CheckCircle2, 
   ArrowRight, Sparkles, Command, Box, X, Hammer, Briefcase, Wrench,
   Globe, Layers, PenTool, CreditCard, GitBranch, FileText, Palette, AlertTriangle, Settings,
-  User, Timer, Package, Ruler, BarChart3, ClipboardCheck, Crown, Landmark
+  User, Timer, Package, Ruler, BarChart3, ClipboardCheck, Crown, Landmark, Map as MapIcon, Truck
 } from 'lucide-react'
 
 // --- ASSETS & CONFIG ---

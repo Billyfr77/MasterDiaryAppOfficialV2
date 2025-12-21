@@ -32,40 +32,41 @@ export const DelayNode = ({ data, selected }) => {
     
     return (
         <div className={`
-            relative min-w-[220px] p-1 transition-all duration-700
-            rounded-[2rem]
-            ${selected ? 'scale-105 z-50 shadow-[0_0_80px_-10px_rgba(245,158,11,0.6)]' : 'hover:scale-[1.02] shadow-xl'}
+            relative min-w-[240px] p-1 transition-all duration-500 ease-out
+            rounded-xl
+            ${selected ? 'scale-110 z-50 shadow-[0_0_100px_rgba(244,63,94,0.8)]' : 'hover:scale-105 shadow-2xl'}
         `}>
-            {/* GLITCH PULSE BACKGROUND */}
-            <div className={`absolute inset-0 rounded-[2rem] bg-black border-2 ${status === 'critical' ? 'border-rose-500' : 'border-amber-500/50'} backdrop-blur-3xl overflow-hidden`}>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.15),transparent_70%)] animate-pulse" />
-                <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(45deg,transparent_45%,rgba(255,255,255,0.05)_50%,transparent_55%)] bg-[length:200%_200%] animate-shimmer" />
+            {/* HAZARD TAPE BACKGROUND */}
+            <div className="absolute inset-0 rounded-xl bg-rose-950 border-2 border-rose-500 overflow-hidden">
+                <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,rgba(244,63,94,0.1),rgba(244,63,94,0.1)_10px,transparent_10px,transparent_20px)] opacity-50 animate-pulse" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
             </div>
 
             <div className="relative p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-2xl ${status === 'critical' ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'} border border-current shadow-lg animate-pulse`}>
-                        <AlertTriangle size={22} strokeWidth={2.5} />
+                <div className="flex items-center justify-between">
+                    <div className="p-3 rounded-lg bg-rose-600 text-white shadow-lg animate-bounce">
+                        <AlertTriangle size={24} strokeWidth={3} />
                     </div>
-                    <div>
-                        <div className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em] mb-0.5">Delay Pulse</div>
-                        <div className="text-base font-black text-white uppercase tracking-tight leading-none">{label || 'Stoppage'}</div>
+                    <div className="text-right">
+                        <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest animate-pulse">Critical Impact</div>
+                        <div className="text-4xl font-black text-white font-mono leading-none tracking-tighter">
+                            +{delayHours}<span className="text-lg align-top opacity-50">H</span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Time Impact</span>
-                        <span className="text-sm font-mono font-black text-amber-400">+{delayHours || 0}H</span>
-                    </div>
-                    <div className="text-[10px] text-white/60 font-medium leading-relaxed italic">
-                        "{reason || 'No reason specified'}"
+                <div className="h-px w-full bg-gradient-to-r from-transparent via-rose-500 to-transparent opacity-50" />
+
+                <div>
+                    <div className="text-lg font-black text-white uppercase tracking-tight">{label || 'Stoppage'}</div>
+                    <div className="text-xs text-rose-200/70 font-medium italic mt-1 line-clamp-2">
+                        "{reason || 'Unspecified operational delay'}"
                     </div>
                 </div>
             </div>
 
-            <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-white !border-2 !border-black shadow-lg" />
-            <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-white !border-2 !border-black shadow-lg" />
+            <Handle type="target" position={Position.Top} className="!w-4 !h-4 !bg-rose-500 !border-4 !border-black shadow-[0_0_20px_#f43f5e]" />
+            <Handle type="source" position={Position.Bottom} className="!w-4 !h-4 !bg-rose-500 !border-4 !border-black shadow-[0_0_20px_#f43f5e]" />
         </div>
     );
 };
@@ -129,52 +130,53 @@ export const ImpactNode = ({ data, selected }) => {
 };
 
 export const ChronosNode = ({ data, selected }) => {
-    const { label, startTime, finishTime, totalHours, manHours } = data;
+    const { label, startTime, finishTime, manHours } = data;
     
-    const theme = {
-        bg: "from-violet-600/80 via-indigo-900/90 to-black",
-        border: "border-violet-400/40",
-        glow: "shadow-violet-500/50",
-        accent: "text-violet-300"
-    };
-
     return (
-        <JewelWrapper theme={theme} selected={selected} shapeClass="rounded-[3rem]">
-            <NodeResizer minWidth={220} minHeight={200} isVisible={selected} lineClassName="border-violet-500/50" />
+        <div className={`
+            relative min-w-[280px] aspect-square transition-all duration-1000
+            rounded-full
+            ${selected ? 'scale-110 z-50 shadow-[0_0_150px_-30px_rgba(6,182,212,0.8)]' : 'hover:scale-105 shadow-2xl'}
+        `}>
+            {/* TIME PORTAL RING */}
+            <div className="absolute inset-0 rounded-full border-[6px] border-cyan-500/20 border-t-cyan-400 border-l-cyan-600/50 animate-spin-slow shadow-[0_0_50px_rgba(6,182,212,0.3)]" />
+            <div className="absolute inset-2 rounded-full border-[2px] border-dashed border-cyan-300/30 animate-spin-reverse-slower" />
             
-            <div className="flex flex-col h-full gap-6">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white shadow-[0_0_20px_rgba(139,92,246,0.4)]">
-                        <Timer size={22} strokeWidth={2.5} />
+            {/* GLASS CORE */}
+            <div className="absolute inset-4 rounded-full bg-gradient-to-br from-cyan-900/90 via-black to-blue-950/90 backdrop-blur-2xl flex flex-col items-center justify-center border border-cyan-500/30 overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.15),transparent_70%)] animate-pulse" />
+                
+                {/* CONTENT */}
+                <div className="relative z-10 text-center space-y-2">
+                    <div className="flex items-center justify-center gap-2 text-cyan-400 mb-2">
+                        <Clock size={16} className="animate-pulse" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">Chronos Hub</span>
                     </div>
-                    <div>
-                        <div className="text-[9px] font-black text-violet-400 uppercase tracking-[0.4em] mb-0.5">Chronos</div>
-                        <div className="text-base font-black text-white uppercase tracking-tight leading-none">{label || 'Timeline Phase'}</div>
+                    
+                    <div className="text-4xl font-black text-white font-mono tracking-tighter drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">
+                        {startTime || '07:00'}
                     </div>
-                </div>
+                    <div className="h-px w-12 bg-cyan-500/50 mx-auto" />
+                    <div className="text-2xl font-bold text-cyan-200/50 font-mono tracking-tighter">
+                        {finishTime || '17:00'}
+                    </div>
 
-                <div className="bg-white/5 rounded-3xl p-5 border border-white/10 backdrop-blur-md shadow-inner">
-                    <div className="flex items-center justify-between mb-3 px-1">
-                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Active Window</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-ping" />
+                    <div className="mt-4 px-4 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold">
+                        {label || 'Shift A'}
                     </div>
-                    <div className="text-2xl font-mono font-black text-white flex items-center justify-center gap-3">
-                        {startTime || '07:00'} <span className="text-violet-500/50 text-sm">/</span> {finishTime || '15:00'}
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between px-5 py-3 rounded-2xl bg-violet-500/10 border border-violet-500/20">
-                    <div className="flex flex-col">
-                        <span className="text-[8px] font-black text-violet-300 uppercase tracking-widest">Resources</span>
-                        <span className="text-lg font-mono font-black text-white">{manHours || 0}H</span>
-                    </div>
-                    <Activity size={20} className="text-violet-400 opacity-50" />
                 </div>
             </div>
 
-            <Handle type="target" position={Position.Left} className="!w-4 !h-4 !bg-white !border-4 !border-violet-600 shadow-xl" />
-            <Handle type="source" position={Position.Right} className="!w-4 !h-4 !bg-white !border-4 !border-fuchsia-600 shadow-xl" />
-        </JewelWrapper>
+            {/* RESOURCE ORBIT INDICATOR */}
+            {manHours > 0 && (
+                <div className="absolute -right-4 top-1/2 -translate-y-1/2 bg-black border border-cyan-500 text-cyan-400 px-3 py-1.5 rounded-xl text-xs font-black shadow-xl flex items-center gap-2">
+                    <Activity size={12} /> {manHours}H
+                </div>
+            )}
+
+            <Handle type="target" position={Position.Left} className="!w-4 !h-4 !bg-cyan-400 !border-4 !border-black shadow-[0_0_20px_#22d3ee]" />
+            <Handle type="source" position={Position.Right} className="!w-4 !h-4 !bg-cyan-400 !border-4 !border-black shadow-[0_0_20px_#22d3ee]" />
+        </div>
     );
 };
 

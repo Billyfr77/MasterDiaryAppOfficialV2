@@ -14,57 +14,44 @@ import DiaryGantt from './DiaryGantt';
 import ItemList from './ItemList';
 import PowerHeader from '../ui/PowerHeader';
 
-// --- DRAGGABLE ITEM COMPONENT (ENHANCED) ---
+// --- DRAGGABLE ITEM COMPONENT ---
 const DraggableItem = ({ item }) => {
     const onDragStart = (event) => {
+        // NORMALIZE DATA FOR DRAG PAYLOAD
         const dragItem = { ...item };
-        if (item.type === 'staff') { dragItem.costRate = item.payRateBase || 0; dragItem.chargeRate = item.chargeOutBase || 0; }
-        else if (item.type === 'equipment') { dragItem.costRate = item.costRateBase || 0; dragItem.chargeRate = item.chargeOutBase || 0; }
-        else if (item.type === 'material') { dragItem.costRate = item.pricePerUnit || 0; dragItem.chargeRate = (item.pricePerUnit || 0) * 1.2; }
-        else if (item.type === 'chronos' || item.type === 'delay') { dragItem.costRate = 0; dragItem.chargeRate = 0; }
+        
+        if (item.type === 'staff') {
+            dragItem.costRate = item.payRateBase || 0;
+            dragItem.chargeRate = item.chargeOutBase || 0;
+        } else if (item.type === 'equipment') {
+            dragItem.costRate = item.costRateBase || 0;
+            dragItem.chargeRate = item.chargeOutBase || 0;
+        } else if (item.type === 'material') {
+            dragItem.costRate = item.pricePerUnit || 0;
+            dragItem.chargeRate = (item.pricePerUnit || 0) * 1.2;
+        }
+
         event.dataTransfer.setData('application/reactflow', JSON.stringify(dragItem));
         event.dataTransfer.effectAllowed = 'move';
     };
 
-    let wrapperClass = "bg-gradient-to-r from-indigo-600/20 to-indigo-900/20 border-indigo-500/30 hover:border-indigo-400";
-    let iconClass = "bg-indigo-500/20 text-indigo-400";
-    let icon = <Package size={16} />;
-
-    if (item.type === 'staff') {
-        wrapperClass = "bg-gradient-to-r from-emerald-600/20 to-emerald-900/20 border-emerald-500/30 hover:border-emerald-400";
-        iconClass = "bg-emerald-500/20 text-emerald-400";
-        icon = <User size={16} />;
-    } else if (item.type === 'equipment') {
-        wrapperClass = "bg-gradient-to-r from-amber-600/20 to-amber-900/20 border-amber-500/30 hover:border-amber-400";
-        iconClass = "bg-amber-500/20 text-amber-400";
-        icon = <Wrench size={16} />;
-    } else if (item.type === 'chronos') {
-        wrapperClass = "bg-gradient-to-r from-cyan-600/20 to-cyan-900/20 border-cyan-500/30 hover:border-cyan-400";
-        iconClass = "bg-cyan-500/20 text-cyan-400";
-        icon = <Clock size={16} />;
-    } else if (item.type === 'delay') {
-        wrapperClass = "bg-gradient-to-r from-rose-600/20 to-rose-900/20 border-rose-500/30 hover:border-rose-400";
-        iconClass = "bg-rose-500/20 text-rose-400";
-        icon = <TrendingUp size={16} className="rotate-180" />;
-    }
+    let icon = <Box size={16} className="text-gray-400" />;
+    let bg = "bg-stone-800";
+    if (item.type === 'staff') { icon = <User size={16} className="text-emerald-400" />; bg = "hover:border-emerald-500/50"; }
+    else if (item.type === 'equipment') { icon = <Wrench size={16} className="text-amber-400" />; bg = "hover:border-amber-500/50"; }
+    else if (item.type === 'material') { icon = <Package size={16} className="text-blue-400" />; bg = "hover:border-blue-500/50"; }
 
     return (
         <div 
             draggable 
             onDragStart={onDragStart}
-            className={`group relative flex items-center gap-3 p-3 rounded-xl border cursor-grab active:cursor-grabbing transition-all hover:translate-x-1 hover:shadow-lg ${wrapperClass}`}
+            className={`flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-stone-900/50 cursor-grab active:cursor-grabbing transition-all ${bg} hover:bg-stone-800`}
         >
-            <div className={`p-2 rounded-lg ${iconClass} group-hover:scale-110 transition-transform`}>
-                {icon}
-            </div>
+            <div className="p-2 bg-black/20 rounded-lg">{icon}</div>
             <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold text-gray-200 truncate group-hover:text-white transition-colors">{item.name}</div>
-                <div className="text-[10px] text-gray-500 font-mono mt-0.5">
-                    {item.type === 'staff' ? `$${item.chargeOutBase || 0}/hr` : 
-                     item.type === 'equipment' ? `$${item.costRateBase || 0}/day` : 
-                     item.type === 'chronos' ? 'Time Event' :
-                     item.type === 'delay' ? 'Impact Event' :
-                     `$${item.pricePerUnit || 0}`}
+                <div className="text-sm font-bold text-white truncate">{item.name}</div>
+                <div className="text-[10px] text-gray-500 font-mono">
+                    {item.type === 'staff' ? `$${item.chargeOutBase || 0}/hr` : `$${item.pricePerUnit || item.costRateBase || 0}`}
                 </div>
             </div>
         </div>
@@ -99,7 +86,7 @@ const AIAutoLogModal = ({ isOpen, onClose, onConfirm, loading }) => {
                         <button onClick={onClose} className="flex-1 py-4 text-gray-400 font-bold hover:bg-white/5 rounded-2xl transition-all">Cancel</button>
                         <button 
                             disabled={loading || !prompt.trim()}
-                            onClick={() => { onConfirm(prompt); }}
+                            onClick={() => { onConfirm(prompt); setPrompt(""); onClose(); }}
                             className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-900/20 flex items-center justify-center gap-3 transition-all"
                         >
                             {loading ? <Loader2 className="animate-spin" /> : <Wand2 size={20} />}
@@ -290,44 +277,33 @@ const PaintDiary = () => {
         {/* MAIN WORKSPACE */}
         <div className="max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 min-h-[700px]">
             {/* RESOURCE DOCK */}
-            <div className="bg-teal-950/40 backdrop-blur-xl border border-emerald-500/20 rounded-[2rem] p-6 flex flex-col overflow-hidden shadow-[0_0_40px_rgba(16,185,129,0.1)] h-[700px] relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none"></div>
+            <div className="bg-stone-900/60 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 flex flex-col overflow-hidden shadow-2xl h-[700px] relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
                 <div className="mb-6 relative z-10">
-                    <h3 className="text-xs font-black text-emerald-400/80 uppercase tracking-widest mb-4 flex items-center gap-2"><Package size={14}/> Resource Library</h3>
+                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Resource Library</h3>
                     <div className="relative">
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500/50" />
-                        <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-black/40 border border-emerald-500/20 rounded-xl pl-9 pr-4 py-3 text-sm text-white focus:border-emerald-500 outline-none transition-all placeholder-emerald-700/50" />
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-3 text-sm text-white focus:border-indigo-500 outline-none transition-all placeholder-gray-600" />
                     </div>
                 </div>
                 
-                <div className="flex gap-1 mb-4 p-1 bg-black/40 rounded-xl relative z-10 border border-emerald-500/10">
-                    {['staff', 'equipment', 'material', 'time'].map(t => (
-                        <button key={t} onClick={() => setResourceTab(t)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${resourceTab === t ? 'bg-emerald-600 text-white shadow-lg' : 'text-emerald-500/60 hover:text-emerald-300'}`}>{t === 'time' ? 'Time' : t === 'equipment' ? 'Eqp' : t === 'material' ? 'Mat' : 'Staff'}</button>
+                <div className="flex gap-1 mb-4 p-1 bg-black/40 rounded-xl relative z-10">
+                    {['staff', 'equipment', 'material'].map(t => (
+                        <button key={t} onClick={() => setResourceTab(t)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${resourceTab === t ? 'bg-white/10 text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}>{t}</button>
                     ))}
                 </div>
                 
                 <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1 relative z-10">
-                    {resourceTab === 'time' ? (
-                        <>
-                            <div className="text-[10px] font-black text-cyan-400 uppercase tracking-widest px-1 mb-2 pt-2">Events</div>
-                            <DraggableItem item={{ id: 'c1', name: 'Start Day', type: 'chronos', duration: 0 }} />
-                            <DraggableItem item={{ id: 'c2', name: 'Lunch Break', type: 'chronos', duration: 0.5 }} />
-                            <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest px-1 mb-2 mt-4">Delays</div>
-                            <DraggableItem item={{ id: 'd1', name: 'Weather Delay', type: 'delay', duration: 1 }} />
-                            <DraggableItem item={{ id: 'd2', name: 'Site Blocked', type: 'delay', duration: 1 }} />
-                        </>
-                    ) : (
-                        filteredResources.map(item => (
-                            <DraggableItem key={item.id} item={{...item, type: resourceTab}} />
-                        ))
-                    )}
+                    {filteredResources.map(item => (
+                        <DraggableItem key={item.id} item={{...item, type: resourceTab}} />
+                    ))}
                 </div>
             </div>
 
             {/* CANVAS / GANTT AREA */}
-            <div className="bg-teal-950/20 backdrop-blur-xl border border-emerald-500/20 rounded-[2rem] p-1 relative shadow-2xl overflow-hidden flex flex-col h-[700px]">
+            <div className="bg-stone-900/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-1 relative shadow-2xl overflow-hidden flex flex-col h-[700px]">
                 {/* Background Grid for visual depth */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#10b98105_1px,transparent_1px),linear-gradient(to_bottom,#10b98105_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
                 
                 {viewMode === 'canvas' ? (
                     <div className="flex-1 relative rounded-[1.8rem] overflow-hidden bg-black/20">
