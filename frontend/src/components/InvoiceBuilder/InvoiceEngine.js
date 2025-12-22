@@ -9,7 +9,7 @@ export const useInvoiceEngine = () => {
   const { settings } = useSettings();
   
   // Initialize viewMode based on incoming state
-  const initialViewMode = location.state?.invoice || location.state?.quoteItems ? 'edit' : 'list';
+  const initialViewMode = location.state?.invoice || location.state?.quoteItems || location.state?.diaryItems ? 'edit' : 'list';
   const [viewMode, setViewMode] = useState(initialViewMode); 
   
   const [invoicesList, setInvoicesList] = useState([]);
@@ -54,14 +54,18 @@ export const useInvoiceEngine = () => {
               category: i.type || 'General'
           }));
       } else if (state?.diaryItems) {
-          initialItems = state.diaryItems.map(i => ({
-              description: i.description || i.name || 'Diary Item',
-              quantity: i.quantity || 1,
-              rate: i.rate || i.price || 0,
-              amount: (i.quantity || 1) * (i.rate || i.price || 0),
-              unit: i.unit || 'ea',
-              category: i.category || 'General'
-          }));
+          initialItems = state.diaryItems.map(i => {
+              const qty = i.duration || i.quantity || 1;
+              const rate = i.chargeRate || i.rate || i.price || 0;
+              return {
+                  description: i.name || i.description || 'Diary Item',
+                  quantity: qty,
+                  rate: rate,
+                  amount: qty * rate,
+                  unit: i.type === 'staff' ? 'hrs' : 'ea',
+                  category: i.type === 'staff' ? 'Labour' : (i.type === 'equipment' ? 'Equipment' : 'Materials')
+              };
+          });
       }
 
       return {

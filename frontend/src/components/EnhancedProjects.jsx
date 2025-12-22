@@ -10,14 +10,16 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
 import { Folder, Plus, Edit, Trash2, Calendar, User, Search, Filter, Download, BarChart3, TrendingUp, MapPin, DollarSign,
-    Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer, X, Upload, FileText, ExternalLink, File, CheckCircle2, Sparkles, Loader2 } from 'lucide-react'
+    Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer, X, Upload, FileText, ExternalLink, File, CheckCircle2, Sparkles, Loader2, Layout } from 'lucide-react'
 import Papa from 'papaparse'
 import ClientSelector from './Clients/ClientSelector'
+import ProjectGantt from './EnhancedProjects/ProjectGantt'
 
 const EnhancedProjects = () => {
   const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'gantt'
   const [selectedProject, setSelectedProject] = useState(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingProject, setEditingProject] = useState(null)
@@ -230,6 +232,15 @@ const EnhancedProjects = () => {
     }
   }
 
+  const handleUpdateProject = async (id, updates) => {
+      try {
+          const res = await api.put(`/projects/${id}`, updates);
+          setProjects(prev => prev.map(p => p.id === id ? { ...p, ...res.data } : p));
+      } catch (err) {
+          console.error("Failed to update project timeline:", err);
+      }
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault()
 
@@ -334,6 +345,22 @@ const EnhancedProjects = () => {
           </div>
 
           <div className="flex gap-3">
+            {/* View Toggle */}
+            <div className="flex bg-black/40 rounded-xl p-1 border border-white/10 mr-2">
+                <button 
+                    onClick={() => setViewMode('grid')} 
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-2 ${viewMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                >
+                    <Layout size={16} /> Grid
+                </button>
+                <button 
+                    onClick={() => setViewMode('gantt')} 
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-2 ${viewMode === 'gantt' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                >
+                    <BarChart3 size={16} /> Gantt
+                </button>
+            </div>
+
             <button
               onClick={exportToCSV}
               className="flex items-center gap-2 px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded-xl transition-all font-bold border border-white/10 shadow-lg"
@@ -464,121 +491,131 @@ const EnhancedProjects = () => {
           </div>
         </div>
 
-        {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map(project => (
-            <div key={project.id} className="group bg-stone-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-indigo-500/50 hover:shadow-2xl hover:-translate-y-1 transition-all relative overflow-hidden">
-              {/* Glossy Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-              
-              {/* Status Badge */}
-              <div className="absolute top-6 right-6 z-10">
-                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm border border-white/10 ${getStatusColor(project.status)} text-white`}>
-                  {project.status || 'Active'}
-                </span>
-              </div>
-
-              <div className="mb-6 relative z-10">
-                <h3 className="text-xl font-bold text-white mb-2 pr-20 group-hover:text-indigo-400 transition-colors truncate">
-                  {project.name}
-                </h3>
+        {/* Projects Content */}
+        {viewMode === 'gantt' ? (
+            <div className="h-[700px]">
+                <ProjectGantt 
+                    projects={projects} 
+                    onViewProject={handleViewProject} 
+                    onUpdateProject={handleUpdateProject}
+                />
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map(project => (
+                <div key={project.id} className="group bg-stone-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-indigo-500/50 hover:shadow-2xl hover:-translate-y-1 transition-all relative overflow-hidden">
+                {/* Glossy Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 
-                <div className="flex items-center text-gray-400 text-sm mb-4 font-medium">
-                  <MapPin size={16} className="mr-1.5 text-indigo-500" />
-                  {project.site}
+                {/* Status Badge */}
+                <div className="absolute top-6 right-6 z-10">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm border border-white/10 ${getStatusColor(project.status)} text-white`}>
+                    {project.status || 'Active'}
+                    </span>
                 </div>
-                
-                <div className="mb-4">
-                    {project.financials ? (
-                        <div>
-                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Live Value</div>
-                            <div className="flex items-center text-2xl font-black text-white tracking-tight mb-2">
-                                <span className="text-emerald-500 mr-1">$</span>
-                                {project.financials.livePrice?.toLocaleString()}
+
+                <div className="mb-6 relative z-10">
+                    <h3 className="text-xl font-bold text-white mb-2 pr-20 group-hover:text-indigo-400 transition-colors truncate">
+                    {project.name}
+                    </h3>
+                    
+                    <div className="flex items-center text-gray-400 text-sm mb-4 font-medium">
+                    <MapPin size={16} className="mr-1.5 text-indigo-500" />
+                    {project.site}
+                    </div>
+                    
+                    <div className="mb-4">
+                        {project.financials ? (
+                            <div>
+                                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Live Value</div>
+                                <div className="flex items-center text-2xl font-black text-white tracking-tight mb-2">
+                                    <span className="text-emerald-500 mr-1">$</span>
+                                    {project.financials.livePrice?.toLocaleString()}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-mono">
+                                    <span className="text-red-300">Costs: ${project.financials.totalCost?.toLocaleString()}</span>
+                                    <span className={`px-1.5 py-0.5 rounded ${project.financials.isProfitable ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                        {project.financials.profit >= 0 ? '+' : ''}${project.financials.profit?.toLocaleString()}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 text-xs font-mono">
-                                <span className="text-red-300">Costs: ${project.financials.totalCost?.toLocaleString()}</span>
-                                <span className={`px-1.5 py-0.5 rounded ${project.financials.isProfitable ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                                    {project.financials.profit >= 0 ? '+' : ''}${project.financials.profit?.toLocaleString()}
-                                </span>
-                            </div>
-                        </div>
-                    ) : (
-                        project.value && (
-                            <div className="flex items-center text-2xl font-black text-white mb-4 tracking-tight">
-                                <span className="text-emerald-500 mr-1">$</span>
-                                {project.value.toLocaleString()}
-                            </div>
-                        )
+                        ) : (
+                            project.value && (
+                                <div className="flex items-center text-2xl font-black text-white mb-4 tracking-tight">
+                                    <span className="text-emerald-500 mr-1">$</span>
+                                    {project.value.toLocaleString()}
+                                </div>
+                            )
+                        )}
+                    </div>
+                    
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mb-5 font-mono">
+                    <div className="flex items-center gap-1">
+                        <Calendar size={12} />
+                        {new Date(project.createdAt).toLocaleDateString()}
+                    </div>
+                    <div className="w-1 h-1 bg-gray-600 rounded-full" />
+                    <div className="flex items-center gap-1">
+                        <User size={12} />
+                        {project.createdBy?.username || 'Unknown'}
+                    </div>
+                    </div>
+                    
+                    {project.description && (
+                    <p className="text-gray-300 text-sm line-clamp-2 leading-relaxed bg-black/20 p-3 rounded-lg border border-white/5">
+                        {project.description}
+                    </p>
                     )}
                 </div>
-                
-                <div className="flex items-center gap-3 text-xs text-gray-500 mb-5 font-mono">
-                  <div className="flex items-center gap-1">
-                    <Calendar size={12} />
-                    {new Date(project.createdAt).toLocaleDateString()}
-                  </div>
-                  <div className="w-1 h-1 bg-gray-600 rounded-full" />
-                  <div className="flex items-center gap-1">
-                    <User size={12} />
-                    {project.createdBy?.username || 'Unknown'}
-                  </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-4 border-t border-white/10 relative z-10">
+                    <button
+                    onClick={() => handleViewProject(project)}
+                    className="flex-1 py-2.5 px-3 bg-white/5 hover:bg-indigo-600 hover:text-white text-indigo-300 border border-white/5 hover:border-indigo-500 rounded-xl transition-all flex items-center justify-center gap-2 font-bold text-sm"
+                    >
+                    <Folder size={16} />
+                    View
+                    </button>
+
+                    <button
+                    onClick={() => navigate('/map-builder', { state: { projectId: project.id } })}
+                    className="p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl hover:bg-emerald-500 hover:text-white transition-all"
+                    title="View on Map"
+                    >
+                    <MapIcon size={16} />
+                    </button>
+                    
+                    <button
+                    onClick={() => handleEditProject(project)}
+                    className="p-2.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl hover:bg-amber-500 hover:text-white transition-all"
+                    title="Edit"
+                    >
+                    <Edit size={16} />
+                    </button>
+                    
+                    <button
+                    onClick={() => handleDeleteProject(project.id)}
+                    className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                    title="Delete"
+                    >
+                    <Trash2 size={16} />
+                    </button>
                 </div>
-                
-                {project.description && (
-                  <p className="text-gray-300 text-sm line-clamp-2 leading-relaxed bg-black/20 p-3 rounded-lg border border-white/5">
-                    {project.description}
-                  </p>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-4 border-t border-white/10 relative z-10">
-                <button
-                  onClick={() => handleViewProject(project)}
-                  className="flex-1 py-2.5 px-3 bg-white/5 hover:bg-indigo-600 hover:text-white text-indigo-300 border border-white/5 hover:border-indigo-500 rounded-xl transition-all flex items-center justify-center gap-2 font-bold text-sm"
-                >
-                  <Folder size={16} />
-                  View
-                </button>
-
-                <button
-                  onClick={() => navigate('/map-builder', { state: { projectId: project.id } })}
-                  className="p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl hover:bg-emerald-500 hover:text-white transition-all"
-                  title="View on Map"
-                >
-                  <MapIcon size={16} />
-                </button>
-                
-                <button
-                  onClick={() => handleEditProject(project)}
-                  className="p-2.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl hover:bg-amber-500 hover:text-white transition-all"
-                  title="Edit"
-                >
-                  <Edit size={16} />
-                </button>
-                
-                <button
-                  onClick={() => handleDeleteProject(project.id)}
-                  className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
-                  title="Delete"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+                </div>
+            ))}
+            
+            {projects.length === 0 && (
+                <div className="col-span-full py-20 text-center">
+                <div className="w-24 h-24 bg-stone-900/60 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10">
+                    <Folder size={48} className="text-gray-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">No projects found</h3>
+                <p className="text-gray-400">Create your first project to get started!</p>
+                </div>
+            )}
             </div>
-          ))}
-          
-          {projects.length === 0 && (
-            <div className="col-span-full py-20 text-center">
-              <div className="w-24 h-24 bg-stone-900/60 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10">
-                <Folder size={48} className="text-gray-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">No projects found</h3>
-              <p className="text-gray-400">Create your first project to get started!</p>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Create/Edit Project Modal */}
         {showCreateForm && (

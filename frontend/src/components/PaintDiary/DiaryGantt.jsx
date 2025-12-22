@@ -57,7 +57,13 @@ const DiaryGantt = ({ items }) => {
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-95">
+            <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-[#0a0a0c]">
+                {/* Immersive Background Visuals */}
+                <div className="absolute inset-0 pointer-events-none opacity-20">
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#4f46e508_0%,transparent_100%)]"></div>
+                </div>
+
                 {items.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-64 text-gray-600">
                         <Calendar size={48} className="mb-4 opacity-20" />

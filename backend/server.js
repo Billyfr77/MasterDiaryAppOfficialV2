@@ -57,6 +57,7 @@ app.use(cookieParser());
 
 // JSON Middleware with Raw Body capture for Stripe Webhooks
 app.use(express.json({
+  limit: '50mb',
   verify: (req, res, buf) => {
     if (req.originalUrl.startsWith('/api/stripe/webhook')) {
       req.rawBody = buf.toString();
@@ -64,7 +65,7 @@ app.use(express.json({
   }
 }));
 
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ... (Error handling middleware) ...
 
@@ -97,6 +98,7 @@ app.use('/api/reports', require('./src/routes/reportRoutes')); // Unified Report
 app.use('/api/mail', require('./src/routes/mail')); // Email Service
 app.use('/api/ai', require('./src/routes/ai')); // Grok AI Service
 app.use('/api/weather', require('./src/routes/weather')); // Weather Service
+app.use('/api/diary-templates', require('./src/routes/diaryTemplates')); // Diary Templates Route
 
 const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 
@@ -122,9 +124,9 @@ app.get('/api/seed-secret', async (req, res) => {
     }
 
     // 2. Create Default Settings
-    const existingSettings = await db.Setting.findOne();
+    const existingSettings = await db.Settings.findOne();
     if (!existingSettings) {
-      await db.Setting.create({
+      await db.Settings.create({
         companyName: 'My Construction Co',
         currency: 'USD',
         theme: 'dark'

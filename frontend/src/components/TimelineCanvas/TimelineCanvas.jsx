@@ -1,17 +1,17 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { 
   ReactFlow, MiniMap, Controls, Background, ReactFlowProvider, addEdge, useReactFlow
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Zap } from 'lucide-react';
 import { useTimelineEngine } from './TimelineEngine';
-import { DiaryNode, WormholeNode, ZoneNode, ChronosNode, ImpactNode, DelayNode } from './TimelineNodes';
+import { DiaryNode, WormholeNode, ZoneNode, ChronosNode, ImpactNode, DelayNode, PhotoNode, AllowanceNode } from './TimelineNodes';
 import { SmartEdgeTypes } from './SmartEdges';
 import { api } from '../../utils/api';
 import { useNotification } from '../../context/NotificationContext';
 
 const TimelineCanvasContent = (props) => {
-  const { items, extraNodes, edges: persistentEdges, onDrop, onUpdateItem, onRemoveItem, onNodeClick, isPulseActive } = props;
+  const { items, extraNodes, edges: persistentEdges, onDrop, onUpdateItem, onRemoveItem, onNodeClick, isPulseActive, onUpdateEdges } = props;
   const { addNotification } = useNotification();
   const { fitView } = useReactFlow();
   
@@ -19,14 +19,16 @@ const TimelineCanvasContent = (props) => {
   const { 
     nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange,
     screenToFlowPosition, onNodeDragStop, onConnect: engineOnConnect 
-  } = useTimelineEngine(items, onUpdateItem, onRemoveItem, onDrop, extraNodes, persistentEdges);
+  } = useTimelineEngine(items, onUpdateItem, onRemoveItem, onDrop, extraNodes, persistentEdges, onUpdateEdges);
 
   const nodeTypes = useMemo(() => ({ 
       diaryNode: DiaryNode, 
       wormhole: WormholeNode, 
       zone: ZoneNode,
       chronos: ChronosNode,
-      impact: ImpactNode
+      impact: ImpactNode,
+      photoNode: PhotoNode,
+      allowance: AllowanceNode
   }), []);
 
   const edgeTypes = useMemo(() => SmartEdgeTypes, []);
@@ -34,13 +36,14 @@ const TimelineCanvasContent = (props) => {
   // Determine edge type based on source/target node data
   const getSmartEdgeParams = useCallback((sourceId) => {
       const sourceNode = nodes.find(n => n.id === sourceId);
-      const type = sourceNode?.data?.type || 'material';
+      const type = sourceNode?.data?.type || sourceNode?.type || 'material';
       
       let edgeType = 'default';
       if (type === 'staff' || type === 'equipment') edgeType = 'orbit';
       else if (type === 'material') edgeType = 'gradient';
       else if (type === 'chronos') edgeType = 'neon';
       else if (type === 'finance') edgeType = 'flow';
+      else if (type === 'allowance') edgeType = 'gold';
 
       return { type: edgeType, data: { type, sourceType: type } };
   }, [nodes]);
@@ -109,12 +112,19 @@ const TimelineCanvasContent = (props) => {
       }
   }, [onNodeClick, isPulseActive, confirmGhostNode, fetchGhostSuggestions]);
 
+  const [dropPing, setDropPing] = useState(null); // { x, y }
+
   const onDropHandler = useCallback((event) => {
       event.preventDefault();
       const type = event.dataTransfer.getData('application/reactflow');
       if (!type) return;
       try {
           const itemData = JSON.parse(type);
+          
+          // Trigger Visual Ping at screen coordinates
+          setDropPing({ x: event.clientX, y: event.clientY });
+          setTimeout(() => setDropPing(null), 1000);
+
           const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
           onDrop(itemData, position);
       } catch (e) {}
@@ -156,6 +166,16 @@ const TimelineCanvasContent = (props) => {
 
   return (
     <div className="w-full h-full min-h-[600px] bg-[#050507] rounded-[2.5rem] overflow-hidden relative border border-white/5 shadow-inner group/canvas">
+      <style>{`
+        @keyframes ping-slow {
+          0% { transform: scale(0.2); opacity: 0.8; }
+          100% { transform: scale(3); opacity: 0; }
+        }
+        .animate-ping-slow {
+          animation: ping-slow 1s cubic-bezier(0, 0, 0.2, 1) forwards;
+        }
+      `}</style>
+      
       {/* AMBIENT ENERGY PARTICLES */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
           {[...Array(6)].map((_, i) => (
@@ -173,7 +193,7 @@ const TimelineCanvasContent = (props) => {
       </div>
 
       {/* MASTERPIECE CONTROLS */}
-      <div className="absolute top-6 left-6 z-50 flex gap-2">
+      <div className="absolute top-6 left-6 z-40 flex gap-2">
           <button 
             onClick={restructureLayout}
             className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl backdrop-blur-md text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2 transition-all shadow-2xl active:scale-95"
@@ -205,6 +225,17 @@ const TimelineCanvasContent = (props) => {
             nodeColor={n => n.type === 'chronos' ? '#8b5cf6' : n.type === 'diaryNode' ? '#10b981' : '#6366f1'}
             maskColor="rgba(0,0,0,0.6)"
         />
+
+        {/* Tactile Drop Ping (Screen Space) */}
+        {dropPing && (
+            <div 
+                className="fixed pointer-events-none z-[9999] w-20 h-20 border-2 border-indigo-500 rounded-full animate-ping-slow shadow-[0_0_20px_#6366f1]"
+                style={{ 
+                    left: dropPing.x - 40, 
+                    top: dropPing.y - 40 
+                }}
+            />
+        )}
       </ReactFlow>
       
       {/* HUD OVERLAY - Visual Flair */}

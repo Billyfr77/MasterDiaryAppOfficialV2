@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command, GitBranch, Briefcase, CreditCard, Activity, PenTool, Menu, X } from 'lucide-react'
@@ -28,6 +28,7 @@ import ClientPortal from './components/ClientPortal';
 import EnhancedSettings from './components/EnhancedSettings'
 import Clients from './components/Clients/Clients'
 import PaintDiary from './components/PaintDiary'
+import { DiaryThemeProvider, useDiaryTheme } from './components/PaintDiary/ThemeContext'
 import ResourceCommand from './components/ResourceCommand'
 import Quotes from './components/Quotes'
 import NodesLibrary from './components/NodesLibrary'
@@ -87,10 +88,8 @@ function App() {
     setScrollThumbWidth(widthPct < 100 ? widthPct : 0);
     
     // Calculate thumb position percentage
-    // Max scroll left is scrollWidth - clientWidth
     const maxScrollLeft = scrollWidth - clientWidth;
     const scrollRatio = scrollLeft / maxScrollLeft;
-    // Max thumb left is 100% - thumbWidth%
     const maxThumbLeft = 100 - widthPct;
     setScrollThumbLeft(scrollRatio * maxThumbLeft);
   };
@@ -110,7 +109,7 @@ function App() {
           e.preventDefault();
           const { scrollWidth, clientWidth } = navRef.current;
           const deltaX = e.pageX - thumbStartX;
-          const scrollRatio = scrollWidth / clientWidth; // Approximation
+          const scrollRatio = scrollWidth / clientWidth; 
           navRef.current.scrollLeft = thumbStartScroll + (deltaX * scrollRatio);
       };
       
@@ -136,84 +135,95 @@ function App() {
   const isPortal = location.pathname.startsWith('/portal');
   const isLanding = location.pathname === '/';
 
-  if (!token && !isPortal) {
-    return <Login onLogin={handleLogin} />
-  }
-
   return (
     <ErrorBoundary>
       <UIProvider>
         <NotificationProvider>
           <SettingsProvider>
             <DataProvider>
-              <DndProvider backend={HTML5Backend}>
-                <div className={`min-h-screen flex flex-col text-gray-900 dark:text-gray-100 font-sans transition-all duration-500 ${isLanding ? 'bg-transparent' : 'bg-[#0a0a0c]'}`}>
+              <DiaryThemeProvider>
+                <DndProvider backend={HTML5Backend}>
+                  <AppInner 
+                    token={token} onLogin={handleLogin}
+                    darkMode={darkMode} setDarkMode={setDarkMode} 
+                    mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen}
+                    navRef={navRef} handleNavScroll={handleNavScroll}
+                    scrollThumbWidth={scrollThumbWidth} scrollThumbLeft={scrollThumbLeft}
+                    handleThumbMouseDown={handleThumbMouseDown}
+                    isLanding={isLanding} isPortal={isPortal}
+                  />
+                </DndProvider>
+              </DiaryThemeProvider>
+            </DataProvider>
+          </SettingsProvider>
+        </NotificationProvider>
+      </UIProvider>
+    </ErrorBoundary>
+  );
+}
+
+// Split into sub-component to use context
+function AppInner({ 
+    token, onLogin,
+    darkMode, setDarkMode, mobileMenuOpen, setMobileMenuOpen, 
+    navRef, handleNavScroll, scrollThumbWidth, scrollThumbLeft, 
+    handleThumbMouseDown, isLanding, isPortal 
+}) {
+  const { theme, allThemes, setActiveTheme, activeTheme } = useDiaryTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  if (!token && !isPortal) {
+    return <Login onLogin={onLogin} />
+  }
+
+  return (
+    <div className={`min-h-screen flex flex-col text-gray-900 dark:text-gray-100 font-sans transition-all duration-500 ${isLanding ? 'bg-transparent' : 'bg-[#0a0a0c]'}`}>
           <style>{`
             @keyframes wave-flow {
               0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.4; }
               50% { transform: translate(2%, 5%) rotate(2deg) scale(1.1); opacity: 0.8; }
               100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.4; }
             }
-
-            @keyframes wave-drift-slow {
-              0% { background-position: 0% 50%; }
-              50% { background-position: 100% 50%; }
-              100% { background-position: 0% 50%; }
-            }
-            
             @keyframes grid-drift {
               0% { background-position: 0 0; }
               100% { background-position: 100px 100px; }
             }
           `}</style>
           
-          {/* --- ULTIMATE BLACK SPACE & PURPLE AURORA --- */}
           {!isPortal && !isLanding && (
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#000000]">
-               {/* 1. Pure Space Base & Noise */}
                <div className="absolute inset-0 bg-black"></div>
-               {/* Persistent Deep Glow (Prevents Abyss) */}
                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(30,27,75,0.15)_0%,transparent_100%)]"></div>
                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] mix-blend-overlay"></div>
-               
-               {/* 2. Cyber Perspective Grid (Subtle) */}
                <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:100px_100px] opacity-10 animate-[grid-drift_60s_linear_infinite]"></div>
 
-               {/* 3. CASCADING NEON LIGHTS (AURORA) */}
                <div className="absolute inset-0 mix-blend-screen filter blur-[140px]">
-                   {/* Massive Purple Wash (Full Left Side) */}
-                   <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[140%] bg-gradient-to-b from-transparent via-violet-600/30 to-transparent animate-[wave-flow_20s_ease-in-out_infinite] rotate-[25deg]" />
-                   
-                   {/* Massive Indigo Wash (Full Right Side) */}
-                   <div className="absolute top-[-10%] right-[-20%] w-[70%] h-[120%] bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent animate-[wave-flow_25s_ease-in-out_infinite_reverse] rotate-[-15deg]" />
-                   
-                   {/* Arctic Blue Core (Pulsing Center) */}
-                   <div className="absolute top-[10%] left-[10%] w-[80%] h-[80%] bg-[radial-gradient(circle,rgba(34,211,238,0.08)_0%,transparent_70%)] animate-[wave-flow_30s_ease-in-out_infinite]" />
-                   
-                   {/* Deep Base Violet (Grounding) */}
-                   <div className="absolute bottom-[-10%] left-[-10%] w-[120%] h-[60%] bg-[radial-gradient(circle,rgba(124,58,237,0.12)_0%,transparent_70%)] animate-[wave-flow_40s_ease-in-out_infinite_reverse]" />
+                   <div 
+                    className="absolute top-[-20%] left-[-20%] w-[80%] h-[140%] bg-gradient-to-b from-transparent to-transparent animate-[wave-flow_20s_ease-in-out_infinite] rotate-[25deg]" 
+                    style={{ backgroundImage: `linear-gradient(to bottom, transparent, ${theme.accent}44, transparent)` }}
+                   />
+                   <div 
+                    className="absolute top-[-10%] right-[-20%] w-[70%] h-[120%] bg-gradient-to-b from-transparent to-transparent animate-[wave-flow_25s_ease-in-out_infinite_reverse] rotate-[-15deg]" 
+                    style={{ backgroundImage: `linear-gradient(to bottom, transparent, ${theme.accent}33, transparent)` }}
+                   />
                </div>
             </div>
           )}
-          {/* Dark Overlay for readability removed in favor of premium background */}
 
-          {/* Shell Components */}
           {!isPortal && <CommandPalette />}
           
-          {/* Mobile Menu Overlay */}
+          {/* Mobile Menu */}
           {mobileMenuOpen && !isPortal && (
             <div className="fixed inset-0 z-[100] flex md:hidden">
-               {/* Backdrop */}
                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={() => setMobileMenuOpen(false)} />
-               
-               {/* Drawer */}
                <div className="relative w-72 h-full bg-stone-900 border-r border-white/10 shadow-2xl p-4 flex flex-col gap-4 animate-slide-right overflow-y-auto">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: theme.accent }}>
                           <Home className="text-white w-5 h-5" />
                         </div>
-                        <span className="font-bold text-xl tracking-tight text-white">MasterDiary<span className="text-indigo-400">OS</span></span>
+                        <span className="font-bold text-xl tracking-tight text-white">MasterDiary<span style={{ color: theme.accent }}>OS</span></span>
                     </div>
                     <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-white/5 rounded-full">
                       <X size={20} />
@@ -222,27 +232,9 @@ function App() {
                   
                   <nav className="flex flex-col gap-2">
                     <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-2">Core</div>
-                    <NavLink to="/pulse" icon={<Activity size={18} />} label="Pulse Dashboard" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/projects" icon={<Briefcase size={18} />} label="Projects" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/diary" icon={<PenTool size={18} />} label="Site Diary" onClick={() => setMobileMenuOpen(false)} />
-                    
-                    <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-4">Finance</div>
-                    <NavLink to="/quotes" icon={<DollarSign size={18} />} label="Quotes & Estimates" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/invoices" icon={<CreditCard size={18} />} label="Invoices" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/subscription" icon={<Crown size={18} />} label="Upgrade Plan" onClick={() => setMobileMenuOpen(false)} />
-                    
-                    <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-4">Operations</div>
-                    <NavLink to="/resources" icon={<Calendar size={18} />} label="Resource Scheduler" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/map-builder" icon={<Command size={18} />} label="Map Builder" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/workflows" icon={<GitBranch size={18} />} label="Workflows" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/safety" icon={<ClipboardCheck size={18} />} label="Safety & Compliance" onClick={() => setMobileMenuOpen(false)} />
-                    
-                    <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-1 mt-4">Management</div>
-                    <NavLink to="/clients" icon={<Users size={18} />} label="Clients CRM" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/staff" icon={<Users size={18} />} label="Staff & HR" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/equipment" icon={<Wrench size={18} />} label="Equipment Fleet" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/nodes" icon={<Package size={18} />} label="Materials Library" onClick={() => setMobileMenuOpen(false)} />
-                    <NavLink to="/reports" icon={<FileText size={18} />} label="Reports" onClick={() => setMobileMenuOpen(false)} />
+                    <NavLink to="/pulse" icon={<Activity size={18} />} label="Pulse Dashboard" onClick={() => setMobileMenuOpen(false)} activeColor={theme.accent} />
+                    <NavLink to="/projects" icon={<Briefcase size={18} />} label="Projects" onClick={() => setMobileMenuOpen(false)} activeColor={theme.accent} />
+                    <NavLink to="/diary" icon={<PenTool size={18} />} label="Site Diary" onClick={() => setMobileMenuOpen(false)} activeColor={theme.accent} />
                   </nav>
                </div>
             </div>
@@ -250,54 +242,42 @@ function App() {
 
           {/* Header */}
           {!isPortal && !isLanding && (
-            <header className="sticky top-0 z-50 glass-panel border-b-0 rounded-none shadow-lg transition-all duration-300">
+            <header className="sticky top-0 z-[100] glass-panel border-b-0 rounded-none shadow-lg transition-all duration-300">
               <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-4 md:gap-8 flex-1 min-w-0">
-                  {/* Hamburger for Mobile */}
-                  <button 
-                    onClick={() => setMobileMenuOpen(true)} 
-                    className="md:hidden p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                  >
-                    <Menu size={24} />
-                  </button>
+                  <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"><Menu size={24} /></button>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: theme.accent }}>
                       <Home className="text-white w-5 h-5" />
                     </div>
-                    <span className="font-bold text-xl tracking-tight hidden md:block">MasterDiary<span className="text-indigo-400">OS</span></span>
+                    <span className="font-bold text-xl tracking-tight hidden md:block text-white">MasterDiary<span style={{ color: theme.accent }}>OS</span></span>
                   </div>
                   
-                  {/* SCROLLABLE NAV CONTAINER */}
                   <div className="hidden md:flex flex-col flex-1 min-w-0 relative group/nav h-full justify-center">
-                      <nav 
-                        ref={navRef}
-                        className="flex items-center gap-1 overflow-x-auto custom-scrollbar-x h-full items-center"
-                        onScroll={handleNavScroll}
-                      >
-                        <NavLink to="/pulse" icon={<Activity size={16} />} label="Pulse" />
-                        <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" />
-                        <NavLink to="/diary" icon={<PenTool size={16} />} label="Diary" />
-                        <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" />
-                        <NavLink to="/quotes" icon={<DollarSign size={16} />} label="Quotes" />
-                        <NavLink to="/invoices" icon={<CreditCard size={16} />} label="Invoices" />
-                        <NavLink to="/clients" icon={<Users size={16} />} label="Clients" />
-                        <NavLink to="/map-builder" icon={<Command size={16} />} label="Map" />
-                        <NavLink to="/nodes" icon={<Package size={16} />} label="Materials" />
-                        <NavLink to="/staff" icon={<Users size={16} />} label="Staff" />
-                        <NavLink to="/equipment" icon={<Wrench size={16} />} label="Equipment" />
-                        <NavLink to="/workflows" icon={<GitBranch size={16} />} label="Flows" />
-                        <NavLink to="/safety" icon={<ClipboardCheck size={16} />} label="Safety" />
-                        <NavLink to="/reports" icon={<FileText size={16} />} label="Reports" />
-                        <NavLink to="/subscription" icon={<Crown size={16} />} label="Upgrade" />
+                      <nav ref={navRef} className="flex items-center gap-1 overflow-x-auto custom-scrollbar-x h-full items-center" onScroll={handleNavScroll}>
+                        <NavLink to="/pulse" icon={<Activity size={16} />} label="Pulse" activeColor={theme.accent} />
+                        <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" activeColor={theme.accent} />
+                        <NavLink to="/diary" icon={<PenTool size={16} />} label="Diary" activeColor={theme.accent} />
+                        <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" activeColor={theme.accent} />
+                        <NavLink to="/quotes" icon={<DollarSign size={16} />} label="Quotes" activeColor={theme.accent} />
+                        <NavLink to="/invoices" icon={<CreditCard size={16} />} label="Invoices" activeColor={theme.accent} />
+                        <NavLink to="/clients" icon={<Users size={16} />} label="Clients" activeColor={theme.accent} />
+                        <NavLink to="/map-builder" icon={<Command size={16} />} label="Map" activeColor={theme.accent} />
+                        <NavLink to="/nodes" icon={<Package size={16} />} label="Materials" activeColor={theme.accent} />
+                        <NavLink to="/staff" icon={<Users size={16} />} label="Staff" activeColor={theme.accent} />
+                        <NavLink to="/equipment" icon={<Wrench size={16} />} label="Equipment" activeColor={theme.accent} />
+                        <NavLink to="/workflows" icon={<GitBranch size={16} />} label="Flows" activeColor={theme.accent} />
+                        <NavLink to="/safety" icon={<ClipboardCheck size={16} />} label="Safety" activeColor={theme.accent} />
+                        <NavLink to="/reports" icon={<FileText size={16} />} label="Reports" activeColor={theme.accent} />
+                        <NavLink to="/subscription" icon={<Crown size={16} />} label="Upgrade" activeColor={theme.accent} />
                       </nav>
 
-                      {/* Custom Scrollbar Handle */}
                       {scrollThumbWidth > 0 && scrollThumbWidth < 100 && (
                           <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5 rounded-full opacity-0 group-hover/nav:opacity-100 transition-opacity duration-200">
                               <div 
-                                  className="absolute top-0 bottom-0 bg-indigo-500 rounded-full cursor-grab active:cursor-grabbing hover:bg-indigo-400"
-                                  style={{ left: `${scrollThumbLeft}%`, width: `${scrollThumbWidth}%` }}
+                                  className="absolute top-0 bottom-0 rounded-full cursor-grab active:cursor-grabbing"
+                                  style={{ left: `${scrollThumbLeft}%`, width: `${scrollThumbWidth}%`, backgroundColor: theme.accent }}
                                   onMouseDown={handleThumbMouseDown}
                               />
                           </div>
@@ -306,25 +286,20 @@ function App() {
                 </div>
 
                 <div className="flex items-center gap-3 flex-shrink-0">
-                   <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                   <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-white/10 transition-colors text-gray-400">
                       {darkMode ? <Sun size={20} /> : <Moon size={20} />}
                    </button>
-                   <Link to="/settings" className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                      <SettingsIcon size={20} />
-                   </Link>
-                   <button onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }} className="p-2 rounded-full hover:bg-red-500/10 text-red-400 transition-colors">
-                      <LogOut size={20} />
-                   </button>
+                   <Link to="/settings" className="p-2 rounded-full hover:bg-white/10 transition-colors text-gray-400"><SettingsIcon size={20} /></Link>
+                   <button onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }} className="p-2 rounded-full hover:bg-red-500/10 text-red-400 transition-colors"><LogOut size={20} /></button>
                 </div>
               </div>
             </header>
           )}
 
-          {/* Main Content */}
           <main className={`flex-1 ${(!isPortal && !isLanding) ? 'container mx-auto px-4 py-8' : ''} animate-fade-in`}>
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login onLogin={handleLogin} />} />
+              <Route path="/login" element={<Login onLogin={onLogin} />} />
               <Route path="/pulse" element={<UltimatePulseDashboard />} />
               <Route path="/dashboard" element={<UltimatePulseDashboard />} />
               <Route path="/projects" element={<EnhancedProjects />} />
@@ -355,17 +330,11 @@ function App() {
 
           {!isPortal && <PinnacleCopilot />}
         </div>
-                            </DndProvider>
-                          </DataProvider>
-                        </SettingsProvider>
-                      </NotificationProvider>
-                    </UIProvider>
-                  </ErrorBoundary>
-                )      }
-// Helper Component for Nav Links
-const NavLink = ({ to, icon, label, onClick }) => {
+  );
+}
+
+const NavLink = ({ to, icon, label, onClick, activeColor }) => {
   const location = useLocation()
-  // Active if exact match OR if it's a sub-route (e.g. /quotes/builder is active for /quotes), excluding root /
   const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to))
 
   return (
@@ -380,7 +349,12 @@ const NavLink = ({ to, icon, label, onClick }) => {
           : 'text-gray-400 hover:text-white hover:bg-white/5'}
       `}
     >
-      <span className={`transition-transform duration-300 ${isActive ? 'scale-110 text-indigo-400' : 'group-hover:scale-110 group-hover:text-indigo-400'}`}>{icon}</span>
+      <span 
+        className="transition-transform duration-300"
+        style={{ color: isActive ? activeColor : undefined }}
+      >
+        {icon}
+      </span>
       <span>{label}</span>
     </Link>
   )

@@ -22,9 +22,12 @@ const EnhancedStaff = () => {
     payRateBase: '',
     payRateOT1: '',
     payRateOT2: '',
+    payRateNight: '',
     chargeOutBase: '',
     chargeOutOT1: '',
-    chargeOutOT2: ''
+    chargeOutOT2: '',
+    chargeOutNight: '',
+    allowances: [] // Array of { name, rate, type }
   })
 
   useEffect(() => {
@@ -52,9 +55,12 @@ const EnhancedStaff = () => {
       payRateBase: '',
       payRateOT1: '',
       payRateOT2: '',
+      payRateNight: '',
       chargeOutBase: '',
       chargeOutOT1: '',
-      chargeOutOT2: ''
+      chargeOutOT2: '',
+      chargeOutNight: '',
+      allowances: []
     })
     setShowCreateForm(true)
   }
@@ -67,9 +73,12 @@ const EnhancedStaff = () => {
       payRateBase: staffMember.payRateBase || '',
       payRateOT1: staffMember.payRateOT1 || '',
       payRateOT2: staffMember.payRateOT2 || '',
+      payRateNight: staffMember.payRateNight || '',
       chargeOutBase: staffMember.chargeOutBase || '',
       chargeOutOT1: staffMember.chargeOutOT1 || '',
-      chargeOutOT2: staffMember.chargeOutOT2 || ''
+      chargeOutOT2: staffMember.chargeOutOT2 || '',
+      chargeOutNight: staffMember.chargeOutNight || '',
+      allowances: staffMember.allowances || []
     })
     setShowCreateForm(true)
   }
@@ -96,9 +105,12 @@ const EnhancedStaff = () => {
         payRateBase: parseFloat(formData.payRateBase) || 0,
         payRateOT1: parseFloat(formData.payRateOT1) || 0,
         payRateOT2: parseFloat(formData.payRateOT2) || 0,
+        payRateNight: parseFloat(formData.payRateNight) || 0,
         chargeOutBase: parseFloat(formData.chargeOutBase) || 0,
         chargeOutOT1: parseFloat(formData.chargeOutOT1) || 0,
-        chargeOutOT2: parseFloat(formData.chargeOutOT2) || 0
+        chargeOutOT2: parseFloat(formData.chargeOutOT2) || 0,
+        chargeOutNight: parseFloat(formData.chargeOutNight) || 0,
+        allowances: formData.allowances
       }
 
       if (editingStaff) {
@@ -116,6 +128,26 @@ const EnhancedStaff = () => {
     } catch (err) {
       alert('Error saving staff member: ' + (err.response?.data?.error || err.message))
     }
+  }
+
+  const addAllowance = () => {
+      setFormData(prev => ({
+          ...prev,
+          allowances: [...prev.allowances, { name: '', rate: 0, type: 'hourly' }]
+      }))
+  }
+
+  const updateAllowance = (idx, field, val) => {
+      const next = [...formData.allowances];
+      next[idx][field] = field === 'rate' ? parseFloat(val) : val;
+      setFormData(prev => ({ ...prev, allowances: next }));
+  }
+
+  const removeAllowance = (idx) => {
+      setFormData(prev => ({
+          ...prev,
+          allowances: prev.allowances.filter((_, i) => i !== idx)
+      }))
   }
 
   if (loading) {
@@ -185,11 +217,13 @@ const EnhancedStaff = () => {
                     <div className="font-mono font-bold text-amber-400 text-right">${member.payRateOT1}/hr</div>
                     <div className="text-gray-500 font-bold uppercase">OT2</div>
                     <div className="font-mono font-bold text-rose-400 text-right">${member.payRateOT2}/hr</div>
+                    <div className="text-gray-500 font-bold uppercase">Night</div>
+                    <div className="font-mono font-bold text-indigo-400 text-right">${member.payRateNight}/hr</div>
                   </div>
                 </div>
 
                 {/* Charge Out Rates */}
-                <div className="bg-black/20 rounded-xl p-4 border border-white/5">
+                <div className="bg-black/20 rounded-xl p-4 border border-white/5 mb-4">
                   <h4 className="text-xs font-black text-indigo-400 mb-3 uppercase tracking-wider flex items-center gap-2">
                     <DollarSign size={12} /> Charge Out Rates
                   </h4>
@@ -200,8 +234,27 @@ const EnhancedStaff = () => {
                     <div className="font-mono font-bold text-purple-400 text-right">${member.chargeOutOT1}/hr</div>
                     <div className="text-gray-500 font-bold uppercase">OT2</div>
                     <div className="font-mono font-bold text-orange-400 text-right">${member.chargeOutOT2}/hr</div>
+                    <div className="text-gray-500 font-bold uppercase">Night</div>
+                    <div className="font-mono font-bold text-indigo-400 text-right">${member.chargeOutNight}/hr</div>
                   </div>
                 </div>
+
+                {/* Allowances Display */}
+                {member.allowances?.length > 0 && (
+                    <div className="bg-emerald-500/5 rounded-xl p-4 border border-emerald-500/10">
+                        <h4 className="text-[10px] font-black text-emerald-500 mb-2 uppercase tracking-widest flex items-center gap-2">
+                            <Plus size={10} /> Active Allowances
+                        </h4>
+                        <div className="space-y-1">
+                            {member.allowances.map((a, i) => (
+                                <div key={i} className="flex justify-between items-center text-[10px]">
+                                    <span className="text-gray-400 font-bold uppercase">{a.name}</span>
+                                    <span className="text-emerald-400 font-mono">${a.rate}/{a.type === 'hourly' ? 'hr' : 'day'}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -327,6 +380,19 @@ const EnhancedStaff = () => {
                         className="w-full px-4 py-2.5 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-rose-500/50 outline-none"
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">
+                        Night Rate ($/hr)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.payRateNight}
+                        onChange={(e) => setFormData({ ...formData, payRateNight: e.target.value })}
+                        step="0.01"
+                        className="w-full px-4 py-2.5 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -335,7 +401,7 @@ const EnhancedStaff = () => {
                   <h3 className="text-sm font-black text-indigo-400 mb-4 flex items-center gap-2 uppercase tracking-wider">
                     <DollarSign size={16} /> Charge Out Rates
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                         Base Rate ($/hr)
@@ -374,7 +440,77 @@ const EnhancedStaff = () => {
                         className="w-full px-4 py-2.5 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-orange-500/50 outline-none"
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">
+                        Night Rate ($/hr)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.chargeOutNight}
+                        onChange={(e) => setFormData({ ...formData, chargeOutNight: e.target.value })}
+                        step="0.01"
+                        className="w-full px-4 py-2.5 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                      />
+                    </div>
                   </div>
+                </div>
+
+                {/* Allowances Section */}
+                <div className="bg-black/20 rounded-2xl p-6 border border-white/5">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-sm font-black text-amber-500 flex items-center gap-2 uppercase tracking-wider">
+                            <Plus size={16} /> Award Penalties & Allowances
+                        </h3>
+                        <button 
+                            type="button" 
+                            onClick={addAllowance}
+                            className="text-[10px] font-black text-indigo-400 hover:text-white uppercase tracking-widest px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg transition-all"
+                        >
+                            + Add Allowance
+                        </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        {formData.allowances.map((al, idx) => (
+                            <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 relative">
+                                <div className="md:col-span-2">
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Name</label>
+                                    <input 
+                                        type="text" value={al.name} placeholder="e.g. Asbestos / Height" 
+                                        onChange={e => updateAllowance(idx, 'name', e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Rate ($)</label>
+                                    <input 
+                                        type="number" value={al.rate} 
+                                        onChange={e => updateAllowance(idx, 'rate', e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none font-mono"
+                                    />
+                                </div>
+                                <div className="flex items-end gap-2">
+                                    <select 
+                                        value={al.type} onChange={e => updateAllowance(idx, 'type', e.target.value)}
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none"
+                                    >
+                                        <option value="hourly">/hr</option>
+                                        <option value="daily">/day</option>
+                                    </select>
+                                    <button 
+                                        type="button" onClick={() => removeAllowance(idx)}
+                                        className="p-2 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                        {formData.allowances.length === 0 && (
+                            <div className="text-center py-6 text-gray-600 text-xs font-bold uppercase tracking-widest">No custom allowances defined</div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex gap-3 justify-end pt-6 border-t border-white/10 mt-4">

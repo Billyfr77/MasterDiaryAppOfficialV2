@@ -15,7 +15,7 @@ require('dotenv').config();
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
  */
-const { Project, Client, MapAsset, Allocation, Diary, Quote, Document, SafetyForm } = require('../models');
+const { Project, Client, MapAsset, Allocation, Diary, Quote, Document, SafetyForm, Invoice, Job } = require('../models');
 const Joi = require('joi');
 const axios = require('axios');
 

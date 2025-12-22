@@ -1,6 +1,7 @@
 import React from 'react';
 import { Activity, Sparkles, Zap, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDiaryTheme } from '../PaintDiary/ThemeContext';
 
 const PowerHeader = ({ 
     title, 
@@ -9,15 +10,35 @@ const PowerHeader = ({
     isPulseActive, 
     onPulseToggle, 
     onAiSuggest, 
-    children, // For controls like DatePicker, Selects, etc.
-    className 
+    children, 
+    className
 }) => {
+    const { theme } = useDiaryTheme();
+    
+    // Dynamic styles derived from global theme
+    const themeColor = theme.primary;
+    const baseBg = theme.bg;
+    const borderColor = theme.border;
+    const glowColor = theme.accent;
+
+    // Pulse secondary color mapping
+    const pulseViaMap = {
+        emerald: 'teal', amber: 'orange', gold: 'orange', rose: 'pink', ruby: 'pink',
+        violet: 'purple', purple: 'purple', blue: 'cyan', cobalt: 'cyan',
+        pink: 'rose', orange: 'amber', leather: 'amber', fuchsia: 'pink', magenta: 'pink',
+        slate: 'blue', midnight: 'blue', cyan: 'blue', glacier: 'blue',
+        indigo: 'purple', nebula: 'purple', green: 'emerald', forest: 'emerald',
+        yellow: 'orange', sand: 'orange', lime: 'green', neon: 'green',
+        sky: 'blue', neutral: 'slate', carbon: 'slate'
+    };
+    const pulseVia = pulseViaMap[themeColor] || 'indigo';
+
     return (
         <div className={`relative z-20 ${className}`}>
             {/* Main Header Bar */}
             <div className={`
-                relative overflow-hidden rounded-3xl border border-white/10 backdrop-blur-xl transition-all duration-500
-                ${isPulseActive ? 'bg-indigo-900/40 shadow-[0_0_50px_rgba(79,70,229,0.3)] border-indigo-500/30' : 'bg-stone-900/60 shadow-xl'}
+                relative overflow-hidden rounded-3xl border backdrop-blur-xl transition-all duration-500
+                ${isPulseActive ? `bg-black/60 shadow-[0_0_50px_${glowColor}44] border-${themeColor}-500/40` : `${baseBg} shadow-xl ${borderColor}`}
             `}>
                 {/* Pulse Background Effect */}
                 <AnimatePresence>
@@ -26,7 +47,7 @@ const PowerHeader = ({
                             initial={{ opacity: 0 }} 
                             animate={{ opacity: 1 }} 
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 animate-pulse-slow pointer-events-none"
+                            className={`absolute inset-0 bg-gradient-to-r from-${themeColor}-500/10 via-${pulseVia}-500/10 to-${themeColor}-500/10 animate-pulse-slow pointer-events-none`}
                         />
                     )}
                 </AnimatePresence>
@@ -35,7 +56,7 @@ const PowerHeader = ({
                     {/* Title & Pulse Toggle */}
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-3">
-                            <div className={`p-3 rounded-2xl transition-colors ${isPulseActive ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/50' : 'bg-white/5 text-gray-400'}`}>
+                            <div className={`p-3 rounded-2xl transition-colors ${isPulseActive ? `bg-${themeColor}-500 text-white shadow-lg shadow-${themeColor}-500/50` : 'bg-white/5 text-gray-400'}`}>
                                 {Icon && <Icon size={24} />}
                             </div>
                             <div>
@@ -56,7 +77,7 @@ const PowerHeader = ({
                             className={`
                                 group relative px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all overflow-hidden
                                 ${isPulseActive 
-                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500' 
+                                    ? `bg-${themeColor}-600 text-white shadow-lg shadow-${themeColor}-500/40 hover:bg-${themeColor}-500` 
                                     : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/5'}
                             `}
                         >
@@ -80,7 +101,7 @@ const PowerHeader = ({
                                     animate={{ scale: 1, opacity: 1 }}
                                     exit={{ scale: 0.8, opacity: 0 }}
                                     onClick={onAiSuggest}
-                                    className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-amber-500/30 hover:brightness-110 transition-all ml-2"
+                                    className={`flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-${themeColor}-500 to-${pulseVia}-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-${themeColor}-500/30 hover:brightness-110 transition-all ml-2`}
                                 >
                                     <Zap size={16} fill="currentColor" />
                                     <span>AI Suggest</span>
@@ -95,7 +116,7 @@ const PowerHeader = ({
                     <div className="grid grid-cols-2 md:grid-cols-4 border-t border-white/5 bg-black/20 divide-x divide-white/5">
                         {stats.map((stat, i) => (
                             <div key={i} className="p-4 flex flex-col items-center justify-center hover:bg-white/5 transition-colors group">
-                                <span className="text-[10px] font-black uppercase text-gray-500 mb-1 group-hover:text-white transition-colors">{stat.label}</span>
+                                <span className={`text-[10px] font-black uppercase text-gray-500 mb-1 group-hover:text-${themeColor}-400 transition-colors`}>{stat.label}</span>
                                 <div className={`text-xl font-black ${stat.color || 'text-white'}`}>{stat.value}</div>
                             </div>
                         ))}

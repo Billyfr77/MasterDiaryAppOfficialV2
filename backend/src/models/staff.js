@@ -47,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     userId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'Users',
         key: 'id'
@@ -76,6 +76,19 @@ module.exports = (sequelize, DataTypes) => {
     chargeOutOT2: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true
+    },
+    payRateNight: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true
+    },
+    chargeOutNight: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true
+    },
+    allowances: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: []
     }
   }, {
     sequelize,

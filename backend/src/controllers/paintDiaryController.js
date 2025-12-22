@@ -3,9 +3,10 @@
  * Clean version with project assignment
  */
 
-const { Diary, Staff, Equipment, Node, Project, Client } = require('../models');
+const db = require('../models');
+const { Diary, Staff, Equipment, Node, Project, Client } = db;
 const Joi = require('joi');
-const { sequelize } = require('../models');
+const { sequelize } = db;
 
 const canvasSchema = Joi.object({
   entries: Joi.array().items(Joi.object({
@@ -38,95 +39,131 @@ const canvasSchema = Joi.object({
 
 const paintDiarySchema = Joi.object({
   date: Joi.date().required(),
-  projectId: Joi.alternatives().try(Joi.string().uuid(), Joi.string().allow(null, '')).optional(),
-  clientId: Joi.alternatives().try(Joi.string().uuid(), Joi.string().allow(null, '')).optional(),
-  canvasData: Joi.any().optional(), // Allow any structure for canvasData
+  projectId: Joi.any().allow(null, '').optional(),
+  jobId: Joi.any().allow(null, '').optional(),
+  clientId: Joi.any().allow(null, '').optional(),
+  canvasData: Joi.any().optional(),
   totalCost: Joi.number().optional().default(0),
   totalRevenue: Joi.number().optional().default(0),
   productivityScore: Joi.number().optional().default(0),
-  gpsData: Joi.any().optional().allow(null), // Allow any structure for gpsData
+  gpsData: Joi.any().optional().allow(null),
 });
-
-// Helper to auto-create resources from diary entries
-const processNewDiaryItems = async (canvasData, userId) => {
-    if (!canvasData || !canvasData.entries) return canvasData;
-
-    const processedEntries = [];
-    for (const entry of canvasData.entries) {
-        const processedItems = [];
-        for (const item of entry.items || []) {
-            // Check if item needs creation (no dataId, or generic ID)
-            // 'ai-' is used by frontend AI, 'temp-' or just missing dataId implies new
-            const isNew = !item.dataId || String(item.dataId).startsWith('ai-') || String(item.id).startsWith('ai-');
-            
-            if (isNew) {
-                try {
-                    let newItem;
-                    if (item.type === 'material') {
-                        newItem = await Node.create({
-                            name: item.name || 'New Material',
-                            pricePerUnit: parseFloat(item.costRate) || 0,
-                            category: 'material',
-                            unit: 'unit',
-                            userId
-                        });
-                    } else if (item.type === 'staff') {
-                        newItem = await Staff.create({
-                            name: item.name || 'New Staff',
-                            role: 'General',
-                            payRates: { base: parseFloat(item.costRate) || 0 },
-                            chargeRates: { base: parseFloat(item.chargeRate) || 0 },
-                            userId
-                        });
-                    } else if (item.type === 'equipment') {
-                        newItem = await Equipment.create({
-                            name: item.name || 'New Equipment',
-                            costRates: { base: parseFloat(item.costRate) || 0 },
-                            chargeRates: { base: parseFloat(item.chargeRate) || 0 },
-                            userId
-                        });
-                    }
-                    
-                    if (newItem) {
-                        item.dataId = newItem.id;
-                    }
-                } catch (err) {
-                    console.error("Auto-create resource failed:", err.message);
-                }
-            }
-            processedItems.push(item);
-        }
-        processedEntries.push({ ...entry, items: processedItems });
-    }
-    return { ...canvasData, entries: processedEntries };
-};
 
 const getAllPaintDiaries = async (req, res) => {
   try {
-    const { date } = req.query;
+    const { date, projectId } = req.query;
+    const where = { diaryType: 'paint' };
+    if (date) where.date = date;
+    if (projectId && projectId !== 'null' && projectId !== 'undefined') {
+      where.projectId = projectId;
+    }
+
     const diaries = await Diary.findAll({
-          where: { diaryType: 'paint', ...(date && { date }) },
-          include: [{ model: Project }, { model: Client }],
-          order: [['date', 'DESC'], ['createdAt', 'DESC']]
-        });
+      where,
+      include: [
+        { model: Project, required: false },
+        { model: Client, required: false }
+      ],
+      order: [['date', 'DESC'], ['createdAt', 'DESC']]
+    });
 
     res.json(diaries);
   } catch (error) {
+    console.error("Error fetching diaries:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
 const getPaintDiaryById = async (req, res) => {
   try {
-    const diary = await Diary.findByPk(req.params.id);
-    if (!diary || diary.diaryType !== 'paint') {
-      return res.status(404).json({ error: 'Paint diary entry not found' });
+    const diary = await Diary.findByPk(req.params.id, {
+      include: [
+        { model: Project, required: false },
+        { model: Client, required: false }
+      ]
+    });
+    if (diary && diary.diaryType === 'paint') {
+      res.json(diary);
+    } else {
+      res.status(404).json({ error: 'Paint diary entry not found' });
     }
-
-    res.json(diary);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+
+const processNewDiaryItems = async (canvasData, userId) => {
+  if (!canvasData) return [];
+  
+  // Normalize canvasData to an array of entries
+  let entries = [];
+  if (Array.isArray(canvasData)) {
+    entries = canvasData;
+  } else if (canvasData.entries && Array.isArray(canvasData.entries)) {
+    entries = canvasData.entries;
+  } else {
+    // Single entry or unknown format
+    entries = [canvasData];
+  }
+
+  const processedEntries = await Promise.all(entries.map(async (entry) => {
+    if (!entry.items) return entry;
+    
+    const processedItems = await Promise.all(entry.items.map(async (item) => {
+      // If item has no dataId, it's a new resource that needs to be created or matched by name
+      if (!item.dataId && item.name && item.type) {
+        try {
+          let resource;
+          const resourceType = item.type;
+          
+          if (resourceType === 'staff') {
+            resource = await Staff.findOne({ where: { name: item.name, userId } });
+            if (!resource) {
+              resource = await Staff.create({
+                name: item.name,
+                role: 'General',
+                payRateBase: item.costRate || 25,
+                chargeOutBase: item.chargeRate || 35,
+                userId
+              });
+            }
+          } else if (resourceType === 'equipment') {
+            resource = await Equipment.findOne({ where: { name: item.name, userId } });
+            if (!resource) {
+              resource = await Equipment.create({
+                name: item.name,
+                category: 'General',
+                ownership: 'owned',
+                costRateBase: item.costRate || 50,
+                userId
+              });
+            }
+          } else if (resourceType === 'material') {
+            resource = await Node.findOne({ where: { name: item.name, userId } });
+            if (!resource) {
+              resource = await Node.create({
+                name: item.name,
+                category: 'material',
+                unit: 'unit',
+                pricePerUnit: item.costRate || 10,
+                userId
+              });
+            }
+          }
+          
+          if (resource) {
+            return { ...item, dataId: resource.id, data: resource.toJSON ? resource.toJSON() : resource };
+          }
+        } catch (err) {
+          console.error(`Error processing new diary item ${item.name}:`, err);
+        }
+      }
+      return item;
+    }));
+    return { ...entry, items: processedItems };
+  }));
+
+  return processedEntries;
 };
 
 const createPaintDiary = async (req, res) => {
@@ -139,31 +176,30 @@ const createPaintDiary = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, clientId, canvasData, gpsData } = req.body;
+    const { date, projectId, jobId, clientId, canvasData, gpsData } = req.body;
 
-    // 1. Auto-Create Resources
-    const processedCanvas = await processNewDiaryItems(canvasData, req.user?.id);
+    // 1. Auto-Create Resources & Normalize Entries
+    const entries = await processNewDiaryItems(canvasData, req.user?.id);
 
     let calculatedCosts = { totalCost: 0, totalRevenue: 0, productivityScore: 0 };
-    if (processedCanvas && processedCanvas.entries) {
-      calculatedCosts = await calculateCostsFromEntries(processedCanvas.entries);
-    }
+    calculatedCosts = await calculateCostsFromEntries(entries);
 
-    const processedCanvasData = processedCanvas ? processedCanvas.entries.map(entry => ({
+    const processedCanvasData = entries.map(entry => ({
       ...entry,
       photos: entry.photos || [],
       voiceNotes: entry.voiceNotes || [],
       location: entry.location || null
-    })) : [];
+    }));
 
     const diaryData = {
       date,
-      projectId,
-      clientId,
+      projectId: projectId || null,
+      jobId: jobId || null,
+      clientId: clientId || null,
       canvasData: processedCanvasData,
-      totalCost: calculatedCosts.totalCost,
-      totalRevenue: calculatedCosts.totalRevenue,
-      productivityScore: calculatedCosts.productivityScore,
+      totalCost: calculatedCosts.totalCost || req.body.totalCost || 0,
+      totalRevenue: calculatedCosts.totalRevenue || req.body.totalRevenue || 0,
+      productivityScore: calculatedCosts.productivityScore || req.body.productivityScore || 0,
       gpsData: gpsData || null,
       diaryType: 'paint'
     };
@@ -171,11 +207,10 @@ const createPaintDiary = async (req, res) => {
     const diary = await Diary.create(diaryData, { transaction });
     await transaction.commit();
 
-    const fullDiary = diary;
-
-    res.status(201).json(fullDiary);
+    res.status(201).json(diary);
   } catch (error) {
-    await transaction.rollback();
+    if (transaction) await transaction.rollback();
+    console.error("Create Paint Diary Error:", error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -196,44 +231,39 @@ const updatePaintDiary = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, clientId, canvasData, gpsData } = req.body;
+    const { date, projectId, jobId, clientId, canvasData, gpsData } = req.body;
 
-    // 1. Auto-Create Resources
-    const processedCanvas = await processNewDiaryItems(canvasData, req.user?.id);
+    // Normalize and process
+    const entries = await processNewDiaryItems(canvasData, req.user?.id);
 
     let calculatedCosts = { totalCost: 0, totalRevenue: 0, productivityScore: 0 };
-    if (processedCanvas && processedCanvas.entries) {
-      calculatedCosts = await calculateCostsFromEntries(processedCanvas.entries);
-    }
+    calculatedCosts = await calculateCostsFromEntries(entries);
 
-    const processedCanvasData = processedCanvas ? processedCanvas.entries.map(entry => ({
+    const processedCanvasData = entries.map(entry => ({
       ...entry,
       photos: entry.photos || [],
       voiceNotes: entry.voiceNotes || [],
       location: entry.location || null
-    })) : [];
+    }));
 
-    const [updated] = await Diary.update({
+    await Diary.update({
       date,
-      projectId,
-      clientId,
+      projectId: projectId || null,
+      jobId: jobId || null,
+      clientId: clientId || null,
       canvasData: processedCanvasData,
-      totalCost: calculatedCosts.totalCost,
-      totalRevenue: calculatedCosts.totalRevenue,
-      productivityScore: calculatedCosts.productivityScore,
+      totalCost: calculatedCosts.totalCost || req.body.totalCost || 0,
+      totalRevenue: calculatedCosts.totalRevenue || req.body.totalRevenue || 0,
+      productivityScore: calculatedCosts.productivityScore || req.body.productivityScore || 0,
       gpsData: gpsData || null
     }, { where: { id: req.params.id }, transaction });
 
     await transaction.commit();
-
-    if (updated) {
-      const updatedDiary = await Diary.findByPk(req.params.id);
-      res.json(updatedDiary);
-    } else {
-      res.status(404).json({ error: 'Paint diary entry not found' });
-    }
+    const updatedDiary = await Diary.findByPk(req.params.id);
+    res.json(updatedDiary);
   } catch (error) {
-    await transaction.rollback();
+    if (transaction) await transaction.rollback();
+    console.error("Update Paint Diary Error:", error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -306,6 +336,14 @@ const calculateCostsFromEntries = async (entries) => {
     return { totalCost: 0, totalRevenue: 0, profit: 0, profitMargin: 0, productivityScore: 0 };
   }
 
+  // Fetch markups from settings
+  const settings = await db.Settings.findAll();
+  const settingsMap = {};
+  settings.forEach(s => settingsMap[s.parameter] = s.value);
+  
+  const materialMarkup = parseFloat(settingsMap.defaultMaterialMarkup) || 1.2;
+  const allowanceMarkup = parseFloat(settingsMap.defaultAllowanceMarkup) || 1.2;
+
   let totalCost = 0;
   let totalRevenue = 0;
   let totalDuration = 0;
@@ -314,7 +352,7 @@ const calculateCostsFromEntries = async (entries) => {
   for (const entry of entries) {
     for (const item of entry.items || []) {
       const cost = await calculateItemCost(item);
-      const revenue = await calculateItemRevenue(item);
+      const revenue = await calculateItemRevenue(item, { materialMarkup, allowanceMarkup });
 
       totalCost += cost * (item.duration || 1);
       totalRevenue += revenue * (item.duration || 1);
@@ -380,7 +418,7 @@ const calculateItemCost = async (item) => {
   }
 };
 
-const calculateItemRevenue = async (item) => {
+const calculateItemRevenue = async (item, markups = { materialMarkup: 1.2, allowanceMarkup: 1.2 }) => {
   // Try to use the rates provided directly in the item first
   if (item.chargeRate !== undefined) return parseFloat(item.chargeRate);
 
@@ -397,7 +435,7 @@ const calculateItemRevenue = async (item) => {
         return equipment ? parseFloat(equipment.costRateBase) * 1.2 : 0;
       case 'material':
         const material = await Node.findByPk(id);
-        return material ? parseFloat(material.pricePerUnit) * 1.3 : 0;
+        return material ? parseFloat(material.pricePerUnit) * markups.materialMarkup : 0;
       default:
         return 0;
     }

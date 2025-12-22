@@ -40,7 +40,22 @@ const staffSchema = Joi.object({
     Joi.number().positive(),
     Joi.string().empty(''),
     Joi.allow(null)
-  ).optional()
+  ).optional(),
+  payRateNight: Joi.alternatives().try(
+    Joi.number().positive(),
+    Joi.string().empty(''),
+    Joi.allow(null)
+  ).optional(),
+  chargeOutNight: Joi.alternatives().try(
+    Joi.number().positive(),
+    Joi.string().empty(''),
+    Joi.allow(null)
+  ).optional(),
+  allowances: Joi.array().items(Joi.object({
+    name: Joi.string().required(),
+    rate: Joi.number().required(),
+    type: Joi.string().valid('hourly', 'daily').required()
+  })).optional()
 });
 
 const getAllStaff = async (req, res) => {
@@ -106,8 +121,11 @@ const createStaff = async (req, res) => {
       ...req.body,
       payRateOT1: req.body.payRateOT1 === '' || req.body.payRateOT1 === null ? null : Number(req.body.payRateOT1),
       payRateOT2: req.body.payRateOT2 === '' || req.body.payRateOT2 === null ? null : Number(req.body.payRateOT2),
+      payRateNight: req.body.payRateNight === '' || req.body.payRateNight === null ? null : Number(req.body.payRateNight),
       chargeOutOT1: req.body.chargeOutOT1 === '' || req.body.chargeOutOT1 === null ? null : Number(req.body.chargeOutOT1),
-      chargeOutOT2: req.body.chargeOutOT2 === '' || req.body.chargeOutOT2 === null ? null : Number(req.body.chargeOutOT2)
+      chargeOutOT2: req.body.chargeOutOT2 === '' || req.body.chargeOutOT2 === null ? null : Number(req.body.chargeOutOT2),
+      chargeOutNight: req.body.chargeOutNight === '' || req.body.chargeOutNight === null ? null : Number(req.body.chargeOutNight),
+      allowances: req.body.allowances || []
     };
 
     const { error } = staffSchema.validate(processedBody);
@@ -139,8 +157,11 @@ const updateStaff = async (req, res) => {
       ...req.body,
       payRateOT1: req.body.payRateOT1 === '' || req.body.payRateOT1 === null ? null : Number(req.body.payRateOT1),
       payRateOT2: req.body.payRateOT2 === '' || req.body.payRateOT2 === null ? null : Number(req.body.payRateOT2),
+      payRateNight: req.body.payRateNight === '' || req.body.payRateNight === null ? null : Number(req.body.payRateNight),
       chargeOutOT1: req.body.chargeOutOT1 === '' || req.body.chargeOutOT1 === null ? null : Number(req.body.chargeOutOT1),
-      chargeOutOT2: req.body.chargeOutOT2 === '' || req.body.chargeOutOT2 === null ? null : Number(req.body.chargeOutOT2)
+      chargeOutOT2: req.body.chargeOutOT2 === '' || req.body.chargeOutOT2 === null ? null : Number(req.body.chargeOutOT2),
+      chargeOutNight: req.body.chargeOutNight === '' || req.body.chargeOutNight === null ? null : Number(req.body.chargeOutNight),
+      allowances: req.body.allowances || []
     };
 
     const { error } = staffSchema.validate(processedBody);

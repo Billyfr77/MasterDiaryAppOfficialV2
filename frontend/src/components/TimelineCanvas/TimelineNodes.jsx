@@ -1,31 +1,45 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeResizer } from '@xyflow/react';
-import { User, Wrench, Package, X, Sparkles, Clock, DollarSign, Activity, Zap, ShieldCheck, Timer, Cpu, Box, AlertTriangle, Ruler, PenTool, Layout } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { User, Wrench, Package, X, Sparkles, Clock, DollarSign, Activity, Zap, ShieldCheck, Timer, Cpu, Box, AlertTriangle, Ruler, PenTool, Layout, Award } from 'lucide-react';
+import { useDiaryTheme } from '../PaintDiary/ThemeContext';
 
 // --- SHARED COMPONENT: GLASS JEWEL WRAPPER ---
-const JewelWrapper = ({ children, theme, selected, isGhost, shapeClass }) => (
-    <div className={`
-        group relative min-w-[280px] p-[2px] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]
-        ${shapeClass}
-        ${selected ? `scale-105 z-50 ${theme.glow} shadow-[0_0_100px_-20px_currentColor]` : 'hover:scale-[1.02] hover:shadow-2xl'}
-    `}>
-        {/* REFRACTIVE BASE LAYER */}
-        <div className={`absolute inset-0 ${shapeClass} bg-gradient-to-br ${theme.bg} backdrop-blur-3xl opacity-90 overflow-hidden`}>
-            {/* Internal Shimmer Rays */}
-            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer" />
-            {/* Subtle Texture */}
-            <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
+const JewelWrapper = ({ children, theme: nodeTheme, selected, isGhost, shapeClass }) => {
+    const { theme } = useDiaryTheme();
+    // If nodeTheme is provided (e.g. from custom override), use it, otherwise fallback to global
+    const activeTheme = nodeTheme || {
+        bg: theme.bg.replace('bg-', ''),
+        border: theme.border,
+        glow: theme.glow,
+        text: theme.text
+    };
+
+    return (
+        <div className={`
+            group relative min-w-[280px] p-[2px] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]
+            ${shapeClass}
+            ${selected ? `scale-105 z-50 ${activeTheme.glow} shadow-[0_0_100px_-20px_currentColor]` : 'hover:scale-[1.02] hover:shadow-2xl'}
+            animate-in zoom-in-95 duration-300 fade-in
+        `}>
+            {/* REFRACTIVE BASE LAYER */}
+            <div className={`absolute inset-0 ${shapeClass} bg-gradient-to-br ${activeTheme.bg || theme.bg} backdrop-blur-3xl opacity-90 overflow-hidden`}>
+                {/* Internal Shimmer Rays */}
+                <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer" />
+                {/* Subtle Texture */}
+                <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
+            </div>
+            
+            {/* HOLOGRAPHIC BORDER */}
+            <div className={`absolute inset-0 ${shapeClass} border-[1.5px] ${activeTheme.border || theme.border} pointer-events-none ring-1 ring-white/10`} />
+            
+            {/* CONTENT AREA */}
+            <div className="relative p-6">
+                {children}
+            </div>
         </div>
-        
-        {/* HOLOGRAPHIC BORDER */}
-        <div className={`absolute inset-0 ${shapeClass} border-[1.5px] ${theme.border} pointer-events-none ring-1 ring-white/10`} />
-        
-        {/* CONTENT AREA */}
-        <div className="relative p-6">
-            {children}
-        </div>
-    </div>
-);
+    );
+};
 
 export const DelayNode = ({ data, selected }) => {
     const { label, delayHours, reason, status } = data;
@@ -47,10 +61,15 @@ export const DelayNode = ({ data, selected }) => {
                     <div className="p-3 rounded-lg bg-rose-600 text-white shadow-lg animate-bounce">
                         <AlertTriangle size={24} strokeWidth={3} />
                     </div>
-                    <div className="text-right">
-                        <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest animate-pulse">Critical Impact</div>
-                        <div className="text-4xl font-black text-white font-mono leading-none tracking-tighter">
-                            +{delayHours}<span className="text-lg align-top opacity-50">H</span>
+                    <div className="flex flex-col items-end gap-2">
+                        <button onClick={(e) => { e.stopPropagation(); data.onDelete?.(); }} className="p-1.5 rounded-lg bg-white/5 text-white/20 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100">
+                            <X size={12} strokeWidth={3} />
+                        </button>
+                        <div className="text-right">
+                            <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest animate-pulse">Critical Impact</div>
+                            <div className="text-4xl font-black text-white font-mono leading-none tracking-tighter">
+                                +{delayHours}<span className="text-lg align-top opacity-50">H</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -89,14 +108,19 @@ export const ImpactNode = ({ data, selected }) => {
             </div>
 
             <div className="relative p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-2xl ${isNegative ? 'bg-rose-500/20 text-rose-400' : 'bg-indigo-500/20 text-indigo-400'} border border-current shadow-lg`}>
-                        <Zap size={22} strokeWidth={2.5} />
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${isNegative ? 'bg-rose-500/20 text-rose-400' : 'bg-indigo-500/20 text-indigo-400'} border border-current shadow-lg`}>
+                            <Zap size={22} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <div className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em] mb-0.5">Impact Anchor</div>
+                            <div className="text-base font-black text-white uppercase tracking-tight leading-none">{label || 'Condition'}</div>
+                        </div>
                     </div>
-                    <div>
-                        <div className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em] mb-0.5">Impact Anchor</div>
-                        <div className="text-base font-black text-white uppercase tracking-tight leading-none">{label || 'Condition'}</div>
-                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); data.onDelete?.(); }} className="p-1.5 rounded-lg bg-white/5 text-white/20 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100">
+                        <X size={12} strokeWidth={3} />
+                    </button>
                 </div>
 
                 <div className="bg-black/40 rounded-3xl p-4 border border-white/5">
@@ -130,7 +154,23 @@ export const ImpactNode = ({ data, selected }) => {
 };
 
 export const ChronosNode = ({ data, selected }) => {
-    const { label, startTime, finishTime, manHours } = data;
+    const { label, startTime, finishTime, manHours, duration } = data;
+
+    const handleTimeChange = (field, value) => {
+        const newData = { [field]: value };
+        
+        // Auto-calc duration
+        const start = field === 'startTime' ? value : (startTime || '07:00');
+        const end = field === 'finishTime' ? value : (finishTime || '17:00');
+        
+        const [h1, m1] = start.split(':').map(Number);
+        const [h2, m2] = end.split(':').map(Number);
+        
+        const totalHours = Math.max(0, (h2 + m2/60) - (h1 + m1/60));
+        newData.duration = parseFloat(totalHours.toFixed(2));
+        
+        data.onUpdate?.(data.id, newData);
+    };
     
     return (
         <div className={`
@@ -148,18 +188,30 @@ export const ChronosNode = ({ data, selected }) => {
                 
                 {/* CONTENT */}
                 <div className="relative z-10 text-center space-y-2">
+                    <button onClick={(e) => { e.stopPropagation(); data.onDelete?.(); }} className="absolute -top-10 left-1/2 -translate-x-1/2 p-1.5 rounded-lg bg-white/5 text-white/20 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100">
+                        <X size={12} strokeWidth={3} />
+                    </button>
                     <div className="flex items-center justify-center gap-2 text-cyan-400 mb-2">
                         <Clock size={16} className="animate-pulse" />
                         <span className="text-[9px] font-black uppercase tracking-[0.3em]">Chronos Hub</span>
                     </div>
                     
-                    <div className="text-4xl font-black text-white font-mono tracking-tighter drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">
-                        {startTime || '07:00'}
-                    </div>
+                    {/* EDITABLE TIME INPUTS */}
+                    <input 
+                        type="time" 
+                        className="text-4xl font-black text-white font-mono tracking-tighter drop-shadow-[0_0_10px_rgba(34,211,238,0.5)] bg-transparent text-center w-full focus:outline-none"
+                        value={startTime || '07:00'}
+                        onChange={(e) => handleTimeChange('startTime', e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                    />
                     <div className="h-px w-12 bg-cyan-500/50 mx-auto" />
-                    <div className="text-2xl font-bold text-cyan-200/50 font-mono tracking-tighter">
-                        {finishTime || '17:00'}
-                    </div>
+                    <input 
+                        type="time" 
+                        className="text-2xl font-bold text-cyan-200/50 font-mono tracking-tighter bg-transparent text-center w-full focus:outline-none"
+                        value={finishTime || '17:00'}
+                        onChange={(e) => handleTimeChange('finishTime', e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                    />
 
                     <div className="mt-4 px-4 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold">
                         {label || 'Shift A'}
@@ -168,9 +220,16 @@ export const ChronosNode = ({ data, selected }) => {
             </div>
 
             {/* RESOURCE ORBIT INDICATOR */}
-            {manHours > 0 && (
-                <div className="absolute -right-4 top-1/2 -translate-y-1/2 bg-black border border-cyan-500 text-cyan-400 px-3 py-1.5 rounded-xl text-xs font-black shadow-xl flex items-center gap-2">
-                    <Activity size={12} /> {manHours}H
+            {(duration > 0 || manHours > 0) && (
+                <div className="absolute -right-4 top-1/2 -translate-y-1/2 bg-black border border-cyan-500 text-cyan-400 px-3 py-1.5 rounded-xl text-xs font-black shadow-xl flex flex-col items-center gap-1 min-w-[60px]">
+                    <div className="flex items-center gap-2">
+                        <Timer size={12} /> {duration || 0}H
+                    </div>
+                    {manHours > 0 && (
+                        <div className="text-[8px] text-gray-500 uppercase tracking-tighter border-t border-white/10 pt-1 w-full text-center">
+                            {manHours} MAN-HRS
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -180,37 +239,146 @@ export const ChronosNode = ({ data, selected }) => {
     );
 };
 
+export const PhotoNode = ({ data, selected }) => {
+    const { url, label, onDelete } = data;
+    
+    return (
+        <div className={`
+            relative group transition-all duration-700
+            ${selected ? 'scale-105 z-50' : 'hover:scale-[1.02]'}
+        `}>
+            {/* AMBIENT PULSE GLOW */}
+            <div className="absolute -inset-4 bg-indigo-500/20 rounded-[2rem] blur-2xl opacity-0 group-hover:opacity-100 animate-pulse transition-opacity" />
+            
+            {/* HOLOGRAPHIC FRAME */}
+            <div className={`
+                relative p-1 rounded-[1.8rem] bg-gradient-to-br from-white/20 via-white/5 to-black border border-white/10 shadow-2xl overflow-hidden
+                ${selected ? 'ring-2 ring-indigo-500/50 shadow-[0_0_50px_rgba(99,102,241,0.3)]' : ''}
+            `}>
+                {/* Photo Content */}
+                <div className="relative aspect-video w-64 rounded-[1.5rem] overflow-hidden bg-stone-900">
+                    <img src={url} alt={label} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                    
+                    {/* Scanning Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <motion.div 
+                        animate={{ top: ["-100%", "200%"] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                        className="absolute left-0 right-0 h-1/2 bg-gradient-to-b from-transparent via-indigo-500/10 to-transparent pointer-events-none"
+                    />
+                </div>
+
+                {/* Footer Info */}
+                <div className="absolute bottom-3 left-4 right-3 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[8px] font-black text-white/80 uppercase tracking-widest">{label || 'EVIDENCE_01'}</span>
+                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete?.(); }} className="p-1.5 rounded-lg bg-black/40 text-white/40 hover:bg-rose-500 hover:text-white transition-all">
+                        <X size={10} />
+                    </button>
+                </div>
+            </div>
+
+            {/* HANDLES */}
+            <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-indigo-400 !border-none" />
+            <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-indigo-400 !border-none" />
+        </div>
+    );
+};
+
+export const AllowanceNode = ({ data, selected }) => {
+    const { label, rate, type } = data;
+    
+    return (
+        <div className={`
+            relative min-w-[200px] p-1 transition-all duration-700
+            rounded-full
+            ${selected ? 'scale-110 z-50 shadow-[0_0_80px_-10px_rgba(251,191,36,0.6)]' : 'hover:scale-105 shadow-2xl'}
+        `}>
+            {/* GOLDEN RING WITH SHINE */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-200 via-yellow-500 to-amber-800 p-[4px] shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.8),transparent_40%)] z-10 opacity-60" />
+                <div className="absolute inset-0 rounded-full bg-[#1a1500] ring-1 ring-amber-500/50 backdrop-blur-xl flex items-center justify-center">
+                     {/* MICRO TEXTURE */}
+                     <div className="absolute inset-0 opacity-[0.05] bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+                </div>
+            </div>
+
+            <div className="relative p-6 flex flex-col items-center justify-center text-center gap-2">
+                <div className="absolute -top-3 p-2 bg-gradient-to-b from-amber-300 to-amber-600 rounded-full shadow-lg border-2 border-amber-200">
+                    <Award size={18} className="text-amber-950" strokeWidth={3} />
+                </div>
+                
+                <button onClick={(e) => { e.stopPropagation(); data.onDelete?.(); }} className="absolute top-2 right-4 text-white/20 hover:text-red-500 transition-colors">
+                    <X size={12} />
+                </button>
+
+                <div className="mt-2">
+                    <div className="text-[9px] font-black text-amber-500/80 uppercase tracking-widest">Allowance</div>
+                    <div className="text-lg font-black text-white uppercase tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-b from-amber-200 to-amber-500">
+                        {label || 'Bonus'}
+                    </div>
+                </div>
+
+                <div className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center gap-1.5">
+                    <DollarSign size={10} className="text-amber-400" />
+                    <span className="text-sm font-mono font-black text-amber-200">${rate || 0}</span>
+                    <span className="text-[9px] font-bold text-amber-500/50 uppercase ml-0.5">/{type === 'daily' ? 'DAY' : 'HR'}</span>
+                </div>
+
+                {data.allowanceTotal > 0 && (
+                    <div className="mt-2 pt-2 border-t border-amber-500/20 w-full">
+                        <div className="text-[8px] font-black text-amber-500/40 uppercase tracking-widest">Distributed</div>
+                        <div className="text-xl font-mono font-black text-emerald-400 animate-pulse">
+                            ${data.allowanceTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-amber-400 !border-2 !border-black" />
+            <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-amber-400 !border-2 !border-black" />
+        </div>
+    );
+};
+
 export const DiaryNode = ({ data, selected }) => {
   const { label, duration, type, costRate, quantity, onDelete, isGhost } = data;
+  const { theme } = useDiaryTheme();
   
+  const getAccentColor = (type) => {
+      if (type === 'staff') return theme.primary === 'emerald' ? 'emerald' : theme.primary;
+      if (type === 'equipment') return 'amber';
+      return 'indigo';
+  };
+
+  const accentColor = getAccentColor(type);
+
   // -- DYNAMIC THEME ENGINE --
-  let theme = {
-      bg: "from-indigo-600/80 via-blue-900/90 to-black",
-      border: "border-indigo-400/40",
-      glow: "shadow-indigo-500/50",
-      icon: "text-indigo-400",
-      iconBg: "bg-indigo-500/20",
-      accent: "text-indigo-200"
+  let nodeTheme = {
+      bg: `from-${accentColor}-600/80 via-${accentColor}-900/90 to-black`,
+      border: `border-${accentColor}-400/40`,
+      glow: `shadow-${accentColor}-500/50`,
+      icon: `text-${accentColor}-400`,
+      iconBg: `bg-${accentColor}-500/20`,
+      accent: `text-${accentColor}-200`
   };
 
   if (isGhost) {
-      theme = { bg: "from-slate-800/60 to-black", border: "border-white/10 border-dashed", glow: "shadow-white/5", iconBg: "bg-white/5", accent: "text-slate-500" };
-  } else if (type === 'staff') {
-      theme = { bg: "from-emerald-600/80 via-teal-900/90 to-black", border: "border-emerald-400/40", glow: "shadow-emerald-500/50", iconBg: "bg-emerald-500/20", accent: "text-emerald-200" };
-  } else if (type === 'equipment') {
-      theme = { bg: "from-amber-500/80 via-orange-900/90 to-black", border: "border-amber-400/40", glow: "shadow-amber-500/50", iconBg: "bg-amber-500/20", accent: "text-amber-200" };
+      nodeTheme = { bg: "from-slate-800/60 to-black", border: "border-white/10 border-dashed", glow: "shadow-white/5", iconBg: "bg-white/5", accent: "text-slate-500" };
   }
 
   // Unified Shape: Elegant Rounded Hexagon (via clip-path) or Squircle
   const shapeClass = "rounded-[2rem]"; 
 
   return (
-    <JewelWrapper theme={theme} selected={selected} isGhost={isGhost} shapeClass={shapeClass}>
+    <JewelWrapper theme={nodeTheme} selected={selected} isGhost={isGhost} shapeClass={shapeClass}>
       <div className="flex flex-col gap-4">
           <div className="flex justify-between items-start">
               <div className="relative">
-                  <div className={`absolute inset-0 rounded-2xl ${theme.iconBg} animate-ping opacity-20`} />
-                  <div className={`relative p-3.5 rounded-2xl ${theme.iconBg} backdrop-blur-md shadow-2xl border border-white/10 transition-all group-hover:rotate-3`}>
+                  <div className={`absolute inset-0 rounded-2xl ${nodeTheme.iconBg} animate-ping opacity-20`} />
+                  <div className={`relative p-3.5 rounded-2xl ${nodeTheme.iconBg} backdrop-blur-md shadow-2xl border border-white/10 transition-all group-hover:rotate-3`}>
                       {type === 'staff' ? <User size={22} className="text-white" /> : 
                        type === 'equipment' ? <Wrench size={22} className="text-white" /> : 
                        <Package size={22} className="text-white" />}
@@ -226,7 +394,7 @@ export const DiaryNode = ({ data, selected }) => {
 
           <div>
               <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-[8px] font-black uppercase tracking-[0.4em] ${theme.accent} opacity-60`}>
+                  <span className={`text-[8px] font-black uppercase tracking-[0.4em] ${nodeTheme.accent} opacity-60`}>
                       {isGhost ? 'SUGGESTION' : type}
                   </span>
               </div>
@@ -238,14 +406,14 @@ export const DiaryNode = ({ data, selected }) => {
           {!isGhost && (
               <div className="flex gap-2 items-center">
                   <div className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/5 flex items-center gap-2">
-                      <Cpu size={10} className={`${theme.accent} opacity-50`} />
+                      <Cpu size={10} className={`${nodeTheme.accent} opacity-50`} />
                       <span className="text-[10px] font-mono font-black text-white">
                           {type === 'staff' || type === 'equipment' ? `${duration || quantity}H` : `${quantity} UNIT`}
                       </span>
                   </div>
                   {costRate > 0 && (
-                      <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1.5">
-                          <DollarSign size={10} className="text-emerald-400" />
+                      <div className={`px-3 py-1.5 rounded-xl bg-${accentColor}-500/10 border border-${accentColor}-500/20 flex items-center gap-1.5`}>
+                          <DollarSign size={10} className={`text-${accentColor}-400`} />
                           <span className="text-[10px] font-mono font-black text-white">${costRate}</span>
                       </div>
                   )}

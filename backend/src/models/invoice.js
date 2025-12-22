@@ -56,7 +56,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     invoiceData: {
-      type: DataTypes.JSONB,
+      type: DataTypes.JSON,
       allowNull: false
     },
     totalAmount: {
