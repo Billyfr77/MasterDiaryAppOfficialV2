@@ -195,45 +195,33 @@ const analyzeDocument = async (req, res) => {
 // --- AI QUOTE GENERATION (Visual Builder - MAXIMUM POWER) ---
 const generateQuote = async (req, res) => {
     try {
-        const { prompt } = req.body;
-        if (!prompt) {
-            return res.status(400).json({ error: 'A prompt describing the job is required.' });
-        }
+        const { prompt, historicalContext = [] } = req.body;
+        if (!prompt) return res.status(400).json({ error: 'A prompt describing the job is required.' });
 
         const systemPrompt = `
-            You are "Pinnacle Architect", the world's most advanced Construction Estimator AI (Level 100).
-            **Mission:** Construct a FLAWLESS, COMPLETE, and INTELLIGENT visual quote blueprint.
+            You are "Pinnacle Architect", the world's most advanced Construction Estimator AI.
+            **Mission:** Construct a FLAWLESS, ID-DRIVEN visual quote blueprint optimized by real-world performance data.
             
-            **INTELLIGENCE MANDATES (The "Brain"):**
-            1. **Hyper-Completeness:** Never add a primary item without its ancillaries.
-               - *Example:* "Drywall" -> MUST include "Stud Adhesive", "Screws", "Joint Tape", "Base Coat", "Top Coat", "Sanding Discs".
-               - *Example:* "Tile" -> MUST include "Adhesive", "Grout", "Spacers", "Silicone", "Waterproofing (if wet area)".
-            2. **Sequencing Logic:** Organize the job into logical chronological ZONES (Phases).
-               - *Standard Flow:* Prep/Demo -> Structure/Rough-in -> Fix/Sheeting -> Fitout -> Finishes -> Cleanup.
-            3. **Realistic Quantities:** Use industry-standard coverage rates (e.g., Paint = 10m²/L, 2 coats). Always add 10% waste.
-            4. **Labor & Equip:** Do not forget the human element. If there is heavy material, add "Laborers". If digging, add "Excavator".
+            **HISTORICAL JOB DNA (Cross-Job Learning):**
+            ${historicalContext.length > 0 ? JSON.stringify(historicalContext) : 'No direct history found. Use industry benchmarks.'}
 
-            **VISUAL LAYOUT ENGINE (The "Canvas"):**
-            - **Zones (Phases):** Create 'zone' nodes at Y=0, spaced X=1000 apart.
-            - **Items (Glass Nodes):** Cluster items vertically under their Zone (Y=300, 600, 900...).
-            - **Edges:**
-              - 'orbit' edge for Labor/Equipment -> Zone.
-              - 'gradient' edge for Materials -> Zone.
-              - 'neon' edge for critical dependencies (e.g., Waterproofing -> Tile).
+            **STRUCTURAL MANDATES:**
+            1. **Specialized Nodes:** Use 'zone' (Phase), 'dimension' (Area), and 'glass' (Resources).
+            2. **Unique Identifiers:** Every node must have a unique 'id'.
+            3. **Relational Edges:** Create explicit edges linking Resources -> Areas -> Phases.
+            4. **Optimization:** If history shows similar jobs took 20% longer, adjust your estimates proactively.
 
-            **OUTPUT FORMAT (RAW JSON):**
+            **OUTPUT FORMAT (RAW JSON ONLY):**
             {
               "nodes": [
-                { "id": "z1", "type": "zone", "label": "Phase 1: Preparation", "x": 0, "y": 0 },
-                { "id": "i1", "type": "glass", "label": "Skip Bin (4m)", "cost": 450, "quantity": 1, "nodeType": "equipment", "x": 0, "y": 300 }
+                { "id": "z1", "type": "zone", "label": "Phase 1", "x": 0, "y": 0 },
+                { "id": "d1", "type": "dimension", "label": "Main Area", "x": 0, "y": 300 },
+                { "id": "i1", "type": "glass", "label": "Concrete", "cost": 250, "quantity": 10, "nodeType": "material", "x": 0, "y": 600 }
               ],
-              "edges": [
-                { "id": "e1", "source": "z1", "target": "i1", "animated": true, "data": { "type": "orbit" } }
-              ]
+              "edges": [...]
             }
 
             Request: "${prompt}"
-            **Action:** Execute Deep-Scan estimation now. Leave no nut or bolt unaccounted for.
         `;
 
         const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 3500);
@@ -245,40 +233,41 @@ const generateQuote = async (req, res) => {
     }
 };
 
-// --- QUOTE CHAT (COPILOT - STRATEGIC) ---
+// --- QUOTE CHAT (COPILOT - STRATEGIC & GRAPH AWARE) ---
 const chatQuoteAssistant = async (req, res) => {
     try {
         const { message, context } = req.body;
+        const { items = [], nodes = [], edges = [] } = context || {};
         
         // Deep context analysis
-        const itemNames = (context?.items || []).map(i => i.name).join(', ');
+        const nodesContext = nodes.map(n => `[${n.id}] ${n.data?.label || n.label} (${n.type})`).join('\n');
+        const graphContext = edges.map(e => `[${e.source}] -> [${e.target}]`).join('\n');
         
         const systemPrompt = `
-            You are "Pinnacle Strategist", the Strategic Construction Consultant.
+            You are "Pinnacle Strategist", the master of ID-driven quote optimization.
             
-            **Goal:** Analyze the current quote context and the user's request to provide HIGH-VALUE suggestions.
-            **Current Quote Includes:** ${itemNames || "Nothing yet"}
-            
-            **Analysis Logic:**
-            1. **Gap Analysis:** Look for missing dependencies. (e.g., User has "Bricks" but no "Sand/Cement" -> Suggest it).
-            2. **Upsell/Value:** Suggest premium alternatives or necessary add-ons (e.g., "Add scaffolding for safety?").
-            3. **Direct Response:** Answer the user's specific query clearly.
+            **CAPABILITIES:**
+            1. **Circuit Awareness:** You can see the graph IDs and connections.
+            2. **Direct Editing:** Suggest changes to existing nodes via 'suggestedActions'.
+               - Format: { "type": "edit_node", "nodeId": "ID", "updates": { "quantity": X, "cost": Y } }
+            3. **Gap Analysis:** Look for items mentioned in nodes that lack supporting materials.
 
-            **Output Format (RAW JSON):**
+            **Current Quote Graph:**
+            --- NODES ---
+            ${nodesContext || "Empty"}
+            
+            --- CONNECTIONS ---
+            ${graphContext || "None"}
+
+            **Output Format (JSON Only):**
             {
-                "reply": "Clear, professional advice explaining WHY you are suggesting these items.",
+                "reply": "Conversational strategic advice.",
+                "suggestedNodes": [...],
                 "suggestedActions": [
-                    {
-                        "type": "add_node", 
-                        "label": "Item Name", 
-                        "quantity": 1, 
-                        "cost": 0.00, 
-                        "category": "material|staff|equipment"
-                    }
+                    { "type": "edit_node", "nodeId": "id", "updates": { "quantity": 5 } },
+                    { "type": "add_node", "label": "Name", "cost": 0, "category": "material" }
                 ]
             }
-            
-            **Rule:** If suggesting items, ensure 'cost' is a realistic market estimate.
         `;
 
         const result = await pinnacleAi.generateJSON(`User: "${message}"`, systemPrompt, 1500);
@@ -286,7 +275,7 @@ const chatQuoteAssistant = async (req, res) => {
 
     } catch (error) {
         console.error("AI Quote Chat Error:", error.message);
-        res.json({ reply: "I can help you optimize this quote. What are we building?", suggestedActions: [] });
+        res.json({ reply: "I can help you optimize this quote.", suggestedActions: [] });
     }
 };
 
@@ -521,7 +510,7 @@ const generateNodeSuggestions = async (req, res) => {
     }
 };
 
-// --- SMART CHAT ASSISTANT (Advanced Logic) ---
+// --- SMART CHAT ASSISTANT (Advanced Logic - V3) ---
 const chatSmartAssistant = async (req, res) => {
     try {
         const { message, context } = req.body;
@@ -533,17 +522,18 @@ const chatSmartAssistant = async (req, res) => {
             limit: 20 
         });
 
-        const templateContext = templates.map(t => `${t.name} (ID: ${t.id}) - ${t.description}`).join(', ');
+        const templateContext = templates.map(t => `${t.name} (ID: ${t.id})`).join(', ');
         
         // Item List
-        const itemsContext = canvasItems.map(i => `[${i.id}] ${i.name} (${i.type}, Qty:${i.quantity})`).join('\n');
+        const itemsContext = canvasItems.map(i => `[${i.id}] ${i.name} (${i.type}, Dur:${i.duration}H)`).join('\n');
         
-        // Special Nodes (Chronos, Delay, etc.)
+        // Special Nodes (Chronos, Delay, Task, etc.)
         const extrasContext = extraNodes.map(n => {
             let details = '';
             if (n.type === 'chronos') details = `Start:${n.data?.startTime}, End:${n.data?.finishTime}, Dur:${n.data?.duration}`;
             if (n.type === 'delay') details = `Weather:${n.data?.weatherType}, Dur:${n.data?.duration}`;
             if (n.type === 'allowance') details = `Rate:$${n.data?.rate}, Type:${n.data?.allowanceType}`;
+            if (n.type === 'taskNode') details = `Label:${n.data?.label}, Planned:${n.data?.plannedHours}, Actual:${n.data?.actualHours}`;
             return `[${n.id}] ${n.data?.label || n.type.toUpperCase()} (${n.type}) - ${details}`;
         }).join('\n');
 
@@ -551,56 +541,39 @@ const chatSmartAssistant = async (req, res) => {
         const graphContext = edges.map(e => `[${e.source}] --(${e.type || 'link'})--> [${e.target}]`).join('\n');
 
         const systemPrompt = `
-            You are "Pinnacle AI", the advanced construction diary assistant.
+            You are "Pinnacle AI", the master Neural OS coordinator.
             
-            **Mission:** Assist with site logs by suggesting the best specialized tools for the task.
-            
-            **Specialized Tool Library:**
-            1. **'chronos'**: For adding new work shifts or lunch breaks.
-            2. **'delay'**: If the user mentions rain, heat, or site delays.
-            3. **'neuralPrism'**: If the user wants to track "velocity", "momentum", or "strategy".
-            4. **'allowance'**: If the user mentions "danger pay", "height money", or "bonuses".
-            5. **'dimension'**: If measurements (Length x Width) are mentioned.
-            6. **'diaryNode'**: For standard staff, equipment, and material resources.
-            
-            **Current Visual Graph Structure:**
-            --- NODES (Resources) ---
+            **CAPABILITIES:**
+            1. **Node Creator:** Suggest adding nodes (especially 'taskNode' for specific work units).
+            2. **Node Editor:** Identify existing IDs and suggest edits via 'suggestedActions' { "type": "edit_node", "nodeId": "...", "updates": {...} }.
+            3. **Task Planner:** Link resources to 'taskNode' to track progress.
+            4. **Simulation Trigger:** If user asks "What if...", describe the impact and suggest node adjustments.
+
+            **Visual Graph Context:**
+            --- RESOURCES ---
             ${itemsContext || 'None'}
             
-            --- EXTRAS (Logic/Time) ---
+            --- LOGIC NODES ---
             ${extrasContext || 'None'}
             
-            --- CONNECTIONS (Circuit) ---
+            --- CONNECTIONS ---
             ${graphContext || 'None'}
-            
-            **Available Templates:** ${templateContext || 'None'}
 
             **Output Format (JSON Only):**
             {
-                "reply": "Strategic conversational response.",
+                "reply": "Authoritative response.",
                 "suggestedNodes": [
-                    { 
-                        "name": "Label", 
-                        "type": "chronos|delay|neuralPrism|allowance|dimension|staff|equipment|material", 
-                        "quantity": 1, 
-                        "duration": 0,
-                        "weatherType": "rain|storm|heat|none"
-                    }
+                    { "name": "Task Name", "type": "taskNode", "plannedHours": 8 }
                 ],
-                "suggestedTemplates": [
-                    { "id": "uuid", "name": "Template Name" } 
-                ]
+                "suggestedActions": [
+                    { "type": "edit_node", "nodeId": "id", "updates": { "plannedHours": 12 } },
+                    { "type": "remove_node", "nodeId": "id" }
+                ],
+                "suggestedTemplates": [...]
             }
-
-            **Strategy Mandate:**
-            - You can see the graph. If a 'delay' node is NOT connected to a 'chronos' node, warn the user.
-            - If user says "it started raining", suggest a 'delay' node with weatherType: 'rain'.
-            - If user says "how am I doing?", suggest a 'neuralPrism' node.
-            - If user mentions a room size, suggest a 'dimension' node.
         `;
 
-        // 1200 tokens for graph-aware responses
-        const result = await pinnacleAi.generateJSON(`User: "${message}"`, systemPrompt, 1200);
+        const result = await pinnacleAi.generateJSON(`User: "${message}"`, systemPrompt, 1500);
         res.json(result);
 
     } catch (error) {
@@ -609,56 +582,73 @@ const chatSmartAssistant = async (req, res) => {
     }
 };
 
-// --- NEURAL PRISM ANALYSIS (POWER MODE) ---
+// --- NEURAL PRISM ANALYSIS (ULTIMATE POWER MODE - Grok-4 Spec) ---
 const analyzePrismVelocity = async (req, res) => {
     try {
-        const { context } = req.body;
+        const { context, history = [] } = req.body;
         if (!context) return res.status(400).json({ error: "Context required." });
 
-        const command = context.command || 'auto'; // default to general analysis
+        const command = context.command || 'auto';
+        const quotedData = context.quotedData || null;
 
         const systemPrompt = `
-            You are "Neural Progress Prism", the predictive strategic engine of MasterDiaryOS.
-            **Mission:** Conduct a deep-reasoning analysis of a work cluster's "Economic Momentum" and profitability.
+            You are "Neural Progress Prism", the central intelligence of MasterDiaryOS.
+            **Mission:** Single point of truth for causality, prediction, and intervention.
             
-            **Current Command:** ${command.toUpperCase()}
-            
-            **Input Data:**
-            - Connected Crew (Rich Financials): ${JSON.stringify(context.workers || [])}
-            - Connected Tasks/Resources (Rich Financials): ${JSON.stringify(context.tasks || [])}
-            - Shift Duration: ${context.duration} hours
-            - External Friction (Weather/Delay): ${context.weatherDelay || 0} hours
-            
-            **Project Financial & Timeline Context:**
-            - Total Contract Value: ${context.projectFinancials?.contractValue || 'Unknown'}
-            - Total Approved Variations: ${context.projectFinancials?.variationsValue || 0}
-            - Live Project Price: ${context.projectFinancials?.liveProjectValue || 'Unknown'}
-            - Project Start: ${context.projectFinancials?.startDate || 'Unknown'}
-            - Project Target Finish: ${context.projectFinancials?.endDate || 'Unknown'}
-            
-            **Economic Analysis Mandate:**
-            1. **Momentum Calculation:** Velocity = (Total Out-house Charge Value Generated per Hour) / (Total In-house Labor & Equipment Cost per Hour).
-            2. **Profitability Baseline:** 1.0 is the "Zero-Profit Baseline". > 1.0 is profitable.
-            3. **Predictive Horizon:** Estimate completion in **AM/PM format**.
-            4. **Ultimate Awareness:** Use the Project Value and Target Finish to determine if the current branch's daily burn is sustainable. Provide ONE specific tactical instruction to improve Profit Velocity or recover the timeline (max 140 chars).
-            5. **Burn Rate:** Calculate the total in-house $ cost per hour of this cluster.
+            **TEMPORAL & BASELINE CONTEXT:**
+            - HISTORICAL TRENDS (Last 5 Days): ${JSON.stringify(history)}
+            - APPROVED QUOTE: ${quotedData ? JSON.stringify({
+                totalRevenue: quotedData.totalRevenue,
+                totalCost: quotedData.totalCost,
+                margin: quotedData.marginPct,
+                staff: (quotedData.staff || []).map(s => `${s.name}: ${s.hours}h`),
+                equip: (quotedData.equipment || []).map(e => `${e.name}: ${e.days}d`)
+            }) : 'No baseline found.'}
+
+            **INTELLIGENCE CORE MANDATES:**
+            1. **Structured Causal Path:** Return an array 'causalPath' tracing the root cause to final effect. Each step: { "nodeId": "...", "label": "...", "effect": "..." }.
+            2. **Drift Dashboard:** Calculate 'driftStats' for: Time, Cost, Labour, Equipment, Material, Zone, Task. 
+               Include: "variancePct", "absoluteVariance", "trend" ("up"|"down"|"stable"), "severity" ("low"|"med"|"high").
+            3. **Idle & Waste Detection:** 
+               - Detect **Equipment Idle Time** if hours are logged but no tasks are linked or velocity is low.
+               - Detect **Material Waste** if actual quantities exceed quoted estimates without corresponding progress.
+            4. **Margin Forecasting:** Predict "finalMargin" and "marginRisk" ("low"|"med"|"critical").
+            5. **Interventions:** Suggest "stabilizers" (nodes to add) and "sequencingChanges".
+            6. **Insights:** Group by "severity" (critical|warning|info). Include "nodeReferences" (IDs).
 
             **Output Format (RAW JSON ONLY):**
             {
                 "velocity": 1.25, 
-                "completionTime": "4:15 PM", 
+                "burnRate": "$145/hr",
+                "currentMargin": "22%",
+                "predictedFinalMargin": "18%",
+                "marginRisk": "med",
                 "status": "optimal" | "stable" | "critical",
-                "insight": "Strategic margin-focused tip...",
-                "burnRate": "$145/hr"
+                "completionDrift": "+2.5 Days",
+                "causalPath": [
+                    { "nodeId": "d1", "label": "Rain Delay", "effect": "Stopped Work" },
+                    { "nodeId": "s1", "label": "Crew A", "effect": "Idle / Non-Productive" },
+                    { "nodeId": "t1", "label": "Fencing", "effect": "Schedule Slip" }
+                ],
+                "driftStats": {
+                    "labour": { "variancePct": 15, "absoluteVariance": "12h", "trend": "up", "severity": "med" },
+                    "cost": { "variancePct": 8, "absoluteVariance": "$450", "trend": "up", "severity": "low" },
+                    "task": { "variancePct": 20, "absoluteVariance": "1 day", "trend": "up", "severity": "high" }
+                },
+                "insights": [
+                    { "severity": "critical", "type": "cost", "text": "...", "nodeReferences": ["s1", "d1"], "tacticalAdvice": "..." }
+                ],
+                "scenarios": [...],
+                "suggestedNodes": [...]
             }
         `;
 
-        const result = await pinnacleAi.generateJSON(`Analyze cluster with command: ${command}`, systemPrompt, 1500);
+        const result = await pinnacleAi.generateJSON(`Neural Command: ${command}`, systemPrompt, 2500);
         res.json(result);
 
     } catch (error) {
         console.error("AI Prism Analysis Error:", error.message);
-        res.json({ velocity: 1.0, completionTime: "--:--", status: "stable", insight: "Neural engine is recalibrating data flows." });
+        res.json({ velocity: 1.0, status: "stable", insights: [{ severity: "info", text: "Engine recalibrating...", priority: 3 }] });
     }
 };
 

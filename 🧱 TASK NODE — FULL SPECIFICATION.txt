@@ -1,0 +1,312 @@
+🧱 TASK NODE — FULL SPECIFICATION
+The atomic work unit of the Neural Operating System
+A Task Node represents a single unit of work that connects:
+
+labour
+
+equipment
+
+materials
+
+zones
+
+quotes (estimates)
+
+diary (actuals)
+
+drift
+
+cost
+
+completion
+
+simulation
+
+intervention
+
+It is the core node type that allows the Neural Prism Engine to reason about production.
+
+🎨 1. HOW A TASK NODE SHOULD LOOK
+A Task Node should visually communicate:
+
+status
+
+progress
+
+drift
+
+cost
+
+zone
+
+crew
+
+equipment
+
+Here’s the ideal visual layout:
+
+1.1 Node Header
+Title: Task name (e.g., “Trenching”, “Painting Walls”)
+Status Badge:
+
+Green → On track
+
+Amber → At risk
+
+Red → Drifting
+
+Zone Tag:
+
+Small coloured pill showing the zone (e.g., “Zone B”)
+
+OCR Tag:
+
+High‑contrast machine‑readable ID (e.g., TSK-14)
+
+1.2 Progress Bar
+A dual‑layer bar:
+
+Top layer: Actual progress (from crew hours)
+
+Bottom layer: Estimated progress (from quote)
+
+If actual < estimated → bar turns amber/red.
+
+1.3 Drift Indicator
+A small panel showing:
+
+Time Drift: +4h
+
+Cost Drift: +$320
+
+Material Drift: +3 bags
+
+Crew Drift: +1 worker
+
+Colour-coded by severity.
+
+1.4 Cost Panel
+Shows:
+
+Estimated cost
+
+Actual cost
+
+Variance
+
+Burn rate
+
+1.5 Resource Chips
+Small icons representing:
+
+Assigned crew
+
+Assigned equipment
+
+Required materials
+
+Hovering shows details.
+
+1.6 Timeline Strip
+A mini Chronos strip showing:
+
+planned duration
+
+actual duration
+
+predicted completion
+
+⚙️ 2. HOW A TASK NODE SHOULD FUNCTION
+This is where the magic happens.
+
+A Task Node must:
+
+2.1 Link to All Relevant Resources
+A Task Node must connect to:
+
+Crew nodes
+
+Equipment nodes
+
+Material nodes
+
+Zone nodes
+
+Quote baseline nodes
+
+Diary actual nodes
+
+This creates the resource graph.
+
+2.2 Auto‑Calculate Actual Progress
+The Task Node must:
+
+scan connected crew hours
+
+sum total labour time
+
+compare to estimated hours
+
+compute % completion
+
+compute drift
+
+This is the Actual Progress Engine.
+
+2.3 Compute Drift in Real Time
+A Task Node must compute:
+
+Time Drift
+Actual hours – Estimated hours
+
+Cost Drift
+Actual cost – Estimated cost
+
+Material Drift
+Actual usage – Estimated usage
+
+Crew Drift
+Actual crew count – Estimated crew count
+
+Zone Drift
+Zone‑level performance impact
+
+2.4 Feed the Neural Prism Engine
+The Task Node must provide:
+
+drift signals
+
+cost signals
+
+progress signals
+
+resource bottlenecks
+
+zone performance
+
+causal clues
+
+This is how the NPE builds:
+
+causal paths
+
+simulations
+
+interventions
+
+margin predictions
+
+2.5 Support Simulation
+When the user toggles “Simulations,” the Task Node must:
+
+accept simulated crew changes
+
+accept simulated equipment changes
+
+accept simulated duration changes
+
+recalc drift
+
+recalc cost
+
+recalc margin impact
+
+This is the Simulation Interface.
+
+2.6 Support Intervention
+When the user clicks “Deploy Optimized Model,” the Task Node must:
+
+accept stabiliser nodes
+
+accept resource adjustments
+
+accept sequencing changes
+
+update drift
+
+update cost
+
+update completion
+
+This is the Intervention Interface.
+
+2.7 Support Cross‑Job Learning
+The Task Node must store:
+
+historical drift
+
+historical cost variance
+
+crew performance
+
+equipment performance
+
+material usage patterns
+
+This allows the NEE + NPE to:
+
+improve future quotes
+
+improve future tasks
+
+detect systemic patterns
+
+🧠 3. HOW A TASK NODE SHOULD THINK
+A Task Node must be able to answer:
+
+“How far through am I?”
+
+“Am I drifting?”
+
+“Why am I drifting?”
+
+“Which crew is causing the drift?”
+
+“Which equipment is causing the drift?”
+
+“Which zone is underperforming?”
+
+“What will this cost at completion?”
+
+“What happens if we add a crew?”
+
+“What happens if we shift equipment?”
+
+This is the Task Intelligence Layer.
+
+🔄 4. HOW A TASK NODE INTERACTS WITH OTHER SYSTEMS
+4.1 With the Neural Estimation Engine
+Pulls estimated hours
+
+Pulls estimated cost
+
+Pulls estimated materials
+
+Pulls estimated crew/equipment
+
+4.2 With the Neural Diary
+Logs actual hours
+
+Logs actual cost
+
+Logs actual materials
+
+Logs actual equipment usage
+
+4.3 With the Neural Prism Engine
+Sends drift signals
+
+Sends causal clues
+
+Sends resource bottlenecks
+
+Receives interventions
+
+Receives simulations
+
+4.4 With Zones
+Inherits zone context
+
+Contributes to zone drift
+
+Contributes to zone cost

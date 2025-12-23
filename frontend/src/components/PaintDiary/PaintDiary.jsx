@@ -2,10 +2,11 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { 
-  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes
+  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
+import { useNotification } from '../../context/NotificationContext';
 
 import { useDiaryEngine } from './DiaryEngine';
 import { useDiaryTheme } from './ThemeContext';
@@ -442,10 +443,103 @@ const PaintDiary = () => {
   const navigate = useNavigate();
   const { theme, setActiveTheme, allThemes, activeTheme } = useDiaryTheme();
   const {
-    selectedDate, setSelectedDate, currentEntry, setCurrentEntry, projects, selectedProject, setSelectedProject, projectJobs, selectedJobId, setSelectedJobId,
+    selectedDate, setSelectedDate, currentEntry, setCurrentEntry, projects, selectedProject, setSelectedProject, projectFinancials, quotedData, projectJobs, selectedJobId, setSelectedJobId,
     selectedClient, setSelectedClient, staff, equipment, materials, isSaved, setIsSaved, isSaving, cost, revenue, profit, productivityScore,
-    chatMessages, chatTyping, handleUpdateItem, handleRemoveItem, handleUpdateEdges, handleSave, handleSmartLog, handleSmartChat, smartLogLoading, generateId, overtimeThreshold, overtimeMultiplier, loadDiary, createNewDiary, handleDeleteDiary
+    chatMessages, chatTyping, handleUpdateItem, handleRemoveItem, handleUpdateEdges, handleSave, handleSmartLog, handleSmartChat, smartLogLoading, generateId, overtimeThreshold, overtimeMultiplier, loadDiary, createNewDiary, handleDeleteDiary, recentHistory
   } = useDiaryEngine();
+
+  // --- STATE DECLARATIONS ---
+  const [showSmartLog, setShowSmartLog] = useState(false);
+  const [showAestheticPicker, setShowAestheticPicker] = useState(false);
+  const [resourceTab, setResourceTab] = useState('staff');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('canvas'); // 'canvas' | 'gantt'
+  const [templates, setTemplates] = useState([]);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [customAllowances, setCustomAllowances] = useState(DEFAULT_ALLOWANCES);
+  const [newAllowanceName, setNewAllowanceName] = useState('');
+  const [newAllowanceRate, setNewAllowanceRate] = useState('');
+  const [newAllowanceType, setNewAllowanceType] = useState('hourly');
+  const [editingAllowanceId, setEditingAllowanceId] = useState(null);
+  const [showDiaryList, setShowDiaryList] = useState(false);
+  const [diariesList, setDiariesList] = useState([]);
+  const [isPulseActive, setIsPulseActive] = useState(false);
+  const [selectedChronos, setSelectedChronos] = useState(null);
+  const [connectedNodes, setConnectedNodes] = useState([]);
+  const [pendingItem, setPendingItem] = useState(null);
+
+  const { addNotification } = useNotification();
+
+  const handleConfirmItem = useCallback((details) => {
+      const isExtraNode = ['chronos', 'delay', 'impact', 'wormhole', 'zone', 'photoNode', 'allowance', 'neuralPrism', 'shapeNode', 'taskNode'].includes(details.type);
+      
+      if (isExtraNode) {
+          const { onDelete, onUpdate, ...cleanData } = details;
+          const newExtra = {
+              id: generateId(),
+              type: details.type,
+              position: pendingItem?.position || { x: 400, y: 400 },
+              data: {
+                  ...cleanData,
+                  label: details.name || details.label,
+                  shapeType: details.shapeType,
+                  color: details.color
+              }
+          };
+          setCurrentEntry(prev => ({ ...prev, extraNodes: [...prev.extraNodes, newExtra] }));
+      } else {
+          const newItem = { 
+              id: generateId(), 
+              dataId: details.id, 
+              type: details.type, 
+              name: details.name, 
+              costRate: details.costRate,
+              chargeRate: details.chargeRate,
+              quantity: details.quantity, 
+              duration: details.duration,
+              startTime: details.startTime,
+              note: details.note,
+              position: pendingItem?.position || { x: 400, y: 400 }
+          };
+          setCurrentEntry(prev => ({ ...prev, items: [...prev.items, newItem] }));
+      }
+      
+      setIsSaved(false);
+      setPendingItem(null);
+  }, [pendingItem, generateId, setCurrentEntry, setIsSaved]);
+
+  const handleDeployFixes = useCallback((suggestions) => {
+      if (!suggestions || !Array.isArray(suggestions)) return;
+      
+      suggestions.forEach((node, i) => {
+          const position = { x: 400 + (i * 100), y: 400 + (i * 100) };
+          
+          // Try to resolve the full node data from staff/equip/materials if it's a resource
+          let resolvedDetails = { ...node, position };
+          
+          if (node.type === 'staff' || node.type === 'equipment' || node.type === 'material') {
+              const library = node.type === 'staff' ? staff : node.type === 'equipment' ? equipment : materials;
+              const match = library.find(item => 
+                  (node.dataId && String(item.id) === String(node.dataId)) || 
+                  (node.name && item.name?.toLowerCase().includes(node.name.toLowerCase()))
+              );
+              
+              if (match) {
+                  resolvedDetails = {
+                      ...resolvedDetails,
+                      id: match.id,
+                      name: match.name,
+                      costRate: match.payRateBase || match.costRateBase || match.pricePerUnit || 0,
+                      chargeRate: match.chargeOutBase || (match.pricePerUnit * 1.2) || 0
+                  };
+              }
+          }
+
+          handleConfirmItem(resolvedDetails);
+      });
+      addNotification('AI Fixes Deployed', 'success');
+  }, [handleConfirmItem, addNotification, staff, equipment, materials]);
 
   const handlePrintToInvoice = () => {
       if (currentEntry.items.length === 0) {
@@ -463,34 +557,102 @@ const PaintDiary = () => {
       });
   };
 
-  const [showSmartLog, setShowSmartLog] = useState(false);
-  const [showAestheticPicker, setShowAestheticPicker] = useState(false);
-  const [resourceTab, setResourceTab] = useState('staff');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('canvas'); // 'canvas' | 'gantt'
-
   const handleAddSuggestedNode = (node) => {
       const position = { x: 400, y: 400 }; // Default center-ish
       handleConfirmItem({ ...node, position });
   };
+
+  const handleInstantiateTemplate = useCallback((template, position) => {
+      const { data } = template;
+      if (!data) return;
+
+      const { items = [], extraNodes = [], edges = [] } = data;
+      
+      // 1. Calculate Bounding Box Center of the template nodes
+      const allNodes = [...items, ...extraNodes];
+      if (allNodes.length === 0) return;
+
+      const minX = Math.min(...allNodes.map(n => n.position?.x || 0));
+      const maxX = Math.max(...allNodes.map(n => (n.position?.x || 0) + (n.width || 200)));
+      const minY = Math.min(...allNodes.map(n => n.position?.y || 0));
+      const maxY = Math.max(...allNodes.map(n => (n.position?.y || 0) + (n.height || 150)));
+
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      const offsetX = position.x - centerX;
+      const offsetY = position.y - centerY;
+
+      // ID Mapping: Old ID -> New ID
+      const idMap = {};
+
+      // Process Items
+      const newItems = items.map(item => {
+          const newId = generateId();
+          idMap[item.id] = newId;
+          return {
+              ...item,
+              id: newId,
+              position: { 
+                  x: (item.position?.x || 0) + offsetX, 
+                  y: (item.position?.y || 0) + offsetY 
+              }
+          };
+      });
+
+      // Process Extra Nodes
+      const newExtraNodes = extraNodes.map(node => {
+          const newId = generateId();
+          idMap[node.id] = newId;
+          // Clean data: remove any inherited handlers
+          const { onDelete, onUpdate, ...cleanData } = node.data || {};
+          
+          return {
+              ...node,
+              id: newId,
+              position: { 
+                  x: (node.position?.x || 0) + offsetX, 
+                  y: (node.position?.y || 0) + offsetY 
+              },
+              data: cleanData
+          };
+      });
+
+      // Process Edges
+      const newEdges = edges.map(edge => {
+          const newSource = idMap[edge.source];
+          const newTarget = idMap[edge.target];
+          if (newSource && newTarget) {
+              return {
+                  ...edge,
+                  id: `e-${newSource}-${newTarget}-${Date.now()}`,
+                  source: newSource,
+                  target: newTarget
+              };
+          }
+          return null;
+      }).filter(Boolean);
+
+      setCurrentEntry(prev => ({
+          ...prev,
+          items: [...prev.items, ...newItems],
+          extraNodes: [...prev.extraNodes, ...newExtraNodes],
+          edges: [...prev.edges, ...newEdges]
+      }));
+      setIsSaved(false);
+  }, [generateId, setCurrentEntry, setIsSaved]);
 
   const handleApplySuggestedTemplate = async (tmplId) => {
       const template = templates.find(t => t.id === tmplId);
       if (template) {
           handleInstantiateTemplate(template, { x: 500, y: 100 });
       } else {
-          // Fetch if not in current list
           try {
               const res = await api.get(`/diary-templates/${tmplId}`);
               handleInstantiateTemplate(res.data, { x: 500, y: 100 });
           } catch (e) { console.error(e); }
       }
   };
-  
-  // Templates State
-  const [templates, setTemplates] = useState([]);
-  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
-  const [templateLoading, setTemplateLoading] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
       try {
@@ -504,12 +666,15 @@ const PaintDiary = () => {
   const handleSaveTemplate = async (name, description) => {
       setTemplateLoading(true);
       try {
-          // Prepare data: items, extraNodes, edges
-          // Ensure all fields exist to satisfy backend validation
+          const sanitize = (obj) => JSON.parse(JSON.stringify(obj, (key, value) => {
+              if (typeof value === 'function') return undefined;
+              return value;
+          }));
+
           const templateData = {
-              items: currentEntry.items || [],
-              extraNodes: currentEntry.extraNodes || [],
-              edges: currentEntry.edges || []
+              items: sanitize(currentEntry.items || []),
+              extraNodes: sanitize(currentEntry.extraNodes || []),
+              edges: sanitize(currentEntry.edges || [])
           };
           
           await api.post('/diary-templates', {
@@ -540,16 +705,8 @@ const PaintDiary = () => {
       } catch (err) { console.error(err); }
   };
 
-  // Custom Allowances
-  const [customAllowances, setCustomAllowances] = useState(DEFAULT_ALLOWANCES);
-  const [newAllowanceName, setNewAllowanceName] = useState('');
-  const [newAllowanceRate, setNewAllowanceRate] = useState('');
-  const [newAllowanceType, setNewAllowanceType] = useState('hourly');
-  const [editingAllowanceId, setEditingAllowanceId] = useState(null);
-
   const handleAddAllowance = () => {
       if (!newAllowanceName || !newAllowanceRate) return;
-      
       if (editingAllowanceId) {
           setCustomAllowances(prev => prev.map(a => a.id === editingAllowanceId ? {
               ...a,
@@ -564,7 +721,7 @@ const PaintDiary = () => {
               name: newAllowanceName,
               rate: parseFloat(newAllowanceRate),
               type: 'allowance',
-              allowanceType: newAllowanceType // 'hourly' or 'daily'
+              allowanceType: newAllowanceType
           };
           setCustomAllowances([...customAllowances, newAll]);
       }
@@ -588,123 +745,29 @@ const PaintDiary = () => {
           setNewAllowanceRate('');
       }
   };
-  
-  // Load/New Entry State
-  const [showDiaryList, setShowDiaryList] = useState(false);
-  const [diariesList, setDiariesList] = useState([]);
-
-  // Pulse & AI State
-  const [isPulseActive, setIsPulseActive] = useState(false);
-
-  // Chronos Management
-  const [selectedChronos, setSelectedChronos] = useState(null);
-  const [connectedNodes, setConnectedNodes] = useState([]);
-
-  // Pending drop item
-  const [pendingItem, setPendingItem] = useState(null);
 
   const handleNodeClick = useCallback((event, node) => {
       if (node.type === 'chronos') {
-          // Use the deep hubData prepared by the recursive engine
           const { workers = [], resources = [], extras = [] } = node.data.hubData || {};
-          
-          // Map to standard node format for the Chronos Manager
           const mappedStaff = workers.map(i => ({ 
               id: i.id, 
               type: 'diaryNode', 
               data: { label: i.name, type: 'staff', duration: i.duration, costRate: i.inHouseCost, chargeRate: i.outHouseCharge } 
           }));
-
           const mappedResources = resources.map(i => ({ 
               id: i.id, 
               type: 'diaryNode', 
               data: { label: i.name, type: i.type, duration: i.duration, costRate: i.inHouseCost, chargeRate: i.outHouseCharge } 
           }));
-
           const mappedExtras = extras.map(e => ({
               id: e.id,
               type: e.type,
               data: { label: e.label }
           }));
-          
           setSelectedChronos(node);
           setConnectedNodes([...mappedStaff, ...mappedResources, ...mappedExtras]);
       }
   }, []);
-
-  const handleInstantiateTemplate = useCallback((template, position) => {
-      const { data } = template;
-      if (!data) return;
-
-      const { items = [], extraNodes = [], edges = [] } = data;
-      
-      // Calculate offset based on the first node found (to center drop)
-      let firstNodePos = { x: 0, y: 0 };
-      if (items.length > 0) firstNodePos = items[0].position || { x: 0, y: 0 };
-      else if (extraNodes.length > 0) firstNodePos = extraNodes[0].position || { x: 0, y: 0 };
-
-      const offsetX = position.x - firstNodePos.x;
-      const offsetY = position.y - firstNodePos.y;
-
-      // ID Mapping: Old ID -> New ID
-      const idMap = {};
-
-      // Process Items
-      const newItems = items.map(item => {
-          const newId = generateId();
-          idMap[item.id] = newId;
-          return {
-              ...item,
-              id: newId,
-              position: { 
-                  x: (item.position?.x || 0) + offsetX, 
-                  y: (item.position?.y || 0) + offsetY 
-              }
-          };
-      });
-
-      // Process Extra Nodes
-      const newExtraNodes = extraNodes.map(node => {
-          const newId = generateId();
-          idMap[node.id] = newId;
-          return {
-              ...node,
-              id: newId,
-              position: { 
-                  x: (node.position?.x || 0) + offsetX, 
-                  y: (node.position?.y || 0) + offsetY 
-              },
-              data: {
-                  ...node.data,
-                  onDelete: () => handleRemoveItem(newId) // Bind new delete handler
-              }
-          };
-      });
-
-      // Process Edges
-      const newEdges = edges.map(edge => {
-          const newSource = idMap[edge.source];
-          const newTarget = idMap[edge.target];
-          // Only create edge if both nodes exist in the new set
-          if (newSource && newTarget) {
-              return {
-                  ...edge,
-                  id: `e-${newSource}-${newTarget}-${Date.now()}`,
-                  source: newSource,
-                  target: newTarget
-              };
-          }
-          return null;
-      }).filter(Boolean);
-
-      setCurrentEntry(prev => ({
-          ...prev,
-          items: [...prev.items, ...newItems],
-          extraNodes: [...prev.extraNodes, ...newExtraNodes],
-          edges: [...prev.edges, ...newEdges]
-      }));
-      setIsSaved(false);
-  }, [generateId, setCurrentEntry, handleRemoveItem]);
 
   const handleDropItem = useCallback((item, position) => {
       if (item.type === 'template') {
@@ -713,44 +776,6 @@ const PaintDiary = () => {
           setPendingItem({ ...item, position });
       }
   }, [handleInstantiateTemplate]);
-
-  const handleConfirmItem = (details) => {
-      const isExtraNode = ['chronos', 'delay', 'impact', 'wormhole', 'zone', 'photoNode', 'allowance', 'neuralPrism', 'shapeNode'].includes(details.type);
-      
-      if (isExtraNode) {
-          const { onDelete, onUpdate, ...cleanData } = details;
-          const newExtra = {
-              id: generateId(),
-              type: details.type,
-              position: pendingItem.position,
-              data: {
-                  ...cleanData,
-                  label: details.name || details.label,
-                  shapeType: details.shapeType,
-                  color: details.color
-              }
-          };
-          setCurrentEntry(prev => ({ ...prev, extraNodes: [...prev.extraNodes, newExtra] }));
-      } else {
-          const newItem = { 
-              id: generateId(), 
-              dataId: details.id, 
-              type: details.type, 
-              name: details.name, 
-              costRate: details.costRate,
-              chargeRate: details.chargeRate,
-              quantity: details.quantity, 
-              duration: details.duration,
-              startTime: details.startTime,
-              note: details.note,
-              position: pendingItem.position
-          };
-          setCurrentEntry(prev => ({ ...prev, items: [...prev.items, newItem] }));
-      }
-      
-      setIsSaved(false);
-      setPendingItem(null);
-  };
 
   const handleAiSuggest = () => {
       setIsPulseActive(prev => !prev);
@@ -767,7 +792,6 @@ const PaintDiary = () => {
   const internalHandleDeleteDiary = async (id) => {
       const success = await handleDeleteDiary(id);
       if (success) {
-          // Refresh the list after successful delete
           const res = await api.get('/paint-diaries');
           setDiariesList(res.data);
       }
@@ -869,11 +893,12 @@ const PaintDiary = () => {
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-2 p-2 bg-black/60 rounded-[1.8rem] border border-white/5 mb-4 backdrop-blur-2xl shadow-inner">
+                    <div className="grid grid-cols-5 gap-2 p-2 bg-black/60 rounded-[1.8rem] border border-white/5 mb-4 backdrop-blur-2xl shadow-inner">
                         {[
                             { id: 'staff', icon: <User size={16} />, label: 'Staff' },
                             { id: 'equipment', icon: <Wrench size={16} />, label: 'Eqp' },
                             { id: 'material', icon: <Package size={16} />, label: 'Mat' },
+                            { id: 'tasks', icon: <ClipboardList size={16} />, label: 'Task' },
                             { id: 'shapes', icon: <Shapes size={16} />, label: 'Zone' },
                             { id: 'time', icon: <Clock size={16} />, label: 'Time' },
                             { id: 'allowance', icon: <DollarSign size={16} />, label: 'Cost' },
@@ -884,7 +909,7 @@ const PaintDiary = () => {
                             <button 
                                 key={t.id} 
                                 onClick={() => setResourceTab(t.id)} 
-                                className={`group relative py-2.5 rounded-[1.2rem] flex flex-col items-center justify-center gap-1 transition-all duration-500 border overflow-hidden ${
+                                className={`group relative py-3.5 rounded-[1.2rem] flex flex-col items-center justify-center gap-1 transition-all duration-500 border overflow-hidden ${
                                     resourceTab === t.id 
                                     ? `border-white/40 text-white z-10 scale-105` 
                                     : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white hover:bg-white/[0.08] hover:border-white/20'
@@ -939,6 +964,20 @@ const PaintDiary = () => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    ) : resourceTab === 'tasks' ? (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest px-1 mb-2">Operational Tasks</div>
+                            <div className="space-y-2">
+                                <DraggableItem item={{ id: 't1', name: 'Fencing', type: 'taskNode', plannedHours: 8 }} />
+                                <DraggableItem item={{ id: 't2', name: 'Trenching', type: 'taskNode', plannedHours: 12 }} />
+                                <DraggableItem item={{ id: 't3', name: 'Painting', type: 'taskNode', plannedHours: 16 }} />
+                            </div>
+                            <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/10">
+                                <p className="text-[10px] text-gray-400 leading-relaxed">
+                                    <span className="text-indigo-400 font-bold">Tip:</span> Connect staff nodes to a task to track specific progress against planned hours.
+                                </p>
+                            </div>
                         </div>
                     ) : resourceTab === 'shapes' ? (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1117,12 +1156,15 @@ const PaintDiary = () => {
                             items={currentEntry.items} 
                             extraNodes={currentEntry.extraNodes}
                             edges={currentEntry.edges}
+                            quotedData={quotedData}
                             onDrop={handleDropItem} 
                             onUpdateItem={handleUpdateItem} 
                             onRemoveItem={handleRemoveItem} 
                             onNodeClick={handleNodeClick}
                             onUpdateEdges={handleUpdateEdges}
                             isPulseActive={isPulseActive} 
+                            history={recentHistory}
+                            onDeployFixes={handleDeployFixes}
                         />
                     </div>
                 ) : (

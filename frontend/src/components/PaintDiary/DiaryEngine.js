@@ -54,7 +54,29 @@ export const useDiaryEngine = () => {
           return saved ? JSON.parse(saved) : null;
       } catch { return null; }
   });
+  
+  const [isSaved, setIsSaved] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [recentHistory, setRecentHistory] = useState([])
+
+  // Fetch History for NPE Causal Reasoning
+  useEffect(() => {
+    if (selectedProject?.id) {
+        api.get(`/paint-diaries?projectId=${selectedProject.id}&limit=5`).then(res => {
+            const history = (res.data || []).map(d => ({
+                date: d.date,
+                cost: d.totalCost,
+                revenue: d.totalRevenue,
+                itemCount: d.canvasData?.[0]?.items?.length || 0,
+                impacts: (d.canvasData?.[0]?.extraNodes || []).filter(n => n.type === 'delay').map(n => n.data?.weatherType).join(',')
+            }));
+            setRecentHistory(history);
+        });
+    }
+  }, [selectedProject?.id, isSaved]);
+
   const [projectFinancials, setProjectFinancials] = useState(null)
+  const [quotedData, setQuotedData] = useState(null)
   const [selectedJobId, setSelectedJobId] = useState(() => {
       return localStorage.getItem('masterdiary-selected-jobid') || null;
   });
@@ -84,8 +106,6 @@ export const useDiaryEngine = () => {
   const [staff, setStaff] = useState([])
   const [equipment, setEquipment] = useState([])
   const [materials, setMaterials] = useState([])
-  const [isSaved, setIsSaved] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   
   const [cost, setCost] = useState(0)
   const [revenue, setRevenue] = useState(0)
@@ -201,12 +221,22 @@ export const useDiaryEngine = () => {
        }
        
        // Fetch deep financials (including variations)
-       api.get(`/projects/${selectedProject.id}`).then(res => {
+       api.get(`/projects/${selectedProject.id}`).then(async res => {
            const p = res.data;
            const contractValue = parseFloat(p.value) || 0;
            const quotes = p.quotes || p.Quotes || [];
-           const variationsValue = quotes.filter(q => q.status === 'approved').reduce((sum, q) => sum + (parseFloat(q.totalRevenue) || 0), 0);
+           const approvedQuote = quotes.find(q => q.status === 'approved');
+           const variationsValue = quotes.filter(q => q.status === 'approved' && q.id !== approvedQuote?.id).reduce((sum, q) => sum + (parseFloat(q.totalRevenue) || 0), 0);
            
+           if (approvedQuote) {
+               try {
+                   const quoteRes = await api.get(`/quotes/${approvedQuote.id}`);
+                   setQuotedData(quoteRes.data);
+               } catch (e) { console.error("Quoted data error", e); }
+           } else {
+               setQuotedData(null);
+           }
+
            setProjectFinancials({
                contractValue,
                variationsValue,
@@ -214,7 +244,8 @@ export const useDiaryEngine = () => {
                startDate: p.startDate,
                endDate: p.endDate,
                status: p.status,
-               projectName: p.name
+               projectName: p.name,
+               approvedQuoteId: approvedQuote?.id
            });
        });
 
@@ -222,6 +253,7 @@ export const useDiaryEngine = () => {
     } else {
         setProjectJobs([]);
         setProjectFinancials(null);
+        setQuotedData(null);
         setSelectedJobId(null);
     }
   }, [selectedProject]);
@@ -422,7 +454,7 @@ export const useDiaryEngine = () => {
   }, []);
 
   return {
-    selectedDate, setSelectedDate, currentEntry, setCurrentEntry, projects, selectedProject, setSelectedProject, projectFinancials, projectJobs, selectedJobId, setSelectedJobId,
+    selectedDate, setSelectedDate, currentEntry, setCurrentEntry, projects, selectedProject, setSelectedProject, projectFinancials, quotedData, projectJobs, selectedJobId, setSelectedJobId,
     selectedClient, setSelectedClient, staff, equipment, materials, isSaved, setIsSaved, isSaving, cost, revenue, profit, productivityScore,
     chatMessages, chatTyping, smartLogLoading, setSmartLogLoading, handleUpdateItem, handleRemoveItem, handleUpdateEdges,
     handleSave, handleSmartLog, handleSmartChat, fetchData, generateId, createNewDiary, loadDiary, handleDeleteDiary

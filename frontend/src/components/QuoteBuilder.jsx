@@ -38,7 +38,7 @@ import PowerHeader from './ui/PowerHeader'
 import { useDiaryTheme } from './PaintDiary/ThemeContext'
 import QuoteSettingsModal from './Quotes/QuoteSettingsModal'
 import ConfigModal from './ConfigModal'
-import { DiaryNode, ChronosNode, ZoneNode, ImpactNode, DelayNode, DimensionNode } from './TimelineCanvas/TimelineNodes';
+import { DiaryNode, ChronosNode, ZoneNode, ImpactNode, DelayNode, DimensionNode, PhotoNode, ShapeNode, TaskNode } from './TimelineCanvas/TimelineNodes';
 import { SmartEdgeTypes } from './TimelineCanvas/SmartEdges'
 import ResourceSidebar from './ResourceSidebar'
 import AestheticPicker from './PaintDiary/AestheticPicker'
@@ -188,7 +188,17 @@ const QuoteBuilderContent = () => {
   const navigate = useNavigate(); const location = useLocation(); const { id } = useParams(); const { addNotification } = useNotification();
   const { theme, allThemes, setActiveTheme, activeTheme } = useDiaryTheme();
   const [isSaving, setIsSaving] = useState(false); const [isGeneratingBlueprint, setIsGeneratingBlueprint] = useState(false); const [dataLoading, setDataLoading] = useState(true);
-  const nodeTypes = useMemo(() => ({ glass: DiaryNode, dimension: DimensionNode, zone: ZoneNode, chronos: ChronosNode, impact: ImpactNode, delay: DelayNode }), [])
+  const nodeTypes = useMemo(() => ({ 
+      glass: DiaryNode, 
+      dimension: DimensionNode, 
+      zone: ZoneNode, 
+      chronos: ChronosNode, 
+      impact: ImpactNode, 
+      delay: DelayNode, 
+      photoNode: PhotoNode, 
+      shapeNode: ShapeNode,
+      taskNode: TaskNode
+  }), [])
   const edgeTypes = useMemo(() => SmartEdgeTypes, [])
   const [nodes, setNodes, onNodesChange] = useNodesState([]); const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [materials, setMaterials] = useState([]); const [staff, setStaff] = useState([]); const [equipment, setEquipment] = useState([]);
@@ -213,7 +223,26 @@ const QuoteBuilderContent = () => {
   const openLoadModal = async () => { setShowLoadModal(true); setQuotesLoading(true); try { const res = await api.get('/quotes?limit=50'); setExistingQuotes(res.data.data || []); } catch (err) { console.error(err); } finally { setQuotesLoading(false); } };
   const handleLoadQuote = (quote) => { navigate(`/quotes/${quote.id}`); setShowLoadModal(false); };
   const deleteNode = useCallback((id) => { setNodes((nds) => nds.filter(n => n.id !== id)); setQuoteItems((items) => items.filter(i => i.tempId !== id)); }, [setNodes]);
-  const handleAIChat = async (message) => { if (!message.trim()) return; setChatMessages(prev => [...prev, { role: 'user', content: message }]); setChatTyping(true); try { const context = { project: projects.find(p => p.id === selectedProject) || {}, items: quoteItems.map(i => ({ name: i.material.name, qty: i.quantity, type: i.type })), settings: quoteSettings }; const res = await api.post('/ai/chat-quote', { message, context }); setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply, actions: res.data.suggestedActions }]); } catch (err) { console.error(err); } finally { setChatTyping(false); } };
+  const handleAIChat = async (message) => {
+      if (!message.trim()) return;
+      setChatMessages(prev => [...prev, { role: 'user', content: message }]);
+      setChatTyping(true);
+      try {
+          const context = { 
+              project: projects.find(p => p.id === selectedProject) || {}, 
+              items: quoteItems.map(i => ({ id: i.tempId, name: i.material.name, qty: i.quantity, type: i.type })), 
+              nodes, 
+              edges,
+              settings: quoteSettings 
+          };
+          const res = await api.post('/ai/chat-quote', { message, context });
+          setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply, actions: res.data.suggestedActions }]);
+      } catch (err) {
+          console.error(err);
+      } finally {
+          setChatTyping(false);
+      }
+  };
   const onTapAdd = (item) => { const position = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); setPendingNode({ item, position, suggestedQuantity: 1 }); };
   const handleAddNode = (quantity, cost, charge) => { if (!pendingNode) return; const { item, position } = pendingNode; const nodeId = `${item.type}-${Date.now()}`; setNodes(nds => nds.concat({ id: nodeId, type: 'glass', position, data: { label: item.name, subLabel: item.type, quantity, type: item.type, onDelete: () => deleteNode(nodeId) } })); setQuoteItems(prev => [...prev, { nodeId: item.id, tempId: nodeId, quantity, material: item, type: item.type, customRate: charge > 0 ? charge : undefined }]); setPendingNode(null); };
   
@@ -297,6 +326,12 @@ const QuoteBuilderContent = () => {
                           ...n.data, 
                           label: n.data.label || 'New Item',
                           type: itemCategory, // Correctly map for DiaryNode coloring
+                          onUpdate: (targetId, ups) => {
+                              setNodes(nds => nds.map(node => node.id === targetId ? { ...node, data: { ...node.data, ...ups } } : node));
+                              if (!isContainer) {
+                                  setQuoteItems(items => items.map(i => i.tempId === targetId ? { ...i, ...ups } : i));
+                              }
+                          },
                           onDelete: () => deleteNode(nodeId) 
                       },
                       style: isContainer ? { width: isZone ? 400 : 200, height: isZone ? 400 : 200, zIndex: -1 } : undefined

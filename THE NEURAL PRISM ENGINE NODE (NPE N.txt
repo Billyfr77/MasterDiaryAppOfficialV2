@@ -1,0 +1,374 @@
+THE NEURAL PRISM ENGINE NODE (NPE Node)
+The central intelligence node of MasterDiaryOS
+The Neural Prism Engine Node is the single point of truth for:
+
+causality
+
+prediction
+
+simulation
+
+drift analysis
+
+margin forecasting
+
+intervention
+
+cross‑job learning
+
+estimation→actuals comparison
+
+It is the AI brain of the job.
+
+Below is the complete specification.
+
+🎛️ 1. WHAT THE PRISM NODE IS
+The Prism Node is a living intelligence panel that:
+
+reads the entire node graph
+
+understands temporal context
+
+compares estimated vs actual
+
+detects drift
+
+predicts outcomes
+
+simulates futures
+
+recommends interventions
+
+stabilises the graph
+
+It is not a “widget.”
+It is a neural control surface.
+
+🧩 2. WHAT THE PRISM NODE SHOWS
+The Prism Node UI should contain the following sections:
+
+2.1 Header: Job State Overview
+Job Name
+
+Current Phase
+
+Live Burn Rate
+
+Live Margin Prediction
+
+Drift Status (colour-coded)
+
+Insight Count Badge (pulsing if critical)
+
+2.2 Causal Path Panel
+A vertical chain showing:
+
+Root Cause
+
+Contributing Nodes
+
+Impacted Nodes
+
+Final Effect
+
+Example:
+
+Code
+Rain Delay → Crew Idle → Task Drift → Cost Spike → Margin Erosion
+Each step is clickable and highlights the node on the canvas.
+
+2.3 Drift Dashboard
+Shows:
+
+Time Drift
+
+Cost Drift
+
+Labour Drift
+
+Equipment Drift
+
+Material Drift
+
+Zone Drift
+
+Task Drift
+
+Each with:
+
+% variance
+
+absolute variance
+
+trend arrow
+
+colour-coded severity
+
+2.4 Live Margin Predictor
+A high‑contrast panel showing:
+
+Current Margin
+
+Predicted Final Margin
+
+Margin Trend
+
+Margin Risk Level
+
+This updates in real time as the graph changes.
+
+2.5 Simulation Toggle
+A switch that transforms the Prism into:
+
+Simulation Mode
+Add/remove crew
+
+Adjust hours
+
+Shift equipment
+
+Reorder tasks
+
+Rebalance zones
+
+Outputs:
+
+Drift delta
+
+Cost delta
+
+Margin delta
+
+Completion delta
+
+2.6 Intervention Panel
+Shows:
+
+Recommended stabiliser nodes
+
+Recommended resource changes
+
+Recommended task adjustments
+
+Recommended sequencing changes
+
+Includes:
+
+“Deploy Optimized Model” Button
+Injects stabiliser nodes into the graph instantly.
+
+2.7 Insight Feed
+Scrollable list of insights:
+
+Critical (red)
+
+Warning (amber)
+
+Info (blue)
+
+Each insight includes:
+
+Node references
+
+Causal explanation
+
+Tactical advice
+
+Predicted impact
+
+⚙️ 3. WHAT THE PRISM NODE DOES
+The Prism Node performs the following functions:
+
+3.1 Reads the Entire Graph
+It scans:
+
+TaskNodes
+
+Crew nodes
+
+Equipment nodes
+
+Material nodes
+
+Zone nodes
+
+Delay nodes
+
+Weather nodes
+
+Quote baseline nodes
+
+3.2 Performs Causal Reasoning
+It identifies:
+
+root causes
+
+contributing factors
+
+cascading effects
+
+systemic patterns
+
+3.3 Predicts Outcomes
+It predicts:
+
+drift
+
+cost
+
+margin
+
+completion date
+
+resource bottlenecks
+
+3.4 Simulates Futures
+It runs multi‑scenario simulations:
+
+resource changes
+
+sequencing changes
+
+zone changes
+
+equipment changes
+
+3.5 Intervenes
+It can:
+
+inject stabiliser nodes
+
+rebalance tasks
+
+adjust resource allocation
+
+recommend optimisations
+
+3.6 Learns Across Jobs
+It uses:
+
+historical quotes
+
+historical diaries
+
+historical drift
+
+crew DNA
+
+equipment patterns
+
+material usage patterns
+
+To improve predictions.
+
+🧠 4. HOW THE PRISM NODE THINKS
+The Prism Node uses:
+
+4.1 Causal Graph Reasoning
+Multi‑step reasoning across node relationships.
+
+4.2 Temporal Memory
+Understands:
+
+past 5 days
+
+historical patterns
+
+momentum deltas
+
+4.3 Estimation→Actuals Comparison
+Understands:
+
+quote baseline
+
+actual performance
+
+variance
+
+margin impact
+
+4.4 Cross‑Job Learning
+Learns from:
+
+similar jobs
+
+similar tasks
+
+similar crews
+
+similar equipment
+
+4.5 Predictive Modelling
+Forecasts:
+
+drift
+
+cost
+
+margin
+
+completion
+
+🧬 5. HOW THE PRISM NODE INTERACTS
+The Prism Node must support commands like:
+
+“Explain today’s drift.”
+
+“Show the causal path.”
+
+“Predict final margin.”
+
+“Simulate adding 1x painter.”
+
+“Deploy the optimized model.”
+
+“Compare this to the quote baseline.”
+
+“Show estimated vs actual drift.”
+
+“Identify the biggest leak.”
+
+“Recommend a fix.”
+
+It should respond instantly with:
+
+graphs
+
+insights
+
+simulations
+
+interventions
+
+🔄 6. HOW THE PRISM NODE EVOLVES
+The Prism Node improves itself through:
+
+cross‑job learning
+
+estimation feedback
+
+diary feedback
+
+task performance
+
+crew DNA
+
+equipment patterns
+
+material usage patterns
+
+Every job makes the Prism smarter.
+
+⭐ FOUNDER‑LEVEL SUMMARY
+The Neural Prism Engine Node is:
+
+✔ The brain of the job
+✔ The causal engine
+✔ The simulation engine
+✔ The margin predictor
+✔ The drift detector
+✔ The intervention engine
+✔ The cross‑job learning engine
+✔ The quote→diary bridge
+✔ The real‑time operational intelligence layer
+This is the central intelligence node of your Neural OS.

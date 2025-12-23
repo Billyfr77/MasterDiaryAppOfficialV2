@@ -1,0 +1,397 @@
+1. Purpose of This Document
+This README defines how Gemini 3 CLI must enhance the Quote Builder AI so that it becomes a fully capable Neural Estimation Engine (NEE) with:
+
+estimated vs actual drift analysis
+
+cost variance modelling
+
+margin prediction
+
+crew requirement forecasting
+
+equipment requirement forecasting
+
+material usage prediction
+
+task‑level comparison
+
+cross‑job learning
+
+quote optimisation
+
+It also defines the Estimation→Actuals Bridge, enabling the Neural Prism Engine (NPE) to:
+
+pull from saved quotes
+
+compare quotes to actual diary data
+
+learn from historical estimates
+
+improve future pricing accuracy
+
+detect systemic estimation patterns
+
+provide predictive insights
+
+This spec does not modify existing architecture — it extends it.
+
+2. Core Principles
+2.1 Additive Only
+Do not modify existing quote builder logic.
+
+Do not restructure the diary.
+
+Do not change node schemas.
+
+Only extend the AI capabilities.
+
+2.2 Grok‑Powered Estimation
+All estimation reasoning must use Grok‑4 Fast Reasoning 1.
+
+Automatically adopt future Grok models.
+
+Keep the NEE model‑agnostic and future‑proof.
+
+2.3 Node‑Graph Native
+The quote builder must treat quotes as node graphs, not lists.
+
+All estimation logic must operate on nodes and edges.
+
+2.4 NPE Integration
+The NPE must be able to pull from saved quotes.
+
+The NPE must compare quotes to actuals.
+
+The NPE must learn from historical estimation patterns.
+
+2.5 Cross‑System Intelligence
+The NEE and NPE must share:
+
+ID‑based intelligence
+
+structural reasoning
+
+cost logic
+
+task logic
+
+crew logic
+
+equipment logic
+
+material logic
+
+3. Neural Estimation Engine (NEE) Enhancements
+The Quote Builder AI becomes a specialised estimation intelligence node.
+
+3.1 Estimated vs Actual Drift
+The NEE must calculate:
+
+time drift
+
+cost drift
+
+labour drift
+
+equipment drift
+
+material drift
+
+task drift
+
+Example:
+
+“Estimated 12 hours, actual 16 hours → +4h drift.”
+
+3.2 Cost Variance Analysis
+The NEE must compute:
+
+estimated cost vs actual cost
+
+variance percentage
+
+variance cause
+
+variance category (labour, equipment, materials, overhead)
+
+Example:
+
+“Labour variance: +18% due to under‑scoped trenching task.”
+
+3.3 Margin Prediction
+The NEE must predict:
+
+expected margin
+
+margin compression risk
+
+margin sensitivity
+
+margin drift over time
+
+Example:
+
+“Projected margin: 22% → 17% after drift.”
+
+3.4 Crew Requirement Forecasting
+The NEE must forecast:
+
+optimal crew size
+
+crew skill requirements
+
+crew duration
+
+crew cost impact
+
+Example:
+
+“Optimal crew size: 3. Current estimate under‑allocates labour.”
+
+3.5 Equipment Requirement Forecasting
+The NEE must predict:
+
+required equipment
+
+equipment hours
+
+idle risk
+
+cost impact
+
+Example:
+
+“Excavator required for 6 hours. Idle risk: low.”
+
+3.6 Material Usage Prediction
+The NEE must estimate:
+
+material quantities
+
+material waste
+
+material delivery timing
+
+material cost impact
+
+Example:
+
+“Concrete usage predicted: 14 bags ± 2.”
+
+3.7 Task‑Level Comparison
+The NEE must compare:
+
+estimated task durations
+
+estimated task costs
+
+estimated task dependencies
+
+estimated task sequencing
+
+Example:
+
+“Task ‘Fencing’ is under‑estimated by 22% based on historical patterns.”
+
+3.8 Cross‑Job Learning
+The NEE must learn from:
+
+all saved quotes
+
+all completed jobs
+
+all diary actuals
+
+all task patterns
+
+all crew performance
+
+all equipment usage
+
+Example:
+
+“This job resembles Job 112 — adjust labour estimate by +12%.”
+
+3.9 Quote Optimisation
+The NEE must:
+
+detect underpricing
+
+detect overpricing
+
+suggest optimal pricing
+
+adjust labour/equipment/material estimates
+
+recommend margin adjustments
+
+Example:
+
+“Increase quote by 8% to match historical cost drift.”
+
+4. Estimation→Actuals Bridge
+This is the intelligence link between the Quote Builder and the Diary.
+
+4.1 Purpose
+Enable the NPE to:
+
+pull saved quotes
+
+compare quotes to actuals
+
+learn from estimation patterns
+
+improve future predictions
+
+detect systemic issues
+
+provide cross‑job insights
+
+4.2 NPE Responsibilities
+The NPE must:
+
+4.2.1 Pull Saved Quotes
+for the current project
+
+for similar projects
+
+for all historical projects
+
+4.2.2 Compare Quotes to Actuals
+cost drift
+
+time drift
+
+crew drift
+
+equipment drift
+
+material drift
+
+task drift
+
+4.2.3 Learn From Patterns
+under‑scoped tasks
+
+over‑scoped tasks
+
+recurring drift categories
+
+crew performance patterns
+
+equipment utilisation patterns
+
+4.2.4 Improve Future Quotes
+adjust estimates
+
+adjust pricing
+
+adjust crew allocation
+
+adjust equipment allocation
+
+adjust material usage
+
+5. AI Chat Enhancements (Quote Builder)
+The Quote Builder AI must support commands like:
+
+“Optimise this quote.”
+
+“Predict margin.”
+
+“Compare this to Job 112.”
+
+“Estimate crew requirements.”
+
+“Estimate equipment hours.”
+
+“Predict material usage.”
+
+“Show estimated vs actual drift.”
+
+“Suggest pricing adjustments.”
+
+The AI must generate:
+
+node links
+
+node graphs
+
+cost graphs
+
+drift graphs
+
+optimisation suggestions
+
+6. Implementation Checklist for Gemini 3 CLI
+Gemini must:
+
+6.1 Enhance the Quote Builder AI
+Add drift analysis
+
+Add cost variance modelling
+
+Add margin prediction
+
+Add crew forecasting
+
+Add equipment forecasting
+
+Add material prediction
+
+Add task‑level comparison
+
+Add cross‑job learning
+
+Add quote optimisation
+
+6.2 Build the Estimation→Actuals Bridge
+NPE pulls saved quotes
+
+NPE compares quotes to actuals
+
+NPE learns from patterns
+
+NPE improves future predictions
+
+6.3 Maintain Additive‑Only Architecture
+No breaking changes
+
+No schema changes
+
+No restructuring
+
+7. Final Intent
+This README transforms the Quote Builder into a Neural Estimation Engine capable of:
+
+ultra‑accurate pricing
+
+predictive estimation
+
+cross‑job learning
+
+drift analysis
+
+cost variance modelling
+
+margin prediction
+
+resource forecasting
+
+task‑level intelligence
+
+optimisation on command
+
+And it enables the Neural Prism Engine to:
+
+pull from saved quotes
+
+compare estimates to actuals
+
+learn from historical patterns
+
+improve future predictions
+
+optimise operations across the entire OS
+
+This is the foundation of a self‑learning, predictive, AI‑native construction operating system.

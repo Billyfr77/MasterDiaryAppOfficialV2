@@ -1,0 +1,12 @@
+Updates
+Ensure that the workflow is perfect and fully functional so that diary entries and quotes can be turned to professional invoices instantly and that multiple entries can be combined into the one invoice and filtered with job numbers ensure that the invoice builder works completely and that the diary and quote builder back to front work completely 
+
+Ensure that the reports feature fully works 
+
+ensure that all ai function is working and the generation is completely working 
+
+update the dashboard with major enhancements and gant charts
+
+enhance the resource allocator and the map builder 
+
+enhance the staff 

@@ -1,415 +1,343 @@
-1. Purpose of This Document
-This README defines how Gemini 3 CLI must enhance the Neural Prism Engine (NPE) inside the Daily Diary so that it becomes:
+This README defines how Gemini 3 CLI must extend the existing MasterDiaryOS architecture by enhancing the Neural Prism Engine (NPE) with five major new capabilities:
 
-A Chronos‑plugged intelligence node
+Task Nodes
 
-A node‑graph reasoning engine
+NPE Intervention Mode
 
-A predictive and analytical system
+Cross‑Job Intelligence Layer
 
-A chat‑driven node generator
+Multi‑Scenario Simulation Engine
 
-A log‑driven node builder
+Crew DNA Profiles
 
-A future‑proof AI layer that automatically upgrades as new Grok models release
+These enhancements must be additive, non‑breaking, and fully compatible with:
 
-This spec does not replace or restructure any existing components.
-It only builds on top of the deeply smart, integrated architecture already present.
+Chronos Time Hub
 
-2. Core Principles
-Gemini must follow these principles:
+Node Graph architecture
 
-2.1 Additive Only
-Do not modify or remove existing components.
-
-Do not restructure the diary, Chronos, or node graph.
-
-Only extend the Neural Prism Engine with new capabilities.
-
-2.2 Grok‑Powered
-All reasoning, insight generation, predictions, and node‑aware intelligence must use:
-
-Grok‑4 Fast Reasoning 1
-
-Automatically adopt future Grok models as they release
-
-The NPE must be model‑agnostic and future‑proof.
-
-2.3 Node‑Graph Native
-The diary is already a node graph.
-
-The NPE must treat all diary data as nodes connected to Chronos.
-
-2.4 Chronos‑Centric
-Chronos is the temporal anchor.
-
-All reasoning must be Chronos‑aware.
-
-2.5 AI Chat + AI Log Integration
-The NPE must leverage:
+Neural Prism Engine v2
 
 AI Chat Node‑Linker
 
 AI Log Node Generator
 
-These features already exist and must be supercharged, not replaced.
+Existing diary manifests
 
-3. Existing AI Features (to be enhanced, not replaced)
-Your diary already includes:
+Existing templates and workflows
 
-3.1 Neural Prism Engine (NPE)
-Grok‑powered reasoning
+The goal is to evolve the diary into a neural operations system capable of planning, predicting, advising, and optimising field operations.
 
-Node‑aware
+2. Core Principles
+Gemini must follow these principles:
 
-Manifest‑aware
+2.1 Additive Only
+Do not modify or remove existing node types.
 
-Cost/time/productivity aware
+Do not restructure the diary.
 
-Extremely fast
+Do not change the manifest schema.
 
-3.2 Chronos Time Hub
-Central temporal node
+Only extend the system with new intelligence.
 
-Connects all diary entries
+2.2 Grok‑Powered Intelligence
+All reasoning must use Grok‑4 Fast Reasoning 1.
 
-Enables time‑based reasoning
+Automatically adopt future Grok models as they release.
 
-3.3 AI Chat Node‑Linker
-Converts natural language → node links
+Keep the NPE model‑agnostic and future‑proof.
 
-Node links → actual nodes when clicked
+2.3 Chronos‑Native
+All new features must integrate with Chronos Time Hub.
 
-Fully diary‑aware
+All reasoning must be time‑aware and sequence‑aware.
 
-3.4 AI Log Node Generator
-Converts text logs → structured node graph entries
+2.4 Node‑Graph Native
+All new features must treat the diary as a graph, not a list.
 
-Auto‑links to Chronos
+Nodes must interconnect cleanly with existing node types.
 
-Auto‑calculates cost/time
+2.5 Interactive Intelligence
+The NPE must respond to commands such as:
 
-These are the pillars the enhancements must build upon.
+“Create a task for fencing in Zone B.”
 
-4. Enhancing the Neural Prism Engine (NPE)
-The NPE becomes the intelligence node of the diary.
+“Simulate adding a second crew.”
 
-4.1 NPE as a Chronos‑Plugged Intelligence Node
+“Compare this job to Job 112.”
+
+“What if we shift equipment earlier?”
+
+“Which crew is optimal for this task?”
+
+3. Task Nodes (New Node Type)
+Task Nodes represent work units that connect labour, equipment, materials, zones, and time.
+
+3.1 Purpose
+Tasks become the central operational unit of the diary.
+
+3.2 Requirements
+Task Nodes must:
+
+Link to Chronos
+
+Link to Zones
+
+Link to Staff nodes
+
+Link to Equipment nodes
+
+Link to Material nodes
+
+Track planned vs actual hours
+
+Track planned vs actual cost
+
+Track task‑level productivity
+
+Track task‑level delays
+
+Track task‑level drift
+
+3.3 NPE Responsibilities
 The NPE must:
 
-Connect directly to the Chronos Time Hub
+Analyse task performance
 
-Traverse all nodes linked to Chronos
+Detect task bottlenecks
 
-Analyse relationships between nodes
+Predict task completion
 
-Compute insights based on temporal patterns
+Suggest optimal crew/equipment
 
-Predict future states
+Detect task‑to‑task dependencies
 
-Chronos becomes the NPE’s data universe.
+3.4 AI Chat Integration
+Users must be able to say:
 
-4.2 NPE Node‑Graph Reasoning
-The NPE must understand and reason over:
+“Create a task for trenching in Zone A.”
 
-Staff nodes
+“Assign Crew 2 to the fencing task.”
 
-Equipment nodes
+“Link the excavator to this task.”
 
-Material nodes
+The AI must generate node links that become Task Nodes.
 
-Delay nodes
+4. NPE Intervention Mode
+This is the NPE’s strategic advisor mode.
 
-Weather nodes
+4.1 Purpose
+The NPE must not only analyse — it must intervene with actionable recommendations.
 
-Cost nodes
+4.2 Capabilities
+The NPE must be able to say:
 
-Productivity nodes
+“If you add 1 more labourer, drift reduces by 0.8 days.”
 
-Zone nodes
+“If you move the excavator to Zone C, cost burn improves by 12%.”
 
-AI‑generated nodes
+“If you reorder materials earlier, tomorrow’s idle time disappears.”
 
-Node links created by AI Chat
+4.3 Requirements
+Intervention Mode must:
 
-Node graphs created by AI Log
+Use the node graph
 
-The NPE must treat the diary as a living graph, not a static list.
+Use Chronos time‑series memory
 
-4.3 NPE Insight Engine (Additive Only)
-The NPE must generate:
+Use predictive financial models
 
-Daily Insights
-Cost anomalies
+Use crew DNA profiles
 
-Labour efficiency
+Use zone intelligence
 
-Equipment utilisation
+4.4 AI Chat Integration
+Users must be able to ask:
 
-Material usage anomalies
+“How do we fix today’s drift?”
 
-Delay impact
+“What’s the fastest way to recover time?”
 
-Weather impact
+“What’s the cheapest intervention?”
 
-Productivity breakdown
+The NPE must respond with specific, actionable interventions.
 
-Revenue/profit interpretation
+5. Cross‑Job Intelligence Layer
+The NPE must reason across all jobs, not just within one.
 
-Predictive Insights
-Tomorrow’s predicted cost
+5.1 Purpose
+Unlock portfolio‑level intelligence.
 
-Predicted completion date
+5.2 Capabilities
+The NPE must be able to:
 
-Delay risk
+Compare jobs
 
-Cost overrun risk
+Detect cross‑job patterns
 
-Pattern Insights
-Multi‑day cost spikes
+Benchmark crews
 
-Crew performance trends
+Benchmark equipment
 
-Weather patterns
+Benchmark material usage
 
-Delay category patterns
+Detect systemic issues
 
-Material usage patterns
+Predict portfolio‑level risks
 
-Structural Insights
-Node inconsistencies
+5.3 Example Outputs
+“Crew 3 is the most consistent across all fencing jobs.”
 
-Missing data
+“Excavator idle time is highest on small‑lot projects.”
 
-Conflicting entries
+“Material waste is trending upward across all jobs.”
 
-Under‑linked nodes
+5.4 AI Chat Integration
+Users must be able to ask:
 
-All insights must be generated using Grok‑4 Fast Reasoning 1 and automatically upgrade to future Grok models.
+“Compare this job to Job 112.”
 
-5. Enhancing the AI Chat Node‑Linker
-The AI Chat feature is already extremely smart.
-We now supercharge it.
+“Which crew performs best across all jobs?”
 
-5.1 Chat‑Driven Node Creation
-When the user types:
+“Where are we losing the most money portfolio‑wide?”
 
-“Add 3 labourers for 11 hours at $55/hr and link them to today’s shift.”
+6. Multi‑Scenario Simulation Engine
+This is the “what‑if” engine.
 
-The AI Chat must:
+6.1 Purpose
+Allow the NPE to simulate alternate futures.
 
-Generate node links
+6.2 Capabilities
+The NPE must simulate:
 
-When clicked, create actual nodes
+adding/removing labour
 
-Auto‑link them to Chronos
+shifting equipment
 
-Auto‑calculate cost
+changing task sequencing
 
-Auto‑update productivity
+adjusting hours
 
-Trigger NPE insight recalculation
+weather impact
 
-5.2 Chat‑Driven Insight Queries
-Users can ask:
+material delivery timing
 
-“Why was productivity low today.”
+zone reassignment
 
-“What caused the cost spike.”
+6.3 Example Outputs
+“Scenario A reduces drift by 1.4 days.”
 
-“Predict tomorrow’s cost.”
+“Scenario B increases margin by 6%.”
 
-“Show all weather delays this week.”
+“Scenario C eliminates tomorrow’s idle time.”
 
-The NPE must answer using:
+6.4 AI Chat Integration
+Users must be able to say:
 
-Node graph traversal
+“Simulate adding a second crew.”
 
-Chronos analysis
+“What if we start Zone C earlier?”
 
-Insight engine
+“What if weather worsens tomorrow?”
 
-Pattern engine
+7. Crew DNA Profiles
+Crew DNA is the behavioural intelligence layer.
 
-5.3 Chat‑Driven Node Editing
-Users can say:
+7.1 Purpose
+Understand crews as dynamic, evolving entities.
 
-“Change the excavator hours to 6.”
+7.2 Data Tracked
+skill profile
 
-“Remove the second labourer.”
+historical productivity
 
-“Increase concrete bags to 14.”
+fatigue patterns
 
+consistency score
+
+task affinity
+
+zone affinity
+
+weather sensitivity
+
+equipment synergy
+
+7.3 NPE Responsibilities
 The NPE must:
 
-Locate the correct node
+match crews to tasks
 
-Modify it
+predict fatigue
 
-Recalculate dependent nodes
+detect performance drift
 
-Update insights
+recommend optimal crew assignments
 
-6. Enhancing the AI Log Node Generator
-The AI Log feature becomes a high‑bandwidth ingestion engine.
+7.4 Example Outputs
+“Crew 2 is optimal for fencing in Zone B.”
 
-6.1 Convert Logs to Node Graphs
-Example input:
+“Crew 1 is showing fatigue patterns.”
 
-“We had 2 hours of rain delay, used 12 concrete bags, and the bobcat was idle for 3 hours.”
-
-The AI Log must generate:
-
-A weather delay node
-
-A material usage node
-
-An equipment idle node
-
-All linked to Chronos
-
-All costed
-
-All included in insights
-
-6.2 Auto‑Classification
-The NPE must classify:
-
-Delay category
-
-Material anomaly
-
-Equipment utilisation
-
-Labour efficiency
-
-6.3 Auto‑Pattern Detection
-If logs show repeated issues:
-
-“Rain delay detected 3 days in a row.”
-
-“Bobcat idle pattern emerging.”
-
-“Concrete usage trending above baseline.”
-
-The NPE must surface these as pattern insights.
-
-7. The Combined System: A Living Neural OS
-When the NPE, Chronos, AI Chat, and AI Log work together, the diary becomes:
-
-7.1 A Self‑Building Diary
-Users speak or type.
-Nodes appear.
-Chronos links them.
-The NPE interprets them.
-Insights update instantly.
-
-7.2 A Predictive OS
-The NPE forecasts:
-
-Cost
-
-Delays
-
-Completion
-
-Productivity
-
-7.3 A Pattern‑Aware System
-The NPE sees:
-
-Trends
-
-Anomalies
-
-Risks
-
-Opportunities
-
-7.4 A Conversational Interface
-The diary becomes:
-
-A chat‑driven node editor
-
-A chat‑driven insight engine
-
-A chat‑driven predictive system
-
-7.5 A Living Graph
-The diary becomes:
-
-A dynamic node graph
-
-A temporal intelligence network
-
-A self‑optimising system
+“Crew 3 performs best on short‑duration tasks.”
 
 8. Implementation Checklist for Gemini 3 CLI
 Gemini must:
 
-8.1 Enhance the Neural Prism Engine
-Add Chronos integration
+8.1 Add Task Nodes
+Node type
 
-Add node graph traversal
+Node links
 
-Add insight engine
+Chronos integration
 
-Add prediction engine
+Zone integration
 
-Add pattern engine
+Staff/equipment/material integration
 
-Ensure all reasoning uses Grok‑4 Fast Reasoning 1
+8.2 Add NPE Intervention Mode
+Actionable recommendations
 
-Auto‑upgrade to future Grok models
+Cost/time impact modelling
 
-8.2 Upgrade AI Chat
-Node‑link generation
+Drift recovery modelling
 
-Node creation on click
+8.3 Add Cross‑Job Intelligence Layer
+Portfolio‑level reasoning
 
-Node editing
+Benchmarking
 
-Insight querying
+Pattern detection
 
-Predictive querying
+8.4 Add Multi‑Scenario Simulation
+What‑if engine
 
-8.3 Upgrade AI Log
-Text → node graph
+Scenario comparison
 
-Auto‑classification
+Predictive modelling
 
-Auto‑linking
+8.5 Add Crew DNA Profiles
+Behaviour modelling
 
-Auto‑pattern detection
+Performance tracking
 
-8.4 UI Enhancements (Additive Only)
-Daily Insights panel
-
-Productivity gauge
-
-Delay timeline
-
-Predictive strip
-
-Pattern summary
-
-Weekly brief
+Crew‑task matching
 
 9. Final Intent
-This README transforms the diary into:
+This README evolves MasterDiaryOS into:
 
-A neural operating system
+A neural operations system
 
-A temporal intelligence engine
+A predictive planning engine
 
-A node‑aware reasoning graph
+A cross‑job intelligence platform
 
-A predictive assistant
+A scenario simulator
 
-A self‑building diary
+A crew optimisation engine
 
-A living system
+A Chronos‑connected reasoning graph
 
-A future‑proof Grok‑powered platform
+A Grok‑powered future‑proof AI system
 
-This is the blueprint for the best construction OS ever built, and it builds only on the existing, deeply smart architecture you’ve already created.
+The Neural Prism Engine becomes a fully interactive, strategic, predictive, and advisory intelligence node capable of producing insights, interventions, simulations, and node operations on command.

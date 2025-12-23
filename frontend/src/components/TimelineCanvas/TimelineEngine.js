@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNodesState, useEdgesState, addEdge, useReactFlow } from '@xyflow/react';
 import { api } from '../../utils/api';
 
-export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, extraNodes = [], persistentEdges = [], onUpdateEdges, projectFinancials) => {
+export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, extraNodes = [], persistentEdges = [], onUpdateEdges, projectFinancials, history = [], onDeployFixes, quotedData) => {
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
   const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(persistentEdges || []);
   const [heatmapActive, setHeatmapActive] = useState(false);
@@ -175,6 +175,9 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           let duration = node.data?.duration;
           let hubData = node.data?.hubData;
           let status = node.data?.status || 'normal';
+          let zoneName = 'Unassigned';
+          let timeDrift = '0h';
+          let costDrift = '$0';
 
           if (hubStateMap.has(node.id)) {
               const state = hubStateMap.get(node.id);
@@ -195,8 +198,93 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
               }
           }
 
+          // Zone Detection & Aggregation Logic
+          if (node.type === 'taskNode' || node.type === 'diaryNode') {
+              const zones = currentExtras.filter(n => n.type === 'zone' || n.type === 'wormhole');
+              const parentZone = zones.find(z => {
+                  const padding = 20;
+                  return node.position.x >= z.position.x - padding &&
+                         node.position.x <= z.position.x + (z.width || 400) + padding &&
+                         node.position.y >= z.position.y - padding &&
+                         node.position.y <= z.position.y + (z.height || 400) + padding;
+              });
+              if (parentZone) zoneName = parentZone.data?.label || 'Zone';
+          }
+
+          // Task Node Logic (Enhanced Cost & Progress Engine)
+          if (node.type === 'taskNode') {
+              const connectedItemIds = currentEdges
+                  .filter(e => e.source === node.id || e.target === node.id)
+                  .map(e => e.source === node.id ? e.target : e.source);
+              
+              const connectedItems = processedItems.filter(i => connectedItemIds.includes(i.id));
+              
+              const totalActualHrs = connectedItems
+                  .filter(i => i.data?.type === 'staff' || i.data?.type === 'equipment')
+                  .reduce((sum, s) => sum + (parseFloat(s.data?.duration) || 0), 0);
+
+              const totalActualCost = connectedItems.reduce((sum, i) => {
+                  const qty = parseFloat(i.data?.quantity) || 0;
+                  const dur = parseFloat(i.data?.duration) || 0;
+                  const rate = parseFloat(i.data?.costRate) || 0;
+                  if (i.data?.type === 'staff' || i.data?.type === 'equipment') return sum + (dur * rate);
+                  return sum + (qty * rate);
+              }, 0);
+
+              // Calculate Drift relative to Quoted Data (NEE Bridge)
+              if (quotedData) {
+                  const quotedLabor = (quotedData.staff || []).reduce((sum, s) => sum + (parseFloat(s.hours) || 0), 0);
+                  const actualVsQuoted = totalActualHrs - quotedLabor;
+                  timeDrift = `${actualVsQuoted > 0 ? '+' : ''}${actualVsQuoted}h`;
+                  const costVariance = totalActualCost - (parseFloat(quotedData.totalCost) || 0);
+                  costDrift = `${costVariance > 0 ? '+' : ''}$${Math.abs(costVariance).toLocaleString()}`;
+              }
+
+              if (Math.abs((parseFloat(node.data?.actualHours) || 0) - totalActualHrs) > 0.01 || 
+                  Math.abs((parseFloat(node.data?.actualCost) || 0) - totalActualCost) > 0.01) {
+                  setTimeout(() => onUpdateItem(node.id, { actualHours: totalActualHrs, actualCost: totalActualCost }), 0);
+              }
+              duration = totalActualHrs; 
+          }
+
+          // Zone Aggregation Engine
+          let zoneTotal = node.data?.zoneTotal || 0;
+          let nodeCount = node.data?.nodeCount || 0;
+          let zoneDrift = node.data?.drift || '0h';
+
+          if (node.type === 'zone' || node.type === 'wormhole') {
+              const containedNodes = [...processedItems, ...currentExtras].filter(n => {
+                  if (n.id === node.id) return false;
+                  const padding = 10;
+                  return n.position.x >= node.position.x - padding &&
+                         n.position.x <= node.position.x + (node.width || 400) + padding &&
+                         n.position.y >= node.position.y - padding &&
+                         n.position.y <= node.position.y + (node.height || 400) + padding;
+              });
+
+              nodeCount = containedNodes.length;
+              const totalCost = containedNodes.reduce((sum, n) => sum + (parseFloat(n.data?.actualCost) || parseFloat(n.data?.cost) || 0), 0);
+              zoneTotal = totalCost;
+
+              const totalDriftHrs = containedNodes.reduce((sum, n) => {
+                  const d = n.data?.timeDrift || '0h';
+                  return sum + (parseFloat(d.replace('h','')) || 0);
+              }, 0);
+              zoneDrift = `${totalDriftHrs > 0 ? '+' : ''}${totalDriftHrs}h`;
+
+              if (Math.abs((node.data?.zoneTotal || 0) - zoneTotal) > 0.1 || node.data?.nodeCount !== nodeCount) {
+                  setTimeout(() => onUpdateItem(node.id, { zoneTotal, nodeCount, drift: zoneDrift }), 0);
+              }
+          }
+
           return {
-              ...node, data: { ...node.data, duration, hubData, status, projectFinancials, onDelete: () => onRemoveItem(node.id), onUpdate: (id, ups) => onUpdateItem(id, ups) }
+              ...node, data: { 
+                  ...node.data, 
+                  duration, hubData, status, zoneName, timeDrift, costDrift, zoneTotal, nodeCount,
+                  projectFinancials, onDeployFixes,
+                  onDelete: () => onRemoveItem(node.id), 
+                  onUpdate: (id, ups) => onUpdateItem(id, ups) 
+              }
           };
       });
 
@@ -216,7 +304,7 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           });
       });
 
-  }, [items, extraNodes, edges, projectFinancials, harvestBranch, onUpdateItem, onRemoveItem]);
+  }, [items, extraNodes, edges, projectFinancials, harvestBranch, onUpdateItem, onRemoveItem, onDeployFixes]);
 
   // Decoupled AI Logic (Fixed Infinite Loop)
   useEffect(() => {
@@ -227,7 +315,12 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           const { hubData, projectFinancials: financials, lastAnalyzedHash, status } = prism.data;
           
           // Generate simple hash of current hubData to check for changes
-          const currentHash = JSON.stringify({ w: hubData.workers?.length, r: hubData.resources?.length, d: hubData.duration });
+          const currentHash = JSON.stringify({ 
+              w: hubData.workers?.length, 
+              r: hubData.resources?.length, 
+              d: hubData.duration,
+              e: edges.length // Edge count included for structural awareness
+          });
           
           // Only analyze if hash changed or never analyzed
           if (status !== 'analyzing' && currentHash !== lastAnalyzedHash) {
@@ -244,8 +337,11 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                               workers: hubData.workers, 
                               tasks: hubData.resources, 
                               duration: hubData.duration, 
-                              projectFinancials: financials 
-                          } 
+                              projectFinancials: financials,
+                              graphEdges: edges.length,
+                              quotedData: quotedData // GRANULAR ESTIMATES
+                          },
+                          history // Send temporal memory
                       });
                       
                       if (res.data) {
@@ -258,13 +354,19 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
               }, 3500);
           }
       });
-  }, [nodes, onUpdateItem]);
+  }, [nodes, edges.length, history, onUpdateItem]);
 
   const onNodeDragStop = useCallback((event, node) => {
     if (!node.parentId) onUpdateItem(node.id, { position: node.position });
   }, [onUpdateItem]);
 
-  const onConnect = useCallback((params) => { setEdges((eds) => addEdge({ ...params, animated: true }, eds)); }, [setEdges]);
+  const onConnect = useCallback((params) => { 
+    setEdges((eds) => {
+        const newEdges = addEdge({ ...params, animated: true }, eds);
+        if (onUpdateEdges) onUpdateEdges(newEdges);
+        return newEdges;
+    }); 
+  }, [setEdges, onUpdateEdges]);
 
   return { nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, heatmapActive, setHeatmapActive, showTime, setShowTime, screenToFlowPosition, onNodeDragStop, onConnect };
 };
