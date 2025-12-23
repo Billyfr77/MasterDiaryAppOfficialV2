@@ -10,7 +10,7 @@ export const generatePDF = async (elementId, invoiceNumber) => {
 
   try {
     const canvas = await html2canvas(input, {
-      scale: 2, // High resolution
+      scale: 3, // Ultra High resolution for professional print
       useCORS: true, // Handle images
       logging: false,
       backgroundColor: '#ffffff'

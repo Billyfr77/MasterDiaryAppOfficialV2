@@ -1,40 +1,47 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNodesState, useEdgesState, addEdge, useReactFlow } from '@xyflow/react';
 import { api } from '../../utils/api';
-import { PIXELS_PER_HOUR, START_HOUR } from './constants';
 
-export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, extraNodes = [], persistentEdges = [], onUpdateEdges) => {
+export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, extraNodes = [], persistentEdges = [], onUpdateEdges, projectFinancials) => {
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
   const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(persistentEdges || []);
   const [heatmapActive, setHeatmapActive] = useState(false);
   const [showTime, setShowTime] = useState(false);
   const { screenToFlowPosition, getNodes } = useReactFlow();
 
+  const edgesRef = useRef(edges);
+  const itemsRef = useRef(items);
+  const extraNodesRef = useRef(extraNodes);
+  const deletedIds = useRef(new Set()); 
+  
+  useEffect(() => { edgesRef.current = edges; }, [edges]);
+  useEffect(() => { itemsRef.current = items; }, [items]);
+  useEffect(() => { extraNodesRef.current = extraNodes; }, [extraNodes]);
+
   const onNodesChange = useCallback((changes) => {
       onNodesChangeInternal(changes);
-      // If position changed, we need to notify the parent for persistence
       changes.forEach(change => {
           if (change.type === 'position' && change.dragging === false) {
               const node = getNodes().find(n => n.id === change.id);
-              if (node) {
-                  onUpdateItem(node.id, { position: node.position });
-              }
+              if (node) onUpdateItem(node.id, { position: node.position });
+          }
+          if (change.type === 'remove') {
+              deletedIds.current.add(change.id);
+              onRemoveItem(change.id);
           }
       });
-  }, [onNodesChangeInternal, onUpdateItem, getNodes]);
+  }, [onNodesChangeInternal, onUpdateItem, onRemoveItem, getNodes]);
 
   const onEdgesChange = useCallback((changes) => {
       onEdgesChangeInternal(changes);
   }, [onEdgesChangeInternal]);
 
-  // Handle external edge sync (e.g. loading a new diary or restoring draft)
+  // Sync external edges
   useEffect(() => {
       if (persistentEdges && persistentEdges.length > 0) {
           setEdges(eds => {
               const localIds = new Set(eds.map(e => e.id));
-              const externalIds = new Set(persistentEdges.map(e => e.id));
-              const isDifferent = persistentEdges.length !== eds.length || 
-                                 persistentEdges.some(pe => !localIds.has(pe.id));
+              const isDifferent = persistentEdges.length !== eds.length || persistentEdges.some(pe => !localIds.has(pe.id));
               if (isDifferent) return persistentEdges;
               return eds;
           });
@@ -43,244 +50,221 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
       }
   }, [persistentEdges, setEdges]);
 
-  // Notify parent of edge changes for persistence
   useEffect(() => {
-      if (onUpdateEdges) {
-          // Check if parent state actually needs update to prevent loops
-          onUpdateEdges(edges);
-      }
+      if (onUpdateEdges) onUpdateEdges(edges);
   }, [edges, onUpdateEdges]);
 
-  // Update Container Totals (Zones/Wormholes/Allowances)
-  const updateContainerTotals = useCallback(() => {
-      setNodes(nds => {
-          const currentEdges = edges; // Use latest edges
-          return nds.map(node => {
-              // Standard Container Logic (Parent/Child)
-              if (node.type === 'zone' || node.type === 'wormhole' || node.type === 'chronos') {
-                  const children = nds.filter(i => (i.parentId === node.id || (node.type==='zone' && i.position.x >= node.position.x && i.position.x <= node.position.x + (node.data.width || 400))) && i.type === 'diaryNode');
-                  const total = children.reduce((sum, i) => sum + (i.data.totalCost || 0), 0);
-                  const manHours = children.filter(c => c.data.type === 'staff').reduce((sum, i) => sum + (i.data.duration || 0), 0);
-                  return { ...node, data: { ...node.data, zoneTotal: total, manHours } };
+  // --- RECURSIVE HARVESTER (Pure logic) ---
+  const harvestBranch = useCallback((startId, currentEdges, currentItems, currentExtras, visited = new Set()) => {
+      if (visited.has(startId)) return { workers: [], resources: [], extras: [], delays: [], breaks: [] };
+      visited.add(startId);
+
+      const connectedEdges = currentEdges.filter(e => e.source === startId || e.target === startId);
+      let workers = [], resources = [], extras = [], delays = [], breaks = [];
+
+      connectedEdges.forEach(edge => {
+          const neighborId = edge.source === startId ? edge.target : edge.source;
+          if (visited.has(neighborId)) return;
+
+          const item = currentItems.find(i => i.id === neighborId);
+          if (item) {
+              const richItem = { ...item, inHouseCost: parseFloat(item.costRate) || 0, outHouseCharge: parseFloat(item.chargeRate) || 0 };
+              if (item.type === 'staff') workers.push(richItem);
+              else resources.push(richItem);
+          } else {
+              const extra = currentExtras.find(e => e.id === neighborId);
+              if (extra) {
+                  const isBreak = extra.type === 'chronos' && !extra.data?.startTime;
+                  if (extra.type === 'delay') delays.push(extra);
+                  else if (isBreak) breaks.push(extra);
+                  else extras.push({ id: extra.id, type: extra.type, label: extra.data?.label || extra.type });
               }
+          }
+
+          const sub = harvestBranch(neighborId, currentEdges, currentItems, currentExtras, visited);
+          workers = [...workers, ...sub.workers];
+          resources = [...resources, ...sub.resources];
+          extras = [...extras, ...sub.extras];
+          delays = [...delays, ...sub.delays];
+          breaks = [...breaks, ...sub.breaks];
+      });
+
+      return { workers, resources, extras, delays, breaks };
+  }, []);
+
+  // --- SINGLE SOURCE OF TRUTH MAPPING ENGINE ---
+  useEffect(() => {
+      const currentItems = items;
+      const currentExtras = extraNodes;
+      const currentEdges = edges;
+
+      // 1. Initial State Calculation
+      const reachableFromHub = new Set();
+      const hubStateMap = new Map();
+      const hubs = currentExtras.filter(n => n.type === 'chronos' && n.data?.startTime && n.data?.finishTime);
+
+      hubs.forEach(hub => {
+          const branch = harvestBranch(hub.id, currentEdges, currentItems, currentExtras);
+          const [h1, m1] = (hub.data.startTime || '07:00').split(':').map(Number);
+          const [h2, m2] = (hub.data.finishTime || '15:00').split(':').map(Number);
+          const baseShift = Math.max(0, (h2 + m2/60) - (h1 + m1/60));
+          const totalDelay = branch.delays.reduce((sum, d) => sum + (parseFloat(d.data?.duration) || 0), 0);
+          const totalBreak = branch.breaks.reduce((sum, b) => sum + (parseFloat(b.data?.duration) || 0), 0);
+          const finalDuration = Math.max(0, baseShift - totalDelay - totalBreak);
+
+          hubStateMap.set(hub.id, { ...branch, finalDuration });
+          branch.workers.forEach(w => reachableFromHub.add(w.id));
+          branch.resources.forEach(r => reachableFromHub.add(r.id));
+          branch.extras.forEach(e => reachableFromHub.add(e.id));
+      });
+
+      // 2. Map Items to Final Visual Nodes
+      const processedItems = currentItems.map(item => {
+          let duration = item.duration;
+          let isChronosLinked = false;
+          let activeAllowances = [];
+
+          // 2a. Allowance Scanner
+          if (item.type === 'staff') {
+              const connectedAllowanceIds = currentEdges
+                  .filter(e => e.source === item.id || e.target === item.id)
+                  .map(e => e.source === item.id ? e.target : e.source);
               
-              // Smart Node logic (Edge-based)
-              if (node.type === 'allowance') {
-                  const connectedIds = currentEdges
-                      .filter(e => e.source === node.id || e.target === node.id)
-                      .map(e => e.source === node.id ? e.target : e.source);
-                  
-                  const connectedStaff = items.filter(i => connectedIds.includes(i.id) && i.type === 'staff');
-                  const allowanceTotal = connectedStaff.reduce((sum, s) => {
-                      const rate = parseFloat(node.data.rate) || 0;
-                      return sum + (node.data.type === 'daily' ? rate : rate * (s.quantity || 0));
-                  }, 0);
-                  return { ...node, data: { ...node.data, allowanceTotal } };
+              const connectedAllowances = currentExtras.filter(n => n.type === 'allowance' && connectedAllowanceIds.includes(n.id));
+              
+              activeAllowances = connectedAllowances.map(a => ({
+                  id: a.id,
+                  name: a.data?.name || 'Allowance',
+                  rate: parseFloat(a.data?.rate) || 0,
+                  type: a.data?.allowanceType || 'hourly' // 'hourly' or 'daily'
+              }));
+
+              // Sync to persistent state if changed
+              const prevAllowances = JSON.stringify(item.activeAllowances || []);
+              const newAllowances = JSON.stringify(activeAllowances);
+              
+              if (prevAllowances !== newAllowances) {
+                  setTimeout(() => onUpdateItem(item.id, { activeAllowances }), 0);
               }
-              return node;
-          });
-      });
-  }, [setNodes, edges, items]);
-
-  const onNodeDragStop = useCallback((event, node) => {
-    // Basic update
-    if (!node.parentId) {
-        onUpdateItem(node.id, { position: node.position });
-    } else {
-        // Parent already tracked via React Flow
-    }
-    updateContainerTotals();
-  }, [onUpdateItem, updateContainerTotals]);
-
-  // --- RECURSIVE PROPAGATION ENGINE ---
-  const propagateDownstream = useCallback((sourceId, updates, visited = new Set()) => {
-      // Prevent infinite loops
-      if (visited.has(sourceId)) return;
-      visited.add(sourceId);
-
-      // Find all immediate children
-      const childrenEdges = edges.filter(e => e.source === sourceId || e.target === sourceId);
-      
-      childrenEdges.forEach(edge => {
-          const childId = edge.source === sourceId ? edge.target : edge.source;
-          
-          // Avoid processing already visited nodes
-          if (visited.has(childId)) return;
-
-          const childNode = getNodes().find(n => n.id === childId);
-          
-          if (childNode && childNode.type === 'diaryNode') {
-              onUpdateItem(childId, { ...updates, isChronosLinked: true });
-              // Recursively propagate to this child's children
-              propagateDownstream(childId, updates, visited);
           }
-      });
-  }, [edges, getNodes, onUpdateItem]);
 
-  const handleNodeUpdate = useCallback((id, updates) => {
-      onUpdateItem(id, updates);
-      
-      // If this is a time-giving node, propagate the changes live
-      const node = getNodes().find(n => n.id === id);
-      if (node && (node.type === 'chronos' || (node.type === 'diaryNode' && node.data.isChronosLinked))) {
-          // We only propagate time-related fields
-          const timeUpdates = {};
-          if (updates.startTime) timeUpdates.startTime = updates.startTime;
-          if (updates.finishTime) timeUpdates.finishTime = updates.finishTime;
-          if (updates.duration !== undefined) timeUpdates.duration = updates.duration;
-          
-          if (Object.keys(timeUpdates).length > 0) {
-              propagateDownstream(id, timeUpdates);
-          }
-      }
-  }, [onUpdateItem, getNodes, propagateDownstream]);
-
-  const onConnect = useCallback((params) => {
-      const sourceNode = nodes.find(n => n.id === params.source);
-      const targetNode = nodes.find(n => n.id === params.target);
-
-      // --- ALLOWANCE-SYNC LOGIC ---
-      if ((sourceNode?.type === 'allowance' && targetNode?.type === 'diaryNode') || (targetNode?.type === 'allowance' && sourceNode?.type === 'diaryNode')) {
-          const allowanceNode = sourceNode.type === 'allowance' ? sourceNode : targetNode;
-          const diaryNode = sourceNode.type === 'allowance' ? targetNode : sourceNode;
-
-          if (diaryNode.data.type === 'staff') {
-              const allowanceData = { 
-                  id: allowanceNode.id, 
-                  name: allowanceNode.data.label, 
-                  rate: allowanceNode.data.rate, 
-                  type: allowanceNode.data.type 
-              };
-              
-              const currentItem = items.find(i => i.id === diaryNode.id);
-              if (currentItem) {
-                  const currentAllowances = currentItem.activeAllowances || [];
-                  const exists = currentAllowances.find(a => a.id === allowanceData.id || a.name === allowanceData.name);
-                  
-                  if (!exists) {
-                      onUpdateItem(diaryNode.id, { activeAllowances: [...currentAllowances, allowanceData] });
+          if (reachableFromHub.has(item.id) && !item.isOverridden) {
+              const state = Array.from(hubStateMap.values()).find(s => s.workers.some(w => w.id === item.id) || s.resources.some(r => r.id === item.id));
+              if (state && (item.type === 'staff' || item.type === 'equipment')) {
+                  duration = state.finalDuration;
+                  isChronosLinked = true;
+                  // Push back to persistent state if mismatch (DEFERRED)
+                  if (Math.abs(parseFloat(item.duration) - duration) > 0.01) {
+                      const orig = item.isChronosLinked ? item.originalDuration : item.duration;
+                      setTimeout(() => onUpdateItem(item.id, { duration, isChronosLinked: true, originalDuration: orig }), 0);
                   }
               }
+          } else if (item.isChronosLinked) {
+              // Disconnected Reset (DEFERRED)
+              setTimeout(() => onUpdateItem(item.id, { isChronosLinked: false, duration: item.originalDuration || item.duration }), 0);
           }
-      }
 
-      // --- CHRONO-SYNC LOGIC (Parent -> Child & Recursive) ---
-      if (sourceNode?.type === 'chronos' && targetNode?.type === 'diaryNode') {
-          const { startTime, finishTime, duration } = sourceNode.data;
-          const updates = { startTime, finishTime, duration, isChronosLinked: true };
-          handleNodeUpdate(targetNode.id, updates);
-      } else if (targetNode?.type === 'chronos' && sourceNode?.type === 'diaryNode') {
-          const { startTime, finishTime, duration } = targetNode.data;
-          const updates = { startTime, finishTime, duration, isChronosLinked: true };
-          handleNodeUpdate(sourceNode.id, updates);
-      }
+          return {
+              id: item.id, type: 'diaryNode', position: item.position || { x: 0, y: 0 },
+              data: { ...item, duration, isChronosLinked, activeAllowances, label: item.name, onDelete: () => onRemoveItem(item.id), onUpdate: (id, ups) => onUpdateItem(id, ups) }
+          };
+      });
 
-      // --- SIBLING SYNC LOGIC (Chain Inheritance) ---
-      // Only propagate if source is already part of a Chronos chain
-      if (sourceNode?.type === 'diaryNode' && targetNode?.type === 'diaryNode') {
-          // Case A: Source -> Target (Source has the time)
-          if (sourceNode.data.isChronosLinked && sourceNode.data.startTime && sourceNode.data.finishTime) {
-               const updates = { 
-                   startTime: sourceNode.data.startTime, 
-                   finishTime: sourceNode.data.finishTime, 
-                   duration: sourceNode.data.duration,
-                   isChronosLinked: true 
-               };
-               handleNodeUpdate(targetNode.id, updates);
+      // 3. Map Extras to Final Visual Nodes
+      const processedExtras = currentExtras.map(node => {
+          let duration = node.data?.duration;
+          let hubData = node.data?.hubData;
+          let status = node.data?.status || 'normal';
+
+          if (hubStateMap.has(node.id)) {
+              const state = hubStateMap.get(node.id);
+              duration = state.finalDuration;
+              hubData = { workers: state.workers, resources: state.resources, extras: state.extras };
+              status = (state.delays.length || state.breaks.length) ? 'impacted' : 'normal';
+              if (Math.abs((parseFloat(node.data?.duration) || 0) - duration) > 0.01) {
+                  setTimeout(() => onUpdateItem(node.id, { duration }), 0);
+              }
           }
-          // Case B: Target -> Source (Target has the time)
-          else if (targetNode.data.isChronosLinked && targetNode.data.startTime && targetNode.data.finishTime) {
-               const updates = { 
-                   startTime: targetNode.data.startTime, 
-                   finishTime: targetNode.data.finishTime, 
-                   duration: targetNode.data.duration,
-                   isChronosLinked: true 
-               };
-               handleNodeUpdate(sourceNode.id, updates);
+
+          // Neural Prism Logic
+          if (node.type === 'neuralPrism') {
+              const hubId = Array.from(hubStateMap.keys()).find(hid => currentEdges.some(e => (e.source === node.id && e.target === hid) || (e.target === node.id && e.source === hid)));
+              if (hubId) {
+                  const s = hubStateMap.get(hubId);
+                  hubData = { workers: s.workers, resources: s.resources, duration: s.finalDuration };
+              }
           }
-      }
 
-      // --- CHRONO-MODIFIER LOGIC (Break -> Shift) ---
-      // If a Chronos node (Break) connects to another Chronos node (Shift), subtract duration
-      if (sourceNode?.type === 'chronos' && targetNode?.type === 'chronos') {
-          const breakDuration = sourceNode.data.duration || 0;
-          const shiftDuration = targetNode.data.duration || 8;
-          const newDuration = Math.max(0, shiftDuration - breakDuration);
+          return {
+              ...node, data: { ...node.data, duration, hubData, status, projectFinancials, onDelete: () => onRemoveItem(node.id), onUpdate: (id, ups) => onUpdateItem(id, ups) }
+          };
+      });
+
+      // 4. Batch Atomic setNodes (Safe lookup)
+      setNodes(nds => {
+          const nodeMap = new Map();
+          nds.forEach(n => { if (n) nodeMap.set(n.id, n); });
+          const combined = [...processedExtras, ...processedItems].filter(n => n && !deletedIds.current.has(n.id));
           
-          handleNodeUpdate(targetNode.id, { duration: newDuration, status: 'adjusted' });
-      }
+          return combined.map(newNode => {
+              const existing = nodeMap.get(newNode.id);
+              if (existing) {
+                  const pos = existing.dragging || existing.selected ? existing.position : newNode.position;
+                  return { ...existing, ...newNode, position: pos, data: { ...existing.data, ...newNode.data } };
+              }
+              return newNode;
+          });
+      });
 
-      // --- IMPACT-SYNC LOGIC ---
-      if (sourceNode?.type === 'impact' && targetNode?.type === 'diaryNode') {
-          const { prodImpact = 1, costImpact = 1 } = sourceNode.data;
-          const newDuration = (targetNode.data.duration || 1) * (1 / prodImpact);
-          const newCost = (targetNode.data.costRate || 0) * costImpact;
-          handleNodeUpdate(targetNode.id, { duration: newDuration, costRate: newCost });
-      }
+  }, [items, extraNodes, edges, projectFinancials, harvestBranch, onUpdateItem, onRemoveItem]);
 
-      // --- DELAY/IMPACT PROPAGATION LOGIC (Deep Update & Bidirectional) ---
-      const isDelayOrImpact = (n) => n?.type === 'delay' || n?.type === 'impact';
-      const isChronos = (n) => n?.type === 'chronos';
-
-      if ((isDelayOrImpact(sourceNode) && isChronos(targetNode)) || (isDelayOrImpact(targetNode) && isChronos(sourceNode))) {
-          const impactNode = isDelayOrImpact(sourceNode) ? sourceNode : targetNode;
-          const chronosNode = isChronos(sourceNode) ? sourceNode : targetNode;
-          
-          const delayAmt = impactNode.data.duration || 1; 
-          const baseDuration = 8; // Default shift length if not set
-          const currentDuration = chronosNode.data.duration || baseDuration;
-          
-          // Calculate new effective duration (subtract delay)
-          const newDuration = Math.max(0, currentDuration - delayAmt);
-          
-          // 1. Update Chronos Node
-          handleNodeUpdate(chronosNode.id, { duration: newDuration, status: 'impacted' });
-      }
-
-      setEdges((eds) => addEdge({ ...params, animated: true }, eds));
-  }, [nodes, edges, setEdges, onUpdateItem, items, propagateDownstream, getNodes, handleNodeUpdate]);
-
-  // Sync external items to nodes
+  // Decoupled AI Logic (Fixed Infinite Loop)
   useEffect(() => {
-    const persistentTypes = ['wormhole', 'zone', 'chronos', 'neuralLens', 'photoNode', 'photoPlane', 'delay', 'impact', 'dimension', 'allowance'];
+      const prisms = nodes.filter(n => n.type === 'neuralPrism' && n.data?.hubData);
+      
+      prisms.forEach(prism => {
+          const prismId = prism.id;
+          const { hubData, projectFinancials: financials, lastAnalyzedHash, status } = prism.data;
+          
+          // Generate simple hash of current hubData to check for changes
+          const currentHash = JSON.stringify({ w: hubData.workers?.length, r: hubData.resources?.length, d: hubData.duration });
+          
+          // Only analyze if hash changed or never analyzed
+          if (status !== 'analyzing' && currentHash !== lastAnalyzedHash) {
+              
+              clearTimeout(window[`prism_${prismId}`]);
+              
+              // Immediate: Mark analyzing
+              onUpdateItem(prismId, { status: 'analyzing', lastAnalyzedHash: currentHash });
 
-    const mappedItems = items.map(item => {
-        let nodeStyle = item.type === 'photoPlane' ? { width: item.width || 800, height: 600, zIndex: -1 } : undefined;
-        return {
-            id: item.id,
-            type: item.type === 'photoPlane' ? 'photoPlane' : 'diaryNode',
-            position: item.position || { x: Math.random() * 400, y: Math.random() * 400 },
-            parentId: item.parentId,
-            extent: item.parentId ? 'parent' : undefined,
-            style: nodeStyle,
-            data: {
-                ...item,
-                id: item.id,
-                label: item.name,
-                onDelete: () => onRemoveItem(item.id),
-                onUpdate: handleNodeUpdate
-            }
-        };
-    });
+              window[`prism_${prismId}`] = setTimeout(async () => {
+                  try {
+                      const res = await api.post('/ai/analyze-prism', { 
+                          context: { 
+                              workers: hubData.workers, 
+                              tasks: hubData.resources, 
+                              duration: hubData.duration, 
+                              projectFinancials: financials 
+                          } 
+                      });
+                      
+                      if (res.data) {
+                          onUpdateItem(prismId, { ...res.data, status: 'ready' });
+                      }
+                  } catch (e) {
+                      console.error("AI Analysis Failed", e);
+                      onUpdateItem(prismId, { status: 'disconnected' });
+                  }
+              }, 3500);
+          }
+      });
+  }, [nodes, onUpdateItem]);
 
-    const mappedExtras = extraNodes.map(node => ({
-        ...node,
-        data: {
-            ...node.data,
-            onDelete: () => onRemoveItem(node.id),
-            onUpdate: handleNodeUpdate
-        }
-    }));
+  const onNodeDragStop = useCallback((event, node) => {
+    if (!node.parentId) onUpdateItem(node.id, { position: node.position });
+  }, [onUpdateItem]);
 
-    setNodes(nds => {
-        const persistentNodes = nds.filter(n => persistentTypes.includes(n.type) && !items.find(it => it.id === n.id) && !extraNodes.find(ex => ex.id === n.id));
-        return [...persistentNodes, ...mappedExtras, ...mappedItems];
-    });
-  }, [items, extraNodes, onRemoveItem, handleNodeUpdate, setNodes]);
+  const onConnect = useCallback((params) => { setEdges((eds) => addEdge({ ...params, animated: true }, eds)); }, [setEdges]);
 
-  return {
-    nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange,
-    heatmapActive, setHeatmapActive, showTime, setShowTime,
-    screenToFlowPosition, onNodeDragStop, updateContainerTotals, onConnect
-  };
+  return { nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, heatmapActive, setHeatmapActive, showTime, setShowTime, screenToFlowPosition, onNodeDragStop, onConnect };
 };

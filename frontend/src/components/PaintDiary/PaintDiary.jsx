@@ -60,9 +60,9 @@ const DraggableItem = ({ item }) => {
         <div 
             draggable 
             onDragStart={onDragStart}
-            className={`group relative flex items-center gap-3 p-3 rounded-xl border cursor-grab active:cursor-grabbing transition-all hover:translate-x-1 hover:shadow-lg ${wrapperClass}`}
+            className={`group relative flex items-center gap-3 p-3 rounded-xl border cursor-grab active:cursor-grabbing transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${wrapperClass}`}
         >
-            <div className={`p-2 rounded-lg ${iconClass} group-hover:scale-110 transition-transform`}>
+            <div className={`p-2 rounded-lg ${iconClass} group-hover:scale-110 transition-transform duration-300`}>
                 {icon}
             </div>
             <div className="flex-1 min-w-0">
@@ -601,22 +601,32 @@ const PaintDiary = () => {
 
   const handleNodeClick = useCallback((event, node) => {
       if (node.type === 'chronos') {
-          // Find connected items
-          const connectedIds = currentEntry.edges
-              .filter(e => e.source === node.id || e.target === node.id)
-              .map(e => e.source === node.id ? e.target : e.source);
+          // Use the deep hubData prepared by the recursive engine
+          const { workers = [], resources = [], extras = [] } = node.data.hubData || {};
           
-          const connected = currentEntry.items.filter(i => connectedIds.includes(i.id));
-          // Also check extraNodes if they are attached
-          const connectedExtras = currentEntry.extraNodes.filter(n => connectedIds.includes(n.id));
-          
-          // Map standard items to a node-like structure for the modal
-          const mappedItems = connected.map(i => ({ id: i.id, type: 'diaryNode', data: { label: i.name, type: i.type, duration: i.duration } }));
+          // Map to standard node format for the Chronos Manager
+          const mappedStaff = workers.map(i => ({ 
+              id: i.id, 
+              type: 'diaryNode', 
+              data: { label: i.name, type: 'staff', duration: i.duration, costRate: i.inHouseCost, chargeRate: i.outHouseCharge } 
+          }));
+
+          const mappedResources = resources.map(i => ({ 
+              id: i.id, 
+              type: 'diaryNode', 
+              data: { label: i.name, type: i.type, duration: i.duration, costRate: i.inHouseCost, chargeRate: i.outHouseCharge } 
+          }));
+
+          const mappedExtras = extras.map(e => ({
+              id: e.id,
+              type: e.type,
+              data: { label: e.label }
+          }));
           
           setSelectedChronos(node);
-          setConnectedNodes([...mappedItems, ...connectedExtras]);
+          setConnectedNodes([...mappedStaff, ...mappedResources, ...mappedExtras]);
       }
-  }, [currentEntry]);
+  }, []);
 
   const handleInstantiateTemplate = useCallback((template, position) => {
       const { data } = template;
@@ -701,7 +711,7 @@ const PaintDiary = () => {
   }, [handleInstantiateTemplate]);
 
   const handleConfirmItem = (details) => {
-      const isExtraNode = ['chronos', 'delay', 'impact', 'wormhole', 'zone', 'photoNode'].includes(details.type);
+      const isExtraNode = ['chronos', 'delay', 'impact', 'wormhole', 'zone', 'photoNode', 'allowance', 'neuralPrism'].includes(details.type);
       
       if (isExtraNode) {
           const newExtra = {
@@ -841,29 +851,61 @@ const PaintDiary = () => {
         {/* MAIN WORKSPACE */}
         <div className="w-full px-4 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 min-h-[700px]">
             {/* RESOURCE DOCK */}
-            <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] p-6 flex flex-col overflow-hidden ${theme.glow} h-[700px] relative`}>
-                <div className={`absolute inset-0 bg-gradient-to-b from-${theme.primary}-500/5 to-transparent pointer-events-none`}></div>
+            <div className={`${theme.bg} backdrop-blur-2xl border ${theme.border} rounded-[2rem] flex flex-col overflow-hidden ${theme.glow} h-[700px] relative animate-in slide-in-from-left duration-700`}>
                 
-                <div className="mb-6 relative z-10">
-                    <h3 className={`text-xs font-black ${theme.text} uppercase tracking-widest mb-4 flex items-center gap-2`}><Package size={14}/> Resource Library</h3>
-                    <div className="relative">
-                        <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 text-${theme.primary}-500/50`} />
-                        <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={`w-full bg-black/40 border ${theme.border} rounded-xl pl-9 pr-4 py-3 text-sm text-white focus:border-${theme.primary}-500 outline-none transition-all placeholder-${theme.primary}-700/50`} />
+                {/* Header with Rich Gradient */}
+                <div className={`p-6 border-b ${theme.border} bg-gradient-to-b from-${theme.primary}-900/40 to-transparent relative z-10`}>
+                    <div className="mb-6">
+                        <h3 className={`text-xs font-black ${theme.text} uppercase tracking-widest mb-4 flex items-center gap-2 drop-shadow-md`}><Package size={14}/> Resource Library</h3>
+                        <div className="relative group">
+                            <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 text-${theme.primary}-500/50 group-focus-within:text-${theme.primary}-400 transition-colors`} />
+                            <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={`w-full bg-black/40 border ${theme.border} rounded-xl pl-9 pr-4 py-3 text-sm text-white focus:border-${theme.primary}-500 outline-none transition-all placeholder-${theme.primary}-700/50 shadow-inner`} />
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-4 gap-2 p-2 bg-black/60 rounded-[1.8rem] border border-white/5 mb-4 backdrop-blur-2xl shadow-inner">
+                        {[
+                            { id: 'staff', icon: <User size={16} />, label: 'Staff' },
+                            { id: 'equipment', icon: <Wrench size={16} />, label: 'Eqp' },
+                            { id: 'material', icon: <Package size={16} />, label: 'Mat' },
+                            { id: 'time', icon: <Clock size={16} />, label: 'Time' },
+                            { id: 'allowance', icon: <DollarSign size={16} />, label: 'Cost' },
+                            { id: 'templates', icon: <Box size={16} />, label: 'Tmpl' },
+                            { id: 'photos', icon: <Camera size={16} />, label: 'Img' },
+                            { id: 'ai', icon: <Sparkles size={16} />, label: 'AI' }
+                        ].map(t => (
+                            <button 
+                                key={t.id} 
+                                onClick={() => setResourceTab(t.id)} 
+                                className={`group relative py-3.5 rounded-[1.2rem] flex flex-col items-center justify-center gap-1.5 transition-all duration-500 border overflow-hidden ${
+                                    resourceTab === t.id 
+                                    ? `border-white/40 text-white z-10 scale-105` 
+                                    : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white hover:bg-white/[0.08] hover:border-white/20'
+                                }`}
+                                style={resourceTab === t.id ? { 
+                                    background: `linear-gradient(135deg, ${theme.accent}ee, ${theme.accent}aa)`,
+                                    boxShadow: `0 0 35px -5px ${theme.accent}88, inset 0 0 15px rgba(255,255,255,0.4)`
+                                } : {}}
+                            >
+                                <div className={`relative z-10 transition-all duration-500 ${resourceTab === t.id ? 'scale-110 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]' : 'group-hover:scale-110 group-hover:text-white'}`}>
+                                    {t.icon}
+                                </div>
+                                <span className={`relative z-10 text-[8px] font-black uppercase tracking-[0.15em] leading-none transition-all duration-500 ${resourceTab === t.id ? 'opacity-100 translate-y-0 text-white' : 'opacity-40 translate-y-0.5'}`}>
+                                    {t.label}
+                                </span>
+                                
+                                {resourceTab === t.id && (
+                                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer pointer-events-none" />
+                                )}
+                            </button>
+                        ))}
                     </div>
                 </div>
                 
-                <div className="flex gap-1 mb-4 p-1 bg-black/40 rounded-xl relative z-10 border border-white/5 flex-wrap">
-                    {['staff', 'equipment', 'material', 'time', 'allowance', 'templates', 'photos', 'ai'].map(t => (
-                        <button key={t} onClick={() => setResourceTab(t)} className={`flex-1 min-w-[40px] py-2 rounded-lg text-[10px] font-black uppercase transition-all ${resourceTab === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : `text-${theme.primary}-500/60 hover:text-${theme.primary}-300`}`}>
-                            {t === 'time' ? 'Time' : t === 'equipment' ? 'Eqp' : t === 'material' ? 'Mat' : t === 'photos' ? 'Img' : t === 'allowance' ? '$$$' : t === 'templates' ? 'Tmpl' : t === 'ai' ? 'AI' : 'Staff'}
-                        </button>
-                    ))}
-                </div>
-                
-                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1 relative z-10">
+                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 p-6 relative z-10">
                     {resourceTab === 'photos' ? (
-                        <div className="space-y-4">
-                            <label className="block w-full p-4 border-2 border-dashed border-emerald-500/20 rounded-2xl text-center cursor-pointer hover:bg-emerald-500/5 transition-all group">
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <label className={`block w-full p-4 border-2 border-dashed border-${theme.primary}-500/20 rounded-2xl text-center cursor-pointer hover:bg-${theme.primary}-500/5 transition-all group`}>
                                 <input type="file" multiple accept="image/*" className="hidden" onChange={async (e) => {
                                     const files = Array.from(e.target.files);
                                     for (const file of files) {
@@ -875,15 +917,15 @@ const PaintDiary = () => {
                                         reader.readAsDataURL(file);
                                     }
                                 }} />
-                                <Camera className="mx-auto text-emerald-500/40 group-hover:text-emerald-400 mb-2" size={24} />
-                                <div className="text-[10px] font-black text-emerald-500/60 uppercase tracking-widest">Upload Evidence</div>
+                                <Camera className={`mx-auto text-${theme.primary}-500/40 group-hover:text-${theme.primary}-400 mb-2 transition-colors`} size={24} />
+                                <div className={`text-[10px] font-black text-${theme.primary}-500/60 uppercase tracking-widest`}>Upload Evidence</div>
                             </label>
                             
                             {(currentEntry.photos || []).map(img => (
                                 <div key={img.id} draggable onDragStart={(e) => {
                                     e.dataTransfer.setData('application/reactflow', JSON.stringify(img));
                                     e.dataTransfer.effectAllowed = 'move';
-                                }} className="group relative aspect-video rounded-xl overflow-hidden border border-emerald-500/20 cursor-grab active:cursor-grabbing">
+                                }} className={`group relative aspect-video rounded-xl overflow-hidden border border-${theme.primary}-500/20 cursor-grab active:cursor-grabbing hover:border-${theme.primary}-400 transition-colors`}>
                                     <img src={img.url} className="w-full h-full object-cover" />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <div className="text-[8px] font-black text-white uppercase tracking-[0.2em]">Drag to Canvas</div>
@@ -892,7 +934,7 @@ const PaintDiary = () => {
                             ))}
                         </div>
                     ) : resourceTab === 'templates' ? (
-                        <>
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest px-1 mb-2">Saved Templates</div>
                             {templates.length === 0 ? (
                                 <div className="text-center py-8 text-gray-500 text-xs">
@@ -900,7 +942,7 @@ const PaintDiary = () => {
                                 </div>
                             ) : (
                                 templates.map(t => (
-                                    <div key={t.id} className="relative group">
+                                    <div key={t.id} className="relative group mb-2">
                                         <div 
                                             draggable
                                             onDragStart={(e) => {
@@ -908,7 +950,7 @@ const PaintDiary = () => {
                                                 e.dataTransfer.setData('application/reactflow', JSON.stringify(dragData));
                                                 e.dataTransfer.effectAllowed = 'move';
                                             }}
-                                            className="bg-indigo-900/20 border border-indigo-500/30 p-3 rounded-xl hover:border-indigo-400 transition-all cursor-grab active:cursor-grabbing group-hover:shadow-lg shadow-indigo-900/20"
+                                            className="bg-indigo-900/20 border border-indigo-500/30 p-3 rounded-xl hover:border-indigo-400 transition-all cursor-grab active:cursor-grabbing group-hover:shadow-lg shadow-indigo-900/20 hover:scale-[1.02] duration-300"
                                         >
                                             <div className="flex items-center gap-2 mb-1">
                                                 <Box size={14} className="text-indigo-400" />
@@ -928,7 +970,7 @@ const PaintDiary = () => {
                                     </div>
                                 ))
                             )}
-                        </>
+                        </div>
                     ) : resourceTab === 'ai' ? (
                         <SmartAssistant 
                             messages={chatMessages} 
@@ -938,17 +980,17 @@ const PaintDiary = () => {
                             onApplyTemplate={handleApplySuggestedTemplate}
                         />
                     ) : resourceTab === 'time' ? (
-                        <>
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="text-[10px] font-black text-cyan-400 uppercase tracking-widest px-1 mb-2 pt-2">Operational Events</div>
                             <DraggableItem item={{ id: 'c1', name: 'Standard Shift', type: 'chronos', duration: 8, startTime: '07:00', finishTime: '15:00' }} />
                             <DraggableItem item={{ id: 'c2', name: 'Lunch Break', type: 'chronos', duration: 0.5 }} />
+                            <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest px-1 mb-2 mt-4">Site Intelligence</div>
+                            <DraggableItem item={{ id: 'prism-alpha', name: 'Neural Prism', type: 'neuralPrism', velocity: 1.0, completionTime: 'Pending' }} />
                             <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest px-1 mb-2 mt-4">Site Impacts</div>
-                            <DraggableItem item={{ id: 'd1', name: 'Weather Delay', type: 'delay', duration: 1, reason: 'Heavy Rain' }} />
-                            <DraggableItem item={{ id: 'd2', name: 'Site Blocked', type: 'delay', duration: 1, reason: 'Access Issues' }} />
-                            <DraggableItem item={{ id: 'i1', name: 'High Heat', type: 'impact', prodImpact: 0.7, costImpact: 1.1, condition: 'Restricted' }} />
-                        </>
+                            <DraggableItem item={{ id: 'weather-primary', name: 'Weather', type: 'delay', duration: 0, weatherType: 'none', reason: 'Weather Event' }} />
+                        </div>
                     ) : resourceTab === 'allowance' ? (
-                        <>
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                              <div className="bg-amber-900/20 border border-amber-500/20 rounded-xl p-3 mb-4">
                                  <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-2">
                                      {editingAllowanceId ? 'Edit Allowance' : 'Create New Allowance'}
@@ -1003,7 +1045,7 @@ const PaintDiary = () => {
 
                              <div className="text-[10px] font-black text-amber-400 uppercase tracking-widest px-1 mb-2">Allowance Library</div>
                              {customAllowances.map(item => (
-                                 <div key={item.id} className="relative group">
+                                 <div key={item.id} className="relative group mb-2">
                                      <DraggableItem item={{ ...item, type: 'allowance', rate: item.rate, allowanceType: item.allowanceType }} />
                                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 rounded-lg p-1 backdrop-blur-sm border border-white/10">
                                          <button onClick={() => handleEditAllowance(item)} className="p-1.5 hover:bg-white/20 rounded text-amber-400"><Edit2 size={12} /></button>
@@ -1012,11 +1054,13 @@ const PaintDiary = () => {
                                  </div>
                              ))}
                              {customAllowances.length === 0 && <div className="text-xs text-white/20 italic px-2 mb-4">No allowances available. Create one above.</div>}
-                        </>
+                        </div>
                     ) : (
-                        filteredResources.map(item => (
-                            <DraggableItem key={item.id} item={{...item, type: resourceTab}} />
-                        ))
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {filteredResources.map(item => (
+                                <DraggableItem key={item.id} item={{...item, type: resourceTab}} />
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>
@@ -1026,6 +1070,26 @@ const PaintDiary = () => {
                 {/* Background Grid for visual depth */}
                 <div className={`absolute inset-0 bg-[linear-gradient(to_right,#${theme.accent.replace('#','') }05_1px,transparent_1px),linear-gradient(to_bottom,#${theme.accent.replace('#','') }05_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none`}></div>
                 
+                {/* PROJECT LOCK OVERLAY */}
+                {!selectedProject && (
+                    <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-700 animate-in fade-in">
+                        <div className="p-8 rounded-[2.5rem] bg-stone-900/80 border border-white/10 shadow-2xl text-center space-y-6 max-w-sm">
+                            <div className="w-20 h-20 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center mx-auto animate-pulse">
+                                <Folder size={40} className="text-indigo-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-white uppercase tracking-tight">Project Context Required</h3>
+                                <p className="text-gray-500 text-xs font-medium mt-2 leading-relaxed">Please select a project from the header to initiate the Visual Diary and enable Site Intelligence.</p>
+                            </div>
+                            <div className="flex justify-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce delay-100" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce delay-200" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce delay-300" />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {viewMode === 'canvas' ? (
                     <div className={`flex-1 relative rounded-[1.8rem] overflow-hidden bg-black/20 border ${theme.border}`}>
                         <TimelineCanvas 

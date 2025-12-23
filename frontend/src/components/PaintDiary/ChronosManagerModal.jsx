@@ -17,7 +17,8 @@ const ChronosManagerModal = ({ isOpen, onClose, chronosNode, connectedNodes, onU
             // Initialize overrides from connected nodes if they differ from chronos
             const initialOverrides = {};
             connectedNodes.forEach(node => {
-                if (node.data.duration !== chronosNode.data.duration) {
+                const diff = Math.abs((parseFloat(node.data.duration) || 0) - (parseFloat(chronosNode.data.duration) || 0));
+                if (diff > 0.01) {
                     initialOverrides[node.id] = { duration: node.data.duration };
                 }
             });
@@ -42,10 +43,18 @@ const ChronosManagerModal = ({ isOpen, onClose, chronosNode, connectedNodes, onU
         connectedNodes.forEach(node => {
             const override = overrides[node.id];
             if (override) {
-                onUpdateItem(node.id, { duration: override.duration });
+                // Manually overridden: set the flag so engine doesn't overwrite it
+                onUpdateItem(node.id, { 
+                    duration: override.duration, 
+                    isOverridden: true 
+                });
             } else {
-                // Default: Sync to Chronos
-                onUpdateItem(node.id, { startTime, duration: chronosDuration });
+                // Default: Sync to Chronos and clear override flag
+                onUpdateItem(node.id, { 
+                    startTime, 
+                    duration: chronosDuration,
+                    isOverridden: false 
+                });
             }
         });
 

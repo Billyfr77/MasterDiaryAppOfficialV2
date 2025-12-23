@@ -3,12 +3,142 @@ import {
   ReactFlow, MiniMap, Controls, Background, ReactFlowProvider, addEdge, useReactFlow
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Zap } from 'lucide-react';
+import { Zap, FileText } from 'lucide-react';
 import { useTimelineEngine } from './TimelineEngine';
-import { DiaryNode, WormholeNode, ZoneNode, ChronosNode, ImpactNode, DelayNode, PhotoNode, AllowanceNode } from './TimelineNodes';
+import { DiaryNode, WormholeNode, ZoneNode, ChronosNode, ImpactNode, DelayNode, PhotoNode, AllowanceNode, DimensionNode, NeuralPrismNode } from './TimelineNodes';
 import { SmartEdgeTypes } from './SmartEdges';
 import { api } from '../../utils/api';
 import { useNotification } from '../../context/NotificationContext';
+
+// --- WEATHER SYSTEM COMPONENT (MEMOIZED & STABLE) ---
+const WeatherSystem = React.memo(({ nodes }) => {
+    const activeWeather = useMemo(() => {
+        const weatherNode = nodes.find(n => n.type === 'delay' && n.data?.weatherType && n.data.weatherType !== 'none');
+        return weatherNode?.data?.weatherType || null;
+    }, [nodes]);
+
+    // Stable Particle Data Generation
+    const particles = useMemo(() => {
+        if (!activeWeather) return [];
+        const count = activeWeather === 'storm' ? 60 : activeWeather === 'snow' ? 80 : 40;
+        return [...Array(count)].map((_, i) => ({
+            id: i,
+            left: Math.random() * 100,
+            top: -(Math.random() * 20),
+            duration: 0.5 + Math.random() * 5,
+            delay: -(Math.random() * 5), // Negative delay for instant start
+            size: 2 + Math.random() * 3,
+            opacity: 0.2 + Math.random() * 0.4
+        }));
+    }, [activeWeather]);
+
+    if (!activeWeather) return null;
+
+    return (
+        <div className="absolute inset-0 z-[10] pointer-events-none overflow-hidden rounded-[2.5rem]">
+            {/* AMBIENT CANVAS DEPTH */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.3)_100%)]" />
+
+            {activeWeather === 'rain' && (
+                <div className="absolute inset-0 animate-in fade-in duration-1000">
+                    {particles.map(p => (
+                        <div key={p.id} className="absolute bg-gradient-to-b from-transparent via-blue-400/20 to-transparent w-[1px] h-[100px] animate-rain-light" style={{
+                            left: `${p.left}%`,
+                            top: `${p.top}%`,
+                            willChange: 'transform',
+                            animationDuration: `${0.8 + (p.duration % 0.4)}s`,
+                            animationDelay: `${p.delay}s`
+                        }} />
+                    ))}
+                    <div className="absolute inset-0 bg-blue-500/[0.01] mix-blend-color-dodge" />
+                </div>
+            )}
+            
+            {activeWeather === 'storm' && (
+                <div className="absolute inset-0 animate-in fade-in duration-700">
+                    <div className="absolute inset-0 bg-[#0a0c14]/15 mix-blend-multiply" />
+                    <div className="absolute inset-0 bg-indigo-50/20 opacity-0 animate-lightning-strike z-50" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.15),transparent_80%)] opacity-0 animate-lightning-glow" />
+
+                    {particles.map(p => (
+                        <div key={p.id} className="absolute bg-gradient-to-b from-transparent via-slate-200/20 to-transparent w-[1.5px] h-[120px] animate-rain-storm-light" style={{
+                            left: `${p.left + (Math.random() * 20 - 10)}%`,
+                            top: `${p.top}%`,
+                            transform: 'rotate(15deg)',
+                            willChange: 'transform',
+                            animationDuration: `${0.3 + (p.duration % 0.2)}s`,
+                            animationDelay: `${p.delay}s`
+                        }} />
+                    ))}
+                </div>
+            )}
+
+            {activeWeather === 'snow' && (
+                <div className="absolute inset-0 animate-in fade-in duration-1000">
+                    <div className="absolute inset-0 bg-white/[0.02]" />
+                     {particles.map(p => (
+                        <div key={p.id} className="absolute bg-white rounded-full animate-snow-light" style={{
+                            left: `${p.left}%`,
+                            top: `${p.top}%`,
+                            width: `${p.size}px`,
+                            height: `${p.size}px`,
+                            opacity: p.opacity,
+                            willChange: 'transform',
+                            animationDuration: `${12 + (p.duration * 2)}s`,
+                            animationDelay: `${p.delay}s`
+                        }} />
+                    ))}
+                </div>
+            )}
+
+            {activeWeather === 'heat' && (
+                <div className="absolute inset-0 bg-orange-500/[0.02] animate-in fade-in duration-1000">
+                    <div className="absolute inset-0 animate-heat-shimmer" />
+                </div>
+            )}
+            
+             <style>{`
+                .animate-rain-light { animation: rain-light linear infinite; }
+                .animate-rain-storm-light { animation: rain-storm-light linear infinite; }
+                .animate-snow-light { animation: snow-light linear infinite; }
+                .animate-lightning-strike { animation: lightning-strike 7s linear infinite; }
+                .animate-lightning-glow { animation: lightning-glow 7s linear infinite; }
+                .animate-heat-shimmer { animation: heat-shimmer 4s ease-in-out infinite; }
+
+                @keyframes rain-light { 
+                    0% { transform: translateY(0); opacity: 0; } 
+                    20% { opacity: 1; }
+                    80% { opacity: 1; }
+                    100% { transform: translateY(120vh); opacity: 0; } 
+                }
+                @keyframes rain-storm-light { 
+                    0% { transform: translateY(0) rotate(15deg); opacity: 0; } 
+                    20% { opacity: 1; }
+                    100% { transform: translateY(120vh) rotate(15deg); opacity: 0; } 
+                }
+                @keyframes lightning-strike { 
+                    0%, 98%, 100% { opacity: 0; } 
+                    98.5% { opacity: 1; } 
+                    98.7% { opacity: 0; } 
+                    99% { opacity: 0.4; } 
+                }
+                @keyframes lightning-glow {
+                    0%, 97%, 100% { opacity: 0; }
+                    98.5% { opacity: 0.8; }
+                }
+                @keyframes snow-light { 
+                    0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; } 
+                    10% { opacity: 1; }
+                    100% { transform: translateY(120vh) translateX(100px) rotate(360deg); opacity: 0; } 
+                }
+                @keyframes heat-shimmer {
+                    0%, 100% { opacity: 0.2; transform: scale(1); }
+                    50% { opacity: 0.4; transform: scale(1.01); }
+                }
+            `}</style>
+        </div>
+    );
+});
 
 const TimelineCanvasContent = (props) => {
   const { items, extraNodes, edges: persistentEdges, onDrop, onUpdateItem, onRemoveItem, onNodeClick, isPulseActive, onUpdateEdges } = props;
@@ -27,8 +157,11 @@ const TimelineCanvasContent = (props) => {
       zone: ZoneNode,
       chronos: ChronosNode,
       impact: ImpactNode,
+      delay: DelayNode,
       photoNode: PhotoNode,
-      allowance: AllowanceNode
+      allowance: AllowanceNode,
+      dimension: DimensionNode,
+      neuralPrism: NeuralPrismNode 
   }), []);
 
   const edgeTypes = useMemo(() => SmartEdgeTypes, []);
@@ -44,18 +177,16 @@ const TimelineCanvasContent = (props) => {
       else if (type === 'chronos') edgeType = 'neon';
       else if (type === 'finance') edgeType = 'flow';
       else if (type === 'allowance') edgeType = 'gold';
+      else if (type === 'neuralPrism') edgeType = 'beam';
 
       return { type: edgeType, data: { type, sourceType: type } };
   }, [nodes]);
 
-  // COMBINED ONCONNECT HANDLER (Resolves redeclaration error)
   const handleConnect = useCallback((params) => {
       const smartParams = getSmartEdgeParams(params.source);
-      // Pass to engine first for logic (e.g. Chrono-Sync)
       if (engineOnConnect) {
           engineOnConnect({ ...params, ...smartParams });
       } else {
-          // Fallback if engine version isn't ready
           setEdges((eds) => addEdge({ ...params, ...smartParams, animated: true }, eds));
       }
   }, [engineOnConnect, getSmartEdgeParams, setEdges]);
@@ -112,7 +243,7 @@ const TimelineCanvasContent = (props) => {
       }
   }, [onNodeClick, isPulseActive, confirmGhostNode, fetchGhostSuggestions]);
 
-  const [dropPing, setDropPing] = useState(null); // { x, y }
+  const [dropPing, setDropPing] = useState(null);
 
   const onDropHandler = useCallback((event) => {
       event.preventDefault();
@@ -120,36 +251,27 @@ const TimelineCanvasContent = (props) => {
       if (!type) return;
       try {
           const itemData = JSON.parse(type);
-          
-          // Trigger Visual Ping at screen coordinates
           setDropPing({ x: event.clientX, y: event.clientY });
           setTimeout(() => setDropPing(null), 1000);
-
           const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
           onDrop(itemData, position);
       } catch (e) {}
   }, [screenToFlowPosition, onDrop]);
 
-  // --- MASTERPIECE RESTRUCTURE ENGINE ---
   const restructureLayout = useCallback(() => {
       const currentNodes = [...nodes];
       const chronos = currentNodes.filter(n => n.type === 'chronos');
-      const resources = currentNodes.filter(n => n.type === 'diaryNode');
-      
       const newNodes = currentNodes.map(node => {
           let position = { ...node.position };
-          
           if (node.type === 'chronos') {
               const idx = chronos.findIndex(n => n.id === node.id);
               position = { x: idx * 600, y: 0 };
           } else if (node.type === 'diaryNode') {
-              // Find which chronos it belongs to via edges
               const parentEdge = edges.find(e => e.target === node.id);
               if (parentEdge) {
                   const parentIdx = chronos.findIndex(n => n.id === parentEdge.source);
                   const siblings = edges.filter(e => e.source === parentEdge.source);
                   const sibIdx = siblings.findIndex(e => e.target === node.id);
-                  
                   position = { 
                       x: (parentIdx * 600) + (sibIdx % 2 === 0 ? 150 : -150), 
                       y: 400 + (Math.floor(sibIdx / 2) * 200) 
@@ -158,7 +280,6 @@ const TimelineCanvasContent = (props) => {
           }
           return { ...node, position };
       });
-
       setNodes(newNodes);
       setTimeout(() => { fitView({ padding: 0.2, duration: 800 }); }, 100);
       addNotification('Canvas Restructured', 'success');
@@ -174,9 +295,21 @@ const TimelineCanvasContent = (props) => {
         .animate-ping-slow {
           animation: ping-slow 1s cubic-bezier(0, 0, 0.2, 1) forwards;
         }
+        @keyframes float-slow {
+          0%, 100% { transform: translate(0, 0); }
+          33% { transform: translate(50px, -80px); }
+          66% { transform: translate(-30px, 40px); }
+        }
+        .animate-float-slow {
+          animation: float-slow 60s linear infinite;
+        }
       `}</style>
       
-      {/* AMBIENT ENERGY PARTICLES */}
+      {/* ATMOSPHERIC ENGINE - Single Call, Top Layer */}
+      <div className="absolute inset-0 z-[9999] pointer-events-none">
+          <WeatherSystem nodes={nodes} />
+      </div>
+
       <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
           {[...Array(6)].map((_, i) => (
               <div 
@@ -185,19 +318,15 @@ const TimelineCanvasContent = (props) => {
                 style={{
                     left: `${Math.random() * 100}%`,
                     top: `${Math.random() * 100}%`,
-                    animationDelay: `${i * 2}s`,
-                    animationDuration: `${15 + i * 5}s`
+                    animationDelay: `${i * 5}s`,
+                    animationDuration: `${40 + i * 20}s`
                 }}
               />
           ))}
       </div>
 
-      {/* MASTERPIECE CONTROLS */}
       <div className="absolute top-6 left-6 z-40 flex gap-2">
-          <button 
-            onClick={restructureLayout}
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl backdrop-blur-md text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2 transition-all shadow-2xl active:scale-95"
-          >
+          <button onClick={restructureLayout} className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl backdrop-blur-md text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2 transition-all shadow-2xl active:scale-95">
               <Zap size={14} className="text-amber-400" /> Restructure
           </button>
       </div>
@@ -220,27 +349,12 @@ const TimelineCanvasContent = (props) => {
         <Background color="#6366f1" gap={40} size={1} className="opacity-[0.12] animate-pulse" />
         <Background color="#8b5cf6" gap={200} size={2} className="opacity-[0.05]" />
         <Controls className="!bg-stone-900 !border-white/10 !text-white !rounded-xl shadow-2xl" />
-        <MiniMap 
-            className="!bg-stone-900/80 !border-white/10 !rounded-3xl !backdrop-blur-xl border-t border-l border-white/10" 
-            nodeColor={n => n.type === 'chronos' ? '#8b5cf6' : n.type === 'diaryNode' ? '#10b981' : '#6366f1'}
-            maskColor="rgba(0,0,0,0.6)"
-        />
-
-        {/* Tactile Drop Ping (Screen Space) */}
-        {dropPing && (
-            <div 
-                className="fixed pointer-events-none z-[9999] w-20 h-20 border-2 border-indigo-500 rounded-full animate-ping-slow shadow-[0_0_20px_#6366f1]"
-                style={{ 
-                    left: dropPing.x - 40, 
-                    top: dropPing.y - 40 
-                }}
-            />
-        )}
+        <MiniMap className="!bg-stone-900/80 !border-white/10 !rounded-3xl !backdrop-blur-xl border-t border-l border-white/10" nodeColor={n => n.type === 'chronos' ? '#8b5cf6' : n.type === 'diaryNode' ? '#10b981' : '#6366f1'} maskColor="rgba(0,0,0,0.6)" />
+        {dropPing && <div className="fixed pointer-events-none z-[9999] w-20 h-20 border-2 border-indigo-500 rounded-full animate-ping-slow shadow-[0_0_20px_#6366f1]" style={{ left: dropPing.x - 40, top: dropPing.y - 40 }} />}
       </ReactFlow>
       
-      {/* HUD OVERLAY - Visual Flair */}
       <div className="absolute top-6 right-6 pointer-events-none">
-          <div className="bg-indigo-500/10 border border-indigo-500/30 px-4 py-2 rounded-2xl backdrop-blur-md animate-pulse">
+          <div className="bg-indigo-50/10 border border-indigo-500/30 px-4 py-2 rounded-2xl backdrop-blur-md animate-pulse">
               <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
                   Infinite Canvas Active

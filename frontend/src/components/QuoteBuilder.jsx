@@ -401,6 +401,21 @@ const QuoteBuilderContent = () => {
       fetchData(); 
   }, []);
 
+  useEffect(() => {
+      if (selectedProject && projects.length > 0) {
+          const proj = projects.find(p => p.id === selectedProject);
+          if (proj) {
+              const client = proj.clientDetails || {};
+              setQuoteSettings(prev => ({
+                  ...prev,
+                  clientId: client.id || null, // Reset if no client linked
+                  clientName: client.name || proj.client || '',
+                  clientAddress: client.address || ''
+              }));
+          }
+      }
+  }, [selectedProject, projects]);
+
   const handlePrintToInvoice = () => {
       if (quoteItems.length === 0) {
           alert("Add items to the quote before invoicing.");

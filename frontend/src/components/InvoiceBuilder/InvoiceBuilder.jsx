@@ -1,16 +1,79 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useDrag, useDrop } from 'react-dnd';
 import { 
   FileText, Save, Plus, Trash2, Download, DollarSign, 
   ArrowLeft, Search, Filter, MoreVertical, CheckCircle, 
   Send, AlertTriangle, Printer, Image as ImageIcon, Eye,
-  ChevronRight, Info, Loader2, Layers, Folder, X, Building2, User, CreditCard, CheckSquare, Mail, Check, Archive, UploadCloud, Percent
+  ChevronRight, Info, Loader2, Layers, Folder, X, Building2, User, CreditCard, CheckSquare, Mail, Check, Archive, UploadCloud, Percent, GripVertical
 } from 'lucide-react';
 import { useInvoiceEngine } from './InvoiceEngine';
 import { generatePDF } from './InvoicePDF';
 import ClientSelector from '../Clients/ClientSelector';
 import { api } from '../../utils/api';
 
+// --- AUTO SCROLL HOOK ---
+const useWindowAutoScroll = () => {
+    useEffect(() => {
+        const handleDragOver = (e) => {
+            const threshold = 100; // px from edge
+            const speed = 20;      // px per event
+            
+            if (e.clientY < threshold) {
+                window.scrollBy({ top: -speed, behavior: 'auto' });
+            } else if (window.innerHeight - e.clientY < threshold) {
+                window.scrollBy({ top: speed, behavior: 'auto' });
+            }
+        };
+
+        window.addEventListener('dragover', handleDragOver);
+        return () => window.removeEventListener('dragover', handleDragOver);
+    }, []);
+};
+
+const DraggableInvoiceRow = ({ item, index, moveItem, onUpdate, onRemove }) => {
+    const ref = useRef(null);
+    const [{ handlerId }, drop] = useDrop({
+        accept: 'invoice-item',
+        collect(monitor) { return { handlerId: monitor.getHandlerId() }; },
+        hover(draggedItem, monitor) {
+            if (!ref.current) return;
+            const dragIndex = draggedItem.index;
+            const hoverIndex = index;
+            if (dragIndex === hoverIndex) return;
+            moveItem(dragIndex, hoverIndex);
+            draggedItem.index = hoverIndex;
+        },
+    });
+    const [{ isDragging }, drag] = useDrag({
+        type: 'invoice-item',
+        item: () => ({ id: item.id || index, index }),
+        collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+    });
+    drag(drop(ref));
+
+    return (
+        <div ref={ref} className={`group flex items-center gap-4 bg-black/20 hover:bg-black/40 border border-white/5 p-2 rounded-2xl transition-colors mb-2 ${isDragging ? 'opacity-0' : 'opacity-100'}`} data-handler-id={handlerId}>
+            <div className="cursor-grab text-gray-600 hover:text-white p-2"><GripVertical size={16} /></div>
+            <div className="flex-1">
+                <input type="text" value={item.description} onChange={(e) => onUpdate(index, 'description', e.target.value)} className="w-full bg-transparent border-none outline-none text-sm font-medium px-2 placeholder-gray-700" placeholder="Description" />
+            </div>
+            <div className="w-20 text-right">
+                <input type="number" value={item.quantity} onChange={(e) => onUpdate(index, 'quantity', e.target.value)} className="w-full bg-transparent border-none outline-none text-xs font-mono text-gray-400 text-right" placeholder="Qty" />
+            </div>
+            <div className="w-16 text-center">
+                <input type="text" value={item.unit} onChange={(e) => onUpdate(index, 'unit', e.target.value)} className="w-full bg-transparent border-none outline-none text-xs font-mono text-gray-500 text-center" placeholder="Unit" />
+            </div>
+            <div className="w-24 text-right">
+                <input type="number" value={item.rate} onChange={(e) => onUpdate(index, 'rate', e.target.value)} className="w-full bg-transparent border-none outline-none text-xs font-mono text-gray-400 text-right" placeholder="Rate" />
+            </div>
+            <div className="w-32 text-right font-black font-mono text-emerald-400 px-4">${parseFloat(item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+            <button onClick={() => onRemove(index)} className="p-2 text-gray-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"><X size={14} /></button>
+        </div>
+    );
+};
+
 const InvoiceBuilder = () => {
+  useWindowAutoScroll(); // Enable drag-to-scroll
   const {
     viewMode, setViewMode, invoicesList, projects, projectJobs, setProjectJobs, listLoading, searchTerm, setSearchTerm,
     selectedIds, setSelectedIds, activeTab, setActiveTab, invoice, setInvoice, saving, showHarvest, setShowHarvest, 
@@ -18,12 +81,44 @@ const InvoiceBuilder = () => {
     calculateTotals, fetchData, handleSave, handleHarvest, importHarvest, getInitialInvoiceState, settings, handleBulkAction, handleLogoUpload
   } = useInvoiceEngine();
 
+  const moveItem = useCallback((dragIndex, hoverIndex) => {
+      setInvoice((prev) => {
+          const updatedItems = [...prev.items];
+          const [draggedItem] = updatedItems.splice(dragIndex, 1);
+          updatedItems.splice(hoverIndex, 0, draggedItem);
+          return { ...prev, items: updatedItems };
+      });
+  }, []);
+
+  const handleUpdateRow = (index, field, value) => {
+      const items = [...invoice.items];
+      items[index][field] = value;
+      if (field === 'quantity' || field === 'rate') {
+          items[index].amount = (parseFloat(items[index].quantity) || 0) * (parseFloat(items[index].rate) || 0);
+      }
+      setInvoice(prev => ({ ...prev, items }));
+  };
+
+  const handleRemoveRow = (index) => {
+      const items = [...invoice.items];
+      items.splice(index, 1);
+      setInvoice(prev => ({ ...prev, items }));
+  };
+
   useEffect(() => { if (viewMode === 'list') fetchData(); }, [viewMode, fetchData]);
 
   const handleProjectChange = async (projectId) => {
       const p = projects.find(x => x.id === projectId);
       if (!p) return;
-      setInvoice(prev => ({ ...prev, projectId: p.id, clientName: p.client || prev.clientName }));
+      
+      const clientName = p.clientDetails?.name || p.client || '';
+      
+      setInvoice(prev => ({ 
+          ...prev, 
+          projectId: p.id, 
+          clientName: clientName || prev.clientName 
+      }));
+      
       try {
           const res = await api.get(`/jobs?projectId=${p.id}`);
           setProjectJobs(res.data.data || res.data || []);
@@ -50,6 +145,29 @@ const InvoiceBuilder = () => {
   });
 
   const totals = calculateTotals();
+
+  const handleLoadInvoice = (inv) => {
+      let items = [];
+      let invoiceData = inv.invoiceData || {};
+
+      // Handle stringified JSON if necessary
+      if (typeof invoiceData === 'string') {
+          try { invoiceData = JSON.parse(invoiceData); } catch (e) { console.error("Failed to parse invoiceData", e); }
+      }
+
+      // 1. Try invoiceData.items
+      if (invoiceData && Array.isArray(invoiceData.items)) {
+          items = invoiceData.items;
+      }
+      
+      // 2. Fallback to top-level items
+      if (items.length === 0 && Array.isArray(inv.items) && inv.items.length > 0) {
+          items = inv.items;
+      }
+
+      setInvoice({ ...inv, invoiceData, items });
+      setViewMode('edit');
+  };
 
   if (viewMode === 'list') {
       return (
@@ -117,11 +235,11 @@ const InvoiceBuilder = () => {
                                               {inv.status}
                                           </span>
                                       </td>
-                                      <td className="px-6 py-6 font-mono font-bold text-white group-hover:text-indigo-400 transition-colors cursor-pointer" onClick={() => { setInvoice(inv); setViewMode('edit'); }}>{inv.invoiceNumber}</td>
+                                      <td className="px-6 py-6 font-mono font-bold text-white group-hover:text-indigo-400 transition-colors cursor-pointer" onClick={() => handleLoadInvoice(inv)}>{inv.invoiceNumber}</td>
                                       <td className="px-6 py-6 font-medium text-gray-300">{inv.Client?.name || inv.clientName || '-'}</td>
                                       <td className="px-6 py-6 text-gray-500 font-mono text-xs">{new Date(inv.createdAt).toLocaleDateString()}</td>
                                       <td className="px-6 py-6 text-right font-black font-mono text-lg text-white">${parseFloat(inv.totalAmount).toLocaleString()}</td>
-                                      <td className="px-6 py-6 text-right"><button onClick={() => { setInvoice(inv); setViewMode('edit'); }} className="p-2 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-all"><ChevronRight size={18} /></button></td>
+                                      <td className="px-6 py-6 text-right"><button onClick={() => handleLoadInvoice(inv)} className="p-2 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-all"><ChevronRight size={18} /></button></td>
                                   </tr>
                               ))}
                               {filteredList.length === 0 && (
@@ -232,30 +350,22 @@ const InvoiceBuilder = () => {
                     </button>
                 </div>
                 <div className="space-y-3 flex-1">
-                    {invoice.items.length === 0 && (
+                    {(invoice.items || []).length === 0 && (
                         <div className="flex flex-col items-center justify-center h-40 text-gray-600 border-2 border-dashed border-white/5 rounded-2xl">
                             <Info size={32} className="mb-2 opacity-50" />
                             <span className="text-xs font-bold uppercase">No Items Added</span>
                             <span className="text-[10px]">Harvest diaries or add manually</span>
                         </div>
                     )}
-                    {invoice.items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center gap-4 bg-black/20 hover:bg-black/40 border border-white/5 p-2 rounded-2xl transition-colors">
-                            <div className="flex-1">
-                                <input type="text" value={item.description} onChange={(e) => { const i = [...invoice.items]; i[idx].description = e.target.value; setInvoice({...invoice, items: i}) }} className="w-full bg-transparent border-none outline-none text-sm font-medium px-2 placeholder-gray-700" placeholder="Description" />
-                            </div>
-                            <div className="w-20 text-right">
-                                <input type="number" value={item.quantity} onChange={(e) => { const i = [...invoice.items]; i[idx].quantity = e.target.value; i[idx].amount = i[idx].quantity * i[idx].rate; setInvoice({...invoice, items: i}) }} className="w-full bg-transparent border-none outline-none text-xs font-mono text-gray-400 text-right" placeholder="Qty" />
-                            </div>
-                            <div className="w-16 text-center">
-                                <input type="text" value={item.unit} onChange={(e) => { const i = [...invoice.items]; i[idx].unit = e.target.value; setInvoice({...invoice, items: i}) }} className="w-full bg-transparent border-none outline-none text-xs font-mono text-gray-500 text-center" placeholder="Unit" />
-                            </div>
-                            <div className="w-24 text-right">
-                                <input type="number" value={item.rate} onChange={(e) => { const i = [...invoice.items]; i[idx].rate = e.target.value; i[idx].amount = i[idx].quantity * i[idx].rate; setInvoice({...invoice, items: i}) }} className="w-full bg-transparent border-none outline-none text-xs font-mono text-gray-400 text-right" placeholder="Rate" />
-                            </div>
-                            <div className="w-32 text-right font-black font-mono text-emerald-400 px-4">${parseFloat(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-                            <button onClick={() => { const i = [...invoice.items]; i.splice(idx, 1); setInvoice({...invoice, items: i}) }} className="p-2 text-gray-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"><X size={14} /></button>
-                        </div>
+                    {(invoice.items || []).map((item, idx) => (
+                        <DraggableInvoiceRow 
+                            key={idx} // Using index as key for reorderable list of simple objects is acceptable here, or generate temp IDs
+                            item={item} 
+                            index={idx} 
+                            moveItem={moveItem} 
+                            onUpdate={handleUpdateRow} 
+                            onRemove={handleRemoveRow} 
+                        />
                     ))}
                 </div>
                 <button onClick={() => setInvoice(prev => ({ ...prev, items: [...prev.items, { description: '', quantity: 1, rate: 0, amount: 0 }] }))} className="mt-6 w-full py-3 border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl text-xs font-bold text-gray-500 hover:text-white uppercase transition-all flex items-center justify-center gap-2">
@@ -301,21 +411,33 @@ const InvoiceBuilder = () => {
                       )}
                       <div>
                           <div className="text-xl font-bold text-gray-900 uppercase tracking-wide">{invoice.senderName}</div>
-                          {invoice.senderABN && <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">ABN: {invoice.senderABN}</div>}
+                          <div className="text-xs text-gray-500 whitespace-pre-wrap mt-1">{invoice.senderAddress}</div>
+                          <div className="text-xs text-gray-500 mt-1">{invoice.senderEmail}</div>
+                          <div className="text-xs text-gray-500">{invoice.senderPhone}</div>
+                          {invoice.senderABN && <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">ABN: {invoice.senderABN}</div>}
                       </div>
                   </div>
                   <div className="text-right">
                       <h2 className="text-5xl font-black mb-2 tracking-tighter" style={{color: invoice.accentColor}}>INVOICE</h2>
                       <div className="font-mono text-xl font-bold">#{invoice.invoiceNumber}</div>
-                      <div className="text-xs text-gray-500 font-bold mt-1">Date: {new Date().toLocaleDateString()}</div>
+                      <div className="text-xs text-gray-500 font-bold mt-1">Date: {new Date(invoice.issueDate || Date.now()).toLocaleDateString()}</div>
+                      <div className="text-xs text-gray-500 font-bold">Due: {new Date(invoice.dueDate || Date.now()).toLocaleDateString()}</div>
                   </div>
               </div>
 
               {/* Bill To */}
-              <div className="mb-12 p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                  <div className="font-black text-xs uppercase text-gray-400 mb-2 tracking-widest">Bill To</div>
-                  <div className="text-2xl font-bold">{invoice.clientName || 'Select Client...'}</div>
-                  <div className="text-sm text-gray-500 mt-1 font-medium">{projects.find(p => p.id === invoice.projectId)?.site || ''}</div>
+              <div className="mb-12 p-6 bg-gray-50 rounded-2xl border border-gray-100 flex justify-between items-start">
+                  <div>
+                      <div className="font-black text-xs uppercase text-gray-400 mb-2 tracking-widest">Bill To</div>
+                      <div className="text-2xl font-bold">{invoice.clientName || 'Select Client...'}</div>
+                      <div className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{invoice.clientAddress}</div>
+                      <div className="text-sm text-gray-500 mt-1">{invoice.clientEmail}</div>
+                  </div>
+                  <div className="text-right">
+                      <div className="font-black text-xs uppercase text-gray-400 mb-2 tracking-widest">Project</div>
+                      <div className="text-sm font-bold text-gray-800">{(projects || []).find(p => p.id === invoice.projectId)?.name || '-'}</div>
+                      <div className="text-xs text-gray-500 mt-1">{(projects || []).find(p => p.id === invoice.projectId)?.site || ''}</div>
+                  </div>
               </div>
 
               {/* Items */}
@@ -328,13 +450,13 @@ const InvoiceBuilder = () => {
                       <span className="w-24 text-right">Amount</span>
                   </div>
                   <div className="space-y-1">
-                      {invoice.items.map((item, i) => (
+                      {(invoice.items || []).map((item, i) => (
                           <div key={i} className="flex justify-between py-3 border-b border-dashed border-gray-100 text-sm font-medium">
                               <span className="w-1/2 truncate pr-4">{item.description || 'Item...'}</span>
                               <span className="w-16 text-right text-gray-500">{item.quantity}</span>
                               <span className="w-16 text-center text-gray-400 text-xs">{item.unit}</span>
-                              <span className="w-24 text-right text-gray-500">${parseFloat(item.rate).toFixed(2)}</span>
-                              <span className="w-24 text-right font-bold">${parseFloat(item.amount).toFixed(2)}</span>
+                              <span className="w-24 text-right text-gray-500">${parseFloat(item.rate || 0).toFixed(2)}</span>
+                              <span className="w-24 text-right font-bold" style={{color: '#10b981'}}>${parseFloat(item.amount || 0).toFixed(2)}</span>
                           </div>
                       ))}
                   </div>
@@ -348,7 +470,7 @@ const InvoiceBuilder = () => {
                   </div>
                   
                   {totals.discountAmount > 0 && (
-                      <div className="flex justify-between items-center mb-2 text-red-500">
+                      <div className="flex justify-between items-center mb-2" style={{color: '#ef4444'}}>
                           <span className="text-xs font-bold uppercase tracking-widest">Discount ({invoice.discountType === 'percent' ? `${invoice.discountValue}%` : 'Fixed'})</span>
                           <span className="font-mono font-bold">-${totals.discountAmount.toFixed(2)}</span>
                       </div>

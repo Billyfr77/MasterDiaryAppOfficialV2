@@ -420,31 +420,38 @@ const parseDiaryLog = async (req, res) => {
 
         const systemPrompt = `
             You are "Pinnacle Site Architect" (Level 100 Intelligence).
-            **Mission:** Convert a raw site log into a COMPLETE, CHRONOLOGICAL Visual Work Map.
+            **Mission:** Convert a raw site log into a COMPLETE, SPECIALIZED, and CHRONOLOGICAL Visual Site Map.
             
             **HYPER-INFERENCE MANDATE:**
-            - **Never trust the user is complete.** If they say "Poured slab", YOU must add: "Concrete Pump", "Vibrator", "Concreters", "Finishing Tools".
-            - If "Excavation", add "Spotter", "Tip Truck" (if removal implied).
+            - Never trust the user is complete. Infer necessary resources (e.g., "Poured slab" -> add "Concrete Pump", "Concreters").
             
-            **ARCHITECTURAL LOGIC:**
-            1. **Chronos Pillars:** Create 'chronos' nodes for time blocks (e.g. "Morning Setup", "Main Works", "Site Pack-up").
-            2. **Smart Clustering:** Group resources (Staff/Equip/Mat) under their relevant Chronos pillar.
-            3. **Connectivity:** Link every resource to a Chronos node.
+            **SPECIALIZED NODE ECOSYSTEM:**
+            1. **'chronos'**: The pillar of time. Use for shifts (e.g., "Morning Shift").
+            2. **'delay'**: The friction node. Use for weather or delays (e.g., "Rain stopped work for 2hrs").
+            3. **'impact'**: Site condition analysis (e.g., "Muddy site decreased productivity").
+            4. **'neuralPrism'**: The brain. Suggest one if strategic analysis is implied.
+            5. **'wormhole' / 'zone'**: Container nodes for large logical groups.
+            6. **'dimension'**: For measurements (e.g., "Room is 5x4m").
+            7. **'allowance'**: For extra payouts (e.g., "Height allowance for 2 painters").
+            8. **'diaryNode'**: Standard resources (nodeType: staff | equipment | material).
 
-            **VISUAL LAYOUT:**
-            - **Pillars:** Y=0, X=0, 600, 1200...
-            - **Resources:** Cluster vertically Y=300+ under pillars.
+            **ARCHITECTURAL LOGIC:**
+            - **Chronos Pillars:** Create pillars at Y=0, X=0, 600, 1200...
+            - **Resource Clustering:** Vertically cluster resources (Y=300+) under their Chronos pillar.
+            - **Plug-ins:** Connect 'delay' and 'neuralPrism' nodes DIRECTLY to the 'chronos' pillars.
 
             **OUTPUT JSON:**
             { 
               "nodes": [
-                { "id": "c1", "type": "chronos", "label": "Phase Name", "x": 0, "y": 0, "startTime": "07:00", "duration": 2 },
-                { "id": "r1", "type": "diaryNode", "label": "Item Name", "nodeType": "staff|material|equipment", "quantity": 1, "x": 0, "y": 300 }
+                { "id": "c1", "type": "chronos", "label": "Phase Name", "x": 0, "y": 0, "startTime": "07:00", "duration": 8 },
+                { "id": "d1", "type": "delay", "label": "Rain Delay", "x": 0, "y": 300, "duration": 2, "weatherType": "rain" },
+                { "id": "r1", "type": "diaryNode", "label": "Item Name", "nodeType": "staff|material|equipment", "quantity": 1, "x": 0, "y": 600 }
               ], 
               "edges": [
-                { "id": "e1", "source": "c1", "target": "r1", "data": { "type": "orbit|gradient" } }
+                { "id": "e1", "source": "c1", "target": "d1", "animated": true },
+                { "id": "e2", "source": "c1", "target": "r1", "animated": true, "data": { "type": "orbit|gradient" } }
               ],
-              "note": "Professional summary of the day." 
+              "note": "A high-level professional summary of the day." 
             }
         `;
 
@@ -532,29 +539,40 @@ const chatSmartAssistant = async (req, res) => {
         const systemPrompt = `
             You are "Pinnacle AI", the advanced construction diary assistant.
             
-            **Capabilities:**
-            1. **Resource Logging:** If user says "Add 2 carpenters", suggest creating staff nodes.
-            2. **Template Suggestion:** If user asks for "Concrete pour setup", check available templates and suggest linking one.
-            3. **Canvas Analysis:** Analyze current items on canvas to provide context-aware advice (e.g., "You have concrete but no pump?").
+            **Mission:** Assist with site logs by suggesting the best specialized tools for the task.
             
-            **Current Canvas:** ${canvasContext || 'Empty'}
+            **Specialized Tool Library:**
+            1. **'chronos'**: For adding new work shifts or lunch breaks.
+            2. **'delay'**: If the user mentions rain, heat, or site delays.
+            3. **'neuralPrism'**: If the user wants to track "velocity", "momentum", or "strategy".
+            4. **'allowance'**: If the user mentions "danger pay", "height money", or "bonuses".
+            5. **'dimension'**: If measurements (Length x Width) are mentioned.
+            6. **'diaryNode'**: For standard staff, equipment, and material resources.
+            
+            **Current Canvas Context:** ${canvasContext || 'Empty'}
             **Available Templates:** ${templateContext || 'None'}
 
             **Output Format (JSON Only):**
             {
-                "reply": "Conversational response.",
+                "reply": "Strategic conversational response.",
                 "suggestedNodes": [
-                    { "name": "Label", "type": "staff|equipment|material", "quantity": 1, "costRate": 0, "chargeRate": 0 }
+                    { 
+                        "name": "Label", 
+                        "type": "chronos|delay|neuralPrism|allowance|dimension|staff|equipment|material", 
+                        "quantity": 1, 
+                        "duration": 0,
+                        "weatherType": "rain|storm|heat|none"
+                    }
                 ],
                 "suggestedTemplates": [
                     { "id": "uuid", "name": "Template Name" } 
                 ]
             }
 
-            **Rules:**
-            - Keep "reply" concise and helpful.
-            - Only populate "suggestedTemplates" if a match is found in the provided list.
-            - "suggestedNodes" are for ad-hoc items not in a template.
+            **Strategy Mandate:**
+            - If user says "it started raining", suggest a 'delay' node with weatherType: 'rain'.
+            - If user says "how am I doing?", suggest a 'neuralPrism' node.
+            - If user mentions a room size, suggest a 'dimension' node.
         `;
 
         // 1000 tokens for smart but cost-effective responses
@@ -564,6 +582,59 @@ const chatSmartAssistant = async (req, res) => {
     } catch (error) {
         console.error("AI Smart Chat Error:", error.message);
         res.status(500).json({ error: "AI Assistant is offline." });
+    }
+};
+
+// --- NEURAL PRISM ANALYSIS (POWER MODE) ---
+const analyzePrismVelocity = async (req, res) => {
+    try {
+        const { context } = req.body;
+        if (!context) return res.status(400).json({ error: "Context required." });
+
+        const command = context.command || 'auto'; // default to general analysis
+
+        const systemPrompt = `
+            You are "Neural Progress Prism", the predictive strategic engine of MasterDiaryOS.
+            **Mission:** Conduct a deep-reasoning analysis of a work cluster's "Economic Momentum" and profitability.
+            
+            **Current Command:** ${command.toUpperCase()}
+            
+            **Input Data:**
+            - Connected Crew (Rich Financials): ${JSON.stringify(context.workers || [])}
+            - Connected Tasks/Resources (Rich Financials): ${JSON.stringify(context.tasks || [])}
+            - Shift Duration: ${context.duration} hours
+            - External Friction (Weather/Delay): ${context.weatherDelay || 0} hours
+            
+            **Project Financial & Timeline Context:**
+            - Total Contract Value: ${context.projectFinancials?.contractValue || 'Unknown'}
+            - Total Approved Variations: ${context.projectFinancials?.variationsValue || 0}
+            - Live Project Price: ${context.projectFinancials?.liveProjectValue || 'Unknown'}
+            - Project Start: ${context.projectFinancials?.startDate || 'Unknown'}
+            - Project Target Finish: ${context.projectFinancials?.endDate || 'Unknown'}
+            
+            **Economic Analysis Mandate:**
+            1. **Momentum Calculation:** Velocity = (Total Out-house Charge Value Generated per Hour) / (Total In-house Labor & Equipment Cost per Hour).
+            2. **Profitability Baseline:** 1.0 is the "Zero-Profit Baseline". > 1.0 is profitable.
+            3. **Predictive Horizon:** Estimate completion in **AM/PM format**.
+            4. **Ultimate Awareness:** Use the Project Value and Target Finish to determine if the current branch's daily burn is sustainable. Provide ONE specific tactical instruction to improve Profit Velocity or recover the timeline (max 140 chars).
+            5. **Burn Rate:** Calculate the total in-house $ cost per hour of this cluster.
+
+            **Output Format (RAW JSON ONLY):**
+            {
+                "velocity": 1.25, 
+                "completionTime": "4:15 PM", 
+                "status": "optimal" | "stable" | "critical",
+                "insight": "Strategic margin-focused tip...",
+                "burnRate": "$145/hr"
+            }
+        `;
+
+        const result = await pinnacleAi.generateJSON(`Analyze cluster with command: ${command}`, systemPrompt, 1500);
+        res.json(result);
+
+    } catch (error) {
+        console.error("AI Prism Analysis Error:", error.message);
+        res.json({ velocity: 1.0, completionTime: "--:--", status: "stable", insight: "Neural engine is recalibrating data flows." });
     }
 };
 
@@ -615,5 +686,6 @@ module.exports = {
   parseDiaryLog,
   generateDashboardInsights,
   generateNodeSuggestions,
-  chatSmartAssistant
+  chatSmartAssistant,
+  analyzePrismVelocity // EXPORT PRISM
 };

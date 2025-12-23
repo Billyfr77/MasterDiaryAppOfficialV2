@@ -10,10 +10,11 @@ import {
   isSameDay, isToday, parseISO, addWeeks, subWeeks, isWithinInterval 
 } from 'date-fns';
 import Card from './ui/Card';
+import { useDiaryTheme } from './PaintDiary/ThemeContext';
 
 // --- DRAGGABLE COMPONENTS ---
 
-const DraggableResource = ({ resource, type }) => {
+const DraggableResource = ({ resource, type, theme }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'resource',
     item: { ...resource, resourceType: type, isNew: true },
@@ -22,12 +23,14 @@ const DraggableResource = ({ resource, type }) => {
     }),
   }));
 
+  const primary = theme?.primary || 'indigo';
+
   return (
     <div 
       ref={drag}
       className={`
-        p-3 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm flex items-center gap-3 cursor-grab 
-        hover:bg-white/10 hover:border-indigo-500/50 transition-all group shadow-sm active:scale-95
+        p-3 rounded-xl border border-${primary}-500/20 bg-${primary}-900/10 backdrop-blur-md flex items-center gap-3 cursor-grab 
+        hover:bg-${primary}-900/30 hover:border-${primary}-400 transition-all duration-300 hover:scale-[1.02] group shadow-sm active:scale-95
         ${isDragging ? 'opacity-50' : 'opacity-100'}
       `}
     >
@@ -38,12 +41,12 @@ const DraggableResource = ({ resource, type }) => {
         <div className="text-sm font-bold text-white truncate">{resource.name}</div>
         <div className="text-[10px] text-gray-400 truncate">{resource.role || resource.category}</div>
       </div>
-      <GripVertical size={14} className="text-gray-600 group-hover:text-gray-400" />
+      <GripVertical size={14} className={`text-${primary}-500 opacity-0 group-hover:opacity-100 transition-opacity`} />
     </div>
   );
 };
 
-const DraggableAllocation = ({ allocation, isConflict, onClick }) => {
+const DraggableAllocation = ({ allocation, isConflict, onClick, theme }) => {
     const [{ isDragging }, drag] = useDrag(() => ({
         type: 'resource', // Same type to allow dropping in the same zones
         item: { ...allocation, isNew: false }, // Pass full allocation data, flag as existing
@@ -54,6 +57,7 @@ const DraggableAllocation = ({ allocation, isConflict, onClick }) => {
 
     const isStaff = allocation.resourceType === 'staff';
     const resourceName = isStaff ? allocation.staffResource?.name : allocation.equipmentResource?.name;
+    const primary = theme?.primary || 'indigo';
     
     let styleClass = isStaff 
         ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40' 
@@ -69,7 +73,7 @@ const DraggableAllocation = ({ allocation, isConflict, onClick }) => {
             ref={drag}
             onClick={onClick}
             className={`
-                p-2 rounded-lg border text-xs font-bold shadow-lg flex items-center justify-between cursor-pointer hover:scale-[1.02] active:scale-95 transition-all ${styleClass}
+                p-2.5 rounded-lg border text-xs font-bold shadow-lg flex items-center justify-between cursor-pointer hover:scale-[1.05] active:scale-95 transition-all duration-200 ${styleClass}
                 ${isDragging ? 'opacity-50' : 'opacity-100'}
             `}
         >
@@ -83,7 +87,7 @@ const DraggableAllocation = ({ allocation, isConflict, onClick }) => {
 };
 
 // --- DROP ZONE COMPONENT ---
-const DayCell = ({ day, projectId, allocations, conflicts, onDrop, onEdit }) => {
+const DayCell = ({ day, projectId, allocations, conflicts, onDrop, onEdit, theme }) => {
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'resource',
         drop: (item) => onDrop(item, projectId, day),
@@ -94,13 +98,14 @@ const DayCell = ({ day, projectId, allocations, conflicts, onDrop, onEdit }) => 
 
     const dayStr = format(day, 'yyyy-MM-dd');
     const isHR = projectId === 'HR';
+    const primary = theme?.primary || 'indigo';
 
     return (
         <div 
             ref={drop}
             className={`
                 flex-1 min-w-[140px] border-r border-white/5 p-1.5 relative transition-all min-h-[100px] flex flex-col gap-1.5
-                ${isOver ? (isHR ? 'bg-red-500/10 shadow-[inset_0_0_20px_rgba(239,68,68,0.2)]' : 'bg-indigo-500/10 shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]') : ''}
+                ${isOver ? (isHR ? 'bg-red-500/10 shadow-[inset_0_0_30px_rgba(239,68,68,0.3)]' : `bg-${primary}-500/10 shadow-[inset_0_0_30px_rgba(var(--${primary}-500-rgb),0.2)]`) : ''}
             `}
         >
             {allocations.map(alloc => {
@@ -112,6 +117,7 @@ const DayCell = ({ day, projectId, allocations, conflicts, onDrop, onEdit }) => 
                         allocation={alloc} 
                         isConflict={isConflict} 
                         onClick={() => onEdit(alloc)} 
+                        theme={theme}
                     />
                 );
             })}
@@ -120,7 +126,7 @@ const DayCell = ({ day, projectId, allocations, conflicts, onDrop, onEdit }) => 
 };
 
 // ... EditAllocationModal ...
-const EditAllocationModal = ({ allocation, onClose, onSave, onDelete }) => {
+const EditAllocationModal = ({ allocation, onClose, onSave, onDelete, theme }) => {
     const [formData, setFormData] = useState({
         startDate: allocation.startDate,
         endDate: allocation.endDate,
@@ -129,11 +135,13 @@ const EditAllocationModal = ({ allocation, onClose, onSave, onDelete }) => {
         notes: allocation.notes || '',
         category: allocation.category || 'project'
     });
+    
+    const primary = theme?.primary || 'indigo';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in" onClick={onClose}>
-            <Card className="w-96 !p-0 bg-stone-900" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b border-white/10 flex justify-between items-center">
+            <div className={`w-96 bg-[#0a0a0c] border border-${primary}-500/30 rounded-[2rem] overflow-hidden shadow-2xl shadow-${primary}-900/20`} onClick={e => e.stopPropagation()}>
+                <div className={`p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-${primary}-900/40 to-transparent`}>
                     <h3 className="text-lg font-black text-white uppercase tracking-wide">Edit Allocation</h3>
                     <button onClick={onClose}><X size={20} className="text-gray-400 hover:text-white" /></button>
                 </div>
@@ -166,18 +174,19 @@ const EditAllocationModal = ({ allocation, onClose, onSave, onDelete }) => {
                     </div>
                 </div>
 
-                <div className="p-6 border-t border-white/10 flex gap-2">
+                <div className="p-6 border-t border-white/10 flex gap-2 bg-black/20">
                     <button onClick={() => onDelete(allocation.id)} className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-xl font-bold text-sm transition-colors border border-red-500/20">Delete</button>
                     <div className="flex-1"></div>
                     <button onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white text-sm font-bold">Cancel</button>
-                    <button onClick={() => onSave(allocation.id, formData)} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-indigo-500/20">Save</button>
+                    <button onClick={() => onSave(allocation.id, formData)} className={`px-6 py-2 bg-${primary}-600 hover:bg-${primary}-500 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-${primary}-500/20`}>Save</button>
                 </div>
-            </Card>
+            </div>
         </div>
     );
 };
 
 const ResourceCommand = () => {
+  const { theme } = useDiaryTheme(); // Consume Theme
   const [currentDate, setCurrentDate] = useState(new Date());
   const [projects, setProjects] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -485,13 +494,17 @@ const ResourceCommand = () => {
   if (loading) return <div className="h-screen bg-stone-950 flex items-center justify-center text-white font-mono animate-pulse">INITIALIZING COMMAND MATRIX...</div>;
 
   return (
-    <div className="h-[calc(100vh-80px)] bg-transparent flex font-sans overflow-hidden text-gray-100 relative">
+    <div className={`h-[calc(100vh-80px)] bg-${theme.bg ? theme.bg : '#050507'} flex font-sans overflow-hidden text-gray-100 relative`}>
+        {/* Dynamic Background matching app */}
+        <div className={`absolute inset-0 bg-gradient-to-b from-${theme.primary}-900/10 to-transparent pointer-events-none`}></div>
+
       {editingAllocation && (
           <EditAllocationModal 
             allocation={editingAllocation} 
             onClose={() => setEditingAllocation(null)} 
             onSave={handleUpdateAllocation}
             onDelete={handleDeleteAllocation}
+            theme={theme}
           />
       )}
 
@@ -504,21 +517,21 @@ const ResourceCommand = () => {
 
       {/* FILTER POPUP */}
       {showFilters && (
-          <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[999] bg-stone-900 border border-white/10 rounded-xl shadow-2xl w-80 max-h-[80vh] flex flex-col animate-fade-in-up">
-              <div className="p-4 border-b border-white/5 flex justify-between items-center bg-stone-950/50 rounded-t-xl">
+          <div className={`fixed top-16 left-1/2 -translate-x-1/2 z-[999] bg-${theme.primary}-950/95 backdrop-blur-2xl border border-${theme.primary}-500/20 rounded-2xl shadow-2xl w-80 max-h-[80vh] flex flex-col animate-fade-in-up`}>
+              <div className={`p-4 border-b border-white/5 flex justify-between items-center bg-${theme.primary}-900/20 rounded-t-2xl`}>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2"><Eye size={16}/> View Context</h3>
                   <button onClick={() => setShowFilters(false)} className="text-gray-400 hover:text-white"><X size={16}/></button>
               </div>
               <div className="p-2 border-b border-white/5 flex gap-2">
                   <button onClick={() => { setSelectedProjectIds([]); setSelectedResourceIds([]); }} className="flex-1 py-1.5 text-[10px] font-bold bg-white/5 hover:bg-white/10 rounded text-gray-400 hover:text-white">Reset All</button>
-                  <button onClick={() => setSelectedProjectIds(projects.map(p => p.id))} className="flex-1 py-1.5 text-[10px] font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded">Select All Projects</button>
+                  <button onClick={() => setSelectedProjectIds(projects.map(p => p.id))} className={`flex-1 py-1.5 text-[10px] font-bold bg-${theme.primary}-500/10 hover:bg-${theme.primary}-500/20 text-${theme.primary}-400 rounded`}>Select All Projects</button>
               </div>
               <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
                   <div className="mb-4">
                       <div className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2 px-2">Projects</div>
                       {projects.map(p => (
                           <div key={p.id} onClick={() => toggleProjectSelection(p.id)} className="flex items-center gap-2 p-2 hover:bg-white/5 rounded-lg cursor-pointer">
-                              <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedProjectIds.length === 0 || selectedProjectIds.includes(p.id) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-600'}`}>
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedProjectIds.length === 0 || selectedProjectIds.includes(p.id) ? `bg-${theme.primary}-600 border-${theme.primary}-600` : 'border-gray-600'}`}>
                                   {(selectedProjectIds.length === 0 || selectedProjectIds.includes(p.id)) && <CheckSquare size={12} className="text-white"/>}
                               </div>
                               <span className={`text-xs font-bold truncate ${selectedProjectIds.includes(p.id) ? 'text-white' : 'text-gray-500'}`}>{p.name}</span>
@@ -540,54 +553,54 @@ const ResourceCommand = () => {
           </div>
       )}
 
-      {/* SIDEBAR */}
+      {/* SIDEBAR - Grandeur Upgrade */}
       <div className={`
-          fixed inset-y-0 left-0 z-50 w-80 bg-stone-900/95 border-r border-white/5 flex flex-col shadow-2xl transition-transform duration-300 backdrop-blur-xl
-          lg:relative lg:translate-x-0
+          fixed inset-y-0 left-0 z-50 w-80 backdrop-blur-2xl flex flex-col shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
+          lg:relative lg:translate-x-0 lg:z-0 border-r border-${theme.primary}-500/20 bg-${theme.primary}-950/20
           ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="p-5 border-b border-white/5">
-          <div className="flex justify-between items-center mb-4">
-             <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 text-indigo-400">
-                <Filter size={14} /> Resource Bay
+        <div className={`p-6 border-b border-${theme.primary}-500/20 bg-gradient-to-b from-${theme.primary}-900/40 to-transparent`}>
+          <div className="flex justify-between items-center mb-6">
+             <h2 className={`text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 drop-shadow-md`}>
+                <Filter size={14} className={`text-${theme.primary}-400`}/> Resource Bay
              </h2>
              <button onClick={() => setShowSidebar(false)} className="lg:hidden text-gray-400 hover:text-white"><X size={18}/></button>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 text-gray-500" size={16} />
+          <div className="relative group">
+            <Search className={`absolute left-3 top-2.5 text-gray-500 group-focus-within:text-${theme.primary}-400 transition-colors`} size={16} />
             <input 
               type="text" 
               placeholder="Search assets..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-xs font-bold text-white focus:border-indigo-500 outline-none placeholder-gray-600 transition-all focus:bg-stone-950"
+              className={`w-full bg-black/30 border border-white/10 rounded-2xl pl-10 pr-3 py-3 text-xs font-bold text-white focus:border-${theme.primary}-500 outline-none placeholder-gray-600 transition-all shadow-inner`}
             />
           </div>
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
           {/* STAFF */}
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Personnel</h3>
-              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-mono border border-emerald-500/20">{visibleStaff.length}</span>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center mb-3 px-2">
+              <h3 className={`text-[10px] font-black text-${theme.primary}-400/80 uppercase tracking-widest`}>Personnel</h3>
+              <span className={`text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-lg font-mono border border-emerald-500/20`}>{visibleStaff.length}</span>
             </div>
             <div className="space-y-2">
               {visibleStaff.map(s => (
-                <DraggableResource key={s.id} resource={s} type="staff" />
+                <DraggableResource key={s.id} resource={s} type="staff" theme={theme} />
               ))}
             </div>
           </div>
 
           {/* EQUIPMENT */}
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Heavy Assets</h3>
-              <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono border border-amber-500/20">{visibleEquipment.length}</span>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+            <div className="flex justify-between items-center mb-3 px-2 border-t border-white/5 pt-4">
+              <h3 className={`text-[10px] font-black text-${theme.primary}-400/80 uppercase tracking-widest`}>Heavy Assets</h3>
+              <span className={`text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-lg font-mono border border-amber-500/20`}>{visibleEquipment.length}</span>
             </div>
             <div className="space-y-2">
               {visibleEquipment.map(e => (
-                <DraggableResource key={e.id} resource={e} type="equipment" />
+                <DraggableResource key={e.id} resource={e} type="equipment" theme={theme} />
               ))}
             </div>
           </div>
@@ -598,11 +611,11 @@ const ResourceCommand = () => {
       <div className="flex-1 flex flex-col relative w-full overflow-hidden">
         
         {/* HEADER */}
-        <div className="h-16 border-b border-white/5 bg-stone-900/60 backdrop-blur-md flex justify-between items-center px-4 md:px-6 sticky top-0 z-40">
+        <div className={`h-16 border-b border-white/5 bg-${theme.primary}-950/10 backdrop-blur-md flex justify-between items-center px-4 md:px-6 sticky top-0 z-40`}>
           <div className="flex items-center gap-2 md:gap-4">
-            <button onClick={() => setShowSidebar(true)} className="lg:hidden p-2 rounded-lg bg-stone-800 text-indigo-400"><Filter size={20}/></button>
+            <button onClick={() => setShowSidebar(true)} className={`lg:hidden p-2 rounded-lg bg-white/5 text-${theme.primary}-400`}><Filter size={20}/></button>
             
-            <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-lg border border-white/5 hover:bg-white/10 transition-all flex items-center gap-2 ${selectedProjectIds.length > 0 ? 'bg-indigo-600 text-white' : 'bg-stone-800 text-gray-400'}`}>
+            <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border border-white/5 hover:bg-white/10 transition-all flex items-center gap-2 ${selectedProjectIds.length > 0 ? `bg-${theme.primary}-600 text-white shadow-lg` : 'bg-black/20 text-gray-400'}`}>
                 <Eye size={18} />
                 <span className="text-xs font-bold hidden md:block">{selectedProjectIds.length > 0 ? `${selectedProjectIds.length} Projects` : 'All Projects'}</span>
             </button>
@@ -611,7 +624,7 @@ const ResourceCommand = () => {
 
             <button onClick={() => setCurrentDate(subWeeks(currentDate, 1))} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"><ChevronLeft size={20}/></button>
             <div className="flex items-center gap-2 md:gap-3">
-              <CalendarIcon size={18} className="text-indigo-500 hidden md:block" />
+              <CalendarIcon size={18} className={`text-${theme.primary}-500 hidden md:block`} />
               <span className="text-sm md:text-xl font-black text-white tracking-tight">{format(weekStart, 'MMMM yyyy')}</span>
               <span className="text-[10px] md:text-sm font-medium text-gray-500 border-l border-white/10 pl-2 md:pl-3">Week of {format(weekStart, 'do')}</span>
             </div>
@@ -619,30 +632,30 @@ const ResourceCommand = () => {
           </div>
           
           <div className="flex gap-4">
-             <button onClick={() => setCurrentDate(new Date())} className="text-[10px] font-bold bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-3 py-1.5 rounded-lg uppercase tracking-wider transition-all hidden md:block border border-indigo-500/20">Today</button>
+             <button onClick={() => setCurrentDate(new Date())} className={`text-[10px] font-bold bg-${theme.primary}-500/10 text-${theme.primary}-400 hover:bg-${theme.primary}-500/20 px-4 py-2 rounded-xl uppercase tracking-wider transition-all hidden md:block border border-${theme.primary}-500/20`}>Today</button>
           </div>
         </div>
 
         {/* CALENDAR GRID */}
-        <div className="flex-1 overflow-auto custom-scrollbar bg-stone-950/50">
+        <div className="flex-1 overflow-auto custom-scrollbar bg-black/20">
           <div className="min-w-[1200px]">
             {/* Header Row */}
-            <div className="flex border-b border-white/5 sticky top-0 bg-stone-900/95 backdrop-blur-sm z-30 shadow-xl">
-              <div className="w-72 flex-shrink-0 p-4 border-r border-white/5 font-black text-gray-500 uppercase text-[10px] tracking-[0.2em] flex items-center justify-between">
+            <div className={`flex border-b border-white/5 sticky top-0 bg-[#0a0a0c]/95 backdrop-blur-sm z-30 shadow-xl border-${theme.primary}-500/10`}>
+              <div className={`w-72 flex-shrink-0 p-4 border-r border-white/5 font-black text-gray-500 uppercase text-[10px] tracking-[0.2em] flex items-center justify-between sticky left-0 z-40 bg-[#0a0a0c]`}>
                   <span>Project Manifest</span>
                   <span>Weekly Budget</span>
               </div>
               {days.map(day => (
-                <div key={day.toString()} className={`flex-1 min-w-[140px] p-3 text-center border-r border-white/5 ${isToday(day) ? 'bg-indigo-900/10' : ''}`}>
-                  <div className={`text-[10px] font-bold uppercase mb-1 ${isToday(day) ? 'text-indigo-400' : 'text-gray-500'}`}>{format(day, 'EEE')}</div>
+                <div key={day.toString()} className={`flex-1 min-w-[140px] p-3 text-center border-r border-white/5 ${isToday(day) ? `bg-${theme.primary}-900/10` : ''}`}>
+                  <div className={`text-[10px] font-bold uppercase mb-1 ${isToday(day) ? `text-${theme.primary}-400` : 'text-gray-500'}`}>{format(day, 'EEE')}</div>
                   <div className={`text-2xl font-black ${isToday(day) ? 'text-white' : 'text-gray-300'}`}>{format(day, 'd')}</div>
                 </div>
               ))}
             </div>
 
-            {/* HR / Leave Row (Always visible unless explicitly filtered out? No, keep always visible for now as it's not a project) */}
+            {/* HR / Leave Row */}
             <div className="flex border-b border-white/5 hover:bg-white/[0.02] transition-colors group bg-red-500/5">
-                <div className="w-72 flex-shrink-0 p-4 border-r border-white/10 sticky left-0 bg-stone-900/90 backdrop-blur-md z-20 shadow-lg border-l-4 border-l-red-500">
+                <div className="w-72 flex-shrink-0 p-4 border-r border-white/10 sticky left-0 bg-[#0a0a0c]/90 backdrop-blur-md z-20 shadow-lg border-l-4 border-l-red-500">
                     <div className="flex justify-between items-start mb-2">
                         <div className="font-bold text-red-200 truncate text-sm max-w-[160px]">HR / Leave</div>
                     </div>
@@ -666,6 +679,7 @@ const ResourceCommand = () => {
                             conflicts={conflicts} 
                             onDrop={handleDrop} 
                             onEdit={setEditingAllocation} 
+                            theme={theme}
                         />
                     );
                 })}
@@ -674,7 +688,7 @@ const ResourceCommand = () => {
             {/* Project Rows */}
             {visibleProjects.map(project => (
               <div key={project.id} className="flex border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
-                <div className={`w-72 flex-shrink-0 p-4 border-r border-white/10 sticky left-0 bg-stone-900/90 backdrop-blur-md z-20 shadow-lg border-l-4 ${project.status === 'active' ? 'border-l-emerald-500' : 'border-l-gray-600'}`}>
+                <div className={`w-72 flex-shrink-0 p-4 border-r border-white/10 sticky left-0 bg-[#0a0a0c]/90 backdrop-blur-md z-20 shadow-lg border-l-4 ${project.status === 'active' ? 'border-l-emerald-500' : 'border-l-gray-600'}`}>
                   <div className="flex justify-between items-start mb-2">
                       <div className="font-bold text-white truncate text-sm max-w-[160px]">{project.name}</div>
                       <div className="text-xs font-mono text-emerald-500 font-bold">${getProjectTotalWeeklyCost(project.id).toLocaleString()}</div>
@@ -683,7 +697,7 @@ const ResourceCommand = () => {
                     {project.client || 'Internal Project'}
                   </div>
                   {project.site && (
-                      <div className="text-[9px] text-indigo-400 mt-1 truncate flex items-center gap-1">
+                      <div className={`text-[9px] text-${theme.primary}-400 mt-1 truncate flex items-center gap-1`}>
                           <MapPin size={10} /> {project.site}
                       </div>
                   )}
@@ -704,6 +718,7 @@ const ResourceCommand = () => {
                           conflicts={conflicts} 
                           onDrop={handleDrop} 
                           onEdit={setEditingAllocation} 
+                          theme={theme}
                       />
                   );
                 })}

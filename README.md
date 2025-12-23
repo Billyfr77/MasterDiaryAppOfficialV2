@@ -1,69 +1,71 @@
-# MasterDiaryOS — AI-Native Construction Operating System 🚀
+# MasterDiaryOS — The "Billion Dollar" Project Engine 🚀
 
-**MasterDiaryOS** is a visual, graph-based operating system designed to unify the entire construction lifecycle—from estimation to execution and invoicing—into a single, high-performance node engine. It is built to feel like the **Unreal Engine of Project Management**.
+**MasterDiaryOS** is not just software; it is a **Visual Simulation Engine** for the construction industry. It replaces static data entry with dynamic, living logic circuits. It treats time, money, and labor like electricity flowing through a board, making it the most advanced, reactive project management tool on the market.
 
----
-
-## 🧠 System Architecture & Philosophy
-
-### 1. The Unified Graph Engine (@xyflow/react)
-At the heart of every module is a custom-tuned React Flow implementation.
-- **Node-Based Truth:** Data isn't just stored in rows; it exists as interactive nodes (Staff, Equipment, Materials, Time, Zones).
-- **Relational Logic:** Connections (edges) aren't just visual; they carry **logic propagation**.
-  - *Example:* Connecting a `Delay` node to a `Chronos` (Time) node automatically recalculates the duration for every linked resource in that branch.
-  - *Example:* Connecting an `Allowance` node to a `Staff` node instantly injects financial overhead into that specific record.
-
-### 2. The "Power Layout" Standard
-Every high-performance module (Diary, Quote, Map) follows this strict 3-tier structure:
-1.  **PowerHeader:** HUD-style top bar displaying real-time financial "Pulse" (Cost, Revenue, Profit, Productivity %).
-2.  **Visual Workspace:**
-    - **Resource Dock (Left):** Context-aware library of draggable assets.
-    - **Infinite Canvas (Right):** The primary node-graph interaction area.
-3.  **Data Manifest (Bottom):** A premium ledger (ItemList) that synchronized 1:1 with the canvas, allowing for bulk editing and fine-tuned numeric input.
+**Creator & Architect:** Billy Freeman
 
 ---
 
-## 🧩 Core Modules & Intelligence
+## 💎 Why This Is "Ahead of the Market"
 
-### 🏗️ AI Blueprint Engine (Quote Builder)
-- **Primary Aesthetic:** Arctic Blue / Indigo.
-- **Logic:** Converts "Scope of Works" text into a full visual bill of materials.
-- **Wormhole Nodes:** Sub-containers that group nested costs, allowing for "Drill-Down" project organization.
-
-### 🎨 AI Diary Engine (Paint Your Day)
-- **Primary Aesthetic:** Jade Emerald / Teal.
-- **Chronos System:** The "Time Hub" concept. All resources attached to a Chronos node inherit its start/finish times.
-- **Overtime Engine:** Multi-tier calculation logic (1.5x, 2.0x, Night Rates) applied automatically based on node time data.
-- **Diary Harvesting:** A bridging service that allows the Invoice Builder to "scan" completed diary entries and convert node clusters into billable line items.
-
-### 🛡️ AI Safety & Workflow
-- **Safety Dashboard:** Automated SWMS and Risk Assessment generation via Grok-4 reasoning.
-- **Automation Graph:** A visual workflow builder where "Trigger" nodes (e.g., `quote.approved`) spawn "Action" nodes (e.g., `create_project`, `send_notification`).
-
-### 🗺️ AI Map Builder (GeoCore)
-- **Function:** Geo-spatial site planning using Mapbox/Google Maps integration.
-- **Interaction:** Drag resources directly onto high-res satellite imagery to define compounds, exclusion zones, and site access routes.
+Traditional tools (Procore, HammerTech, etc.) are **Forms**. You type data, hit save, and it sits there.
+**MasterDiaryOS** is a **Simulation**.
+- **Reactive Logic:** Change a shift time, and the entire payroll recalculates instantly.
+- **Physical Context:** Drag a rain cloud onto the canvas, and productivity drops while costs rise.
+- **AI Agency:** The Neural Prism doesn't just chat; it *watches* the site and intervenes with risk analysis.
 
 ---
 
-## 🛠️ Technical Implementation Details (For Future AI)
+## 🧠 Core Engines & Innovations
 
-### Backend (Node.js/Express/Sequelize)
-- **Models:** Centralized in `backend/src/models`. `Diary`, `Project`, `Quote`, and `Allocation` are the core entities.
-- **AI Integration (`grokService.js`):** Uses `grok-4-1-fast-reasoning` for all JSON-structured generation.
-- **Normalization:** The backend expects `canvasData` to be an array of entries. Each entry contains `items`, `extraNodes`, and `edges`.
+### 1. The "Circuit Board" Logic Engine (V4)
+We have gamified Enterprise Resource Planning (ERP).
+- **Chronos Propagation:** Time is a physical force. Connect a `Chronos Node` (Shift) to a worker, and they inherit the duration. Connect a `Lunch Break` to the Shift, and it mathematically cuts the duration for everyone in that branch.
+- **The Allowance Scanner:** No more hidden checkboxes. Drag an `Allowance Node` (e.g., "Danger Pay", "Height") and plug it into a worker. The system visually scans the connection, identifies the rate type (Hourly vs Daily), and injects the cash flow into the worker's cost profile instantly.
+- **Recursive Harvesting:** The engine creates a "Single Source of Truth" by harvesting data recursively through infinite chains of nodes.
 
-### Frontend (React/Vite/Tailwind)
-- **State Management:** Heavy use of custom hooks (e.g., `useDiaryEngine`, `useTimelineEngine`) to separate graph logic from UI rendering.
-- **Communication:** Standardized `api` utility in `frontend/src/utils/api.js`.
-- **Styling:** Custom "Enterprise Data Visuals" theme with #0a0a0c base, noise textures, and animated indigo/violet aurora glows.
+### 2. The Atmospheric Simulation
+A high-tech "Alive" environment that introduces physics to project management.
+- **Particle Systems:** Rain, Snow, and Storms are not just GIFs. They are code-driven particle systems with negative-delay animations for instant, glitch-free "mid-fall" realism.
+- **Logic Impact:** Weather isn't just visual. A "Storm" node physically disrupts the logic flow, triggering delay calculations and financial impact warnings across the graph.
+
+### 3. The Neural Prism (AI Agent)
+The "Brain" of the canvas.
+- **Infinite Loop Protection:** Smart hashing algorithms prevent AI re-analysis loops, ensuring stable, high-performance monitoring.
+- **Hub Sync:** The Prism connects to the Chronos Hub, reading the workforce deployment and analyzing financial efficiency (Burn Rate vs Momentum) in real-time.
+- **Status States:** Visually shifts from "Analyzing" (Pulse) to "Optimal" (Emerald) or "Critical" (Crimson) based on deep financial context.
 
 ---
 
-## 🚀 Pre-Launch Priorities (Status: 98%)
-1.  **Human-Approval Layers:** Finalizing UI modals for "Workflow Approval" nodes.
-2.  **Reliability Polish:** Hardening `canvasData` persistence (Handled).
-3.  **Xero Integration:** Export logic for harvested invoices.
+## 🎨 Aesthetic & UX Engine (The "Grandeur" Update)
 
-**Founder:** Billy Fraser  
-**Philosophy:** Don't build a tool. Build a new category.
+### "Jewel" UI Architecture
+Every element is designed to feel like a premium physical object.
+- **Glassmorphism:** Deep layers of blur and gradients.
+- **Kinetic Feedback:** Nodes pulse, glow, and react to connections.
+- **Power Header:** A futuristic command center that puts every control at your fingertips.
+- **Infinite Canvas:** A workspace that expands with your project, supported by Ghost Node suggestions and auto-restructuring tools.
+
+---
+
+## 🛠️ Technical Implementation Details
+
+### Stack
+- **Frontend:** React, Vite, TailwindCSS, React Flow (Custom Engine)
+- **Backend:** Node.js, Express, Sequelize, SQLite/Postgres
+- **AI:** Google Gemini 1.5 Pro (Integrated via Neural Prism)
+
+### Key Algorithms
+- **Allowance Scanner:** Detects and computes complex payroll additions via graph traversal.
+- **Chronos Math:** Handles time subtraction (breaks) and propagation (shifts) with 0.01h precision.
+- **Particle Physics:** CSS-driven, GPU-accelerated weather effects.
+
+---
+
+## 🚀 Status
+**Market Dominance Ready.**
+- **Logic:** Circuit-based, reactive, and bulletproof.
+- **Visuals:** Cinema-grade.
+- **AI:** Embedded & Active.
+
+**Copyright © 2025 Billy Freeman. All rights reserved.**

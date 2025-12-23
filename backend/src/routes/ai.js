@@ -33,6 +33,7 @@ router.post('/map-elements', aiController.generateMapElements); // Genesis Mode
 router.post('/parse-diary', aiController.parseDiaryLog); // Smart Log
 router.post('/dashboard-insights', aiController.generateDashboardInsights); // Neural Core
 router.post('/node-suggestions', aiController.generateNodeSuggestions); // Ghost Node Pulse
+router.post('/analyze-prism', aiController.analyzePrismVelocity); // PRISM POWER MODE
 
 // Chat Aliases
 router.post('/chat-quote', aiController.chatQuoteAssistant);

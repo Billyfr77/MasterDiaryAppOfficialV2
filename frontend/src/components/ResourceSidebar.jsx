@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { Search, User, Wrench, Package, X, GripVertical } from 'lucide-react';
 
-const ResourceCard = ({ item, onClick, onDragStart }) => {
-  let wrapperClass = "bg-gradient-to-r from-indigo-600/20 to-indigo-900/20 border-indigo-500/30 hover:border-indigo-400";
-  let iconClass = "bg-indigo-500/20 text-indigo-400";
+const ResourceCard = ({ item, onClick, onDragStart, themeColor }) => {
+  let wrapperClass = `bg-gradient-to-r from-${themeColor}-900/10 to-transparent border-${themeColor}-500/20 hover:border-${themeColor}-400 hover:bg-${themeColor}-900/30 hover:shadow-lg hover:shadow-${themeColor}-500/10`;
+  let iconClass = `bg-${themeColor}-500/20 text-${themeColor}-400`;
   let icon = <Package size={16} />;
 
   if (item.type === 'staff') {
-    wrapperClass = "bg-gradient-to-r from-emerald-600/20 to-emerald-900/20 border-emerald-500/30 hover:border-emerald-400";
+    wrapperClass = `bg-gradient-to-r from-emerald-900/10 to-transparent border-emerald-500/20 hover:border-emerald-400 hover:bg-emerald-900/30 hover:shadow-lg hover:shadow-emerald-500/10`;
     iconClass = "bg-emerald-500/20 text-emerald-400";
     icon = <User size={16} />;
   } else if (item.type === 'equipment') {
-    wrapperClass = "bg-gradient-to-r from-amber-600/20 to-amber-900/20 border-amber-500/30 hover:border-amber-400";
+    wrapperClass = `bg-gradient-to-r from-amber-900/10 to-transparent border-amber-500/20 hover:border-amber-400 hover:bg-amber-900/30 hover:shadow-lg hover:shadow-amber-500/10`;
     iconClass = "bg-amber-500/20 text-amber-400";
     icon = <Wrench size={16} />;
   }
@@ -19,7 +19,6 @@ const ResourceCard = ({ item, onClick, onDragStart }) => {
   const handleDragStart = (e) => {
       if (onDragStart) onDragStart(e, item);
       else {
-          // Sanitize item to prevent circular references
           const safeItem = {
               id: item.id,
               name: item.name,
@@ -31,7 +30,7 @@ const ResourceCard = ({ item, onClick, onDragStart }) => {
           };
           const jsonItem = JSON.stringify(safeItem);
           e.dataTransfer.setData('application/reactflow', jsonItem);
-          e.dataTransfer.setData('text/plain', jsonItem); // Fallback
+          e.dataTransfer.setData('text/plain', jsonItem);
           e.dataTransfer.effectAllowed = 'copy';
       }
   };
@@ -41,9 +40,9 @@ const ResourceCard = ({ item, onClick, onDragStart }) => {
         draggable 
         onDragStart={handleDragStart} 
         onClick={() => onClick && onClick(item)}
-        className={`group relative flex items-center gap-3 p-3 rounded-xl border cursor-grab active:cursor-grabbing transition-all hover:translate-x-1 hover:shadow-lg ${wrapperClass}`}
+        className={`group relative flex items-center gap-3 p-3 rounded-xl border cursor-grab active:cursor-grabbing transition-all duration-300 hover:scale-[1.02] ${wrapperClass}`}
     >
-      <div className={`p-2 rounded-lg ${iconClass} group-hover:scale-110 transition-transform`}>
+      <div className={`p-2 rounded-lg ${iconClass} group-hover:scale-110 transition-transform duration-300`}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
@@ -54,7 +53,7 @@ const ResourceCard = ({ item, onClick, onDragStart }) => {
              `$${item.pricePerUnit || 0}/unit`}
         </div>
       </div>
-      <GripVertical size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <GripVertical size={14} className={`text-${themeColor}-500 opacity-0 group-hover:opacity-100 transition-opacity`} />
     </div>
   );
 };
@@ -63,7 +62,6 @@ const ResourceSidebar = ({ materials = [], staff = [], equipment = [], onSearch,
   const [activeTab, setActiveTab] = useState('all');
   const [localSearch, setLocalSearch] = useState('');
 
-  // Determine accent colors based on the passed theme (primary color string)
   const themeColor = theme; 
 
   const handleSearch = (e) => {
@@ -75,39 +73,40 @@ const ResourceSidebar = ({ materials = [], staff = [], equipment = [], onSearch,
 
   return (
     <div className={`
-        fixed inset-y-0 left-0 z-50 w-80 backdrop-blur-xl flex flex-col shadow-2xl transition-transform duration-300 
-        lg:relative lg:translate-x-0 lg:z-0 lg:w-full lg:h-full
+        fixed inset-y-0 left-0 z-50 w-80 backdrop-blur-2xl flex flex-col shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
+        lg:relative lg:translate-x-0 lg:z-0 lg:w-full lg:h-full animate-in slide-in-from-left duration-700
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        bg-${themeColor}-950/20 border-r lg:border-none border-${themeColor}-500/20
+        bg-${themeColor}-950/30 border-r lg:border-none border-${themeColor}-500/20
     `}>
-      {/* Header */}
-      <div className={`p-5 border-b border-${themeColor}-500/20 bg-${themeColor}-900/10`}>
-        <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                <Package size={16} className={`text-${themeColor}-500`} /> Resources
+      {/* Header with Rich Gradient */}
+      <div className={`p-6 border-b border-${themeColor}-500/20 bg-gradient-to-b from-${themeColor}-900/40 to-transparent`}>
+        <div className="flex justify-between items-center mb-6">
+            <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-3 drop-shadow-md">
+                <div className={`p-1.5 rounded-lg bg-${themeColor}-500/20 text-${themeColor}-400`}><Package size={16} /></div>
+                Library
             </h3>
-            <button onClick={onClose} className="lg:hidden text-gray-500 hover:text-white"><X size={18} /></button>
+            <button onClick={onClose} className="lg:hidden text-gray-500 hover:text-white transition-colors"><X size={18} /></button>
         </div>
         
         {/* Search */}
-        <div className="relative group">
-            <Search className={`absolute left-3 top-2.5 text-gray-500 group-focus-within:text-${themeColor}-500 transition-colors`} size={14} />
+        <div className="relative group mb-6">
+            <Search className={`absolute left-4 top-3 text-gray-500 group-focus-within:text-${themeColor}-400 transition-colors duration-300`} size={16} />
             <input 
                 type="text" 
-                placeholder="Search database..." 
+                placeholder="Search resources..." 
                 value={localSearch} 
                 onChange={handleSearch} 
-                className={`w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-white focus:border-${themeColor}-500 outline-none transition-all placeholder-gray-600`} 
+                className={`w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-xs font-bold text-white focus:border-${themeColor}-500 outline-none transition-all placeholder-gray-600 shadow-inner`} 
             />
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mt-4 p-1 bg-black/40 rounded-lg">
+        <div className="flex gap-1 p-1 bg-black/40 rounded-xl border border-white/5">
             {['all', 'mat', 'lab', 'eqp'].map(tab => (
                 <button 
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${activeTab === tab ? `bg-${themeColor}-600 text-white shadow-lg` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
+                    className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${activeTab === tab ? `bg-${themeColor}-600 text-white shadow-lg shadow-${themeColor}-900/50 scale-105` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
                 >
                     {tab === 'mat' ? 'Mat' : tab === 'lab' ? 'Lab' : tab === 'eqp' ? 'Eqp' : 'All'}
                 </button>
@@ -118,28 +117,28 @@ const ResourceSidebar = ({ materials = [], staff = [], equipment = [], onSearch,
       {/* List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
         {(activeTab === 'all' || activeTab === 'mat') && (
-            <div className="space-y-3">
-                <div className={`text-[10px] font-black text-${themeColor}-500/80 uppercase tracking-widest px-1`}>Materials</div>
+            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className={`text-[9px] font-black text-${themeColor}-400 uppercase tracking-[0.3em] px-2 opacity-80`}>Materials</div>
                 {filterItems(materials).map(item => (
-                    <ResourceCard key={item.id} item={{...item, type: 'material'}} onClick={onTapAdd} />
+                    <ResourceCard key={item.id} item={{...item, type: 'material'}} onClick={onTapAdd} themeColor={themeColor} />
                 ))}
             </div>
         )}
 
         {(activeTab === 'all' || activeTab === 'lab') && (
-            <div className="space-y-3">
-                <div className={`text-[10px] font-black text-emerald-500/80 uppercase tracking-widest px-1 border-t border-white/5 pt-4`}>Staff</div>
+            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+                <div className={`text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em] px-2 opacity-80 border-t border-white/5 pt-4`}>Staff</div>
                 {filterItems(staff).map(item => (
-                    <ResourceCard key={item.id} item={{...item, type: 'staff'}} onClick={onTapAdd} />
+                    <ResourceCard key={item.id} item={{...item, type: 'staff'}} onClick={onTapAdd} themeColor={themeColor} />
                 ))}
             </div>
         )}
 
         {(activeTab === 'all' || activeTab === 'eqp') && (
-            <div className="space-y-3">
-                <div className={`text-[10px] font-black text-amber-500/80 uppercase tracking-widest px-1 border-t border-white/5 pt-4`}>Equipment</div>
+            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+                <div className={`text-[9px] font-black text-amber-400 uppercase tracking-[0.3em] px-2 opacity-80 border-t border-white/5 pt-4`}>Equipment</div>
                 {filterItems(equipment).map(item => (
-                    <ResourceCard key={item.id} item={{...item, type: 'equipment'}} onClick={onTapAdd} />
+                    <ResourceCard key={item.id} item={{...item, type: 'equipment'}} onClick={onTapAdd} themeColor={themeColor} />
                 ))}
             </div>
         )}
