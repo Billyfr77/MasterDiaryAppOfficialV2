@@ -5,7 +5,7 @@ import {
     User, Wrench, Package, X, Sparkles, Clock, DollarSign, Activity, Zap, 
     ShieldCheck, Timer, Cpu, Box, AlertTriangle, Ruler, PenTool, Layout, 
     Award, CloudRain, Sun, Snowflake, ChevronDown, Magnet, FileText,
-    TrendingUp, Target, BrainCircuit, Waves
+    TrendingUp, Target, BrainCircuit, Waves, PaintBucket, Layers
 } from 'lucide-react';
 import { useDiaryTheme } from '../PaintDiary/ThemeContext';
 
@@ -27,7 +27,7 @@ const JewelWrapper = ({ children, theme: nodeTheme, selected, isGhost, shapeClas
             ${selected ? `scale-105 z-50 ${activeTheme.glow} shadow-[0_0_100px_-20px_currentColor]` : 'hover:scale-[1.02] hover:shadow-2xl'}
             animate-in zoom-in-95 duration-300 fade-in
         `} style={{ willChange: 'transform' }}>
-            <div className={`absolute inset-0 ${shapeClass} bg-gradient-to-br ${activeTheme.bg || theme.bg} backdrop-blur-3xl opacity-95 overflow-hidden`}>
+            <div className={`absolute inset-0 ${shapeClass} bg-gradient-to-br ${activeTheme.bg || theme.bg} backdrop-blur-3xl opacity-100 overflow-hidden`}>
                 <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer" />
                 <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
             </div>
@@ -66,6 +66,8 @@ export const DelayNode = ({ id, data, selected }) => {
 
     return (
         <JewelWrapper theme={s} selected={selected} shapeClass="rounded-[2rem]">
+            {/* AI VISION TAG */}
+            <div className="absolute top-2 right-4 text-[8px] font-mono text-white font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-50">ID:{id}::DELAY</div>
             <div className="flex flex-col gap-5">
                 <div className="flex justify-between items-start">
                     <div>
@@ -124,6 +126,8 @@ export const ImpactNode = ({ id, data, selected }) => {
 
     return (
         <JewelWrapper selected={selected} shapeClass="rounded-[2.5rem]">
+            {/* AI VISION TAG */}
+            <div className="absolute top-2 right-4 text-[8px] font-mono text-white font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-50">ID:{id}::IMPACT</div>
             <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -162,6 +166,9 @@ export const ChronosNode = ({ id, data, selected }) => {
             rounded-full select-none cursor-pointer
             ${selected ? 'scale-110 z-50 shadow-[0_0_150px_-30px_rgba(6,182,212,0.8)]' : 'hover:scale-105 shadow-2xl'}
         `}>
+            {/* AI VISION TAG */}
+            <div className="absolute top-[15%] left-1/2 -translate-x-1/2 text-[8px] font-mono text-cyan-100 font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-50">ID:{id}::CHRONOS</div>
+
             <div className={`absolute inset-0 rounded-full border-[6px] border-cyan-500/20 border-t-cyan-400 border-l-cyan-600/50 animate-spin-slow ${hasHubData ? 'shadow-[0_0_50px_rgba(6,182,212,0.5)]' : ''}`} /><div className="absolute inset-2 rounded-full border-[2px] border-dashed border-cyan-300/30 animate-spin-reverse-slower" />
             <div className="absolute inset-4 rounded-full bg-gradient-to-br from-cyan-900/90 via-black to-blue-950/90 backdrop-blur-2xl flex flex-col items-center justify-center border border-cyan-500/30 overflow-hidden cursor-pointer">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.15),transparent_70%)] animate-pulse" />
@@ -227,6 +234,9 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
 
     return (
         <div className={`relative w-[280px] h-[280px] transition-all duration-1000 ${selected ? 'scale-110' : 'hover:scale-105'}`}>
+            {/* AI VISION TAG */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 text-[8px] font-mono text-indigo-200 font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-60">ID:{id}::PRISM</div>
+
             <button onClick={(e) => { e.stopPropagation(); data.onDelete?.(); }} className="absolute -top-12 left-1/2 -translate-x-1/2 p-2 rounded-xl bg-white/5 text-white/20 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 border border-white/10 z-[100] nodrag"><X size={16} strokeWidth={3} /></button>
             {data.gravityActive && (<div className="absolute inset-0 z-0 pointer-events-none"><motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.1, 0.4, 0.1] }} transition={{ duration: 4, repeat: Infinity }} className="absolute inset-[-120px] rounded-full border-2 border-dashed border-indigo-500/20" /><div className="absolute inset-[-180px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08) 0%,transparent_70%)]" /></div>)}
             <div className="absolute inset-0 rounded-full border-[4px] border-white/5 animate-ping-slow pointer-events-none" style={{ borderColor: `${theme.color}22` }} /><div className={`absolute inset-0 rounded-full border border-white/5 ${isPluggedIn ? 'animate-spin-slow' : 'opacity-20'}`} /><div className={`absolute inset-12 rounded-full blur-[60px] transition-colors duration-1000 ${isPluggedIn ? 'opacity-40' : 'opacity-10'}`} style={{ backgroundColor: theme.color }} />
@@ -271,21 +281,49 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
     );
 };
 
-export const PhotoNode = ({ data, selected }) => {
-    const { url, label, onDelete } = data;
+export const PhotoNode = ({ id, data, selected }) => {
+    const { url, label, onDelete, isBackground } = data;
+    const update = (field, value) => data.onUpdate?.(id, { [field]: value });
+
     return (
-        <div className={`relative group transition-all duration-700 ${selected ? 'scale-105 z-50' : 'hover:scale-[1.02]'}`}>
-            <div className="absolute -inset-4 bg-indigo-500/20 rounded-[2rem] blur-2xl opacity-0 group-hover:opacity-100 animate-pulse transition-opacity" />
-            <div className={`relative p-1 rounded-[1.8rem] bg-gradient-to-br from-white/20 via-white/5 to-black border border-white/10 shadow-2xl overflow-hidden ${selected ? 'ring-2 ring-indigo-500/50 shadow-[0_0_50px_rgba(99,102,241,0.3)]' : ''}`}>
-                <div className="relative aspect-video w-64 rounded-[1.5rem] overflow-hidden bg-stone-900"><img src={url} alt={label} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" /><div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" /><motion.div animate={{ top: ["-100%", "200%"] }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="absolute left-0 right-0 h-1/2 bg-gradient-to-b from-transparent via-indigo-500/10 to-transparent pointer-events-none" /></div>
-                <div className="absolute bottom-3 left-4 right-3 flex justify-between items-center"><div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /><span className="text-[8px] font-black text-white/80 uppercase tracking-widest">{label || 'EVIDENCE_01'}</span></div><button onClick={(e) => { e.stopPropagation(); onDelete?.(); }} className="p-1.5 rounded-lg bg-black/40 text-white/40 hover:bg-rose-500 hover:text-white transition-all"><X size={10} /></button></div>
+        <div 
+            className={`relative group transition-all duration-500 ${selected ? 'z-[100]' : isBackground ? 'z-0' : 'z-40 hover:scale-[1.02]'}`} 
+            style={{ width: '100%', height: '100%', minWidth: 200, minHeight: 150 }}
+        >
+            <NodeResizer minWidth={200} minHeight={150} isVisible={selected} />
+            
+            {/* AI VISION TAG */}
+            {!isBackground && <div className="absolute top-4 right-4 text-[8px] font-mono text-white font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-50">ID:{id}::PHOTO</div>}
+
+            <div className={`absolute -inset-4 bg-indigo-500/20 rounded-[2rem] blur-2xl opacity-0 ${!isBackground && 'group-hover:opacity-100'} animate-pulse transition-opacity pointer-events-none`} />
+            
+            <div className={`relative w-full h-full rounded-[1.8rem] overflow-hidden transition-all duration-500 ${isBackground ? 'opacity-100 border-4 border-white/10 shadow-inner' : 'bg-gradient-to-br from-white/20 via-white/5 to-black border border-white/10 shadow-2xl p-1'}`}>
+                
+                {/* Image Container */}
+                <div className={`relative w-full h-full ${!isBackground && 'rounded-[1.5rem]'} overflow-hidden bg-stone-900`}>
+                    <img src={url} alt={label} className="w-full h-full object-cover" />
+                    {!isBackground && <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />}
+                </div>
             </div>
-            <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-indigo-400 !border-none" /><Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-indigo-400 !border-none" />
+
+            {/* CONTROLS (Standardised with ShapeNode) */}
+            <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-md transition-all ${selected || !isBackground ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto'}`}>
+                <div className="flex items-center gap-2 px-2 border-r border-white/10 mr-1">
+                    <div className={`w-1.5 h-1.5 rounded-full ${isBackground ? 'bg-indigo-500' : 'bg-emerald-500 animate-pulse'}`} />
+                    <span className="text-[8px] font-black text-white/60 uppercase tracking-widest truncate max-w-[80px]">{label || 'IMAGE'}</span>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); update('isBackground', !isBackground); }} className={`p-2 rounded-xl transition-all ${isBackground ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`} title="Toggle Background"><Layers size={14} /></button>
+                <div className="w-px h-4 bg-white/10" />
+                <button onClick={(e) => { e.stopPropagation(); onDelete?.(); }} className="p-2 rounded-xl text-rose-400 hover:bg-rose-500/20 transition-all"><X size={14} /></button>
+            </div>
+            
+            <Handle type="target" position={Position.Top} className={`!w-2 !h-2 !bg-indigo-400 !border-none ${isBackground ? 'opacity-0' : ''}`} />
+            <Handle type="source" position={Position.Bottom} className={`!w-2 !h-2 !bg-indigo-400 !border-none ${isBackground ? 'opacity-0' : ''}`} />
         </div>
     );
 };
 
-export const DiaryNode = ({ data, selected }) => {
+export const DiaryNode = ({ id, data, selected }) => {
   const { label, duration, type, costRate, quantity, onDelete, isGhost } = data;
   const getThemeStyles = (nodeType) => {
       const t = nodeType?.toLowerCase();
@@ -297,6 +335,9 @@ export const DiaryNode = ({ data, selected }) => {
   const nodeTheme = getThemeStyles(type);
   return (
     <JewelWrapper theme={nodeTheme} selected={selected} isGhost={isGhost} shapeClass="rounded-[2rem]">
+      {/* AI VISION TAG */}
+      <div className="absolute top-2 right-4 text-[8px] font-mono text-white font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-50">ID:{id}::{type?.toUpperCase()}</div>
+
       <div className="flex flex-col gap-4">
           <div className="flex justify-between items-start">
               <div className="relative"><div className={`absolute inset-0 rounded-2xl ${nodeTheme.iconBg} animate-ping opacity-20`} /><div className={`relative p-3.5 rounded-2xl ${nodeTheme.iconBg} backdrop-blur-md shadow-2xl border border-white/10 transition-all group-hover:rotate-3`}>{type === 'staff' ? <User size={22} className={nodeTheme.icon} /> : type === 'equipment' ? <Wrench size={22} className={nodeTheme.icon} /> : <Package size={22} className={nodeTheme.icon} />}</div></div>
@@ -310,11 +351,14 @@ export const DiaryNode = ({ data, selected }) => {
   );
 };
 
-export const DimensionNode = ({ data, selected }) => {
+export const DimensionNode = ({ id, data, selected }) => {
     const { label, width, height } = data;
     const area = (width / 20) * (height / 20);
     return (
         <div className={`relative min-w-[150px] min-h-[150px] p-1 transition-all duration-700 rounded-[2rem] border-2 ${selected ? 'border-indigo-500/50 bg-indigo-500/10 shadow-2xl scale-105' : 'border-white/5 bg-black/20 hover:border-white/20'}`} style={{ width: '100%', height: '100%' }}>
+            {/* AI VISION TAG */}
+            <div className="absolute top-2 right-4 text-[8px] font-mono text-white font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-60">ID:{id}</div>
+
             <NodeResizer minWidth={150} minHeight={150} isVisible={selected} onResize={data.onResize} />
             <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[2rem]"><div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.05),transparent_70%)]" /><div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:20px_20px]" /></div>
             <div className="relative p-6 h-full flex flex-col justify-between"><div><div className="flex items-center gap-3 mb-4"><div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400"><Ruler size={16} /></div><div className="text-sm font-black text-white uppercase tracking-wider truncate">{label}</div></div></div><div className="space-y-2"><div className="flex justify-between items-center text-[10px] font-bold"><span className="text-gray-500 uppercase">Dimensions</span><span className="text-indigo-400 font-mono">{(width/20).toFixed(1)}' x {(height/20).toFixed(1)}'</span></div><div className="flex justify-between items-end"><span className="text-[10px] font-bold text-gray-500 uppercase">Area</span><span className="text-2xl font-black text-white font-mono leading-none">{area.toFixed(0)}<span className="text-xs text-gray-600 ml-1">SQFT</span></span></div></div></div>
@@ -349,3 +393,93 @@ export const WormholeNode = ({ data, selected }) => (
        <div className="text-center z-10 p-12 bg-black/60 backdrop-blur-3xl rounded-full border border-white/5 shadow-2xl ring-1 ring-white/10"><div className="flex justify-center mb-4"><Zap size={48} className="text-indigo-400" /></div><div className="text-3xl font-black text-white uppercase tracking-[0.5em] mb-2">WORMHOLE</div><div className="text-[10px] text-indigo-300 font-black uppercase tracking-widest opacity-40">Holographic Container V2</div>{data.zoneTotal > 0 && (<div className="mt-8 pt-6 border-t border-white/10"><div className="text-4xl font-mono font-black text-emerald-400 animate-pulse">${data.zoneTotal.toLocaleString()}</div></div>)}</div>
     </div>
 );
+
+export const ShapeNode = ({ id, data, selected }) => {
+    const { label, color = 'indigo', shapeType = 'square', isBackground, onDelete } = data;
+    const update = (field, value) => data.onUpdate?.(id, { [field]: value });
+    const [showColors, setShowColors] = useState(false);
+
+    const colorMap = {
+        slate: '#64748b', gray: '#6b7280', zinc: '#71717a', neutral: '#737373', stone: '#78716c',
+        red: '#ef4444', orange: '#f97316', amber: '#f59e0b', yellow: '#eab308', lime: '#84cc16',
+        green: '#22c55e', emerald: '#10b981', teal: '#14b8a6', cyan: '#06b6d4', sky: '#0ea5e9',
+        blue: '#3b82f6', indigo: '#6366f1', violet: '#8b5cf6', purple: '#a855f7', fuchsia: '#d946ef',
+        pink: '#ec4899', rose: '#f43f5e'
+    };
+
+    const colors = Object.keys(colorMap);
+    const activeColor = colorMap[color] || colorMap.indigo;
+
+    const getShapeClass = () => {
+        if (shapeType === 'circle') return 'rounded-full';
+        if (shapeType === 'pill') return 'rounded-[999px]';
+        return 'rounded-[2.5rem]';
+    };
+
+    return (
+        <div 
+            className={`relative group transition-all duration-500 ${selected ? 'z-[100]' : isBackground ? 'z-0 nodrag' : 'z-40 hover:scale-[1.02]'}`} 
+            style={{ width: '100%', height: '100%', minWidth: 150, minHeight: 150 }}
+        >
+            <NodeResizer minWidth={150} minHeight={150} isVisible={selected} />
+            
+            {/* AI VISION TAG */}
+            {!isBackground && <div className="absolute top-4 right-4 text-[8px] font-mono text-white font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-50">ID:{id}::SHAPE</div>}
+
+            <div 
+                className={`absolute inset-0 ${getShapeClass()} transition-all duration-500 overflow-hidden backdrop-blur-xl`}
+                style={{
+                    backgroundColor: isBackground ? activeColor : `${activeColor}33`,
+                    borderColor: isBackground ? `${activeColor}66` : `${activeColor}66`,
+                    borderWidth: isBackground ? '4px' : '1px',
+                    borderStyle: 'solid',
+                    boxShadow: isBackground ? 'inset 0 0 100px rgba(0,0,0,0.2)' : `0 0 30px ${activeColor}33`
+                }}
+            >
+                {!isBackground && <div className={`absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-50 pointer-events-none`} />}
+                {isBackground && <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/grid-me.png')]" />}
+            </div>
+
+            {/* CONTROLS */}
+            <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 transition-all ${selected || !isBackground ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto'}`}>
+                
+                {/* COLOR PALETTE POPUP */}
+                <AnimatePresence>
+                    {showColors && (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                            className="mb-2 p-3 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl grid grid-cols-6 gap-1.5 w-[180px] shadow-2xl"
+                        >
+                            {colors.map(c => (
+                                <button 
+                                    key={c}
+                                    onClick={(e) => { e.stopPropagation(); update('color', c); }}
+                                    title={c}
+                                    className={`w-5 h-5 rounded-full border border-white/10 transition-transform hover:scale-125 ${color === c ? 'ring-2 ring-white scale-110' : ''}`}
+                                    style={{ backgroundColor: colorMap[c] }}
+                                />
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* MAIN BAR */}
+                <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-md">
+                    <button onClick={(e) => { e.stopPropagation(); update('isBackground', !isBackground); }} className={`p-2 rounded-xl transition-all ${isBackground ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`} title="Toggle Background"><Layers size={14} /></button>
+                    <div className="w-px h-4 bg-white/10" />
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setShowColors(!showColors); }}
+                        className={`p-2 rounded-xl transition-all flex items-center gap-2 ${showColors ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <PaintBucket size={14} />
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: activeColor }} />
+                    </button>
+                    <div className="w-px h-4 bg-white/10" />
+                    <button onClick={(e) => { e.stopPropagation(); onDelete?.(); }} className="p-2 rounded-xl text-rose-400 hover:bg-rose-500/20 transition-all"><X size={14} /></button>
+                </div>
+            </div>
+        </div>
+    );
+};

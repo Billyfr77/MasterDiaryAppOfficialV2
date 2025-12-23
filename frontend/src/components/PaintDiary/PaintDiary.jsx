@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { 
-  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder
+  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
@@ -54,6 +54,10 @@ const DraggableItem = ({ item }) => {
         wrapperClass = "bg-gradient-to-r from-amber-500/20 to-yellow-900/20 border-amber-500/30 hover:border-amber-400";
         iconClass = "bg-amber-500/20 text-amber-400";
         icon = <Award size={16} />;
+    } else if (item.type === 'shapeNode') {
+        wrapperClass = "bg-gradient-to-r from-violet-500/20 to-purple-900/20 border-violet-500/30 hover:border-violet-400";
+        iconClass = "bg-violet-500/20 text-violet-400";
+        icon = <Shapes size={16} />;
     }
 
     return (
@@ -711,17 +715,19 @@ const PaintDiary = () => {
   }, [handleInstantiateTemplate]);
 
   const handleConfirmItem = (details) => {
-      const isExtraNode = ['chronos', 'delay', 'impact', 'wormhole', 'zone', 'photoNode', 'allowance', 'neuralPrism'].includes(details.type);
+      const isExtraNode = ['chronos', 'delay', 'impact', 'wormhole', 'zone', 'photoNode', 'allowance', 'neuralPrism', 'shapeNode'].includes(details.type);
       
       if (isExtraNode) {
+          const { onDelete, onUpdate, ...cleanData } = details;
           const newExtra = {
               id: generateId(),
               type: details.type,
               position: pendingItem.position,
               data: {
-                  ...details,
-                  label: details.name,
-                  onDelete: () => handleRemoveItem(newExtra.id)
+                  ...cleanData,
+                  label: details.name || details.label,
+                  shapeType: details.shapeType,
+                  color: details.color
               }
           };
           setCurrentEntry(prev => ({ ...prev, extraNodes: [...prev.extraNodes, newExtra] }));
@@ -863,11 +869,12 @@ const PaintDiary = () => {
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-4 gap-2 p-2 bg-black/60 rounded-[1.8rem] border border-white/5 mb-4 backdrop-blur-2xl shadow-inner">
+                    <div className="grid grid-cols-3 gap-2 p-2 bg-black/60 rounded-[1.8rem] border border-white/5 mb-4 backdrop-blur-2xl shadow-inner">
                         {[
                             { id: 'staff', icon: <User size={16} />, label: 'Staff' },
                             { id: 'equipment', icon: <Wrench size={16} />, label: 'Eqp' },
                             { id: 'material', icon: <Package size={16} />, label: 'Mat' },
+                            { id: 'shapes', icon: <Shapes size={16} />, label: 'Zone' },
                             { id: 'time', icon: <Clock size={16} />, label: 'Time' },
                             { id: 'allowance', icon: <DollarSign size={16} />, label: 'Cost' },
                             { id: 'templates', icon: <Box size={16} />, label: 'Tmpl' },
@@ -877,7 +884,7 @@ const PaintDiary = () => {
                             <button 
                                 key={t.id} 
                                 onClick={() => setResourceTab(t.id)} 
-                                className={`group relative py-3.5 rounded-[1.2rem] flex flex-col items-center justify-center gap-1.5 transition-all duration-500 border overflow-hidden ${
+                                className={`group relative py-2.5 rounded-[1.2rem] flex flex-col items-center justify-center gap-1 transition-all duration-500 border overflow-hidden ${
                                     resourceTab === t.id 
                                     ? `border-white/40 text-white z-10 scale-105` 
                                     : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white hover:bg-white/[0.08] hover:border-white/20'
@@ -887,10 +894,10 @@ const PaintDiary = () => {
                                     boxShadow: `0 0 35px -5px ${theme.accent}88, inset 0 0 15px rgba(255,255,255,0.4)`
                                 } : {}}
                             >
-                                <div className={`relative z-10 transition-all duration-500 ${resourceTab === t.id ? 'scale-110 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]' : 'group-hover:scale-110 group-hover:text-white'}`}>
+                                <div className={`relative z-10 transition-all duration-500 ${resourceTab === t.id ? 'scale-110' : 'group-hover:scale-110 group-hover:text-white'}`}>
                                     {t.icon}
                                 </div>
-                                <span className={`relative z-10 text-[8px] font-black uppercase tracking-[0.15em] leading-none transition-all duration-500 ${resourceTab === t.id ? 'opacity-100 translate-y-0 text-white' : 'opacity-40 translate-y-0.5'}`}>
+                                <span className={`relative z-10 text-[7px] font-black uppercase tracking-[0.1em] leading-none transition-all duration-500 ${resourceTab === t.id ? 'opacity-100 translate-y-0 text-white' : 'opacity-40 translate-y-0.5'}`}>
                                     {t.label}
                                 </span>
                                 
@@ -932,6 +939,20 @@ const PaintDiary = () => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    ) : resourceTab === 'shapes' ? (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="text-[10px] font-black text-violet-400 uppercase tracking-widest px-1 mb-2">Smart Zones</div>
+                            <div className="space-y-2">
+                                <DraggableItem item={{ id: 's1', name: 'Square Zone', type: 'shapeNode', shapeType: 'square', color: 'indigo' }} />
+                                <DraggableItem item={{ id: 's2', name: 'Circle Zone', type: 'shapeNode', shapeType: 'circle', color: 'emerald' }} />
+                                <DraggableItem item={{ id: 's3', name: 'Pill Zone', type: 'shapeNode', shapeType: 'pill', color: 'rose' }} />
+                            </div>
+                            <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/10">
+                                <p className="text-[10px] text-gray-400 leading-relaxed">
+                                    <span className="text-violet-400 font-bold">Tip:</span> Drag a zone onto the canvas, enable "Background Mode" via the layer icon, and group your nodes visually.
+                                </p>
+                            </div>
                         </div>
                     ) : resourceTab === 'templates' ? (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

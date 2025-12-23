@@ -5,7 +5,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { Zap, FileText } from 'lucide-react';
 import { useTimelineEngine } from './TimelineEngine';
-import { DiaryNode, WormholeNode, ZoneNode, ChronosNode, ImpactNode, DelayNode, PhotoNode, AllowanceNode, DimensionNode, NeuralPrismNode } from './TimelineNodes';
+import { DiaryNode, WormholeNode, ZoneNode, ChronosNode, ImpactNode, DelayNode, PhotoNode, AllowanceNode, DimensionNode, NeuralPrismNode, ShapeNode } from './TimelineNodes';
 import { SmartEdgeTypes } from './SmartEdges';
 import { api } from '../../utils/api';
 import { useNotification } from '../../context/NotificationContext';
@@ -161,7 +161,8 @@ const TimelineCanvasContent = (props) => {
       photoNode: PhotoNode,
       allowance: AllowanceNode,
       dimension: DimensionNode,
-      neuralPrism: NeuralPrismNode 
+      neuralPrism: NeuralPrismNode,
+      shapeNode: ShapeNode 
   }), []);
 
   const edgeTypes = useMemo(() => SmartEdgeTypes, []);

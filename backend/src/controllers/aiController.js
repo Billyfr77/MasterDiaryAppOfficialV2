@@ -525,7 +525,7 @@ const generateNodeSuggestions = async (req, res) => {
 const chatSmartAssistant = async (req, res) => {
     try {
         const { message, context } = req.body;
-        const { canvasItems = [], canvasTemplates = [] } = context || {};
+        const { canvasItems = [], extraNodes = [], edges = [], canvasTemplates = [] } = context || {};
 
         // Fetch available templates for AI awareness
         const templates = await DiaryTemplate.findAll({ 
@@ -534,7 +534,21 @@ const chatSmartAssistant = async (req, res) => {
         });
 
         const templateContext = templates.map(t => `${t.name} (ID: ${t.id}) - ${t.description}`).join(', ');
-        const canvasContext = canvasItems.map(i => `${i.name} (${i.type})`).join(', ');
+        
+        // Item List
+        const itemsContext = canvasItems.map(i => `[${i.id}] ${i.name} (${i.type}, Qty:${i.quantity})`).join('\n');
+        
+        // Special Nodes (Chronos, Delay, etc.)
+        const extrasContext = extraNodes.map(n => {
+            let details = '';
+            if (n.type === 'chronos') details = `Start:${n.data?.startTime}, End:${n.data?.finishTime}, Dur:${n.data?.duration}`;
+            if (n.type === 'delay') details = `Weather:${n.data?.weatherType}, Dur:${n.data?.duration}`;
+            if (n.type === 'allowance') details = `Rate:$${n.data?.rate}, Type:${n.data?.allowanceType}`;
+            return `[${n.id}] ${n.data?.label || n.type.toUpperCase()} (${n.type}) - ${details}`;
+        }).join('\n');
+
+        // Connections (The Circuit)
+        const graphContext = edges.map(e => `[${e.source}] --(${e.type || 'link'})--> [${e.target}]`).join('\n');
 
         const systemPrompt = `
             You are "Pinnacle AI", the advanced construction diary assistant.
@@ -549,7 +563,16 @@ const chatSmartAssistant = async (req, res) => {
             5. **'dimension'**: If measurements (Length x Width) are mentioned.
             6. **'diaryNode'**: For standard staff, equipment, and material resources.
             
-            **Current Canvas Context:** ${canvasContext || 'Empty'}
+            **Current Visual Graph Structure:**
+            --- NODES (Resources) ---
+            ${itemsContext || 'None'}
+            
+            --- EXTRAS (Logic/Time) ---
+            ${extrasContext || 'None'}
+            
+            --- CONNECTIONS (Circuit) ---
+            ${graphContext || 'None'}
+            
             **Available Templates:** ${templateContext || 'None'}
 
             **Output Format (JSON Only):**
@@ -570,13 +593,14 @@ const chatSmartAssistant = async (req, res) => {
             }
 
             **Strategy Mandate:**
+            - You can see the graph. If a 'delay' node is NOT connected to a 'chronos' node, warn the user.
             - If user says "it started raining", suggest a 'delay' node with weatherType: 'rain'.
             - If user says "how am I doing?", suggest a 'neuralPrism' node.
             - If user mentions a room size, suggest a 'dimension' node.
         `;
 
-        // 1000 tokens for smart but cost-effective responses
-        const result = await pinnacleAi.generateJSON(`User: "${message}"`, systemPrompt, 1000);
+        // 1200 tokens for graph-aware responses
+        const result = await pinnacleAi.generateJSON(`User: "${message}"`, systemPrompt, 1200);
         res.json(result);
 
     } catch (error) {

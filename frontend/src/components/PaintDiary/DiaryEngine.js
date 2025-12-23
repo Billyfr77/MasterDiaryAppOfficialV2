@@ -363,7 +363,15 @@ export const useDiaryEngine = () => {
       setChatMessages(prev => [...prev, userMsg]);
       setChatTyping(true);
       try {
-          const res = await api.post('/ai/chat-smart', { message, context: { canvasItems: currentEntry.items, canvasContext: currentEntry.note } });
+          const res = await api.post('/ai/chat-smart', { 
+              message, 
+              context: { 
+                  canvasItems: currentEntry.items, 
+                  extraNodes: currentEntry.extraNodes,
+                  edges: currentEntry.edges,
+                  canvasContext: currentEntry.note 
+              } 
+          });
           const aiMsg = { id: generateId(), role: 'assistant', content: res.data.reply, suggestedNodes: res.data.suggestedNodes || [], suggestedTemplates: res.data.suggestedTemplates || [] };
           setChatMessages(prev => [...prev, aiMsg]);
       } catch (err) {
