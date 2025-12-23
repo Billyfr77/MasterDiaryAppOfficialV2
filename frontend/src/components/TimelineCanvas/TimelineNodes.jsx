@@ -849,25 +849,143 @@ export const TaskNode = ({ id, data, selected }) => {
 
 
 
-                {/* PROGRESS ENGINE */}
+                                {/* DUAL-LAYER PROGRESS ENGINE */}
 
-                <div className="space-y-2">
 
-                    <div className="flex justify-between items-end">
 
-                        <div className="text-[9px] font-bold text-gray-400 uppercase">Progress Engine</div>
+                                <div className="space-y-2">
 
-                        <div className={`text-xs font-mono font-black ${isOver ? 'text-rose-400' : 'text-emerald-400'}`}>{actualHours} / {plannedHours}H</div>
 
-                    </div>
 
-                    <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-[2px]">
+                                    <div className="flex justify-between items-end border-b border-white/5 pb-2">
 
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className={`h-full rounded-full ${isOver ? 'bg-rose-500 shadow-[0_0_10px_#f43f5e]' : 'bg-emerald-500 shadow-[0_0_30px_#10b981]'}`} />
 
-                    </div>
 
-                </div>
+                                        <div>
+
+
+
+                                            <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Production Progress</div>
+
+
+
+                                            <div className={`text-xs font-mono font-black ${isOver ? 'text-rose-400' : 'text-emerald-400'}`}>
+
+
+
+                                                {actualHours}<span className="text-[10px] text-gray-600 mx-1">/</span>{plannedHours}H
+
+
+
+                                            </div>
+
+
+
+                                        </div>
+
+
+
+                                        <div className="text-right">
+
+
+
+                                            <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Cost Burn</div>
+
+
+
+                                            <div className="text-xs font-mono font-black text-rose-400">${parseFloat(actualCost).toLocaleString()}</div>
+
+
+
+                                        </div>
+
+
+
+                                    </div>
+
+
+
+                                    
+
+
+
+                                    {/* The Dual Bar */}
+
+
+
+                                    <div className="relative h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-[2px]">
+
+
+
+                                        {/* Quoted/Estimated 'Ghost' Layer */}
+
+
+
+                                        <div 
+
+
+
+                                            className="absolute inset-y-0 left-0 bg-indigo-500/20 border-r border-indigo-500/40 z-0" 
+
+
+
+                                            style={{ width: '100%' }} // In this context, plannedHours is the current target
+
+
+
+                                        />
+
+
+
+                                        {/* Actual Progress Layer */}
+
+
+
+                                        <motion.div 
+
+
+
+                                            initial={{ width: 0 }} 
+
+
+
+                                            animate={{ width: `${progress}%` }} 
+
+
+
+                                            className={`h-full rounded-full relative z-10 ${isOver ? 'bg-rose-500 shadow-[0_0_15px_#f43f5e]' : 'bg-emerald-500 shadow-[0_0_25px_#10b981]'}`} 
+
+
+
+                                        />
+
+
+
+                                    </div>
+
+
+
+                                    {isOver && (
+
+
+
+                                        <div className="flex items-center gap-1.5 text-[7px] font-black text-rose-400 uppercase animate-pulse">
+
+
+
+                                            <AlertTriangle size={8} /> Estimate Horizon Exceeded
+
+
+
+                                        </div>
+
+
+
+                                    )}
+
+
+
+                                </div>
 
 
 
