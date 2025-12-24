@@ -1,0 +1,338 @@
+Overview
+The MasterDiaryOS Intelligence Stack is a collection of modular, read‑only AI nodes that interpret, analyze, forecast, and contextualize project diary data.
+
+These nodes:
+
+do not modify existing data
+
+do not interfere with existing AI features
+
+do not alter schemas
+
+do not generate nodes/canvas/workflows
+
+only read data and output new structured intelligence blocks
+
+Each node is optional, non‑blocking, and fully compatible with the current MasterDiaryOS architecture.
+
+🧩 Node Index
+Node ID	Purpose
+diary.intelligenceLayer.v1	Interprets today’s diary data
+diary.forecastLayer.v1	Predicts tomorrow + week ahead
+diary.trendLayer.v1	Identifies cross‑day patterns
+diary.qualityLayer.v1	Detects compliance + quality gaps
+diary.riskLayer.v1	Computes unified risk signals
+diary.storyLayer.v1	Generates weekly narrative summaries
+diary.photoIntelLayer.v1	Interprets site photos (optional)
+diary.crossJobIntelLayer.v1	Portfolio‑level intelligence
+Each node is defined below.
+
+1. diary.intelligenceLayer.v1
+Interpretive brain of the Diary
+Purpose
+Transforms raw diary data into:
+
+daily narrative
+
+anomaly detection
+
+next‑action recommendations
+
+reconstructed timeline
+
+meta confidence signals
+
+Input (read‑only)
+Structured diary JSON.
+
+Output
+Code
+{
+  "narrative": "string",
+  "anomalies": [...],
+  "next_actions": [...],
+  "timeline": [...],
+  "meta": {...}
+}
+Behavior
+factual
+
+deterministic
+
+no hallucination
+
+no schema modification
+
+2. diary.forecastLayer.v1
+Predictive intelligence for tomorrow and the week ahead
+Purpose
+Predicts:
+
+productivity
+
+burn rate
+
+drift
+
+staffing sufficiency
+
+weather‑adjusted risk
+
+Input
+Diary data + optional previous days.
+
+Output
+Code
+{
+  "forecast": {
+    "tomorrow": {...},
+    "week_ahead": {...}
+  },
+  "risks": [...],
+  "meta": {...}
+}
+Behavior
+read‑only
+
+no workflow modification
+
+no auto‑scheduling
+
+3. diary.trendLayer.v1
+Cross‑day pattern recognition
+Purpose
+Identifies trends across:
+
+productivity
+
+cost burn
+
+drift
+
+equipment usage
+
+staffing consistency
+
+Input
+Array of past diary entries.
+
+Output
+Code
+{
+  "trends": [...],
+  "pattern_summary": "string",
+  "meta": {...}
+}
+Behavior
+no modification of historical data
+
+no forecasting (handled by forecastLayer)
+
+4. diary.qualityLayer.v1
+Quality + compliance intelligence
+Purpose
+Detects:
+
+missing signatures
+
+missing photos
+
+missing safety notes
+
+incomplete tasks
+
+compliance gaps
+
+Input
+Diary + safety + task data.
+
+Output
+Code
+{
+  "quality_issues": [...],
+  "compliance_gaps": [...],
+  "recommended_checks": [...],
+  "meta": {...}
+}
+Behavior
+does not auto‑fix anything
+
+does not create tasks
+
+purely advisory
+
+5. diary.riskLayer.v1
+Unified risk scoring engine
+Purpose
+Computes risk across:
+
+schedule
+
+cost
+
+quality
+
+weather
+
+equipment
+
+Input
+Diary + anomalies + trends + forecast (optional).
+
+Output
+Code
+{
+  "risk_score": 0-100,
+  "risk_bands": {
+    "schedule": "low|medium|high",
+    "cost": "...",
+    "quality": "...",
+    "weather": "...",
+    "equipment": "..."
+  },
+  "explanations": [...],
+  "meta": {...}
+}
+Behavior
+read‑only
+
+no auto‑escalation
+
+no workflow modification
+
+6. diary.storyLayer.v1
+Cinematic weekly summary engine
+Purpose
+Generates:
+
+weekly narrative
+
+key wins
+
+key risks
+
+major events
+
+recommended actions
+
+Input
+7 days of diary data.
+
+Output
+Code
+{
+  "weekly_narrative": "string",
+  "highlights": [...],
+  "risks": [...],
+  "actions": [...],
+  "meta": {...}
+}
+Behavior
+no modification of diary entries
+
+no cross‑job inference
+
+7. diary.photoIntelLayer.v1
+Optional visual intelligence layer
+Purpose
+Interprets site photos to detect:
+
+progress
+
+safety issues
+
+material usage
+
+site conditions
+
+Input
+Photo metadata + diary context.
+
+Output
+Code
+{
+  "photo_insights": [...],
+  "safety_flags": [...],
+  "progress_estimates": [...],
+  "meta": {...}
+}
+Behavior
+does not store or modify photos
+
+does not override human safety decisions
+
+8. diary.crossJobIntelLayer.v1
+Portfolio‑level intelligence
+Purpose
+Analyzes multiple jobs to identify:
+
+which jobs are at risk
+
+which jobs are outperforming
+
+cross‑job anomalies
+
+resource bottlenecks
+
+portfolio‑level trends
+
+Input
+Array of job summaries.
+
+Output
+Code
+{
+  "portfolio_summary": "string",
+  "job_rankings": [...],
+  "portfolio_risks": [...],
+  "resource_signals": [...],
+  "meta": {...}
+}
+Behavior
+read‑only
+
+no job‑to‑job data mutation
+
+no auto‑reallocation of resources
+
+🔐 Safety & Compatibility Rules (Global)
+All nodes MUST:
+
+operate in read‑only mode
+
+be deterministic
+
+be schema‑consistent
+
+be optional and non‑blocking
+
+degrade gracefully with missing data
+
+All nodes MUST NOT:
+
+modify diary data
+
+modify tasks or workflows
+
+generate nodes or canvas data
+
+alter PRISM_CORE, CHRONOS, HUB_SYNC, DELAY
+
+introduce required fields
+
+break backward compatibility
+
+🧠 Intelligence Stack Philosophy
+Each node is:
+
+modular
+
+isolated
+
+cinematic
+
+non‑destructive
+
+future‑proof
+
+Together, they transform MasterDiaryOS into a thinking environment — not just a project management tool.

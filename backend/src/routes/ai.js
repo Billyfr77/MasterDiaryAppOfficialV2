@@ -34,6 +34,7 @@ router.post('/parse-diary', aiController.parseDiaryLog); // Smart Log
 router.post('/dashboard-insights', aiController.generateDashboardInsights); // Neural Core
 router.post('/node-suggestions', aiController.generateNodeSuggestions); // Ghost Node Pulse
 router.post('/analyze-prism', aiController.analyzePrismVelocity); // PRISM POWER MODE
+router.post('/analyze-intelligence', aiController.analyzeIntelligenceLayer); // INTEL LAYER V1
 
 // Chat Aliases
 router.post('/chat-quote', aiController.chatQuoteAssistant);

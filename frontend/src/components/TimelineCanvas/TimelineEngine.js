@@ -439,10 +439,10 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
 
               window[`prism_${prismId}`] = setTimeout(async () => {
                   try {
-                      // Unified Topology for AI
+                      // Unified Topology for AI - STRIPPED for Cost Efficiency
                       const fullTopology = [
-                          ...(hubData.workers || []).map(w => ({ ...w, nodeType: 'staff' })),
-                          ...(hubData.resources || []).map(r => ({ ...r, nodeType: r.type || 'equipment' })),
+                          ...(hubData.workers || []).map(w => ({ id: w.id, name: w.name, role: w.role, duration: w.duration, nodeType: 'staff' })),
+                          ...(hubData.resources || []).map(r => ({ id: r.id, name: r.name, type: r.type, quantity: r.quantity, nodeType: r.type || 'equipment' })),
                           ...(hubData.extras || []).map(e => ({ id: e.id, type: e.type, label: e.data?.label || e.label })),
                           ...(hubData.delays || []).map(d => ({ id: d.id, type: 'delay', label: d.data?.label, duration: d.data?.duration, weather: d.data?.weatherType })),
                           ...(hubData.breaks || []).map(b => ({ id: b.id, type: 'break', duration: b.data?.duration }))

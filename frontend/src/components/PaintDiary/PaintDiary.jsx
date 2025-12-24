@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { 
-  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList, Circle, ShieldCheck, Crown
+  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList, Circle, ShieldCheck, Crown, Cpu
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../utils/api';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -16,6 +17,7 @@ import ItemDetailsModal from './ItemDetailsModal';
 import ChronosManagerModal from './ChronosManagerModal';
 import DiaryGantt from './DiaryGantt';
 import ItemList from './ItemList';
+import IntelligenceLayer from './IntelligenceLayer';
 import PowerHeader from '../ui/PowerHeader';
 import AestheticPicker from './AestheticPicker';
 
@@ -497,11 +499,44 @@ const PaintDiary = () => {
   const [showDiaryList, setShowDiaryList] = useState(false);
   const [diariesList, setDiariesList] = useState([]);
   const [isPulseActive, setIsPulseActive] = useState(false);
+  const [showIntelligence, setShowIntelligence] = useState(false);
   const [selectedChronos, setSelectedChronos] = useState(null);
   const [connectedNodes, setConnectedNodes] = useState([]);
   const [pendingItem, setPendingItem] = useState(null);
 
   const { addNotification } = useNotification();
+
+  // --- DERIVE INTELLIGENCE INPUT ---
+  const derivedDiaryData = useMemo(() => {
+      const tasks = currentEntry.extraNodes.filter(n => n.type === 'taskNode');
+      const delays = currentEntry.extraNodes.filter(n => n.type === 'delay');
+      const chronos = currentEntry.extraNodes.filter(n => n.type === 'chronos' && n.data?.startTime);
+      
+      const planned = tasks.reduce((sum, t) => sum + (parseFloat(t.data?.plannedHours) || 0), 0);
+      const completed = tasks.reduce((sum, t) => sum + (parseFloat(t.data?.actualHours) || 0), 0);
+      const drift = tasks.reduce((sum, t) => sum + (parseFloat(t.data?.timeDrift?.replace('h','')) || 0), 0);
+
+      return {
+          shift_start_time: chronos[0]?.data?.startTime || '07:00',
+          shift_end_time: chronos[0]?.data?.finishTime || '15:00',
+          production_hours_planned: planned,
+          production_hours_completed: completed,
+          time_drift_hours: drift,
+          cost_burn: cost,
+          burn_rate: cost / (chronos[0]?.data?.duration || 8),
+          margin: profit / (revenue || 1),
+          productivity_percent: productivityScore,
+          weather_event: delays[0]?.data?.weatherType || 'none',
+          weather_impact: delays[0]?.data?.reason || 'none',
+          staff_list: resolvedItems.filter(i => i.type === 'staff').map(s => ({ name: s.name, role: s.role, dur: s.duration, skills: s.skillTags })),
+          task_list: tasks.map(t => ({ label: t.data?.label, planned: t.data?.plannedHours, actual: t.data?.actualHours })),
+          job_metadata: {
+              projectName: selectedProject?.name,
+              projectStatus: selectedProject?.status,
+              contractValue: projectFinancials?.contractValue
+          }
+      };
+  }, [currentEntry, cost, profit, revenue, productivityScore, selectedProject, projectFinancials]);
 
   const handleCreateCustomTask = () => {
       if (!newTaskName || !newTaskHours) return;
@@ -932,6 +967,12 @@ const PaintDiary = () => {
                 <button onClick={handleNewEntry} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><Plus size={16} /> New</button>
                 <button onClick={handleLoadEntries} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><List size={16} /> Load</button>
                 <button onClick={() => setShowSaveTemplate(true)} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><Box size={16} /> Template</button>
+                <button 
+                    onClick={() => setShowIntelligence(!showIntelligence)} 
+                    className={`px-4 py-2.5 ${showIntelligence ? 'bg-indigo-600 text-white shadow-[0_0_20px_#6366f1]' : 'bg-white/5 text-gray-400'} border border-white/10 rounded-xl font-bold transition-all text-xs uppercase tracking-widest flex items-center gap-2`}
+                >
+                    <Cpu size={16} className={showIntelligence ? 'animate-spin-slow' : ''} /> Insights
+                </button>
                 <button onClick={handlePrintToInvoice} className={`px-4 py-2.5 bg-${theme.primary}-600/20 hover:bg-${theme.primary}-600/30 border border-${theme.primary}-500/20 text-${theme.primary}-400 rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-${theme.primary}-900/20`}><CreditCard size={16} /> Invoice</button>
 
                 <button onClick={() => setShowSmartLog(true)} className={`flex items-center gap-2 px-4 py-2.5 bg-${theme.primary}-600/20 border border-${theme.primary}-500/30 text-${theme.primary}-400 rounded-xl font-bold hover:bg-${theme.primary}-600 hover:text-white transition-all shadow-lg shadow-${theme.primary}-900/20 text-xs uppercase tracking-wider`}><Sparkles size={16} /> AI Log</button>
@@ -1099,18 +1140,15 @@ const PaintDiary = () => {
                         </div>
                     ) : resourceTab === 'shapes' ? (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="text-[10px] font-black text-violet-400 uppercase tracking-widest px-1 mb-2">Smart Zones</div>
+                            <div className="text-[10px] font-black text-violet-400 uppercase tracking-widest px-1 mb-2">Spatial Logic</div>
                             <div className="space-y-2">
                                 <DraggableItem item={{ id: 'z1', name: 'Container Zone', type: 'zone', zoneTotal: 0 }} />
                                 <DraggableItem item={{ id: 'w1', name: 'Wormhole', type: 'wormhole' }} />
+                                <DraggableItem item={{ id: 'd1', name: 'Dimension Area', type: 'dimension', width: 200, height: 200 }} />
+                                <div className="h-px bg-white/5 my-4" />
                                 <DraggableItem item={{ id: 's1', name: 'Square Shape', type: 'shapeNode', shapeType: 'square', color: 'indigo' }} />
                                 <DraggableItem item={{ id: 's2', name: 'Circle Shape', type: 'shapeNode', shapeType: 'circle', color: 'emerald' }} />
                                 <DraggableItem item={{ id: 's3', name: 'Pill Shape', type: 'shapeNode', shapeType: 'pill', color: 'rose' }} />
-                            </div>
-                            <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/10">
-                                <p className="text-[10px] text-gray-400 leading-relaxed">
-                                    <span className="text-violet-400 font-bold">Tip:</span> Drag a zone onto the canvas, enable "Background Mode" via the layer icon, and group your nodes visually.
-                                </p>
                             </div>
                         </div>
                     ) : resourceTab === 'templates' ? (
@@ -1167,7 +1205,10 @@ const PaintDiary = () => {
                             <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest px-1 mb-2 mt-4">Site Intelligence</div>
                             <DraggableItem item={{ id: 'prism-alpha', name: 'Neural Prism', type: 'neuralPrism', velocity: 1.0, completionTime: 'Pending' }} />
                             <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest px-1 mb-2 mt-4">Site Impacts</div>
-                            <DraggableItem item={{ id: 'weather-primary', name: 'Weather', type: 'delay', duration: 0, weatherType: 'none', reason: 'Weather Event' }} />
+                            <div className="space-y-2">
+                                <DraggableItem item={{ id: 'weather-primary', name: 'Weather Delay', type: 'delay', duration: 0, weatherType: 'none', reason: 'Weather Event' }} />
+                                <DraggableItem item={{ id: 'impact-primary', name: 'Site Impact', type: 'impact', label: 'Impact', condition: 'Operational' }} />
+                            </div>
                         </div>
                     ) : resourceTab === 'allowance' ? (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1293,6 +1334,15 @@ const PaintDiary = () => {
                     </div>
                 )}
             </div>
+        </div>
+
+        {/* INTELLIGENCE LAYER - ADDITIVE MODULE */}
+        <div className="w-full px-4 mt-8">
+            <AnimatePresence>
+                {showIntelligence && (
+                    <IntelligenceLayer diaryData={derivedDiaryData} active={showIntelligence} />
+                )}
+            </AnimatePresence>
         </div>
 
         {/* ITEM LIST - BOTTOM */}

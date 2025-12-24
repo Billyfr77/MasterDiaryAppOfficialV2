@@ -22,7 +22,7 @@
     "exif-js": "^2.3.0",
     "framer-motion": "^12.23.25",
     "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.3",
+    "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.553.0",
     "mapbox-gl": "^3.16.0",

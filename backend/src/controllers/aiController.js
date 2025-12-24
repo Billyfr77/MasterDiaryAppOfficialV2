@@ -678,6 +678,58 @@ const analyzePrismVelocity = async (req, res) => {
     }
 };
 
+// --- ADDITIVE INTELLIGENCE MODULE (diary.intelligenceLayer.v1) ---
+const analyzeIntelligenceLayer = async (req, res) => {
+    try {
+        const { diaryData } = req.body;
+        if (!diaryData) return res.status(400).json({ error: "Diary data required for interpretation." });
+
+        const systemPrompt = `
+            You are "diary.intelligenceLayer.v1.PRO", the elite forensic analyst module for MasterDiaryOS.
+            **Goal:** Transform raw site data into blue-chip executive intelligence reports.
+            **Mandate:** Extreme depth, factual precision, and predictive forecasting.
+
+            **INTELLIGENCE PILLARS (DEEP DIVE):**
+            1. **Strategic Outlook:** A high-level 3-sentence summary of project health relative to the end date.
+            2. **Forensic Highlights:** 3-5 specific accomplishments or data-backed observations.
+            3. **Margin Erosion Audit:** Explicit detection of cost leaks or inefficient resource density.
+            4. **Operational Velocity:** Analysis of production hours vs. milestones.
+
+            **Output Schema (Strict JSON):**
+            {
+              "strategic_outlook": "string",
+              "forensic_highlights": "string",
+              "narrative": "Full executive briefing (6-10 sentences).",
+              "anomalies": [
+                { 
+                  "type": "Financial | Operational | Temporal | Resource | Safety", 
+                  "description": "Forensic detail.", 
+                  "severity": "low|medium|high", 
+                  "data_point": "string", 
+                  "root_cause": "string",
+                  "mitigation_priority": "string"
+                }
+              ],
+              "next_actions": ["string (Highly specific tactical commands)"],
+              "timeline": ["string (Chronological events with logical inference)"],
+              "meta": {
+                "confidence": "low|medium|high",
+                "forensic_notes": "Internal reasoning logs"
+              }
+            }
+
+            **Tone:** High-end consultancy. Direct, authoritative, and data-driven.
+        `;
+
+        const result = await pinnacleAi.generateJSON(`Interpret this data: ${JSON.stringify(diaryData)}`, systemPrompt, 1500);
+        res.json(result);
+
+    } catch (error) {
+        console.error("AI Intelligence Layer Error:", error.message);
+        res.status(500).json({ error: "Intelligence Layer is offline." });
+    }
+};
+
 const generateQuoteScope = async (req, res) => {
     try {
         const { items, projectName } = req.body;
@@ -727,5 +779,6 @@ module.exports = {
   generateDashboardInsights,
   generateNodeSuggestions,
   chatSmartAssistant,
-  analyzePrismVelocity // EXPORT PRISM
+  analyzePrismVelocity,
+  analyzeIntelligenceLayer // EXPORT INTEL LAYER
 };

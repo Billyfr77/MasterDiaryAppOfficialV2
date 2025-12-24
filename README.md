@@ -1,100 +1,84 @@
-# MasterDiaryOS — The Neural Operating System (Neural OS) 🚀
-
-**MasterDiaryOS** is the world’s first **Neural Operating System** for the construction and heavy industry sectors. It has evolved beyond a "Visual Simulation Engine" into a self-aware, predictive, and causal operation system that treats project data as a living neural network.
-
-**Creator & Architect:** Billy Freeman
-
----
-
-## 🏛️ 1. Core System Architecture
-MasterDiaryOS operates through three primary, interconnected intelligence layers:
-
-### 1.1 Neural Diary Engine (NDE)
-The execution layer. Powered by the **Neural Prism Engine V3**, it captures real-time site data through a visual node-graph and performs multi-step causal reasoning to identify drift and productivity leaks.
-
-### 1.2 Neural Estimation Engine (NEE)
-The planning layer. It utilizes **Job DNA** (historical cross-job learning) to generate hyper-accurate, ID-driven visual quotes. These quotes serve as the "Estimated Baseline" for the NDE.
-
-### 1.3 Neural Workflow Engine (NWE)
-The automation layer. It converts complex text-based operational goals into structured workflow graphs, linking milestones, approvals, and resource-actions directly into the project timeline.
+# 🏗️ MasterDiaryOS // The Neural Construction Operating System
+**Version:** 2.5.0 (Flagship Edition)
+**Intelligence Core:** grok-4-1-fast-reasoning (Flagship Engine)
+**Architecture:** AI-Native Topological Graph
 
 ---
 
-## 🧠 2. Neural Prism Engine V3 (The Brain)
-The NPE is the central intelligence node of the job. It is not a widget; it is a **Holographic Control Surface**.
-
-### 2.1 Causal Path Analysis
-The NPE identifies the **Root Cause** of project failures. It traces variances across node IDs (e.g., `Rain Delay (D1) -> Crew Idle (S1) -> Task Drift (T1) -> Margin Erosion`).
-- **Interactive UI:** Click any step in the causal chain to highlight the offending node on the canvas.
-
-### 2.2 Multi-Scenario Simulation (What-If Engine)
-The Prism can simulate alternate futures. Users can query: *"What if I add another painter?"*
-- **Outputs:** Recalculates drift deltas, cost deltas, and predicted margin impact.
-- **Sim View:** A dedicated dashboard within the Prism comparing the "Current Baseline" to "AI Optimized Scenarios."
-
-### 2.3 Live Margin Predictor & Burn Monitor
-- **Live Margin:** Predicts final project profit in real-time by comparing the **Approved Quote Baseline** against the **Current Actual Burn Rate**.
-- **Burn Rate Monitor:** Visualizes cost-per-hour intensity with a dynamic momentum wave.
-
-### 2.4 Autonomous Intervention
-- **Deploy Optimized Model:** A one-click action that injects "Stabilizer Nodes" into the graph to balance high-drift branches or re-sequence tasks for optimal recovery.
+## 📜 Executive Overview
+MasterDiaryOS is an **AI-Native Construction Operating System** designed to transform construction management from a manual, form-based chore into a high-fidelity **Operational Circuit**. Every module in the app is interconnected through a unified logic lattice, allowing data from a quote to flow into a site diary, and finally into a branded invoice with zero manual re-entry.
 
 ---
 
-## ⚡ 3. TaskNodes (The Atomic Work Unit)
-TaskNodes represent specific units of work (e.g., "Trenching", "Fencing") and serve as the primary data aggregators.
+## 🧠 Core Intelligence Modules
 
-### 3.1 Dual-Layer Progress Engine
-- **Top Layer (Actual):** Visualizes crew hours and material quantities consumed in real-time.
-- **Bottom Layer (Estimated):** Displays the "Ghost" baseline from the approved quote.
-- **Horizon Alerts:** The progress bar shifts from Emerald to Rose-Crimson when the **Estimate Horizon** is exceeded.
+### 1. Neural Diary Engine (NDE) // Site Execution
+The execution layer that captures site reality via an interactive **Calculated Canvas**.
+*   **The Chronos System:** Centralized time hubs that propagate shift data across connected resources.
+*   **Hierarchical Command Propagation:** Advanced team building where subordinates and machinery automatically inherit durations from their linked supervisors (Boss -> Supervisor -> Worker -> Machine).
+*   **Neural Prism Node:** The graph's "Brain" that performs topological reasoning to identify causal paths for time drift and financial leaks.
+*   **Smart Log:** Natural language processing that "architects" the canvas automatically based on a supervisor's daily summary.
 
-### 3.2 Automated Drift Tracking
-TaskNodes automatically scan connected Staff, Equipment, and Material nodes.
-- **Calculation:** `Actual Hours - Estimated Hours = Time Drift`.
-- **Financials:** Aggregates costs from all connected resource types to show a live "Burned Cost" per task.
+### 2. Neural Estimation Engine (NEE) // Visual Quoting
+A first-of-its-kind visual quoting system that replaces static spreadsheets.
+*   **AI Blueprints:** Converts text prompts (e.g., "Build a 3-bedroom house") into a complete node graph of tasks, materials, and labor.
+*   **Dimensional Logic:** Specialized nodes for areas and perimeters that auto-calculate material yields (e.g., paint, concrete, flooring).
+*   **Ghost Baselines:** Approved quotes serve as a "Ghost" layer on the site diary, allowing for real-time comparison between "Quoted" and "Actual" performance.
+
+### 3. Additive Intelligence Module (diary.intelligenceLayer.v1)
+A non-destructive forensic node that interprets the operational circuit without mutating data.
+*   **Multi-Stream Intelligence:** Toggleable high-fidelity views for **Command Overview**, **Temporal Track**, **Strategic Decision Queue**, and **Forensic Audit**.
+*   **Professional PDF Reporting:** Generates "Blue-Chip" industrial reports with blueprint-style layouts, forensic anomaly matrices, and strategic roadmaps.
+*   **Project Vault Integration:** Direct archiving of AI-generated intelligence reports to the stored documents and project reporting hub.
+
+### 4. Workflow Automator // The Construction Router
+The "Zapier of Construction"—a visual logic builder for firm-wide automation.
+*   **Trigger-Action Nodes:** Visually graph logic like "If Site Diary is Approved → Generate Invoice → Notify Client."
+*   **Pulse Status:** Custom status indicators that change color based on the logic flow of the project.
+
+### 5. GeoSpatial Map Architect // Site Planning
+High-fidelity site positioning layered onto real-world geospatial data.
+*   **AI Compounds:** The AI generates site compounds, exclusion zones, and resource laydown areas on interactive maps.
+*   **Georeferenced Nodes:** Links visual diary nodes to specific GPS coordinates for a 1:1 digital twin of the site.
+
+### 6. Financial Harvest & Invoice Builder // Revenue Recovery
+An elite financial engine designed for maximum recovery and audit trails.
+*   **Diary Harvesting:** Directly import "billable nodes" from the site diary into branded, professional invoices.
+*   **Retention & Variations:** Built-in tracking for retention percentages and variation approval workflows.
+*   **Xero Sync:** Full bi-directional synchronization with Xero for seamless accounting.
+
+### 7. Unified Pulse Dashboard // Business Intelligence
+The "Macro View" of the entire firm portfolio.
+*   **Multi-Entity Tracking:** Real-time metrics for Projects, Staff, Equipment, and Materials.
+*   **Predictive Analytics:** AI-driven forecasting for project margins and completion trajectories.
+*   **Global Context AI:** A persistent Copilot that sees the "entire database" to provide portfolio-level insights.
+
+### 8. Resource Command // Crew & Asset DNA
+The HR and Asset management layer.
+*   **Crew DNA:** Tracks staff certification tags (Skill DNA) and hierarchical roles (Director, Supervisor, Labourer).
+*   **Command Identity:** Rank-specific visual icons (Crowns, Shields) and background themes on the canvas.
+*   **Smart Recommendations:** System-wide skill tag suggestions to ensure database cleanliness and accurate reporting.
 
 ---
 
-## 🗺️ 4. Spatial Intelligence (Smart Zones)
-Zones are physical or logical site boundaries that act as **Active Intelligence Containers**.
+## 🛠️ Technical Implementation Notes
 
-### 4.1 Automated Containment
-Anything dragged into a Zone (TaskNodes, Crew, Equipment) is automatically inherited by that zone's logic.
-- **Aggregation:** Zones compute total burn, drift, and node density (congestion) for their specific area.
-- **Density Indicator:** Dynamic activity dots show how "congested" a site area is in real-time.
+### **Topological Logic Engine**
+The heart of the app is the `TimelineEngine.js` and `harvestBranch` algorithm. This recursive engine traverses the graph circuit, ensuring that cost and time data propagate through any number of links (Supervisor → Task → Labourer → Machine).
 
-### 4.2 Solid Backgrounds
-Site plans, maps, and evidence photos can be toggled to `isBackground`.
-- **Stability:** Backgrounds are locked at `z-0` and set to `nodrag`, allowing resources to be grouped and manipulated on top of them without shifting the layout.
+### **Zero-Context Strategy & Cost Control**
+To maintain privacy and adhere to the **AI Pricing Plan**, we use **Topological Stripping**. Every node is stripped to its bare identity (ID, Name, Role, Duration) before being sent to the AI.
+*   **Flagship Reasoning:** Powered by **grok-4-1-fast-reasoning**.
+*   **Hard Token Caps:** All reports and analysis functions are capped between 400-1500 tokens to prevent token bleed.
 
 ---
 
-## 🛰️ 5. AI Vision & Machine Readability
-MasterDiaryOS is built for the future of Vision-AI (OCR).
-- **AI Data Plates:** Every node features a high-contrast, machine-readable OCR tag (e.g., `TSK-102`, `ZN-04`, `S-01`).
-- **Vision-Ready Structure:** Consistent UI positioning and distinct color-coding ensure that future Grok Vision models can "see" and interpret the site state from a single screenshot.
+📂 **Directory Map for Master Coders:**
+- `frontend/src/components/TimelineCanvas/`: The visual graph core.
+- `frontend/src/components/PaintDiary/IntelligenceLayer.jsx`: The Strategic Reporting engine.
+- `backend/src/controllers/aiController.js`: The reasoning hub.
+- `backend/src/services/grokService.js`: The flagship AI bridge with robust JSON extraction.
 
 ---
 
-## 🧬 6. Technical Implementation (For Future AI Masters)
-
-### 6.1 The Logic Engine (`TimelineEngine.js`)
-- **Recursive Harvester:** Traverses the graph from **Chronos Hubs** to resource nodes, propagating time and marks nodes as `isChronosLinked`.
-- **Zone Detection:** Uses bounding-box math (`node.position` vs `zone.position + dimensions`) to assign spatial ownership.
-- **State Synchronization:** Atomic `setNodes` batches ensure high-performance visual updates without state-drift.
-
-### 6.2 The AI Controller (`aiController.js`)
-- **Grok-4 Reasoning:** System prompts are optimized for causal chain generation and multi-scenario JSON output.
-- **Job DNA Context:** Quotes are generated by injecting historical project history, allowing the AI to learn that "Fencing in Zone B usually takes 20% longer than estimated."
-
-### 6.3 CSS Momentum Waves
-- GPU-accelerated keyframe animations (`heatmapPulse`, `shimmer`, `float-slow`) provide kinetic feedback without taxing the CPU.
-
----
-
-## 🚀 Vision Summary
-MasterDiaryOS is a self-optimizing ecosystem where the **Neural Estimation Engine** sets the target, the **Neural Diary Engine** tracks the reality, and the **Neural Prism** intervenes to ensure the two never drift apart.
-
-**Copyright © 2025 Billy Freeman. All rights reserved.**
-**Licensed for Elite Construction Operations.**
+**MasterDiaryOS is the motherboard of the modern construction firm—interconnecting people, time, and money in a single visual circuit.**

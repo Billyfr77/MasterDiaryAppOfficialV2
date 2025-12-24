@@ -54,11 +54,15 @@ class GrokService {
 
       let content = completion.choices[0].message.content;
       
+      // STRIP REASONING TAGS (e.g. <thought>...</thought>)
+      content = content.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim();
+      
       // ROBUST JSON EXTRACTION
       const startIdx = content.indexOf('{');
       const endIdx = content.lastIndexOf('}');
       
       if (startIdx === -1 || endIdx === -1) {
+          console.error("[Grok] Raw Content:", content);
           throw new Error("No JSON object found in response");
       }
       
