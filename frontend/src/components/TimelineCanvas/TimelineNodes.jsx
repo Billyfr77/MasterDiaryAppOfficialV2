@@ -6,7 +6,7 @@ import {
     ShieldCheck, Timer, Cpu, Box, AlertTriangle, Ruler, PenTool, Layout, 
     Award, CloudRain, Sun, Snowflake, ChevronDown, Magnet, FileText,
     TrendingUp, Target, BrainCircuit, Waves, PaintBucket, Layers, ClipboardList,
-    GitFork, MessageSquare, ArrowRight, TrendingDown, Crown
+    GitFork, MessageSquare, ArrowRight, TrendingDown, Crown, Calendar
 } from 'lucide-react';
 import { useDiaryTheme } from '../PaintDiary/ThemeContext';
 import { api } from '../../utils/api';
@@ -50,6 +50,8 @@ export const DelayNode = ({ id, data, selected }) => {
         { id: 'none', icon: <AlertTriangle size={12} />, label: 'Off' },
         { id: 'rain', icon: <CloudRain size={12} />, label: 'Rain' },
         { id: 'storm', icon: <Zap size={12} />, label: 'Storm' },
+        { id: 'wind', icon: <TrendingUp size={12} />, label: 'Wind' },
+        { id: 'flood', icon: <Waves size={12} />, label: 'Flood' },
         { id: 'heat', icon: <Sun size={12} />, label: 'Heat' },
         { id: 'snow', icon: <Snowflake size={12} />, label: 'Snow' },
     ];
@@ -58,6 +60,8 @@ export const DelayNode = ({ id, data, selected }) => {
         switch(weatherType) {
             case 'rain': return { accent: '#60a5fa', border: 'border-blue-500/40', bg: 'from-blue-600/30 to-blue-950/80', glow: 'shadow-blue-500/40' };
             case 'storm': return { accent: '#fbce1b', border: 'border-yellow-400/40', bg: 'from-slate-800/60 to-black', glow: 'shadow-yellow-400/50' };
+            case 'wind': return { accent: '#2dd4bf', border: 'border-teal-400/40', bg: 'from-teal-600/20 to-teal-950/80', glow: 'shadow-teal-500/40' };
+            case 'flood': return { accent: '#06b6d4', border: 'border-cyan-400/40', bg: 'from-cyan-600/20 to-cyan-950/80', glow: 'shadow-cyan-500/40' };
             case 'heat': return { accent: '#fb923c', border: 'border-orange-400/40', bg: 'from-orange-600/30 to-orange-950/80', glow: 'shadow-orange-500/40' };
             case 'snow': return { accent: '#e2e8f0', border: 'border-slate-300/40', bg: 'from-slate-600/30 to-slate-900/80', glow: 'shadow-white/20' };
             default: return { accent: '#f43f5e', border: 'border-rose-500/40', bg: 'from-rose-600/20 to-rose-950/80', glow: 'shadow-rose-500/30' };
@@ -148,46 +152,160 @@ export const ImpactNode = ({ id, data, selected }) => {
 };
 
 export const ChronosNode = ({ id, data, selected }) => {
-    const { label, startTime, finishTime, duration, onDelete, hubData } = data;
+    const { label, startTime, finishTime, duration, date, onDelete, hubData } = data;
     const hasHubData = hubData && (hubData.workers?.length > 0 || hubData.resources?.length > 0);
+    const workerCount = hubData?.workers?.length || 0;
+    const resourceCount = hubData?.resources?.length || 0;
+    
+    // --- INTELLIGENT SHIFT DECOMPOSITION ---
+    const calculateBreakdown = () => {
+        const startHr = parseInt((startTime || '07:00').split(':')[0]);
+        const isNight = startHr >= 18 || startHr < 6;
+        const dur = parseFloat(duration) || 0;
+        if (isNight) return { normal: 0, ot1: 0, ot2: 0, night: dur, theme: 'indigo' };
+        
+        const normal = Math.min(dur, 8);
+        const ot1 = Math.min(Math.max(0, dur - 8), 2);
+        const ot2 = Math.max(0, dur - 10);
+        return { normal, ot1, ot2, night: 0, theme: 'cyan' };
+    };
+
+    const b = calculateBreakdown();
+
     const handleTimeChange = (field, value) => {
         const newData = { [field]: value };
         const start = field === 'startTime' ? value : (startTime || '07:00');
         const end = field === 'finishTime' ? value : (finishTime || '17:00');
         const [h1, m1] = start.split(':').map(Number);
         const [h2, m2] = end.split(':').map(Number);
-        const totalHours = Math.max(0, (h2 + m2/60) - (h1 + m1/60));
+        let totalHours = (h2 + m2/60) - (h1 + m1/60);
+        if (totalHours < 0) totalHours += 24; 
         newData.duration = parseFloat(totalHours.toFixed(2));
         data.onUpdate?.(id, newData);
     };
+
+    // Calculate arc for visual dial (approximate for 24h cycle)
+    const arcPercent = (duration / 24) * 360;
+
     return (
         <div className={`
-            group relative min-w-[280px] aspect-square transition-all duration-1000
-            rounded-full select-none cursor-pointer
-            ${selected ? 'scale-110 z-50 shadow-[0_0_150px_-30px_rgba(6,182,212,0.8)]' : 'hover:scale-105 shadow-2xl'}
+            group relative min-w-[340px] transition-all duration-1000
+            rounded-[3.5rem] select-none cursor-pointer p-1.5
+            ${selected ? 'scale-105 z-50 shadow-[0_0_120px_-20px_#22d3ee]' : 'hover:scale-[1.02] shadow-2xl'}
         `}>
-            <div className="absolute top-[15%] left-1/2 -translate-x-1/2 text-[8px] font-mono text-cyan-100 font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-50">ID:{id}::CHRONOS</div>
-            <div className={`absolute inset-0 rounded-full border-[6px] border-cyan-500/20 border-t-cyan-400 border-l-cyan-600/50 animate-spin-slow ${hasHubData ? 'shadow-[0_0_50px_rgba(6,182,212,0.5)]' : ''}`} /><div className="absolute inset-2 rounded-full border-[2px] border-dashed border-cyan-300/30 animate-spin-reverse-slower" />
-            <div className="absolute inset-4 rounded-full bg-gradient-to-br from-cyan-900/90 via-black to-blue-950/90 backdrop-blur-2xl flex flex-col items-center justify-center border border-cyan-500/30 overflow-hidden cursor-pointer">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.15),transparent_70%)] animate-pulse" />
-                <div className="relative z-10 text-center space-y-2 pointer-events-none">
-                    <button onClick={(e) => { e.stopPropagation(); onDelete?.(); }} className="absolute -top-10 left-1/2 -translate-x-1/2 p-2 rounded-xl bg-white/5 text-white/20 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 border border-white/10 pointer-events-auto"><X size={16} strokeWidth={3} /></button>
-                    <div className="flex items-center justify-center gap-2 text-cyan-400 mb-2"><Clock size={16} className="animate-pulse" /><span className="text-[9px] font-black uppercase tracking-[0.3em]">{hasHubData ? 'Chronos Hub' : 'Chronos'}</span></div>
-                    <div className="pointer-events-auto">
-                        <input type="time" className="text-4xl font-black text-white font-mono tracking-tighter drop-shadow-[0_0_10px_rgba(34,211,238,0.5)] bg-transparent text-center w-full focus:outline-none cursor-pointer" value={startTime || '07:00'} onChange={(e) => handleTimeChange('startTime', e.target.value)} onClick={(e) => e.stopPropagation()} />
-                        <div className="h-px w-12 bg-cyan-500/50 mx-auto my-1" />
-                        <input type="time" className="text-2xl font-bold text-cyan-200/50 font-mono tracking-tighter bg-transparent text-center w-full focus:outline-none cursor-pointer" value={finishTime || '17:00'} onChange={(e) => handleTimeChange('finishTime', e.target.value)} onClick={(e) => e.stopPropagation()} />
+            {/* ATMOSPHERIC GLOW */}
+            <div className={`absolute -inset-4 bg-${b.theme}-500/10 rounded-[4rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity animate-pulse-slow`} />
+            
+            <div className={`absolute inset-0 rounded-[3.5rem] bg-gradient-to-br from-${b.theme}-900/60 via-[#050507] to-black backdrop-blur-3xl border-2 ${selected ? `border-${b.theme}-400` : 'border-white/10'} shadow-inner`} />
+            
+            <div className="relative p-8 space-y-6">
+                {/* TOP HEADER */}
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <div className={`relative p-4 bg-${b.theme}-500/20 rounded-[1.8rem] text-${b.theme}-400 border border-${b.theme}-500/30 shadow-2xl transition-transform group-hover:rotate-6`}>
+                            <Calendar size={24} />
+                            {hasHubData && <div className={`absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-black animate-ping`} />}
+                        </div>
+                        <div>
+                            <input 
+                                type="date" 
+                                value={date || new Date().toISOString().split('T')[0]} 
+                                onChange={(e) => data.onUpdate?.(id, { date: e.target.value })}
+                                className="bg-transparent text-white font-black text-lg uppercase tracking-tighter outline-none cursor-pointer hover:text-cyan-400 transition-colors"
+                            />
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <div className={`w-1.5 h-1.5 rounded-full bg-${b.theme}-500 animate-pulse`} />
+                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">{label || 'TEMPORAL_HUB'}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="mt-4 px-4 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold">{label || 'Shift A'}</div>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete?.(); }} className="p-2.5 rounded-2xl bg-white/5 text-white/20 hover:bg-rose-500 hover:text-white transition-all border border-white/5"><X size={18} strokeWidth={3} /></button>
+                </div>
+
+                {/* VISUAL DIAL & TIME DISPLAY */}
+                <div className="relative bg-black/40 rounded-[2.5rem] p-6 border border-white/5 shadow-inner overflow-hidden">
+                    {/* SVG DIAL BACKGROUND */}
+                    <div className="absolute top-0 right-0 w-32 h-32 opacity-10 pointer-events-none translate-x-10 -translate-y-10">
+                        <svg viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeWidth="2" strokeDasharray="2 4" />
+                            <motion.path 
+                                d="M 50,5 A 45,45 0 1,1 50,95 A 45,45 0 1,1 50,5" 
+                                fill="none" stroke={b.theme === 'cyan' ? '#22d3ee' : '#6366f1'} 
+                                strokeWidth="8" strokeDasharray={`${arcPercent} 360`}
+                                initial={{ strokeDashoffset: 360 }}
+                                animate={{ strokeDashoffset: 0 }}
+                                transition={{ duration: 2 }}
+                            />
+                        </svg>
+                    </div>
+
+                    <div className="relative z-10 flex flex-col gap-6">
+                        <div className="flex justify-between items-center">
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em] block">Start Horizon</span>
+                                <input type="time" value={startTime || '07:00'} onChange={(e) => handleTimeChange('startTime', e.target.value)} className={`bg-transparent text-3xl font-black text-white font-mono outline-none cursor-pointer focus:text-${b.theme}-400 transition-colors`} />
+                            </div>
+                            <div className={`p-3 rounded-full bg-white/5 border border-white/10 text-gray-700`}>
+                                <ArrowRight size={20} />
+                            </div>
+                            <div className="space-y-1 text-right">
+                                <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em] block">Final Sync</span>
+                                <input type="time" value={finishTime || '15:00'} onChange={(e) => handleTimeChange('finishTime', e.target.value)} className={`bg-transparent text-3xl font-black text-white font-mono outline-none cursor-pointer focus:text-${b.theme}-400 transition-colors`} />
+                            </div>
+                        </div>
+
+                        {/* ANALYTIC BREAKDOWN */}
+                        <div className="space-y-3 pt-4 border-t border-white/5">
+                            <div className="flex justify-between items-end">
+                                <div className="flex items-center gap-2">
+                                    <Clock size={14} className={`text-${b.theme}-400`} />
+                                    <span className={`text-[10px] font-black text-${b.theme}-400 uppercase tracking-widest`}>Shift Intensity</span>
+                                </div>
+                                <span className="text-2xl font-black text-white font-mono tracking-tighter">{duration}<span className="text-xs text-gray-600 ml-1">HRS</span></span>
+                            </div>
+                            
+                            <div className="h-4 w-full bg-white/5 rounded-2xl overflow-hidden flex border border-white/5 p-[2px] shadow-inner">
+                                {b.normal > 0 && <motion.div initial={{ width: 0 }} animate={{ width: `${(b.normal/duration)*100}%` }} className="h-full bg-cyan-500 rounded-l-xl shadow-[0_0_20px_rgba(34,211,238,0.4)]" />}
+                                {b.ot1 > 0 && <motion.div initial={{ width: 0 }} animate={{ width: `${(b.ot1/duration)*100}%` }} className="h-full bg-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.4)]" />}
+                                {b.ot2 > 0 && <motion.div initial={{ width: 0 }} animate={{ width: `${(b.ot2/duration)*100}%` }} className="h-full bg-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.4)]" />}
+                                {b.night > 0 && <motion.div initial={{ width: 0 }} animate={{ width: `${(b.night/duration)*100}%` }} className="h-full bg-indigo-600 animate-pulse shadow-[0_0_20px_rgba(79,70,229,0.4)]" />}
+                            </div>
+
+                            <div className="flex flex-wrap gap-3 mt-2">
+                                {b.normal > 0 && <div className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-lg flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-cyan-500" /><span className="text-[8px] font-black text-white uppercase">REG: {b.normal}H</span></div>}
+                                {b.ot1 > 0 && <div className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500" /><span className="text-[8px] font-black text-white uppercase">1.5x: {b.ot1}H</span></div>}
+                                {b.ot2 > 0 && <div className="px-3 py-1 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-rose-500" /><span className="text-[8px] font-black text-white uppercase">2.0x: {b.ot2}H</span></div>}
+                                {b.night > 0 && <div className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" /><span className="text-[8px] font-black text-white uppercase">NIGHT: {b.night}H</span></div>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ORBITAL STATUS FOOTER */}
+                <div className="flex items-center justify-between gap-4 pt-2">
+                    <div className="flex gap-2">
+                        <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3 group/chip transition-all hover:bg-white/10">
+                            <User size={14} className="text-emerald-400 group-hover/chip:rotate-12 transition-transform" />
+                            <span className="text-xs font-black text-white">{workerCount}</span>
+                        </div>
+                        <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3 group/chip transition-all hover:bg-white/10">
+                            <Wrench size={14} className="text-amber-400 group-hover/chip:rotate-12 transition-transform" />
+                            <span className="text-xs font-black text-white">{resourceCount}</span>
+                        </div>
+                    </div>
+                    
+                    <div className={`flex items-center gap-2 px-5 py-2.5 rounded-[1.2rem] ${hasHubData ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/10'} border transition-all`}>
+                        <div className={`w-2 h-2 rounded-full ${hasHubData ? 'bg-emerald-500 animate-ping' : 'bg-gray-600'}`} />
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${hasHubData ? 'text-emerald-400' : 'text-gray-500'}`}>
+                            {hasHubData ? 'CIRCUIT_LIVE' : 'NO_DATA'}
+                        </span>
+                    </div>
                 </div>
             </div>
-            {duration > 0 && (
-                <div className="absolute -right-4 top-1/2 -translate-y-1/2 bg-black border border-cyan-500 text-cyan-400 px-3 py-1.5 rounded-xl text-xs font-black shadow-xl flex flex-col items-center gap-1 min-w-[60px]">
-                    <div className="flex items-center gap-2"><Timer size={12} /> {duration || 0}H</div>
-                </div>
-            )}
-            {hasHubData && (<div className="absolute -left-4 top-1/2 -translate-y-1/2 bg-indigo-600 border border-indigo-400 text-white px-2 py-1 rounded-lg text-[8px] font-black animate-pulse shadow-lg">HUB_SYNC</div>)}
-            <Handle type="target" position={Position.Left} className="!w-4 !h-4 !bg-cyan-400 !border-4 !border-black shadow-[0_0_20px_#22d3ee]" /><Handle type="source" position={Position.Right} className="!w-4 !h-4 !bg-cyan-400 !border-4 !border-black shadow-[0_0_20px_#22d3ee]" />
+
+            {/* CONNECTION PORTS */}
+            <Handle type="target" position={Position.Left} className="!w-5 !h-5 !bg-cyan-400 !border-4 !border-black shadow-[0_0_25px_#22d3ee] !transition-transform hover:scale-150" />
+            <Handle type="source" position={Position.Right} className="!w-5 !h-5 !bg-cyan-400 !border-4 !border-black shadow-[0_0_25px_#22d3ee] !transition-transform hover:scale-150" />
         </div>
     );
 };

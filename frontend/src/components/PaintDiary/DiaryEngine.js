@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
 import { useSettings } from '../../context/SettingsContext';
+import { useNotification } from '../../context/NotificationContext';
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -9,6 +10,7 @@ export const useDiaryEngine = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { settings } = useSettings();
+  const { addNotification } = useNotification();
   
   const materialMarkup = parseFloat(settings.defaultMaterialMarkup) || 1.2;
   const allowanceMarkup = parseFloat(settings.defaultAllowanceMarkup) || 1.2;
@@ -121,74 +123,126 @@ export const useDiaryEngine = () => {
   const [chatTyping, setChatTyping] = useState(false)
   const [smartLogLoading, setSmartLogLoading] = useState(false)
 
-  // --- CALCULATIONS ---
+  const [billableItems, setBillableItems] = useState([]);
+
+  // --- CALCULATIONS (Daily / Weekly / Monthly Aggregate Engine) ---
   useEffect(() => {
       let totalCost = 0;
       let totalRevenue = 0;
+      const calculatedBillables = [];
 
-      (currentEntry.items || []).forEach(item => {
-          const qty = parseFloat(item.quantity) || 0;
+      const items = currentEntry.items || [];
+      const extraNodes = currentEntry.extraNodes || [];
+      const edges = currentEntry.edges || [];
+
+      // 1. Identify all hubs
+      const hubs = extraNodes.filter(n => n.type === 'chronos' && n.data?.startTime);
+
+      // 2. Build Assignment Map (Support multiple hubs per item)
+      const itemToHubsMap = new Map(); // itemId -> hubNode[]
+      
+      hubs.forEach(hub => {
+          const visited = new Set();
+          const queue = [hub.id];
+          while(queue.length > 0) {
+              const currId = queue.shift();
+              if (visited.has(currId)) continue;
+              visited.add(currId);
+              
+              const connected = edges
+                  .filter(e => e.source === currId || e.target === currId)
+                  .map(e => e.source === currId ? e.target : e.source);
+              
+              connected.forEach(id => {
+                  const item = items.find(i => i.id === id);
+                  if (item) {
+                      if (!itemToHubsMap.has(item.id)) itemToHubsMap.set(item.id, []);
+                      itemToHubsMap.get(item.id).push(hub);
+                  } else if (!visited.has(id)) {
+                      queue.push(id);
+                  }
+              });
+          }
+      });
+
+      // 3. Process Items into Billable Events
+      items.forEach(item => {
+          const assignedHubs = itemToHubsMap.get(item.id) || [null]; // Null represents a standalone item
           
-          if (item.type === 'staff') {
-              const baseRate = parseFloat(item.costRate) || 0;
-              const chargeRate = parseFloat(item.chargeRate) || 0;
-              const startHr = parseInt((item.startTime || '07:00').split(':')[0]);
-              const isNight = startHr >= 18 || startHr < 6;
-
+          assignedHubs.forEach(hub => {
+              const qty = parseFloat(item.quantity) || 0;
+              const dur = hub ? (parseFloat(hub.data?.duration) || qty) : qty;
+              const hubDate = hub?.data?.date || selectedDate.toISOString().split('T')[0];
+              
               let lineCost = 0;
               let lineRevenue = 0;
+              const baseRate = parseFloat(item.costRate) || 0;
+              const chargeRate = parseFloat(item.chargeRate) || 0;
 
-              if (isNight) {
-                  const nightCostRate = item.payRateNight || (baseRate * 2.0);
-                  const nightChargeRate = item.chargeOutNight || (chargeRate * 2.0);
-                  lineCost = qty * nightCostRate;
-                  lineRevenue = qty * nightChargeRate;
+              if (item.type === 'staff') {
+                  const startHr = hub ? parseInt((hub.data?.startTime || '07:00').split(':')[0]) : 7;
+                  const isNight = startHr >= 18 || startHr < 6;
+
+                  if (isNight) {
+                      const nightCostRate = item.payRateNight || (baseRate * 2.0);
+                      const nightChargeRate = item.chargeOutNight || (chargeRate * 2.0);
+                      lineCost = dur * nightCostRate;
+                      lineRevenue = dur * nightChargeRate;
+                  } else {
+                      const regHrs = Math.min(dur, overtimeThreshold);
+                      const ot1Hrs = Math.min(Math.max(0, dur - overtimeThreshold), 2);
+                      const ot2Hrs = Math.max(0, dur - (overtimeThreshold + 2));
+                      const r2_c = item.payRateOT1 || (baseRate * 1.5);
+                      const r2_r = item.chargeOutOT1 || (chargeRate * 1.5);
+                      const r3_c = item.payRateOT2 || (baseRate * 2.0);
+                      const r3_r = item.chargeOutOT2 || (chargeRate * 2.0);
+                      lineCost = (regHrs * baseRate) + (ot1Hrs * r2_c) + (ot2Hrs * r3_c);
+                      lineRevenue = (regHrs * chargeRate) + (ot1Hrs * r2_r) + (ot2Hrs * r3_r);
+                  }
+
+                  // Allowances
+                  if (item.activeAllowances?.length > 0) {
+                      item.activeAllowances.forEach(al => {
+                          const alRate = parseFloat(al.rate) || 0;
+                          if (al.type === 'hourly') {
+                              lineCost += dur * alRate;
+                              lineRevenue += dur * alRate * allowanceMarkup; 
+                          } else {
+                              lineCost += alRate;
+                              lineRevenue += alRate * allowanceMarkup;
+                          }
+                      });
+                  }
               } else {
-                  const regHrs = Math.min(qty, overtimeThreshold);
-                  const ot1Hrs = Math.min(Math.max(0, qty - overtimeThreshold), 2);
-                  const ot2Hrs = Math.max(0, qty - (overtimeThreshold + 2));
-                  const r2_c = item.payRateOT1 || (baseRate * 1.5);
-                  const r2_r = item.chargeOutOT1 || (chargeRate * 1.5);
-                  const r3_c = item.payRateOT2 || (baseRate * 2.0);
-                  const r3_r = item.chargeOutOT2 || (chargeRate * 2.0);
-                  lineCost = (regHrs * baseRate) + (ot1Hrs * r2_c) + (ot2Hrs * r3_c);
-                  lineRevenue = (regHrs * chargeRate) + (ot1Hrs * r2_r) + (ot2Hrs * r3_r);
+                  const multiplier = (item.type === 'equipment' && hub) ? dur : qty;
+                  lineCost = multiplier * baseRate;
+                  lineRevenue = multiplier * (parseFloat(item.chargeRate) || (baseRate * materialMarkup));
               }
 
-              if (item.activeAllowances?.length > 0) {
-                  item.activeAllowances.forEach(al => {
-                      const alRate = parseFloat(al.rate) || 0;
-                      if (al.type === 'hourly') {
-                          lineCost += qty * alRate;
-                          lineRevenue += qty * alRate * allowanceMarkup; 
-                      } else {
-                          // Daily or Fixed
-                          lineCost += alRate;
-                          lineRevenue += alRate * allowanceMarkup;
-                      }
-                  });
-              }
               totalCost += lineCost;
               totalRevenue += lineRevenue;
-          } else if (item.type === 'material') {
-              const cRate = parseFloat(item.costRate) || 0;
-              const rRate = item.chargeRate !== undefined ? parseFloat(item.chargeRate) : (cRate * materialMarkup);
-              totalCost += qty * cRate;
-              totalRevenue += qty * rRate;
-          } else {
-              const cRate = parseFloat(item.costRate) || 0;
-              const rRate = parseFloat(item.chargeRate) || 0;
-              totalCost += qty * cRate;
-              totalRevenue += qty * rRate;
-          }
+              
+              calculatedBillables.push({
+                  ...item,
+                  id: `${item.id}-${hub?.id || 'standalone'}`,
+                  originalId: item.id,
+                  hubId: hub?.id,
+                  date: hubDate,
+                  duration: dur,
+                  calculatedCost: lineCost,
+                  calculatedRevenue: lineRevenue
+              });
+          });
       });
 
       setCost(totalCost);
       setRevenue(totalRevenue);
       setProfit(totalRevenue - totalCost);
+      setBillableItems(calculatedBillables);
+      
       const efficiency = totalRevenue > 0 ? (totalRevenue - totalCost) / totalRevenue : 0;
       setProductivityScore(Math.round(Math.min(100, Math.max(0, efficiency * 100))));
-  }, [currentEntry, overtimeThreshold, overtimeMultiplier, allowanceMarkup, materialMarkup]);
+  }, [currentEntry, overtimeThreshold, overtimeMultiplier, allowanceMarkup, materialMarkup, selectedDate]);
 
   // --- DATA LOADING ---
   const fetchData = useCallback(async () => {
@@ -391,6 +445,80 @@ export const useDiaryEngine = () => {
       setIsSaved(false);
   }, []);
 
+  const handleExecuteAiAction = useCallback((action) => {
+      if (!action) return;
+      
+      if (action.type === 'duplicate_day') {
+          const { hubId, targetDates } = action;
+          const sourceHub = currentEntry.extraNodes.find(n => n.id === hubId);
+          if (!sourceHub) return;
+
+          // Find everything connected to this hub
+          const visited = new Set();
+          const queue = [hubId];
+          const branchItems = [];
+          const branchExtras = [];
+          
+          while(queue.length > 0) {
+              const currId = queue.shift();
+              if (visited.has(currId)) continue;
+              visited.add(currId);
+              
+              const connected = currentEntry.edges
+                  .filter(e => e.source === currId || e.target === currId)
+                  .map(e => e.source === currId ? e.target : e.source);
+              
+              connected.forEach(id => {
+                  const item = currentEntry.items.find(i => i.id === id);
+                  if (item) branchItems.push(item);
+                  else if (!visited.has(id)) queue.push(id);
+              });
+          }
+
+          const newExtras = [];
+          const newItems = [];
+          const newEdges = [];
+
+          targetDates.forEach((date, idx) => {
+              const newHubId = `chronos-${Date.now()}-${idx}`;
+              const offsetX = (idx + 1) * 600;
+
+              // 1. Create Hub
+              newExtras.push({
+                  ...sourceHub,
+                  id: newHubId,
+                  position: { x: sourceHub.position.x + offsetX, y: sourceHub.position.y },
+                  data: { ...sourceHub.data, date, label: `Copy: ${sourceHub.data.label}` }
+              });
+
+              // 2. Clone/Link items
+              branchItems.forEach(item => {
+                  const newItemId = `${item.id}-copy-${idx}`;
+                  newItems.push({
+                      ...item,
+                      id: newItemId,
+                      position: { x: (item.position?.x || 0) + offsetX, y: item.position?.y || 0 }
+                  });
+                  newEdges.push({
+                      id: `e-clone-${newHubId}-${newItemId}`,
+                      source: newHubId,
+                      target: newItemId,
+                      animated: true,
+                      type: 'neon'
+                  });
+              });
+          });
+
+          setCurrentEntry(prev => ({
+              ...prev,
+              items: [...prev.items, ...newItems],
+              extraNodes: [...prev.extraNodes, ...newExtras],
+              edges: [...prev.edges, ...newEdges]
+          }));
+          addNotification(`Duplicated ${targetDates.length} days`, 'success');
+      }
+  }, [currentEntry, addNotification]);
+
   const handleSmartChat = async (message) => {
       if (!message.trim()) return;
       const userMsg = { id: generateId(), role: 'user', content: message };
@@ -406,8 +534,18 @@ export const useDiaryEngine = () => {
                   canvasContext: currentEntry.note 
               } 
           });
-          const aiMsg = { id: generateId(), role: 'assistant', content: res.data.reply, suggestedNodes: res.data.suggestedNodes || [], suggestedTemplates: res.data.suggestedTemplates || [] };
+          const aiMsg = { 
+              id: generateId(), 
+              role: 'assistant', 
+              content: res.data.reply, 
+              suggestedNodes: res.data.suggestedNodes || [], 
+              suggestedTemplates: res.data.suggestedTemplates || [],
+              suggestedActions: res.data.suggestedActions || [] 
+          };
           setChatMessages(prev => [...prev, aiMsg]);
+          
+          // AUTO-EXECUTE CERTAIN ACTIONS IF DESIRED (Optional policy)
+          // For now, let the user trigger them via UI or keep it manual.
       } catch (err) {
           setChatMessages(prev => [...prev, { id: generateId(), role: 'assistant', content: "AI core is offline." }]);
       } finally { setChatTyping(false); }
@@ -462,6 +600,6 @@ export const useDiaryEngine = () => {
     selectedClient, setSelectedClient, staff, equipment, materials, isSaved, setIsSaved, isSaving, cost, revenue, profit, productivityScore,
     chatMessages, chatTyping, handleUpdateItem, handleRemoveItem, handleUpdateEdges,
     handleSave, handleSmartLog, handleSmartChat, fetchData, generateId, createNewDiary, loadDiary, handleDeleteDiary, resolvedItems,
-    smartLogLoading, setSmartLogLoading
+    smartLogLoading, setSmartLogLoading, billableItems
   };
 };

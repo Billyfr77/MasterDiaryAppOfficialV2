@@ -3,6 +3,7 @@ import {
   ReactFlow, MiniMap, Controls, Background, ReactFlowProvider, addEdge, useReactFlow
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, FileText, ClipboardList } from 'lucide-react';
 import { useTimelineEngine } from './TimelineEngine';
 import { DiaryNode, WormholeNode, ZoneNode, ChronosNode, ImpactNode, DelayNode, PhotoNode, AllowanceNode, DimensionNode, NeuralPrismNode, ShapeNode, TaskNode, NotesNode } from './TimelineNodes';
@@ -10,87 +11,150 @@ import { SmartEdgeTypes } from './SmartEdges';
 import { api } from '../../utils/api';
 import { useNotification } from '../../context/NotificationContext';
 
-// --- WEATHER SYSTEM COMPONENT (MEMOIZED & STABLE) ---
+// --- WEATHER SYSTEM COMPONENT (APEX EDITION - MULTI-NODE SUPPORT) ---
 const WeatherSystem = React.memo(({ nodes }) => {
-    const activeWeather = useMemo(() => {
-        if (!nodes) return null;
-        const weatherNode = nodes.find(n => n.type === 'delay' && n.data?.weatherType && n.data.weatherType !== 'none');
-        return weatherNode?.data?.weatherType || null;
+    const activeWeathers = useMemo(() => {
+        if (!nodes) return [];
+        const types = nodes
+            .filter(n => n.type === 'delay' && n.data?.weatherType && n.data.weatherType !== 'none')
+            .map(n => n.data.weatherType);
+        return [...new Set(types)]; // Unique active weather states
     }, [nodes]);
 
     const particles = useMemo(() => {
-        if (!activeWeather) return [];
-        const count = activeWeather === 'storm' ? 60 : activeWeather === 'snow' ? 80 : 40;
-        return [...Array(count)].map((_, i) => ({
-            id: i,
-            left: Math.random() * 100,
-            top: -(Math.random() * 20),
-            duration: 0.5 + Math.random() * 5,
-            delay: -(Math.random() * 5),
-            size: 2 + Math.random() * 3,
-            opacity: 0.2 + Math.random() * 0.4
-        }));
-    }, [activeWeather]);
+        const pMap = {};
+        activeWeathers.forEach(type => {
+            const count = type === 'storm' ? 60 : type === 'snow' ? 80 : type === 'wind' ? 40 : 30;
+            pMap[type] = [...Array(count)].map((_, i) => ({
+                id: i,
+                left: Math.random() * 100,
+                top: Math.random() * 100,
+                duration: 0.5 + Math.random() * 4,
+                delay: -(Math.random() * 5),
+                size: type === 'wind' ? (100 + Math.random() * 200) : (2 + Math.random() * 4),
+                opacity: 0.1 + Math.random() * 0.3
+            }));
+        });
+        return pMap;
+    }, [activeWeathers]);
 
-    if (!activeWeather) return null;
+    if (activeWeathers.length === 0) return null;
 
     return (
         <div className="absolute inset-0 z-[10] pointer-events-none overflow-hidden rounded-[2.5rem]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.3)_100%)]" />
-            {activeWeather === 'rain' && (
-                <div className="absolute inset-0 animate-in fade-in duration-1000">
-                    {particles.map(p => (
-                        <div key={p.id} className="absolute bg-gradient-to-b from-transparent via-blue-400/20 to-transparent w-[1px] h-[100px] animate-rain-light" style={{
-                            left: `${p.left}%`,
-                            top: `${p.top}%`,
-                            willChange: 'transform',
-                            animationDuration: `${0.8 + (p.duration % 0.4)}s`,
-                            animationDelay: `${p.delay}s`
-                        }} />
-                    ))}
-                </div>
-            )}
-            {activeWeather === 'storm' && (
-                <div className="absolute inset-0 animate-in fade-in duration-700">
-                    <div className="absolute inset-0 bg-indigo-50/20 opacity-0 animate-lightning-strike z-50" />
-                    {particles.map(p => (
-                        <div key={p.id} className="absolute bg-gradient-to-b from-transparent via-slate-200/40 to-transparent w-[2px] h-[150px] animate-rain-storm-light" style={{
-                            left: `${p.left}%`,
-                            top: `${p.top}%`,
-                            transform: 'rotate(25deg)',
-                            willChange: 'transform',
-                            animationDuration: `${0.2 + (p.duration % 0.2)}s`,
-                            animationDelay: `${p.delay}s`
-                        }} />
-                    ))}
-                </div>
-            )}
-            {activeWeather === 'snow' && (
-                <div className="absolute inset-0 animate-in fade-in duration-1000">
-                    {particles.map(p => (
-                        <div key={p.id} className="absolute bg-white rounded-full blur-[1px] animate-snow-fall" style={{
-                            left: `${p.left}%`,
-                            top: `${p.top}%`,
-                            width: `${p.size}px`,
-                            height: `${p.size}px`,
-                            opacity: p.opacity,
-                            willChange: 'transform',
-                            animationDuration: `${3 + (p.duration % 4)}s`,
-                            animationDelay: `${p.delay}s`
-                        }} />
-                    ))}
-                </div>
-            )}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(0,0,0,0.4)_100%)]" />
+            
+            <AnimatePresence>
+                {activeWeathers.map(type => (
+                    <motion.div 
+                        key={type}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0"
+                    >
+                        {type === 'wind' && (
+                            <div className="absolute inset-0">
+                                {particles[type].map(p => (
+                                    <div key={p.id} className="absolute bg-gradient-to-r from-transparent via-teal-400/20 to-transparent h-[2px] blur-[1px] animate-wind-ribbon" style={{
+                                        left: `-50%`,
+                                        top: `${p.left}%`,
+                                        width: `${p.size}px`,
+                                        willChange: 'transform',
+                                        animationDuration: `${0.8 + (p.duration % 1.5)}s`,
+                                        animationDelay: `${p.delay}s`
+                                    }} />
+                                ))}
+                            </div>
+                        )}
+
+                        {type === 'flood' && (
+                            <div className="absolute inset-0 flex flex-col justify-end">
+                                {/* Back Wave */}
+                                <div className="absolute bottom-0 left-[-50%] w-[200%] h-[35%] bg-cyan-600/20 animate-parallax-wave-slow blur-xl" />
+                                {/* Front Wave */}
+                                <div className="absolute bottom-0 left-[-50%] w-[200%] h-[25%] bg-gradient-to-t from-cyan-500/40 via-cyan-400/20 to-transparent animate-parallax-wave border-t-2 border-cyan-300/30 backdrop-blur-[2px]">
+                                    <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/water-flea.png')] mix-blend-overlay animate-pulse" />
+                                </div>
+                            </div>
+                        )}
+
+                        {type === 'rain' && (
+                            <div className="absolute inset-0">
+                                {particles[type].map(p => (
+                                    <div key={p.id} className="absolute bg-gradient-to-b from-transparent via-blue-400/30 to-transparent w-[1px] h-[120px] animate-rain-light" style={{
+                                        left: `${p.left}%`,
+                                        top: `${p.top - 20}%`,
+                                        willChange: 'transform',
+                                        animationDuration: `${0.6 + (p.duration % 0.3)}s`,
+                                        animationDelay: `${p.delay}s`
+                                    }} />
+                                ))}
+                            </div>
+                        )}
+
+                        {type === 'storm' && (
+                            <div className="absolute inset-0">
+                                <div className="absolute inset-0 bg-indigo-50/10 opacity-0 animate-lightning-strike z-50" />
+                                {particles[type].map(p => (
+                                    <div key={p.id} className="absolute bg-gradient-to-b from-transparent via-slate-200/50 to-transparent w-[2px] h-[180px] animate-rain-storm-light" style={{
+                                        left: `${p.left}%`,
+                                        top: `${p.top - 20}%`,
+                                        transform: 'rotate(20deg)',
+                                        willChange: 'transform',
+                                        animationDuration: `${0.2 + (p.duration % 0.2)}s`,
+                                        animationDelay: `${p.delay}s`
+                                    }} />
+                                ))}
+                            </div>
+                        )}
+
+                        {type === 'snow' && (
+                            <div className="absolute inset-0">
+                                {particles[type].map(p => (
+                                    <div key={p.id} className="absolute bg-white rounded-full blur-[1px] animate-snow-fall" style={{
+                                        left: `${p.left}%`,
+                                        top: `${p.top - 10}%`,
+                                        width: `${p.size}px`,
+                                        height: `${p.size}px`,
+                                        opacity: p.opacity,
+                                        willChange: 'transform',
+                                        animationDuration: `${4 + (p.duration % 5)}s`,
+                                        animationDelay: `${p.delay}s`
+                                    }} />
+                                ))}
+                            </div>
+                        )}
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+
             <style>{`
                 .animate-rain-light { animation: rain-light linear infinite; }
                 .animate-rain-storm-light { animation: rain-storm-light linear infinite; }
-                .animate-lightning-strike { animation: lightning-strike 7s linear infinite; }
+                .animate-lightning-strike { animation: lightning-strike 8s linear infinite; }
                 .animate-snow-fall { animation: snow-fall linear infinite; }
+                .animate-wind-ribbon { animation: wind-ribbon linear infinite; }
+                .animate-parallax-wave { animation: parallax-wave 12s ease-in-out infinite; }
+                .animate-parallax-wave-slow { animation: parallax-wave 20s ease-in-out infinite reverse; }
                 
+                @keyframes wind-ribbon {
+                    0% { transform: translateX(0) translateY(0); opacity: 0; }
+                    20% { opacity: 1; }
+                    50% { transform: translateX(100vw) translateY(20px); }
+                    80% { opacity: 1; }
+                    100% { transform: translateX(150vw) translateY(-10px); opacity: 0; }
+                }
+                
+                @keyframes parallax-wave {
+                    0%, 100% { transform: translateX(0) translateY(0) rotate(-1deg); }
+                    50% { transform: translateX(-5%) translateY(10px) rotate(1deg); }
+                }
+
                 @keyframes rain-light { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(120vh); opacity: 0; } }
-                @keyframes rain-storm-light { 0% { transform: translateY(0) translateX(0) rotate(25deg); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(120vh) translateX(-20vh) rotate(25deg); opacity: 0; } }
-                @keyframes lightning-strike { 0%, 92%, 100% { opacity: 0; } 93% { opacity: 0.8; } 93.5% { opacity: 0; } 94% { opacity: 0.3; } 96% { opacity: 0; } }
-                @keyframes snow-fall { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(110vh) translateX(20px); opacity: 0; } }
+                @keyframes rain-storm-light { 0% { transform: translateY(0) translateX(0) rotate(20deg); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(120vh) translateX(-15vh) rotate(20deg); opacity: 0; } }
+                @keyframes lightning-strike { 0%, 94%, 100% { opacity: 0; } 95% { opacity: 1; } 95.5% { opacity: 0; } 96% { opacity: 0.4; } 98% { opacity: 0; } }
+                @keyframes snow-fall { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(110vh) translateX(30px); opacity: 0; } }
             `}</style>
         </div>
     );

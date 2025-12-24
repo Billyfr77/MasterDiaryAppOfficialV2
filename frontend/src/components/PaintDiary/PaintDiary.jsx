@@ -208,7 +208,7 @@ const SaveTemplateModal = ({ isOpen, onClose, onConfirm, loading }) => {
 };
 
 // --- SMART ASSISTANT CHAT ---
-const SmartAssistant = ({ messages, onSend, typing, onAddNode, onApplyTemplate }) => {
+const SmartAssistant = ({ messages, onSend, typing, onAddNode, onApplyTemplate, onExecuteAction }) => {
     const [input, setInput] = useState("");
     const scrollRef = useRef();
 
@@ -267,6 +267,21 @@ const SmartAssistant = ({ messages, onSend, typing, onAddNode, onApplyTemplate }
                                             className="flex items-center gap-1.5 px-2 py-1.5 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 rounded-lg hover:bg-indigo-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-tighter"
                                         >
                                             <Box size={10} /> {tmpl.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Suggested Actions */}
+                            {msg.suggestedActions?.length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-2 pt-3 border-t border-white/5">
+                                    {msg.suggestedActions.map((act, i) => (
+                                        <button 
+                                            key={i} 
+                                            onClick={() => onExecuteAction(act)} 
+                                            className="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-lg text-[10px] font-black uppercase hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2"
+                                        >
+                                            <Zap size={10} fill="currentColor" /> {act.type.replace('_',' ')}
                                         </button>
                                     ))}
                                 </div>
@@ -480,7 +495,7 @@ const PaintDiary = () => {
   const {
     selectedDate, setSelectedDate, currentEntry, setCurrentEntry, projects, selectedProject, setSelectedProject, projectFinancials, quotedData, projectJobs, selectedJobId, setSelectedJobId,
     selectedClient, setSelectedClient, staff, equipment, materials, isSaved, setIsSaved, isSaving, cost, revenue, profit, productivityScore,
-    chatMessages, chatTyping, handleUpdateItem, handleRemoveItem, handleUpdateEdges, handleSave, handleSmartLog, handleSmartChat, smartLogLoading, generateId, overtimeThreshold, overtimeMultiplier, loadDiary, createNewDiary, handleDeleteDiary, recentHistory, resolvedItems
+    chatMessages, chatTyping, handleUpdateItem, handleRemoveItem, handleUpdateEdges, handleSave, handleSmartLog, handleSmartChat, smartLogLoading, generateId, overtimeThreshold, overtimeMultiplier, loadDiary, createNewDiary, handleDeleteDiary, recentHistory, resolvedItems, billableItems, handleExecuteAiAction
   } = useDiaryEngine();
 
   // --- STATE DECLARATIONS ---
@@ -537,8 +552,8 @@ const PaintDiary = () => {
           productivity_percent: productivityScore,
           weather_event: delays[0]?.data?.weatherType || 'none',
           weather_impact: delays[0]?.data?.reason || 'none',
-          site_notes: siteNotes, // NEW
-          staff_list: resolvedItems.filter(i => i.type === 'staff').map(s => ({ name: s.name, role: s.role, dur: s.duration, skills: s.skillTags })),
+          site_notes: siteNotes,
+          staff_list: billableItems.filter(i => i.type === 'staff').map(s => ({ name: s.name, role: s.role, dur: s.duration, date: s.date, skills: s.skillTags })),
           task_list: tasks.map(t => ({ label: t.data?.label, planned: t.data?.plannedHours, actual: t.data?.actualHours })),
           job_metadata: {
               projectName: selectedProject?.name,
@@ -547,7 +562,30 @@ const PaintDiary = () => {
               projectId: selectedProject?.id
           }
       };
-  }, [currentEntry, cost, profit, revenue, productivityScore, selectedProject, projectFinancials, resolvedItems]);
+  }, [currentEntry, cost, profit, revenue, productivityScore, selectedProject, projectFinancials, billableItems]);
+
+  const handleBuildWeek = () => {
+      const today = new Date(selectedDate);
+      const newExtras = [];
+      for (let i = 0; i < 7; i++) {
+          const d = new Date(today);
+          d.setDate(today.getDate() + i);
+          newExtras.push({
+              id: `chronos-week-${Date.now()}-${i}`,
+              type: 'chronos',
+              position: { x: i * 400, y: 100 },
+              data: {
+                  label: `Day ${i + 1}`,
+                  date: d.toISOString().split('T')[0],
+                  startTime: '07:00',
+                  finishTime: '15:00',
+                  duration: 8
+              }
+          });
+      }
+      setCurrentEntry(prev => ({ ...prev, extraNodes: [...prev.extraNodes, ...newExtras] }));
+      addNotification('Weekly Sequence Built', 'success');
+  };
 
   const handleCreateCustomTask = () => {
       if (!newTaskName || !newTaskHours) return;
@@ -658,13 +696,13 @@ const PaintDiary = () => {
   }, [handleConfirmItem, addNotification, staff, equipment, materials]);
 
   const handlePrintToInvoice = () => {
-      if (currentEntry.items.length === 0) {
+      if (billableItems.length === 0) {
           alert("Add items to the diary before invoicing.");
           return;
       }
       navigate('/invoices', { 
           state: { 
-              diaryItems: currentEntry.items,
+              diaryItems: billableItems,
               projectId: selectedProject?.id,
               clientId: selectedClient?.id,
               clientName: selectedClient?.name,
@@ -1153,6 +1191,16 @@ const PaintDiary = () => {
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="text-[10px] font-black text-violet-400 uppercase tracking-widest px-1 mb-2">Spatial Logic</div>
                             <div className="space-y-2">
+                                <button 
+                                    onClick={handleBuildWeek}
+                                    className="w-full p-4 bg-violet-600/20 border border-violet-500/30 rounded-2xl hover:bg-violet-600 transition-all flex items-center justify-center gap-3 group mb-4"
+                                >
+                                    <Calendar size={18} className="text-violet-400 group-hover:text-white" />
+                                    <div className="text-left">
+                                        <div className="text-xs font-black text-white uppercase tracking-widest">Build Weekly Phase</div>
+                                        <div className="text-[8px] font-bold text-violet-400 uppercase">Instantiate 7-Day Sequence</div>
+                                    </div>
+                                </button>
                                 <DraggableItem item={{ id: 'z1', name: 'Container Zone', type: 'zone', zoneTotal: 0 }} />
                                 <DraggableItem item={{ id: 'w1', name: 'Wormhole', type: 'wormhole' }} />
                                 <DraggableItem item={{ id: 'd1', name: 'Dimension Area', type: 'dimension', width: 200, height: 200 }} />
@@ -1207,6 +1255,7 @@ const PaintDiary = () => {
                             typing={chatTyping} 
                             onAddNode={handleAddSuggestedNode}
                             onApplyTemplate={handleApplySuggestedTemplate}
+                            onExecuteAction={handleExecuteAiAction}
                         />
                     ) : resourceTab === 'time' ? (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

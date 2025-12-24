@@ -425,39 +425,28 @@ const parseDiaryLog = async (req, res) => {
         if (!prompt) return res.status(400).json({ error: "Description required." });
 
         const systemPrompt = `
-            You are "Pinnacle Site Architect" (Level 100 Intelligence).
-            **Mission:** Convert a raw site log into a COMPLETE, SPECIALIZED, and CHRONOLOGICAL Visual Site Map.
+            You are the "MasterDiary Architect". Your goal is to convert natural language descriptions into a high-fidelity visual site circuit.
+            **MANDATE:** You support MULTIPLE DAYS on one canvas.
             
-            **HYPER-INFERENCE MANDATE:**
-            - Never trust the user is complete. Infer necessary resources (e.g., "Poured slab" -> add "Concrete Pump", "Concreters").
-            
-            **SPECIALIZED NODE ECOSYSTEM:**
-            1. **'chronos'**: The pillar of time. Use for shifts (e.g., "Morning Shift").
-            2. **'delay'**: The friction node. Use for weather or delays (e.g., "Rain stopped work for 2hrs").
-            3. **'impact'**: Site condition analysis (e.g., "Muddy site decreased productivity").
-            4. **'neuralPrism'**: The brain. Suggest one if strategic analysis is implied.
-            5. **'wormhole' / 'zone'**: Container nodes for large logical groups.
-            6. **'dimension'**: For measurements (e.g., "Room is 5x4m").
-            7. **'allowance'**: For extra payouts (e.g., "Height allowance for 2 painters").
-            8. **'diaryNode'**: Standard resources (nodeType: staff | equipment | material).
+            **Rules for Weekly Architecting:**
+            1. If the user mentions a period (e.g. "This week", "Mon-Fri"), generate ONE 'chronos' node per day.
+            2. Assign 'date' (YYYY-MM-DD) and 'label' (e.g. "Monday Prep") to each 'chronos'.
+            3. Link relevant 'staff', 'equipment', and 'taskNode' elements to EACH hub. 
+            4. If a crew works all week, create the staff nodes once but link them to every 'chronos' node via edges.
+            5. Add 'notesNode' elements for each day with specific daily objectives.
+            6. Position hubs horizontally (x: 0, 600, 1200...) to create a clear weekly track.
 
-            **ARCHITECTURAL LOGIC:**
-            - **Chronos Pillars:** Create pillars at Y=0, X=0, 600, 1200...
-            - **Resource Clustering:** Vertically cluster resources (Y=300+) under their Chronos pillar.
-            - **Plug-ins:** Connect 'delay' and 'neuralPrism' nodes DIRECTLY to the 'chronos' pillars.
-
-            **OUTPUT JSON:**
-            { 
-              "nodes": [
-                { "id": "c1", "type": "chronos", "label": "Phase Name", "x": 0, "y": 0, "startTime": "07:00", "duration": 8 },
-                { "id": "d1", "type": "delay", "label": "Rain Delay", "x": 0, "y": 300, "duration": 2, "weatherType": "rain" },
-                { "id": "r1", "type": "diaryNode", "label": "Item Name", "nodeType": "staff|material|equipment", "quantity": 1, "x": 0, "y": 600 }
-              ], 
-              "edges": [
-                { "id": "e1", "source": "c1", "target": "d1", "animated": true },
-                { "id": "e2", "source": "c1", "target": "r1", "animated": true, "data": { "type": "orbit|gradient" } }
-              ],
-              "note": "A high-level professional summary of the day." 
+            **Output Format (Strict JSON):**
+            {
+                "nodes": [
+                    { "id": "c1", "type": "chronos", "label": "Day 1", "date": "YYYY-MM-DD", "startTime": "07:00", "finishTime": "15:00", "x": 0, "y": 0 },
+                    { "id": "n1", "type": "notesNode", "text": "Specific daily goal...", "x": 0, "y": 300 },
+                    { "id": "r1", "type": "diaryNode", "nodeType": "staff", "label": "Name", "x": 200, "y": 200 }
+                ],
+                "edges": [
+                    { "id": "e1", "source": "c1", "target": "r1", "animated": true, "type": "neon" }
+                ],
+                "note": "A summary of the engineered phase."
             }
         `;
 
@@ -558,13 +547,14 @@ const chatSmartAssistant = async (req, res) => {
         const graphContext = edges.map(e => `[${e.source}] --(${e.type || 'link'})--> [${e.target}]`).join('\n');
 
         const systemPrompt = `
-            You are "Pinnacle AI", the master Neural OS coordinator.
-            
+            You are "MasterDiary Copilot", the flagship strategist for MasterDiaryOS.
+            **MANDATE:** You support MULTIPLE CHRONOS HUBS on one canvas. 
+
             **CAPABILITIES:**
-            1. **Node Creator:** Suggest adding nodes (especially 'taskNode' for specific work units).
-            2. **Node Editor:** Identify existing IDs and suggest edits via 'suggestedActions' { "type": "edit_node", "nodeId": "...", "updates": {...} }.
-            3. **Task Planner:** Link resources to 'taskNode' to track progress.
-            4. **Simulation Trigger:** If user asks "What if...", describe the impact and suggest node adjustments.
+            1. **Macro-Scaling:** Suggest duplicating a successful day's design across a week via 'suggestedActions'.
+            2. **Forensic Advice:** Link nodes to optimize command propagation (e.g. "Link Supervisor A to all hubs").
+            3. **Phase Planning:** Proactively suggest 'taskNode' sequences for the coming week.
+            4. **Note Enrichment:** Recommend adding 'notesNode' for critical safety reminders mentioned in chat.
 
             **Visual Graph Context:**
             --- RESOURCES ---
@@ -583,8 +573,8 @@ const chatSmartAssistant = async (req, res) => {
                     { "name": "Task Name", "type": "taskNode", "plannedHours": 8 }
                 ],
                 "suggestedActions": [
-                    { "type": "edit_node", "nodeId": "id", "updates": { "plannedHours": 12 } },
-                    { "type": "remove_node", "nodeId": "id" }
+                    { "type": "duplicate_day", "hubId": "id", "targetDates": ["YYYY-MM-DD"] },
+                    { "type": "edit_node", "nodeId": "id", "updates": { "plannedHours": 12 } }
                 ],
                 "suggestedTemplates": [...]
             }
