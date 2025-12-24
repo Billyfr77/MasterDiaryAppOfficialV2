@@ -616,6 +616,7 @@ const analyzePrismVelocity = async (req, res) => {
             if (n.role) details += `, Role:${n.role}`;
             if (n.duration) details += `, Dur:${n.duration}h`;
             if (n.weather) details += `, Weather:${n.weather}`;
+            if (n.text) details += `, Text:"${n.text}"`; // NEW: Notes inclusion
             return `[${n.id}] ${label} (${details})`;
         }).join('\n');
 
@@ -624,6 +625,7 @@ const analyzePrismVelocity = async (req, res) => {
             **Mission:** Single point of truth for causality, prediction, and intervention.
             
             **TEMPORAL & BASELINE CONTEXT:**
+            - SITE OBSERVATIONS (Notes): ${JSON.stringify(context.site_notes || [])}
             - HISTORICAL TRENDS (Last 5 Days): ${JSON.stringify(history)}
             - PROJECT TIMELINE: Start ${context.projectFinancials?.startDate || 'N/A'} -> End ${context.projectFinancials?.endDate || 'N/A'}
             - PROJECT FINANCIALS (Live Baseline): ${JSON.stringify(context.projectFinancials || {})}
@@ -640,7 +642,7 @@ const analyzePrismVelocity = async (req, res) => {
 
             **INTELLIGENCE CORE MANDATES:**
             1. **Autonomous Baseline:** Use "PROJECT FINANCIALS" as your primary anchor if "APPROVED QUOTE" is missing. Do not ask for a baseline; derive drift from the Contract Value and Timeline provided.
-            2. **Structured Causal Path:** Return an array 'causalPath' tracing the root cause to final effect. Each step: { "nodeId": "...", "label": "...", "effect": "..." }.
+            2. **Structured Causal Path:** Return an array 'causalPath' tracing the root cause to final effect. Use SITE OBSERVATIONS if they explain delays. Each step: { "nodeId": "...", "label": "...", "effect": "..." }.
             3. **Drift Dashboard:** Calculate 'driftStats' for: Time, Cost, Labour, Equipment, Material, Zone, Task. 
                Include: "variancePct", "absoluteVariance", "trend" ("up"|"down"|"stable"), "severity" ("low"|"med"|"high").
             4. **High-Fidelity Insights:** Group by "severity" (critical|warning|info). 
@@ -686,39 +688,42 @@ const analyzeIntelligenceLayer = async (req, res) => {
 
         const systemPrompt = `
             You are "diary.intelligenceLayer.v1.PRO", the elite forensic analyst module for MasterDiaryOS.
-            **Goal:** Transform raw site data into blue-chip executive intelligence reports.
-            **Mandate:** Extreme depth, factual precision, and predictive forecasting.
+            **Goal:** Transform raw site data and handwritten observations into blue-chip executive intelligence.
+            **Mandate:** Extreme depth, factual precision, and causal linking.
+
+            **DATA CONTEXT:**
+            - Site Observations (Notes): ${JSON.stringify(diaryData.site_notes || [])}
+            - Operational Stats: ${JSON.stringify(diaryData)}
 
             **INTELLIGENCE PILLARS (DEEP DIVE):**
-            1. **Strategic Outlook:** A high-level 3-sentence summary of project health relative to the end date.
-            2. **Forensic Highlights:** 3-5 specific accomplishments or data-backed observations.
-            3. **Margin Erosion Audit:** Explicit detection of cost leaks or inefficient resource density.
-            4. **Operational Velocity:** Analysis of production hours vs. milestones.
+            1. **Strategic Outlook:** Project health relative to end date. FACTOR IN SITE NOTES HEAVILY.
+            2. **Forensic Highlights:** Data-backed observations. Reference site notes as "Direct Observations".
+            3. **Causal Attribution:** If an anomaly exists (e.g. time drift), search site notes for the reason.
+            4. **Operational Velocity:** Production hours vs. milestones.
 
             **Output Schema (Strict JSON):**
             {
               "strategic_outlook": "string",
               "forensic_highlights": "string",
-              "narrative": "Full executive briefing (6-10 sentences).",
+              "narrative": "Full executive briefing (6-10 sentences). Integrate data with site observations seamlessly.",
               "anomalies": [
                 { 
                   "type": "Financial | Operational | Temporal | Resource | Safety", 
-                  "description": "Forensic detail.", 
+                  "description": "Forensic detail. MUST explicitly mention if this is explained by a Site Note.", 
                   "severity": "low|medium|high", 
                   "data_point": "string", 
                   "root_cause": "string",
                   "mitigation_priority": "string"
                 }
               ],
-              "next_actions": ["string (Highly specific tactical commands)"],
-              "timeline": ["string (Chronological events with logical inference)"],
+              "next_actions": ["string"],
+              "timeline": ["string"],
               "meta": {
                 "confidence": "low|medium|high",
+                "notes_processed": "number (count of site notes used in analysis)",
                 "forensic_notes": "Internal reasoning logs"
               }
             }
-
-            **Tone:** High-end consultancy. Direct, authoritative, and data-driven.
         `;
 
         const result = await pinnacleAi.generateJSON(`Interpret this data: ${JSON.stringify(diaryData)}`, systemPrompt, 1500);

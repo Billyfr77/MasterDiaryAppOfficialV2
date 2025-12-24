@@ -1,84 +1,80 @@
 # 🏗️ MasterDiaryOS // The Neural Construction Operating System
-**Version:** 2.5.0 (Flagship Edition)
-**Intelligence Core:** grok-4-1-fast-reasoning (Flagship Engine)
+**Version:** 2.6.0 (Flagship Intelligence Edition)
+**Intelligence Core:** grok-4-1-fast-reasoning (Flagship Reasoning Engine)
 **Architecture:** AI-Native Topological Graph
 
 ---
 
 ## 📜 Executive Overview
-MasterDiaryOS is an **AI-Native Construction Operating System** designed to transform construction management from a manual, form-based chore into a high-fidelity **Operational Circuit**. Every module in the app is interconnected through a unified logic lattice, allowing data from a quote to flow into a site diary, and finally into a branded invoice with zero manual re-entry.
+MasterDiaryOS is an **AI-Native Construction Operating System** that transforms site management into a high-fidelity **Operational Circuit**. By treating people, time, and money as nodes in a living logic graph, the system automates forensic reporting, predicts margin erosion, and ensures total operational transparency.
 
 ---
 
 ## 🧠 Core Intelligence Modules
 
 ### 1. Neural Diary Engine (NDE) // Site Execution
-The execution layer that captures site reality via an interactive **Calculated Canvas**.
-*   **The Chronos System:** Centralized time hubs that propagate shift data across connected resources.
-*   **Hierarchical Command Propagation:** Advanced team building where subordinates and machinery automatically inherit durations from their linked supervisors (Boss -> Supervisor -> Worker -> Machine).
-*   **Neural Prism Node:** The graph's "Brain" that performs topological reasoning to identify causal paths for time drift and financial leaks.
-*   **Smart Log:** Natural language processing that "architects" the canvas automatically based on a supervisor's daily summary.
+The core execution layer powered by a recursive topological traversal engine.
+*   **The Chronos System:** Centralized time pillars that propagate shift data across connected resources.
+*   **Chained Inheritance:** Hierarchy-aware tracking where workers and machinery inherit temporal data from linked supervisors (Boss -> Supervisor -> Crew).
+*   **Site Notes Node:** Interactive amber glass nodes for handwritten site observations.
+*   **Causal Note Linking:** The AI "reads" site notes to explain time drifts (e.g., linking a delay to a "Crane breakdown" note).
+*   **Neural Prism Node:** The graph's brain, featuring a holographic interface and live "Cognitive Feed" during site analysis.
 
 ### 2. Neural Estimation Engine (NEE) // Visual Quoting
-A first-of-its-kind visual quoting system that replaces static spreadsheets.
-*   **AI Blueprints:** Converts text prompts (e.g., "Build a 3-bedroom house") into a complete node graph of tasks, materials, and labor.
-*   **Dimensional Logic:** Specialized nodes for areas and perimeters that auto-calculate material yields (e.g., paint, concrete, flooring).
-*   **Ghost Baselines:** Approved quotes serve as a "Ghost" layer on the site diary, allowing for real-time comparison between "Quoted" and "Actual" performance.
+Replaces static spreadsheets with a dynamic visual blueprint.
+*   **AI Blueprints:** Text-to-Graph conversion for entire project scopes.
+*   **Dimensional Logic:** Perimeter and area nodes that auto-calculate material yields.
+*   **Ghost Baselines:** Active comparison between "Quoted" vs "Actual" performance directly on the diary canvas.
 
-### 3. Additive Intelligence Module (diary.intelligenceLayer.v1)
-A non-destructive forensic node that interprets the operational circuit without mutating data.
-*   **Multi-Stream Intelligence:** Toggleable high-fidelity views for **Command Overview**, **Temporal Track**, **Strategic Decision Queue**, and **Forensic Audit**.
-*   **Professional PDF Reporting:** Generates "Blue-Chip" industrial reports with blueprint-style layouts, forensic anomaly matrices, and strategic roadmaps.
-*   **Project Vault Integration:** Direct archiving of AI-generated intelligence reports to the stored documents and project reporting hub.
+### 3. Additive Intelligence Layer (`v1.PRO`) // Forensic Reporting
+A modular, non-destructive layer for executive-level briefing.
+*   **Multi-Stream Switching:** Toggle between **Command Overview**, **Temporal Track**, **Strategic Decision Queue**, and **Forensic Audit**.
+*   **Report Matrix:** Generate 4 unique "Blue-Chip" report types (Executive, Risk, Velocity, Finance).
+*   **Blueprint PDF Engine:** High-fidelity PDF generation with industrial typography and vertical KPI sidebars.
+*   **Project Vault:** Automatic archiving of all intelligence reports to the app's internal Document Hub.
 
-### 4. Workflow Automator // The Construction Router
-The "Zapier of Construction"—a visual logic builder for firm-wide automation.
-*   **Trigger-Action Nodes:** Visually graph logic like "If Site Diary is Approved → Generate Invoice → Notify Client."
-*   **Pulse Status:** Custom status indicators that change color based on the logic flow of the project.
+### 4. Workflow Automator // Project Routing
+Visually graph the logic of your firm.
+*   **Trigger-Action Logic:** "If Diary Approved → Generate Invoice → Notify Xero."
+*   **Pulse Status:** Dynamic color-coded status tracking through the workflow lifecycle.
 
 ### 5. GeoSpatial Map Architect // Site Planning
-High-fidelity site positioning layered onto real-world geospatial data.
-*   **AI Compounds:** The AI generates site compounds, exclusion zones, and resource laydown areas on interactive maps.
-*   **Georeferenced Nodes:** Links visual diary nodes to specific GPS coordinates for a 1:1 digital twin of the site.
+Interactive mapping layered with site intelligence.
+*   **AI Compounds:** Automated generation of site zones and exclusion areas.
+*   **Georeferenced Nodes:** Links canvas nodes to exact GPS coordinates for a 1:1 digital twin.
 
-### 6. Financial Harvest & Invoice Builder // Revenue Recovery
-An elite financial engine designed for maximum recovery and audit trails.
-*   **Diary Harvesting:** Directly import "billable nodes" from the site diary into branded, professional invoices.
-*   **Retention & Variations:** Built-in tracking for retention percentages and variation approval workflows.
-*   **Xero Sync:** Full bi-directional synchronization with Xero for seamless accounting.
+### 6. Revenue Recovery // Financial Harvest
+*   **Diary Harvesting:** Import billable site nodes directly into professional invoices.
+*   **Retention & Variations:** Forensic tracking of variations and retention percentages.
+*   **Xero Integration:** Seamless synchronization with professional accounting suites.
 
-### 7. Unified Pulse Dashboard // Business Intelligence
-The "Macro View" of the entire firm portfolio.
-*   **Multi-Entity Tracking:** Real-time metrics for Projects, Staff, Equipment, and Materials.
-*   **Predictive Analytics:** AI-driven forecasting for project margins and completion trajectories.
-*   **Global Context AI:** A persistent Copilot that sees the "entire database" to provide portfolio-level insights.
-
-### 8. Resource Command // Crew & Asset DNA
-The HR and Asset management layer.
-*   **Crew DNA:** Tracks staff certification tags (Skill DNA) and hierarchical roles (Director, Supervisor, Labourer).
-*   **Command Identity:** Rank-specific visual icons (Crowns, Shields) and background themes on the canvas.
-*   **Smart Recommendations:** System-wide skill tag suggestions to ensure database cleanliness and accurate reporting.
+### 7. Safety & Resource Command
+*   **AI SWMS Generator:** High-fidelity safety documentation using the flagship reasoning core.
+*   **Crew DNA:** Skill-tagging and hierarchy-based rank management (Crown/Shield icons).
+*   **Asset Lifecycle:** Maintenance and utilization tracking for heavy machinery.
 
 ---
 
-## 🛠️ Technical Implementation Notes
+## 🛠️ Technical Architecture
 
-### **Topological Logic Engine**
-The heart of the app is the `TimelineEngine.js` and `harvestBranch` algorithm. This recursive engine traverses the graph circuit, ensuring that cost and time data propagate through any number of links (Supervisor → Task → Labourer → Machine).
+### **Flagship AI Integration**
+The system exclusively utilizes **grok-4-1-fast-reasoning**.
+*   **Robust Parsing:** Custom JSON extraction logic that strips `<thought>` tags and reasoning preambles.
+*   **Zero-Context Strategy:** Topological stripping reduces input tokens by 85% by only sending bare node identities (ID, Name, Role, Duration).
 
-### **Zero-Context Strategy & Cost Control**
-To maintain privacy and adhere to the **AI Pricing Plan**, we use **Topological Stripping**. Every node is stripped to its bare identity (ID, Name, Role, Duration) before being sent to the AI.
-*   **Flagship Reasoning:** Powered by **grok-4-1-fast-reasoning**.
-*   **Hard Token Caps:** All reports and analysis functions are capped between 400-1500 tokens to prevent token bleed.
-
----
-
-📂 **Directory Map for Master Coders:**
-- `frontend/src/components/TimelineCanvas/`: The visual graph core.
-- `frontend/src/components/PaintDiary/IntelligenceLayer.jsx`: The Strategic Reporting engine.
-- `backend/src/controllers/aiController.js`: The reasoning hub.
-- `backend/src/services/grokService.js`: The flagship AI bridge with robust JSON extraction.
+### **Visual Engine**
+*   **Framework:** React Flow (XYFlow) + Framer Motion.
+*   **Aesthetic:** "Jewel-Tier" Glassmorphism with high-contrast industrial accents.
+*   **PDF Engine:** jsPDF + autoTable with custom blueprint layouts.
 
 ---
 
-**MasterDiaryOS is the motherboard of the modern construction firm—interconnecting people, time, and money in a single visual circuit.**
+📂 **Critical Directory Map:**
+- `frontend/src/components/TimelineCanvas/`: Topological Graph Core.
+- `frontend/src/components/PaintDiary/IntelligenceLayer.jsx`: Forensic Reporting Engine.
+- `backend/src/controllers/intelligenceController.js`: Modular Intelligence Nodes.
+- `backend/src/services/grokService.js`: Flagship AI Bridge.
+
+---
+
+**MasterDiaryOS: Interconnecting people, time, and money in a single visual circuit.**

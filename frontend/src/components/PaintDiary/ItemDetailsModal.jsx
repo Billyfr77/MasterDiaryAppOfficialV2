@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, DollarSign, FileText, Calendar, ArrowRight, TrendingUp, Calculator, User, Wrench, Package, AlertTriangle, Zap, CheckCircle2, ChevronUp, ChevronDown, Plus, Minus } from 'lucide-react';
+import { X, Clock, DollarSign, FileText, Calendar, ArrowRight, TrendingUp, Calculator, User, Wrench, Package, AlertTriangle, Zap, CheckCircle2, ChevronUp, ChevronDown, Plus, Minus, ClipboardList } from 'lucide-react';
 
 const ItemDetailsModal = ({ isOpen, onClose, onConfirm, item, overtimeThreshold = 8 }) => {
     const [quantity, setQuantity] = useState(1);

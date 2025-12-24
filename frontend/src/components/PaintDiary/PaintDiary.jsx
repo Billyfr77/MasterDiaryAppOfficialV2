@@ -64,6 +64,14 @@ const DraggableItem = ({ item }) => {
         wrapperClass = "bg-gradient-to-r from-amber-500/20 to-yellow-900/20 border-amber-500/30 hover:border-amber-400";
         iconClass = "bg-amber-500/20 text-amber-400";
         icon = <Award size={16} />;
+    } else if (item.type === 'notesNode') {
+        wrapperClass = "bg-gradient-to-r from-amber-600/30 to-amber-950/40 border-amber-500/40 hover:border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)]";
+        iconClass = "bg-amber-500/20 text-amber-400";
+        icon = <FileText size={16} />;
+    } else if (item.type === 'neuralPrism') {
+        wrapperClass = "bg-gradient-to-r from-indigo-600/30 to-violet-950/40 border-indigo-500/40 hover:border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.2)]";
+        iconClass = "bg-indigo-500/20 text-indigo-400";
+        icon = <Cpu size={16} className="animate-spin-slow" />;
     } else if (item.type === 'shapeNode' || item.type === 'zone' || item.type === 'wormhole') {
         wrapperClass = "bg-gradient-to-r from-violet-500/20 to-purple-900/20 border-violet-500/30 hover:border-violet-400";
         iconClass = "bg-violet-500/20 text-violet-400";
@@ -511,6 +519,7 @@ const PaintDiary = () => {
       const tasks = currentEntry.extraNodes.filter(n => n.type === 'taskNode');
       const delays = currentEntry.extraNodes.filter(n => n.type === 'delay');
       const chronos = currentEntry.extraNodes.filter(n => n.type === 'chronos' && n.data?.startTime);
+      const siteNotes = currentEntry.extraNodes.filter(n => n.type === 'notesNode').map(n => n.data?.text).filter(Boolean);
       
       const planned = tasks.reduce((sum, t) => sum + (parseFloat(t.data?.plannedHours) || 0), 0);
       const completed = tasks.reduce((sum, t) => sum + (parseFloat(t.data?.actualHours) || 0), 0);
@@ -528,15 +537,17 @@ const PaintDiary = () => {
           productivity_percent: productivityScore,
           weather_event: delays[0]?.data?.weatherType || 'none',
           weather_impact: delays[0]?.data?.reason || 'none',
+          site_notes: siteNotes, // NEW
           staff_list: resolvedItems.filter(i => i.type === 'staff').map(s => ({ name: s.name, role: s.role, dur: s.duration, skills: s.skillTags })),
           task_list: tasks.map(t => ({ label: t.data?.label, planned: t.data?.plannedHours, actual: t.data?.actualHours })),
           job_metadata: {
               projectName: selectedProject?.name,
               projectStatus: selectedProject?.status,
-              contractValue: projectFinancials?.contractValue
+              contractValue: projectFinancials?.contractValue,
+              projectId: selectedProject?.id
           }
       };
-  }, [currentEntry, cost, profit, revenue, productivityScore, selectedProject, projectFinancials]);
+  }, [currentEntry, cost, profit, revenue, productivityScore, selectedProject, projectFinancials, resolvedItems]);
 
   const handleCreateCustomTask = () => {
       if (!newTaskName || !newTaskHours) return;
@@ -577,7 +588,7 @@ const PaintDiary = () => {
   };
 
   const handleConfirmItem = useCallback((details) => {
-      const isExtraNode = ['chronos', 'delay', 'impact', 'wormhole', 'zone', 'photoNode', 'allowance', 'neuralPrism', 'shapeNode', 'taskNode'].includes(details.type);
+      const isExtraNode = ['chronos', 'delay', 'impact', 'wormhole', 'zone', 'photoNode', 'allowance', 'neuralPrism', 'shapeNode', 'taskNode', 'notesNode'].includes(details.type);
       
       if (isExtraNode) {
           const { onDelete, onUpdate, ...cleanData } = details;
@@ -1203,7 +1214,10 @@ const PaintDiary = () => {
                             <DraggableItem item={{ id: 'c1', name: 'Standard Shift', type: 'chronos', duration: 8, startTime: '07:00', finishTime: '15:00' }} />
                             <DraggableItem item={{ id: 'c2', name: 'Lunch Break', type: 'chronos', duration: 0.5 }} />
                             <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest px-1 mb-2 mt-4">Site Intelligence</div>
-                            <DraggableItem item={{ id: 'prism-alpha', name: 'Neural Prism', type: 'neuralPrism', velocity: 1.0, completionTime: 'Pending' }} />
+                            <div className="space-y-2">
+                                <DraggableItem item={{ id: 'prism-alpha', name: 'Neural Prism', type: 'neuralPrism', velocity: 1.0, completionTime: 'Pending' }} />
+                                <DraggableItem item={{ id: 'notes-primary', name: 'Site Notes', type: 'notesNode', text: '' }} />
+                            </div>
                             <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest px-1 mb-2 mt-4">Site Impacts</div>
                             <div className="space-y-2">
                                 <DraggableItem item={{ id: 'weather-primary', name: 'Weather Delay', type: 'delay', duration: 0, weatherType: 'none', reason: 'Weather Event' }} />

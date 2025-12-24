@@ -56,11 +56,11 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
 
   // --- RECURSIVE HARVESTER (Pure logic) ---
   const harvestBranch = useCallback((startId, currentEdges, currentItems, currentExtras, visited = new Set()) => {
-      if (visited.has(startId)) return { workers: [], resources: [], extras: [], delays: [], breaks: [] };
+      if (visited.has(startId)) return { workers: [], resources: [], extras: [], delays: [], breaks: [], notes: [] };
       visited.add(startId);
 
       const connectedEdges = currentEdges.filter(e => e.source === startId || e.target === startId);
-      let workers = [], resources = [], extras = [], delays = [], breaks = [];
+      let workers = [], resources = [], extras = [], delays = [], breaks = [], notes = [];
 
       connectedEdges.forEach(edge => {
           const neighborId = edge.source === startId ? edge.target : edge.source;
@@ -77,7 +77,8 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                   const isBreak = extra.type === 'chronos' && !extra.data?.startTime;
                   if (extra.type === 'delay') delays.push(extra);
                   else if (isBreak) breaks.push(extra);
-                  else extras.push(extra); // FULL OBJECT
+                  else if (extra.type === 'notesNode') notes.push(extra);
+                  else extras.push(extra); 
               }
           }
 
@@ -87,9 +88,10 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           extras = [...extras, ...sub.extras];
           delays = [...delays, ...sub.delays];
           breaks = [...breaks, ...sub.breaks];
+          notes = [...notes, ...sub.notes];
       });
 
-      return { workers, resources, extras, delays, breaks };
+      return { workers, resources, extras, delays, breaks, notes };
   }, []);
 
   // --- SINGLE SOURCE OF TRUTH MAPPING ENGINE ---
@@ -118,6 +120,7 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           branch.extras.forEach(e => reachableFromHub.add(e.id));
           branch.delays.forEach(d => reachableFromHub.add(d.id));
           branch.breaks.forEach(b => reachableFromHub.add(b.id));
+          branch.notes.forEach(n => reachableFromHub.add(n.id));
       });
 
       // --- CHAINED INHERITANCE (Advanced Team Mechanic) ---
@@ -133,6 +136,7 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           s.extras.forEach(e => resourceHubAssignment.set(e.id, hub.id));
           s.delays.forEach(d => resourceHubAssignment.set(d.id, hub.id));
           s.breaks.forEach(b => resourceHubAssignment.set(b.id, hub.id));
+          s.notes.forEach(n => resourceHubAssignment.set(n.id, hub.id));
       });
 
       while (changed) {
@@ -412,7 +416,7 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
 
   }, [items, extraNodes, edges, projectFinancials, harvestBranch, onUpdateItem, onRemoveItem, onDeployFixes, quotedData]);
 
-  // Decoupled AI Logic (Fixed Infinite Loop)
+  // Decoupled AI Logic (Fixed Infinite Loop & Note Sync)
   useEffect(() => {
       const prisms = nodes.filter(n => n.type === 'neuralPrism' && n.data?.hubData);
       
@@ -420,17 +424,21 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           const prismId = prism.id;
           const { hubData, projectFinancials: financials, lastAnalyzedHash, status } = prism.data;
           
-          // Generate simple hash of current hubData to check for changes
+          // Stable Hash: Include IDs of all connected elements to detect topology changes
+          const connectedIds = [
+              ...(hubData.workers || []).map(w => w.id),
+              ...(hubData.resources || []).map(r => r.id),
+              ...(hubData.notes || []).map(n => n.id + (n.data?.text || '')) // Hash text changes too
+          ].sort().join(',');
+
           const currentHash = JSON.stringify({ 
-              w: hubData.workers?.length, 
-              r: hubData.resources?.length, 
-              d: hubData.duration,
-              e: edges.length,
-              q: !!quotedData // Trigger if quote status changes
+              topology: connectedIds,
+              duration: hubData.duration,
+              quote: quotedData?.totalRevenue // Only trigger if financial baseline changes
           });
           
-          // Only analyze if hash changed or never analyzed
-          if (status !== 'analyzing' && currentHash !== lastAnalyzedHash) {
+          // Only analyze if hash changed 
+          if (currentHash !== lastAnalyzedHash) {
               
               clearTimeout(window[`prism_${prismId}`]);
               
@@ -445,7 +453,8 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                           ...(hubData.resources || []).map(r => ({ id: r.id, name: r.name, type: r.type, quantity: r.quantity, nodeType: r.type || 'equipment' })),
                           ...(hubData.extras || []).map(e => ({ id: e.id, type: e.type, label: e.data?.label || e.label })),
                           ...(hubData.delays || []).map(d => ({ id: d.id, type: 'delay', label: d.data?.label, duration: d.data?.duration, weather: d.data?.weatherType })),
-                          ...(hubData.breaks || []).map(b => ({ id: b.id, type: 'break', duration: b.data?.duration }))
+                          ...(hubData.breaks || []).map(b => ({ id: b.id, type: 'break', duration: b.data?.duration })),
+                          ...(hubData.notes || []).map(n => ({ id: n.id, type: 'note', text: n.data?.text || n.text }))
                       ];
 
                       const res = await api.post('/ai/analyze-prism', { 
@@ -454,7 +463,8 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                               duration: hubData.duration, 
                               projectFinancials: financials,
                               graphEdges: edges.length,
-                              quotedData: quotedData 
+                              quotedData: quotedData,
+                              site_notes: (hubData.notes || []).map(n => n.data?.text).filter(Boolean)
                           },
                           history 
                       });
@@ -466,7 +476,7 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                       console.error("AI Analysis Failed", e);
                       onUpdateItem(prismId, { status: 'disconnected' });
                   }
-              }, 1500);
+              }, 2000); // Increased debounce to 2s
           }
       });
   }, [nodes, edges.length, history, onUpdateItem, quotedData]);

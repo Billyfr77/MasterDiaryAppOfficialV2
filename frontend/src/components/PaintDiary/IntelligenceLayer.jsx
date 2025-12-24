@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Sparkles, AlertTriangle, ArrowRight, Clock, Target, 
     CheckCircle2, Info, Loader2, BarChart3, ListChecks,
-    TrendingUp, ShieldAlert, Cpu, FileDown, Save, Check
+    TrendingUp, ShieldAlert, Cpu, FileDown, Save, Check, FileText,
+    ClipboardList
 } from 'lucide-react';
 import { api } from '../../utils/api';
 import jsPDF from 'jspdf';
@@ -16,7 +17,7 @@ import autoTable from 'jspdf-autotable';
 const IntelligenceLayer = ({ diaryData, active }) => {
     const [intel, setIntel] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(null); // 'exec' | 'risk' | 'velocity' | 'finance'
+    const [saving, setSaving] = useState(null); // 'executive' | 'risk' | 'velocity' | 'finance'
     const [error, setError] = useState(false);
     const [activeTab, setActiveTab] = useState('command'); // command | timeline | strategy | audit
 
@@ -164,7 +165,7 @@ const IntelligenceLayer = ({ diaryData, active }) => {
         doc.setTextColor(...darkColor);
         doc.setFontSize(11);
         doc.setFont("helvetica", "italic");
-        const outlookText = doc.splitTextToSize(intel.strategic_outlook || "Analyzing temporal trajectory...", 125);
+        const outlookText = doc.splitTextToSize(intel?.strategic_outlook || "Analyzing temporal trajectory...", 125);
         doc.text(outlookText, startX, 65);
 
         // B. EXECUTIVE NARRATIVE
@@ -271,6 +272,48 @@ const IntelligenceLayer = ({ diaryData, active }) => {
         { id: 'audit', label: 'Forensic Audit', icon: Info }
     ];
 
+    if (error) {
+        return (
+            <div className="w-full p-8 bg-rose-950/20 border border-rose-500/20 rounded-[3rem] text-center">
+                <AlertTriangle className="mx-auto text-rose-500 mb-2" />
+                <h3 className="text-white font-black uppercase tracking-widest">Intelligence Node Error</h3>
+                <p className="text-rose-400/60 text-xs mt-1">Failed to establish link with Reasoning Core. Verify API connectivity.</p>
+                <button onClick={fetchIntelligence} className="mt-4 px-6 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase">Retry Sync</button>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="w-full p-12 bg-indigo-950/20 border border-indigo-500/20 rounded-[3rem] backdrop-blur-xl flex flex-col items-center justify-center gap-4 animate-pulse">
+                <div className="p-4 bg-indigo-600/20 rounded-2xl text-indigo-400">
+                    <Loader2 size={32} className="animate-spin" />
+                </div>
+                <div className="text-center">
+                    <h3 className="text-lg font-black text-white uppercase tracking-tighter">Initializing Intelligence Layer</h3>
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Interpreting Operational Circuit...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!intel) {
+        return (
+            <button 
+                onClick={fetchIntelligence}
+                className="w-full p-12 bg-indigo-600/10 border border-indigo-500/20 rounded-[3rem] hover:bg-indigo-600/20 transition-all group flex flex-col items-center gap-4"
+            >
+                <div className="p-4 bg-indigo-600/20 rounded-2xl text-indigo-400 group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(99,102,241,0.2)]">
+                    <Cpu size={32} />
+                </div>
+                <div className="text-center">
+                    <h3 className="text-lg font-black text-white uppercase tracking-tighter">Establish Intelligence Node</h3>
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Activate diary.intelligenceLayer.v1</p>
+                </div>
+            </button>
+        );
+    }
+
     return (
         <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -318,7 +361,7 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                                     </div>
                                     <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em]">INTEL_LAYER // DAILY EXECUTIVE BRIEFING</span>
                                 </div>
-                                <p className="text-xl md:text-2xl font-medium text-gray-200 leading-relaxed max-w-4xl italic">
+                                <p className="text-xl md:text-2xl font-medium text-gray-200 leading-relaxed italic">
                                     "{narrative}"
                                 </p>
                             </div>
@@ -439,6 +482,13 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                                     <div className="space-y-1">
                                         <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest block">Data Coverage</span>
                                         <p className="text-sm font-bold text-gray-300">{meta.data_coverage || 'Full operational circuit detected.'}</p>
+                                    </div>
+                                    <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                                        <FileText size={16} className="text-amber-400" />
+                                        <div>
+                                            <div className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Site Knowledge</div>
+                                            <div className="text-xs font-bold text-white">{meta.notes_processed || 0} Observations Integrated</div>
+                                        </div>
                                     </div>
                                     <div className="p-6 bg-indigo-600/5 border border-indigo-500/10 rounded-3xl">
                                         <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest block mb-2">Forensic Reasoning Notes</span>

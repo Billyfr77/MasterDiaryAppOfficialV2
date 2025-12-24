@@ -97,6 +97,7 @@ app.use('/api/safety', require('./src/routes/safetyRoutes')); // Register Safety
 app.use('/api/reports', require('./src/routes/reportRoutes')); // Unified Reports Hub
 app.use('/api/mail', require('./src/routes/mail')); // Email Service
 app.use('/api/ai', require('./src/routes/ai')); // Grok AI Service
+app.use('/api/intelligence', require('./src/routes/intelligenceRoutes')); // NEW: Intelligence Stack
 app.use('/api/weather', require('./src/routes/weather')); // Weather Service
 app.use('/api/diary-templates', require('./src/routes/diaryTemplates')); // Diary Templates Route
 

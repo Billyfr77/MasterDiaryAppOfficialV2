@@ -3,9 +3,9 @@ import {
   ReactFlow, MiniMap, Controls, Background, ReactFlowProvider, addEdge, useReactFlow
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Zap, FileText } from 'lucide-react';
+import { Zap, FileText, ClipboardList } from 'lucide-react';
 import { useTimelineEngine } from './TimelineEngine';
-import { DiaryNode, WormholeNode, ZoneNode, ChronosNode, ImpactNode, DelayNode, PhotoNode, AllowanceNode, DimensionNode, NeuralPrismNode, ShapeNode, TaskNode } from './TimelineNodes';
+import { DiaryNode, WormholeNode, ZoneNode, ChronosNode, ImpactNode, DelayNode, PhotoNode, AllowanceNode, DimensionNode, NeuralPrismNode, ShapeNode, TaskNode, NotesNode } from './TimelineNodes';
 import { SmartEdgeTypes } from './SmartEdges';
 import { api } from '../../utils/api';
 import { useNotification } from '../../context/NotificationContext';
@@ -118,7 +118,8 @@ const TimelineCanvasContent = (props) => {
       dimension: DimensionNode,
       neuralPrism: NeuralPrismNode,
       shapeNode: ShapeNode,
-      taskNode: TaskNode 
+      taskNode: TaskNode,
+      notesNode: NotesNode
   }), []);
 
   const edgeTypes = useMemo(() => SmartEdgeTypes, []);
