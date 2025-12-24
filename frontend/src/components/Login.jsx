@@ -2,11 +2,13 @@
  * MasterDiaryApp Official - Construction SaaS Platform
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  */
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { api } from '../utils/api'
+import { useNavigate } from 'react-router-dom'
 import { LogIn, UserPlus, Mail, Lock, User, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react'
 
 const Login = ({ onLogin }) => {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isRegister, setIsRegister] = useState(false)
@@ -14,6 +16,14 @@ const Login = ({ onLogin }) => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      onLogin(token)
+      navigate('/dashboard')
+    }
+  }, [navigate, onLogin])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

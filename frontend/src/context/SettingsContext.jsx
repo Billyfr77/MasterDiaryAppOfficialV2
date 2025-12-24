@@ -54,7 +54,11 @@ export const SettingsProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    loadSettings();
+    if (localStorage.getItem('token')) {
+      loadSettings();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   return (

@@ -13,10 +13,11 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, Play, Plus, Trash2, Layout, Calendar, List, MoreVertical, Loader2, ArrowLeft, Sparkles, Wand2, HelpCircle, Clipboard, GitFork, Bell, Zap, User, MessageSquare, CheckSquare, FolderOpen, FileText, ArrowRight, X } from 'lucide-react';
+import { Save, Play, Plus, Trash2, Layout, Calendar, List, MoreVertical, Loader2, ArrowLeft, Sparkles, Wand2, HelpCircle, Clipboard, GitFork, Bell, Zap, User, MessageSquare, CheckSquare, FolderOpen, FileText, ArrowRight, X, BrainCircuit, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WorkflowSidebar from './WorkflowSidebar';
 import CustomNode from './CustomNode';
+import AppIntegrationNode from './AppIntegrationNode';
 import DecisionNode from './DecisionNode';
 import CustomEdge from './CustomEdge';
 import PropertiesPanel from './PropertiesPanel';
@@ -25,7 +26,9 @@ import ListView from './ListView';
 import WorkflowHelp from './WorkflowHelp';
 import ContextMenu from './ContextMenu';
 import ConnectionLine from './ConnectionLine';
+import WorkflowCopilot from './WorkflowCopilot';
 import { api } from '../../utils/api';
+import { useNotification } from '../../context/NotificationContext';
 
 const nodeTypes = {
   milestone: CustomNode,
@@ -39,7 +42,14 @@ const nodeTypes = {
   action: CustomNode,
   quoteAction: CustomNode,
   diaryAction: CustomNode,
-  resourceAction: CustomNode
+  resourceAction: CustomNode,
+  invoiceNode: AppIntegrationNode,
+  safetyNode: AppIntegrationNode,
+  resourceNode: AppIntegrationNode,
+  diaryNode: AppIntegrationNode,
+  quoteNode: AppIntegrationNode,
+  forensicNode: AppIntegrationNode,
+  delayNode: AppIntegrationNode
 };
 
 const edgeTypes = {
@@ -49,6 +59,7 @@ const edgeTypes = {
 const getId = () => `node_${new Date().getTime()}`;
 
 const WorkflowBuilderContent = () => {
+  const { addNotification } = useNotification();
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -183,9 +194,28 @@ const WorkflowBuilderContent = () => {
   const generateAiTemplate = async (type = 'custom') => {
       setAiLoading(true);
       
+      const NODE_SCHEMA_INSTRUCTION = `
+      CRITICAL: You are the architect of a "MasterDiaryOS" executable workflow.
+      You MUST use the following specific node types and configurations to create intelligent, functional automation.
+      
+      AVAILABLE NODE TYPES:
+      1. 'invoiceNode': Billing. Config: { amount: "5000", client: "Client" }
+      2. 'safetyNode': Compliance. Config: { template: "High Risk SWMS", riskLevel: "High" }
+      3. 'resourceNode': Allocation. Config: { resourceType: "Excavator", quantity: "1" }
+      4. 'diaryNode': Logs. Config: { logType: "Delay" }
+      5. 'quoteNode': Estimation. Config: { status: "Approved" }
+      6. 'forensicNode': RISK AUDIT. Config: { category: "Financial Risk", sensitivity: "High" }
+      7. 'delayNode': TEMPORAL LOGIC. Config: { duration: "24", type: "Standard" }
+      8. 'decision': Logic branching.
+      9. 'approval': Human sign-off.
+      10. 'milestone': Key event.
+
+      Return JSON with 'nodes' and 'edges'. Node data MUST include 'config' properties.
+      `;
+
       const finalPrompt = type === 'custom' 
-          ? aiPrompt 
-          : `A standard workflow for: ${type.replace(/_/g, ' ')}`;
+          ? `${aiPrompt}\n\n${NODE_SCHEMA_INSTRUCTION}`
+          : `Generate a robust construction workflow for: ${type.replace(/_/g, ' ')}.\n\n${NODE_SCHEMA_INSTRUCTION}`;
 
       if (!finalPrompt) {
           alert("Please provide a description or select a template.");
@@ -201,6 +231,7 @@ const WorkflowBuilderContent = () => {
               setNodes(nodes);
               setEdges(edges);
               setShowAIModal(false);
+              addNotification('success', 'AI Architect Complete', 'Workflow successfully generated and integrated.');
               // Auto-fit view after AI generation
               setTimeout(() => {
                   if (reactFlowInstance) {
@@ -212,7 +243,7 @@ const WorkflowBuilderContent = () => {
           }
       } catch (err) {
           console.error("AI Workflow Generation Error:", err);
-          alert(`Failed to generate workflow: ${err.response?.data?.error || err.message}`);
+          addNotification('error', 'AI Generation Failed', err.response?.data?.error || err.message);
       } finally {
           setAiLoading(false);
       }
@@ -230,6 +261,10 @@ const WorkflowBuilderContent = () => {
   const [quickAddMenu, setQuickAddMenu] = useState(null);
   
   const navigate = useNavigate();
+
+  // --- MASTERPIECE STATES ---
+  const [forensicLens, setForensicLens] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
 
   // Load Staff for assignment
   useEffect(() => {
@@ -259,7 +294,7 @@ const WorkflowBuilderContent = () => {
           setShowLoadModal(true);
       } catch (err) {
           console.error("Failed to load workflows", err);
-          alert("Could not fetch workflows.");
+          addNotification('error', 'Load Error', 'Could not fetch saved workflows.');
       }
   };
 
@@ -269,6 +304,7 @@ const WorkflowBuilderContent = () => {
       setNodes(wf.nodes || []);
       setEdges(wf.edges || []);
       setShowLoadModal(false);
+      addNotification('info', 'Workflow Loaded', `Active canvas: ${wf.title}`);
   };
 
   const deleteWorkflow = async (id, title) => {
@@ -279,7 +315,7 @@ const WorkflowBuilderContent = () => {
     try {
       setLoading(true);
       await api.delete(`/workflows/${id}`);
-      alert(`Workflow "${title}" deleted successfully.`);
+      addNotification('success', 'Workflow Deleted', `"${title}" removed from library.`);
       fetchWorkflows(); // Re-fetch to update the list
       // If the deleted workflow was the currently loaded one, clear it
       if (workflowId === id) {
@@ -290,7 +326,7 @@ const WorkflowBuilderContent = () => {
       }
     } catch (error) {
       console.error('Failed to delete workflow:', error);
-      alert('Failed to delete workflow. Check console.');
+      addNotification('error', 'Delete Failed', 'Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -339,8 +375,46 @@ const WorkflowBuilderContent = () => {
   }, [nodes.map(n => n.data.status).join(',')]); 
 
   const onConnect = useCallback((params) => {
-      setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true }, eds));
-  }, []);
+      // 1. Smart Validation
+      if (params.source === params.target) {
+          addNotification('warning', 'Invalid Connection', 'Cannot connect a node to itself.');
+          return;
+      }
+
+      // 2. Decision Node Logic Auto-Labeling
+      // We need to check the source handle ID to determine if it's a "Yes" or "No" path
+      let label = '';
+      let style = { strokeWidth: 2 };
+      
+      // If connecting from a Decision Node handle
+      if (params.sourceHandle === 'true') {
+          label = 'YES';
+          style = { stroke: '#22c55e', strokeWidth: 2 }; 
+      } else if (params.sourceHandle === 'false') {
+          label = 'NO';
+          style = { stroke: '#ef4444', strokeWidth: 2 };
+      }
+
+      // 3. Create Smart Edge
+      const newEdge = {
+          ...params,
+          type: 'custom',
+          animated: true,
+          label,
+          style,
+          data: { 
+              sourceHandleId: params.sourceHandle, // Store for CustomEdge visualization
+              isBlocked: false,
+              isActive: false
+          }
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
+      
+      // 4. Feedback
+      const connectionType = label ? `Logic Path (${label})` : 'Standard Link';
+      addNotification('success', 'Smart Link Created', `${connectionType} established.`);
+  }, [addNotification]);
 
   const onConnectStart = useCallback((_, { nodeId }) => {
     connectingNodeId.current = nodeId;
@@ -389,6 +463,7 @@ const WorkflowBuilderContent = () => {
       
       setQuickAddMenu(null);
       setSelectedNodeId(newNode.id);
+      addNotification('success', 'Node Added', `${label} node created.`);
   };
 
   const handleTapAddNode = (type, label) => {
@@ -407,6 +482,7 @@ const WorkflowBuilderContent = () => {
 
       setNodes((nds) => nds.concat(newNode));
       if (window.innerWidth < 1024) setShowSidebar(false);
+      addNotification('success', 'Node Added', `${label} node placed on canvas.`);
   };
 
   const onPaneContextMenu = useCallback(
@@ -437,6 +513,7 @@ const WorkflowBuilderContent = () => {
 
       setNodes((nds) => nds.concat(newNode));
       setMenu(null);
+      addNotification('success', 'Node Added', `${label} node created.`);
   }
 
   const onDragOver = useCallback((event) => {
@@ -470,6 +547,7 @@ const WorkflowBuilderContent = () => {
     
           setNodes((nds) => nds.concat(newNode));
           setSelectedNodeId(newNode.id);
+          addNotification('success', 'Node Dropped', `${label} node placed.`);
       }
     },
     [reactFlowInstance],
@@ -502,6 +580,7 @@ const WorkflowBuilderContent = () => {
           };
           setNodes((nds) => nds.concat(newNode));
           setSelectedNodeId(newNode.id);
+          addNotification('success', 'Quick Node', 'Standard task node created.');
       }
   }, [reactFlowInstance]);
 
@@ -520,6 +599,7 @@ const WorkflowBuilderContent = () => {
       setNodes((nds) => nds.filter((n) => n.id !== id));
       setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
       setSelectedNodeId(null);
+      addNotification('warning', 'Node Deleted', 'Item removed from workflow.');
   };
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
@@ -545,11 +625,14 @@ const WorkflowBuilderContent = () => {
         setWorkflowId(newId);
       }
       
-      if (!silent) alert('Workflow saved successfully!');
+      if (!silent) {
+          alert('Workflow saved successfully!'); // Keep alert for direct feedback or remove if notify is enough
+          addNotification('success', 'Workflow Saved', `"${workflowName}" is secure.`);
+      }
       return newId;
     } catch (error) {
       console.error('Failed to save workflow:', error);
-      alert('Failed to save workflow. Check console.');
+      addNotification('error', 'Save Failed', 'Could not save workflow. Check connection.');
       return null;
     } finally {
       setLoading(false);
@@ -569,10 +652,10 @@ const WorkflowBuilderContent = () => {
           // 3. Update local state
           setNodes(res.data.nodes);
           setEdges(res.data.edges);
-          alert('Workflow started!');
+          addNotification('success', 'Workflow Executing', 'Process initiated successfully.');
       } catch (err) {
           console.error("Run failed", err);
-          alert("Failed to start workflow.");
+          addNotification('error', 'Execution Failed', 'Could not start workflow.');
       }
   };
 
@@ -606,8 +689,10 @@ const WorkflowBuilderContent = () => {
       { type: 'trigger', label: 'Trigger', icon: Zap, color: 'text-amber-400' },
       { type: 'action', label: 'Action', icon: Play, color: 'text-indigo-400' },
       { type: 'decision', label: 'Logic', icon: GitFork, color: 'text-orange-400' },
-      { type: 'milestone', label: 'Milestone', icon: Bell, color: 'text-yellow-400' },
-      { type: 'approval', label: 'Approval', icon: User, color: 'text-purple-400' },
+      { type: 'invoiceNode', label: 'Invoice', icon: FileText, color: 'text-emerald-400' },
+      { type: 'safetyNode', label: 'Safety', icon: CheckSquare, color: 'text-rose-400' },
+      { type: 'resourceNode', label: 'Resource', icon: User, color: 'text-amber-400' },
+      { type: 'diaryNode', label: 'Diary', icon: Calendar, color: 'text-cyan-400' },
   ];
 
   const resumeNode = (id) => {
@@ -722,6 +807,29 @@ const WorkflowBuilderContent = () => {
                 <span className="text-xs font-bold uppercase tracking-wider">AI Suggest</span>
               </button>
 
+             {/* MASTERPIECE: CO-PILOT TOGGLE */}
+             <button 
+                onClick={() => setCopilotOpen(!copilotOpen)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${copilotOpen ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_#6366f1]' : 'bg-slate-800/50 border-white/10 text-slate-400 hover:text-white'}`}
+                title="Neural Co-pilot"
+              >
+                <BrainCircuit size={16} />
+                <span className="text-xs font-bold uppercase tracking-wider">Co-pilot</span>
+              </button>
+
+             {/* MASTERPIECE: FORENSIC LENS TOGGLE */}
+             <button 
+                onClick={() => {
+                    setForensicLens(!forensicLens);
+                    addNotification(forensicLens ? 'info' : 'warning', forensicLens ? 'Standard View' : 'Forensic Mode Active', forensicLens ? 'Neural filters deactivated.' : 'Financial risk analysis initialized.');
+                }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${forensicLens ? 'bg-violet-600 border-violet-400 text-white shadow-[0_0_15px_#8b5cf6]' : 'bg-slate-800/50 border-white/10 text-slate-400 hover:text-white'}`}
+                title="Forensic Risk Lens"
+              >
+                <AlertTriangle size={16} />
+                <span className="text-xs font-bold uppercase tracking-wider">Forensic</span>
+              </button>
+
              {/* Help Button */}
              <button 
                 onClick={() => setShowHelp(true)}
@@ -797,7 +905,7 @@ const WorkflowBuilderContent = () => {
         >
           {viewMode === 'graph' && (
             <ReactFlow
-              nodes={nodes}
+              nodes={nodes.map(n => ({ ...n, data: { ...n.data, forensicActive: forensicLens } }))}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
@@ -815,23 +923,45 @@ const WorkflowBuilderContent = () => {
               fitView
               className="bg-slate-950"
               defaultEdgeOptions={{ type: 'custom', animated: true, style: { strokeWidth: 2, stroke: '#64748b' } }}
-              minZoom={0.2}
+              minZoom={0.1}
               maxZoom={4}
             >
-              <Background color="#334155" gap={20} size={1} />
-              <Controls className="bg-slate-800 border-slate-700 fill-slate-300 text-slate-300 [&>button:hover]:bg-slate-700" />
+              {/* MASTERPIECE CYBER GRID */}
+              <Background 
+                color={forensicLens ? "#4c1d95" : "#1e1b4b"} 
+                gap={25} 
+                size={1} 
+                className="opacity-20"
+              />
+              <Background 
+                variant="lines" 
+                color={forensicLens ? "#5b21b6" : "#312e81"} 
+                gap={150} 
+                size={1} 
+                className="opacity-10"
+              />
+              
+              <Controls className="bg-slate-900 border-white/10 fill-slate-300 text-slate-300 [&>button:hover]:bg-slate-800" />
               <MiniMap 
-                className="!bg-slate-900 !border-slate-700 rounded-lg overflow-hidden shadow-xl" 
+                className="!bg-slate-900 !border-white/10 rounded-2xl overflow-hidden shadow-2xl" 
                 nodeColor={(n) => {
+                  if (forensicLens) return '#8b5cf6';
                   if (n.type === 'input') return '#10b981';
                   if (n.type === 'output') return '#ef4444';
                   if (n.type === 'milestone') return '#eab308';
                   return '#3b82f6';
                 }}
-                maskColor="rgba(15, 23, 42, 0.6)"
+                maskColor="rgba(2, 6, 23, 0.8)"
               />
             </ReactFlow>
           )}
+
+          {/* MASTERPIECE CO-PILOT INTERFACE */}
+          <WorkflowCopilot 
+            isOpen={copilotOpen} 
+            onClose={() => setCopilotOpen(false)}
+            onCommand={(cmd) => addNotification('info', 'Command Received', `Co-pilot is analyzing: ${cmd}`)}
+          />
 
           {/* Quick Add Menu Popover (Connections) */}
           <AnimatePresence>

@@ -31,9 +31,18 @@ MasterDiaryOS is an **AI-Native Construction Operating System** that transforms 
 *   **Interactive AI Guide:** A built-in "Neural Tutor" that spotlights screen elements and teaches users how to master the OS in real-time.
 *   **Module-Based Training:** Specific training modules for "Quote Building," "Diary Management," and "Financial Auditing."
 
-### 4. Workflow Automator // The Project Router
-*   **Visual Logic Builder:** Map out the lifecycle of a project visually.
-*   **Trigger-Action Sync:** Automatically trigger events like "Generate Invoice," "Send Email," or "Flag Risk" when specific logic gates are met on the canvas.
+### 4. Neural Workflow Engine (NWE) // Pinnacle OS Brain
+*   **The Masterpiece Logic Hub:** The most advanced feature of the OS, acting as the centralized brain for cross-module automation.
+    *   **Power Node Architecture:** Beyond standard tasks, the NWE utilizes high-fidelity **Integration Nodes** that execute real app functionality:
+        *   **Invoice Engine:** Configurable nodes that auto-draft financial claims with specific amounts and client targets.
+        *   **Compliance Lock:** Safety nodes pre-wired to SWMS templates and risk sensitivity levels (Low to Critical).
+        *   **Resource Sync:** Live allocation nodes for syncing machinery (Excavators, Fleet) and staff roles.
+        *   **Forensic Audit:** Specialized violet-glow nodes that perform deep financial risk scans and detect timeline drift.
+        *   **Temporal Delay:** Intelligent logic holds for material curing, weather events, or approval gateways.
+    *   **Neural Co-pilot:** A dedicated, floating AI chat interface specifically for the builder. Command the AI to *"Architect a high-risk demolition flow"* or *"Refactor this branch for maximum margin,"* and watch it execute in real-time.
+    *   **Forensic Lens Mode:** A masterpiece visual toggle that shifts the entire canvas into a high-contrast risk assessment view, highlighting anomalies with violet pulses and cyber-grid shifts.
+    *   **Smart Edge Logic:** Connection lines aren't just visual; they are intelligent logic paths. Connecting from a **Logic Gate** (Decision Node) automatically architects **YES (Pass)** and **NO (Fail)** paths with holographic badges and color-coded signals.
+    *   **Pinnacle Properties:** Every node type features a uniquely tailored "Jewel" interface, ensuring intuitive control over complex functional configurations.
 
 ### 5. GeoSpatial Map Architect // Digital Twin
 *   **Georeferenced Nodes:** Links visual diary nodes to exact GPS coordinates.

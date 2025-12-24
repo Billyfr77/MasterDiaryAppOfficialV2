@@ -15,7 +15,7 @@ import {
   ArrowRight, Sparkles, Command, Box, X, Hammer, Briefcase, Wrench,
   Globe, Layers, PenTool, CreditCard, GitBranch, FileText, Palette, AlertTriangle, Settings,
   User, Timer, Package, Ruler, BarChart3, ClipboardCheck, Crown, Landmark, Map as MapIcon, Truck,
-  List, Loader2, Wand2, Calendar, Maximize, Plus, TrendingUp, BrainCircuit, GraduationCap
+  List, Loader2, Wand2, Calendar, Maximize, Plus, TrendingUp, BrainCircuit, GraduationCap, DollarSign
 } from 'lucide-react'
 
 // --- ASSETS & CONFIG ---
@@ -556,7 +556,7 @@ const OSCapabilities = () => (
                                 <div className="p-3 bg-emerald-600 rounded-xl text-white"><Zap size={20}/></div>
                                 <div>
                                     <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Neural_Yield</div>
-                                    <div className="text-sm font-bold text-white">Area Node -> Material Auto-Calc</div>
+                                    <div className="text-sm font-bold text-white">Area Node &rarr; Material Auto-Calc</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">

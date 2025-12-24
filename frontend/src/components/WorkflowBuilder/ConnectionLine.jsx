@@ -13,28 +13,48 @@ export default function ConnectionLine({ fromX, fromY, toX, toY, fromPosition, t
 
   return (
     <g>
-      {/* Glow Effect */}
+      {/* Outer Glow (Plasma Effect) */}
       <path
         fill="none"
         stroke="#6366f1"
-        strokeWidth={6}
-        className="opacity-20 blur-sm"
+        strokeWidth={8}
+        className="opacity-10 blur-md animate-pulse"
         d={edgePath}
       />
-      {/* Main Line */}
+      
+      {/* Secondary Glow */}
       <path
         fill="none"
         stroke="#818cf8"
-        strokeWidth={2}
-        className="animated"
+        strokeWidth={4}
+        className="opacity-30 blur-sm"
+        d={edgePath}
+      />
+
+      {/* Main Dashed Line (Animated) */}
+      <path
+        fill="none"
+        stroke="#a5b4fc"
+        strokeWidth={2.5}
         d={edgePath}
         style={{
-             strokeDasharray: '5, 5',
-             animation: 'dashdraw 0.5s linear infinite'
+             strokeDasharray: '8, 8',
+             animation: 'dashdraw 0.4s linear infinite'
         }}
       />
-      {/* Target Cursor Magnet */}
-      <circle cx={toX} cy={toY} r={6} fill="#6366f1" stroke="#fff" strokeWidth={2} className="animate-pulse" />
+
+      {/* Source Anchor */}
+      <circle cx={fromX} cy={fromY} r={4} fill="#6366f1" stroke="#fff" strokeWidth={1.5} />
+
+      {/* Target Cursor Magnet (Seeking UI) */}
+      <g transform={`translate(${toX}, ${toY})`}>
+          {/* Ripple rings */}
+          <circle r={12} fill="none" stroke="#6366f1" strokeWidth={1} opacity={0.5}>
+             <animate attributeName="r" from="8" to="20" dur="1.5s" repeatCount="indefinite" />
+             <animate attributeName="opacity" from="0.5" to="0" dur="1.5s" repeatCount="indefinite" />
+          </circle>
+          <circle r={6} fill="#6366f1" stroke="#fff" strokeWidth={2} />
+      </g>
     </g>
   );
 };

@@ -392,7 +392,7 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.2 }}
-                        className="p-8 bg-[#0a0a0c] border border-white/5 rounded-[3rem] shadow-xl"
+                        className="p-8 bg-[#0a0a0c] border border-white/5 rounded-[3rem] shadow-xl min-h-[400px]"
                     >
                         <div className="flex items-center gap-3 mb-8 px-4">
                             <div className="p-2 bg-cyan-500/20 rounded-lg text-cyan-400 border border-cyan-500/30">
@@ -401,12 +401,14 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                             <span className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em]">RECONSTRUCTED OPERATIONAL TIMELINE</span>
                         </div>
                         <div className="space-y-8 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-px before:bg-indigo-500/10 max-w-3xl mx-auto py-4">
-                            {timeline.map((event, idx) => (
+                            {(timeline || []).map((event, idx) => (
                                 <div key={idx} className="relative pl-12 group">
                                     <div className="absolute left-0 top-1 w-10 h-10 rounded-full bg-black border border-white/5 flex items-center justify-center group-hover:border-cyan-500/40 transition-colors">
                                         <div className="w-3 h-3 rounded-full bg-cyan-500/20 border border-cyan-500/40 shadow-[0_0_10px_rgba(34,211,238,0.2)] group-hover:scale-125 transition-transform" />
                                     </div>
-                                    <p className="text-base font-medium text-gray-400 group-hover:text-white transition-colors py-2">{event}</p>
+                                    <p className="text-base font-medium text-gray-400 group-hover:text-white transition-colors py-2">
+                                        {typeof event === 'string' ? event : event?.description || JSON.stringify(event)}
+                                    </p>
                                 </div>
                             ))}
                         </div>
@@ -420,7 +422,7 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.2 }}
-                        className="p-8 bg-[#0a0a0c] border border-white/5 rounded-[3rem] shadow-xl"
+                        className="p-8 bg-[#0a0a0c] border border-white/5 rounded-[3rem] shadow-xl min-h-[400px]"
                     >
                         <div className="flex items-center gap-3 mb-10 px-4">
                             <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400 border border-emerald-500/30">
@@ -429,12 +431,14 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                             <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">STRATEGIC DECISION QUEUE</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {next_actions.map((action, idx) => (
+                            {(next_actions || []).map((action, idx) => (
                                 <div key={idx} className="flex items-center gap-6 p-8 bg-gradient-to-r from-white/[0.02] to-transparent border border-white/5 rounded-3xl hover:border-emerald-500/30 hover:bg-white/[0.04] transition-all cursor-default group">
                                     <div className="w-8 h-8 rounded-xl border-2 border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/10 group-hover:border-emerald-500/40 transition-all">
                                         <CheckCircle2 size={16} className="text-emerald-500 opacity-20 group-hover:opacity-100 transition-opacity" />
                                     </div>
-                                    <span className="text-lg font-medium text-gray-300 group-hover:text-white transition-colors">{action}</span>
+                                    <span className="text-lg font-medium text-gray-300 group-hover:text-white transition-colors">
+                                        {typeof action === 'string' ? action : action?.task || JSON.stringify(action)}
+                                    </span>
                                 </div>
                             ))}
                         </div>

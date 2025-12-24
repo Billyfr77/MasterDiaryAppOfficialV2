@@ -57,21 +57,21 @@ const WorkflowHelp = ({ onClose }) => {
                     <div className="space-y-6">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400"><GitFork size={24} /></div>
-                            <h3 className="text-xl font-bold text-white">Intelligent Nodes</h3>
+                            <h3 className="text-xl font-bold text-white">Advanced Nodes</h3>
                         </div>
                         <HelpCard 
-                            title="Task / Action"
-                            desc="Standard step. Can be assigned to staff, given a duration, and marked as mandatory."
-                            icon={Clipboard}
-                        />
-                        <HelpCard 
-                            title="Decision Logic"
-                            desc="Branches the flow. Has 'Yes' and 'No' outputs. Configure the question in the side panel."
+                            title="Logic & Decision"
+                            desc="Branches the flow. Has 'Yes' and 'No' outputs. Configure logic in the side panel."
                             icon={GitFork}
                         />
                         <HelpCard 
+                            title="App Integrations"
+                            desc="Power nodes for Invoicing, Safety Forms, Resource Allocation, and Site Diary logs."
+                            icon={Zap}
+                        />
+                        <HelpCard 
                             title="Milestone"
-                            desc="A checkpoint. Useful for invoicing triggers or client notifications."
+                            desc="Key checkpoints that can trigger automated billing or client updates."
                             icon={Sparkles}
                         />
                     </div>
