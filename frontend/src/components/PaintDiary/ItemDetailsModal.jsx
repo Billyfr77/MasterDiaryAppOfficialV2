@@ -3,6 +3,8 @@ import { X, Clock, DollarSign, FileText, Calendar, ArrowRight, TrendingUp, Calcu
 
 const ItemDetailsModal = ({ isOpen, onClose, onConfirm, item, overtimeThreshold = 8 }) => {
     const [quantity, setQuantity] = useState(1);
+    const [plannedHours, setPlannedHours] = useState(8);
+    const [name, setName] = useState("");
     const [startTime, setStartTime] = useState("07:00");
     const [finishTime, setFinishTime] = useState("15:00");
     const [notes, setNotes] = useState("");
@@ -21,6 +23,8 @@ const ItemDetailsModal = ({ isOpen, onClose, onConfirm, item, overtimeThreshold 
                 return;
             }
             setQuantity(item.quantity || (item.type === 'staff' ? 8 : 1));
+            setPlannedHours(item.plannedHours || 8);
+            setName(item.name || item.label || "");
             setCostRate(item.costRate || 0);
             setChargeRate(item.chargeRate || (item.costRate * 1.2) || 0);
             if (item.startTime) setStartTime(item.startTime);
@@ -58,8 +62,11 @@ const ItemDetailsModal = ({ isOpen, onClose, onConfirm, item, overtimeThreshold 
     const handleConfirm = () => {
         onConfirm({
             ...item,
+            name,
+            label: name,
             quantity: parseFloat(quantity),
             duration: parseFloat(quantity), 
+            plannedHours: parseFloat(plannedHours),
             startTime,
             finishTime,
             note: notes,
@@ -71,6 +78,7 @@ const ItemDetailsModal = ({ isOpen, onClose, onConfirm, item, overtimeThreshold 
     };
 
     const isTimeBased = item.type === 'staff' || item.type === 'equipment' || item.type === 'chronos';
+    const isTask = item.type === 'taskNode';
     const isMaterial = item.type === 'material';
 
     // Theme Logic
@@ -78,6 +86,7 @@ const ItemDetailsModal = ({ isOpen, onClose, onConfirm, item, overtimeThreshold 
                  item.type === 'equipment' ? { color: 'amber', icon: <Wrench /> } :
                  item.type === 'chronos' ? { color: 'cyan', icon: <Clock /> } :
                  item.type === 'delay' ? { color: 'rose', icon: <AlertTriangle /> } :
+                 item.type === 'taskNode' ? { color: 'indigo', icon: <ClipboardList /> } :
                  { color: 'indigo', icon: <Package /> };
 
     const colorClasses = {
@@ -96,20 +105,23 @@ const ItemDetailsModal = ({ isOpen, onClose, onConfirm, item, overtimeThreshold 
 
                 {/* Header */}
                 <div className="relative p-8 pb-4 flex justify-between items-start z-10">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-1">
                         <div className={`p-4 rounded-2xl bg-gradient-to-br ${colorClasses[theme.color]} shadow-lg`}>
                             {React.cloneElement(theme.icon, { size: 24, strokeWidth: 2.5 })}
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <div className={`text-[10px] font-black uppercase tracking-[0.2em] text-${theme.color}-500 mb-1`}>
-                                New Entry
+                                {isTask ? 'Configure Task' : 'New Entry'}
                             </div>
-                            <h3 className="text-2xl font-black text-white uppercase tracking-tight leading-none">
-                                {item.name}
-                            </h3>
+                            <input 
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                className="w-full bg-transparent text-2xl font-black text-white uppercase tracking-tight leading-none outline-none focus:text-indigo-400 transition-colors"
+                                placeholder="Item Name"
+                            />
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/5">
+                    <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/5 ml-4">
                         <X size={20} className="text-gray-400" />
                     </button>
                 </div>
@@ -117,7 +129,21 @@ const ItemDetailsModal = ({ isOpen, onClose, onConfirm, item, overtimeThreshold 
                 <div className="p-8 pt-2 space-y-6 relative z-10 max-h-[70vh] overflow-y-auto custom-scrollbar">
                     
                     {/* --- DYNAMIC INPUT SECTION --- */}
-                    {isTimeBased ? (
+                    {isTask ? (
+                        <div className="space-y-4">
+                            <div className="bg-black/40 border border-white/10 rounded-3xl p-6 flex flex-col items-center justify-center h-32 relative overflow-hidden group/input focus-within:border-indigo-500/50">
+                                <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-2">Planned Target (Hrs)</label>
+                                <input 
+                                    type="number" 
+                                    value={plannedHours} 
+                                    onChange={e => setPlannedHours(parseFloat(e.target.value))} 
+                                    className="w-full bg-transparent text-white font-mono text-5xl font-black text-center outline-none z-10"
+                                />
+                                <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-focus-within/input:opacity-100 transition-opacity pointer-events-none" />
+                            </div>
+                            <p className="text-center text-[10px] text-gray-500 font-bold uppercase tracking-widest">Set the estimated time required for this task</p>
+                        </div>
+                    ) : isTimeBased ? (
                         <div className="space-y-4">
                             {/* Time Visualizer Bar */}
                             <div className="h-12 bg-black/40 rounded-xl border border-white/5 flex items-center px-4 relative overflow-hidden">

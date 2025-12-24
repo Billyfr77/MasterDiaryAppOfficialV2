@@ -89,6 +89,21 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON,
       allowNull: true,
       defaultValue: []
+    },
+    fatigueLevel: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0
+    },
+    skillTags: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: []
+    },
+    historicalPerformance: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {}
     }
   }, {
     sequelize,

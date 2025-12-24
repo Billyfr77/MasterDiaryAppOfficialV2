@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { 
-  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList
+  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList, Circle, ShieldCheck, Crown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
@@ -35,10 +35,17 @@ const DraggableItem = ({ item }) => {
     let iconClass = "bg-indigo-500/20 text-indigo-400";
     let icon = <Package size={16} />;
 
+    const getRoleIcon = (role) => {
+        const lowRole = role?.toLowerCase() || '';
+        if (lowRole.includes('boss') || lowRole.includes('director') || lowRole.includes('owner')) return <Crown size={16} />;
+        if (lowRole.includes('super') || lowRole.includes('foreman') || lowRole.includes('lead') || lowRole.includes('manager')) return <ShieldCheck size={16} />;
+        return <User size={16} />;
+    };
+
     if (item.type === 'staff') {
         wrapperClass = "bg-gradient-to-r from-emerald-600/20 to-emerald-900/20 border-emerald-500/30 hover:border-emerald-400";
         iconClass = "bg-emerald-500/20 text-emerald-400";
-        icon = <User size={16} />;
+        icon = getRoleIcon(item.role);
     } else if (item.type === 'equipment') {
         wrapperClass = "bg-gradient-to-r from-amber-600/20 to-amber-900/20 border-amber-500/30 hover:border-amber-400";
         iconClass = "bg-amber-500/20 text-amber-400";
@@ -55,10 +62,10 @@ const DraggableItem = ({ item }) => {
         wrapperClass = "bg-gradient-to-r from-amber-500/20 to-yellow-900/20 border-amber-500/30 hover:border-amber-400";
         iconClass = "bg-amber-500/20 text-amber-400";
         icon = <Award size={16} />;
-    } else if (item.type === 'shapeNode') {
+    } else if (item.type === 'shapeNode' || item.type === 'zone' || item.type === 'wormhole') {
         wrapperClass = "bg-gradient-to-r from-violet-500/20 to-purple-900/20 border-violet-500/30 hover:border-violet-400";
         iconClass = "bg-violet-500/20 text-violet-400";
-        icon = <Shapes size={16} />;
+        icon = item.type === 'wormhole' ? <Circle size={16} /> : item.type === 'zone' ? <Box size={16} /> : <Shapes size={16} />;
     }
 
     return (
@@ -72,6 +79,18 @@ const DraggableItem = ({ item }) => {
             </div>
             <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold text-gray-200 truncate group-hover:text-white transition-colors">{item.name}</div>
+                {item.type === 'staff' && item.skillTags?.length > 0 && (
+                    <div className="max-h-0 opacity-0 group-hover:max-h-20 group-hover:opacity-100 transition-all duration-500 overflow-hidden">
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                            {item.skillTags.slice(0, 3).map((tag, i) => (
+                                <span key={i} className="px-1.5 py-0.5 rounded-[4px] bg-emerald-500/20 border border-emerald-500/30 text-[6px] font-black text-emerald-400 uppercase tracking-tighter">
+                                    {tag}
+                                </span>
+                            ))}
+                            {item.skillTags.length > 3 && <span className="text-[6px] text-gray-500 font-bold self-center ml-1">+ {item.skillTags.length - 3}</span>}
+                        </div>
+                    </div>
+                )}
                 <div className="text-[10px] text-gray-500 font-mono mt-0.5">
                     {item.type === 'staff' ? `$${item.chargeOutBase || 0}/hr` : 
                      item.type === 'equipment' ? `$${item.costRateBase || 0}/day` : 
@@ -439,13 +458,19 @@ const DEFAULT_ALLOWANCES = [
     { id: 'a5', name: 'First Aid', rate: 15.00, allowanceType: 'daily' }
 ];
 
+const DEFAULT_TASKS = [
+    { id: 't1', name: 'Fencing', type: 'taskNode', plannedHours: 8 },
+    { id: 't2', name: 'Trenching', type: 'taskNode', plannedHours: 12 },
+    { id: 't3', name: 'Painting', type: 'taskNode', plannedHours: 16 }
+];
+
 const PaintDiary = () => {
   const navigate = useNavigate();
   const { theme, setActiveTheme, allThemes, activeTheme } = useDiaryTheme();
   const {
     selectedDate, setSelectedDate, currentEntry, setCurrentEntry, projects, selectedProject, setSelectedProject, projectFinancials, quotedData, projectJobs, selectedJobId, setSelectedJobId,
     selectedClient, setSelectedClient, staff, equipment, materials, isSaved, setIsSaved, isSaving, cost, revenue, profit, productivityScore,
-    chatMessages, chatTyping, handleUpdateItem, handleRemoveItem, handleUpdateEdges, handleSave, handleSmartLog, handleSmartChat, smartLogLoading, generateId, overtimeThreshold, overtimeMultiplier, loadDiary, createNewDiary, handleDeleteDiary, recentHistory
+    chatMessages, chatTyping, handleUpdateItem, handleRemoveItem, handleUpdateEdges, handleSave, handleSmartLog, handleSmartChat, smartLogLoading, generateId, overtimeThreshold, overtimeMultiplier, loadDiary, createNewDiary, handleDeleteDiary, recentHistory, resolvedItems
   } = useDiaryEngine();
 
   // --- STATE DECLARATIONS ---
@@ -457,6 +482,13 @@ const PaintDiary = () => {
   const [templates, setTemplates] = useState([]);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateLoading, setTemplateLoading] = useState(false);
+  
+  // Custom Tasks Library
+  const [customTasks, setCustomTasks] = useState(DEFAULT_TASKS);
+  const [newTaskName, setNewTaskName] = useState('');
+  const [newTaskHours, setNewTaskHours] = useState('');
+  const [editingTaskId, setEditingTaskId] = useState(null);
+
   const [customAllowances, setCustomAllowances] = useState(DEFAULT_ALLOWANCES);
   const [newAllowanceName, setNewAllowanceName] = useState('');
   const [newAllowanceRate, setNewAllowanceRate] = useState('');
@@ -470,6 +502,44 @@ const PaintDiary = () => {
   const [pendingItem, setPendingItem] = useState(null);
 
   const { addNotification } = useNotification();
+
+  const handleCreateCustomTask = () => {
+      if (!newTaskName || !newTaskHours) return;
+      if (editingTaskId) {
+          setCustomTasks(prev => prev.map(t => t.id === editingTaskId ? {
+              ...t,
+              name: newTaskName,
+              plannedHours: parseFloat(newTaskHours)
+          } : t));
+          setEditingTaskId(null);
+      } else {
+          const newTask = {
+              id: `task-${Date.now()}`,
+              name: newTaskName,
+              type: 'taskNode',
+              plannedHours: parseFloat(newTaskHours)
+          };
+          setCustomTasks([newTask, ...customTasks]);
+      }
+      setNewTaskName('');
+      setNewTaskHours('');
+  };
+
+  const handleEditTask = (task) => {
+      setNewTaskName(task.name);
+      setNewTaskHours(task.plannedHours);
+      setEditingTaskId(task.id);
+      setResourceTab('tasks');
+  };
+
+  const handleDeleteTask = (id) => {
+      setCustomTasks(prev => prev.filter(t => t.id !== id));
+      if (editingTaskId === id) {
+          setEditingTaskId(null);
+          setNewTaskName('');
+          setNewTaskHours('');
+      }
+  };
 
   const handleConfirmItem = useCallback((details) => {
       const isExtraNode = ['chronos', 'delay', 'impact', 'wormhole', 'zone', 'photoNode', 'allowance', 'neuralPrism', 'shapeNode', 'taskNode'].includes(details.type);
@@ -967,11 +1037,59 @@ const PaintDiary = () => {
                         </div>
                     ) : resourceTab === 'tasks' ? (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="bg-indigo-900/20 border border-indigo-500/20 rounded-xl p-3 mb-4">
+                                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">
+                                    {editingTaskId ? 'Edit Task Unit' : 'Define New Task'}
+                                </div>
+                                <div className="space-y-2">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Task Name (e.g. Brickwork)" 
+                                        value={newTaskName}
+                                        onChange={e => setNewTaskName(e.target.value)}
+                                        className="w-full bg-black/40 border border-indigo-500/30 rounded-lg px-3 py-2 text-xs text-white focus:border-indigo-500 outline-none"
+                                    />
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input 
+                                                type="number" 
+                                                placeholder="Planned Hrs" 
+                                                value={newTaskHours}
+                                                onChange={e => setNewTaskHours(e.target.value)}
+                                                className="w-full bg-black/40 border border-indigo-500/30 rounded-lg px-3 py-2 text-xs text-white focus:border-indigo-500 outline-none"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 text-[8px] font-black uppercase">Hrs</span>
+                                        </div>
+                                        <button 
+                                            onClick={handleCreateCustomTask}
+                                            disabled={!newTaskName || !newTaskHours}
+                                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                                        >
+                                            {editingTaskId ? 'Update' : 'Create'}
+                                        </button>
+                                        {editingTaskId && (
+                                            <button 
+                                                onClick={() => { setEditingTaskId(null); setNewTaskName(''); setNewTaskHours(''); }}
+                                                className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest px-1 mb-2">Operational Tasks</div>
                             <div className="space-y-2">
-                                <DraggableItem item={{ id: 't1', name: 'Fencing', type: 'taskNode', plannedHours: 8 }} />
-                                <DraggableItem item={{ id: 't2', name: 'Trenching', type: 'taskNode', plannedHours: 12 }} />
-                                <DraggableItem item={{ id: 't3', name: 'Painting', type: 'taskNode', plannedHours: 16 }} />
+                                {customTasks.map(task => (
+                                    <div key={task.id} className="relative group">
+                                        <DraggableItem item={task} />
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 rounded-lg p-1 backdrop-blur-sm border border-white/10">
+                                            <button onClick={() => handleEditTask(task)} className="p-1.5 hover:bg-white/20 rounded text-indigo-400"><Edit2 size={12} /></button>
+                                            <button onClick={() => handleDeleteTask(task.id)} className="p-1.5 hover:bg-rose-500/20 rounded text-rose-400"><Trash2 size={12} /></button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                             <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/10">
                                 <p className="text-[10px] text-gray-400 leading-relaxed">
@@ -983,9 +1101,11 @@ const PaintDiary = () => {
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="text-[10px] font-black text-violet-400 uppercase tracking-widest px-1 mb-2">Smart Zones</div>
                             <div className="space-y-2">
-                                <DraggableItem item={{ id: 's1', name: 'Square Zone', type: 'shapeNode', shapeType: 'square', color: 'indigo' }} />
-                                <DraggableItem item={{ id: 's2', name: 'Circle Zone', type: 'shapeNode', shapeType: 'circle', color: 'emerald' }} />
-                                <DraggableItem item={{ id: 's3', name: 'Pill Zone', type: 'shapeNode', shapeType: 'pill', color: 'rose' }} />
+                                <DraggableItem item={{ id: 'z1', name: 'Container Zone', type: 'zone', zoneTotal: 0 }} />
+                                <DraggableItem item={{ id: 'w1', name: 'Wormhole', type: 'wormhole' }} />
+                                <DraggableItem item={{ id: 's1', name: 'Square Shape', type: 'shapeNode', shapeType: 'square', color: 'indigo' }} />
+                                <DraggableItem item={{ id: 's2', name: 'Circle Shape', type: 'shapeNode', shapeType: 'circle', color: 'emerald' }} />
+                                <DraggableItem item={{ id: 's3', name: 'Pill Shape', type: 'shapeNode', shapeType: 'pill', color: 'rose' }} />
                             </div>
                             <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/10">
                                 <p className="text-[10px] text-gray-400 leading-relaxed">
@@ -1153,7 +1273,7 @@ const PaintDiary = () => {
                 {viewMode === 'canvas' ? (
                     <div className={`flex-1 relative rounded-[1.8rem] overflow-hidden bg-black/20 border ${theme.border}`}>
                         <TimelineCanvas 
-                            items={currentEntry.items} 
+                            items={resolvedItems} 
                             extraNodes={currentEntry.extraNodes}
                             edges={currentEntry.edges}
                             quotedData={quotedData}

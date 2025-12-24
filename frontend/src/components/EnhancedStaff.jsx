@@ -4,9 +4,22 @@
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { api } from '../utils/api'
-import { Users, Plus, Edit, Trash2, User, DollarSign } from 'lucide-react'
+import { Users, Plus, Edit, Trash2, User, DollarSign, Tag, X as XIcon } from 'lucide-react'
+
+const CORE_ROLES = [
+    'Director / Boss',
+    'Project Manager',
+    'Site Supervisor',
+    'Foreman / Lead',
+    'Skilled Labourer',
+    'General Labourer',
+    'Machine Operator',
+    'Apprentice',
+    'Subcontractor',
+    'Estimator'
+];
 
 const EnhancedStaff = () => {
   const [staff, setStaff] = useState([])
@@ -14,6 +27,7 @@ const EnhancedStaff = () => {
   const [selectedStaff, setSelectedStaff] = useState(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
+  const [newSkill, setNewSkill] = useState('')
 
   // Form state
   const [formData, setFormData] = useState({
@@ -27,7 +41,8 @@ const EnhancedStaff = () => {
     chargeOutOT1: '',
     chargeOutOT2: '',
     chargeOutNight: '',
-    allowances: [] // Array of { name, rate, type }
+    allowances: [], // Array of { name, rate, type }
+    skillTags: [] // Array of strings
   })
 
   useEffect(() => {
@@ -60,7 +75,8 @@ const EnhancedStaff = () => {
       chargeOutOT1: '',
       chargeOutOT2: '',
       chargeOutNight: '',
-      allowances: []
+      allowances: [],
+      skillTags: []
     })
     setShowCreateForm(true)
   }
@@ -78,7 +94,8 @@ const EnhancedStaff = () => {
       chargeOutOT1: staffMember.chargeOutOT1 || '',
       chargeOutOT2: staffMember.chargeOutOT2 || '',
       chargeOutNight: staffMember.chargeOutNight || '',
-      allowances: staffMember.allowances || []
+      allowances: staffMember.allowances || [],
+      skillTags: Array.isArray(staffMember.skillTags) ? staffMember.skillTags : []
     })
     setShowCreateForm(true)
   }
@@ -110,7 +127,8 @@ const EnhancedStaff = () => {
         chargeOutOT1: parseFloat(formData.chargeOutOT1) || 0,
         chargeOutOT2: parseFloat(formData.chargeOutOT2) || 0,
         chargeOutNight: parseFloat(formData.chargeOutNight) || 0,
-        allowances: formData.allowances
+        allowances: formData.allowances,
+        skillTags: formData.skillTags
       }
 
       if (editingStaff) {
@@ -149,6 +167,43 @@ const EnhancedStaff = () => {
           allowances: prev.allowances.filter((_, i) => i !== idx)
       }))
   }
+
+  const addSkill = (e) => {
+      if (e) e.preventDefault();
+      if (!newSkill.trim() || formData.skillTags.includes(newSkill.trim())) return;
+      setFormData(prev => ({
+          ...prev,
+          skillTags: [...prev.skillTags, newSkill.trim()]
+      }));
+      setNewSkill('');
+  }
+
+  const removeSkill = (skill) => {
+      setFormData(prev => ({
+          ...prev,
+          skillTags: prev.skillTags.filter(s => s !== skill)
+      }));
+  }
+
+  const allAvailableSkills = useMemo(() => {
+      const skills = new Set();
+      staff.forEach(s => {
+          if (Array.isArray(s.skillTags)) {
+              s.skillTags.forEach(tag => skills.add(tag));
+          }
+      });
+      // Add common industry defaults if library is small
+      ['SWMS Certified', 'First Aid', 'Working at Heights', 'Asbestos Awareness', 'White Card'].forEach(s => skills.add(s));
+      return Array.from(skills);
+  }, [staff]);
+
+  const skillSuggestions = useMemo(() => {
+      if (!newSkill.trim()) return [];
+      return allAvailableSkills.filter(s => 
+          s.toLowerCase().includes(newSkill.toLowerCase()) && 
+          !formData.skillTags.includes(s)
+      ).slice(0, 5);
+  }, [newSkill, allAvailableSkills, formData.skillTags]);
 
   if (loading) {
     return (
@@ -201,8 +256,20 @@ const EnhancedStaff = () => {
                   </div>
                 </div>
 
-                <div className="text-gray-400 text-sm mb-6 font-medium">
+                <div className="text-gray-400 text-sm mb-2 font-medium">
                   {member.role}
+                </div>
+
+                {/* Skill Tags */}
+                <div className="flex flex-wrap gap-1.5 mb-6">
+                    {Array.isArray(member.skillTags) && member.skillTags.map((skill, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-tighter">
+                            {skill}
+                        </span>
+                    ))}
+                    {(!member.skillTags || member.skillTags.length === 0) && (
+                        <span className="text-[10px] text-gray-600 italic">No skills defined</span>
+                    )}
                 </div>
 
                 {/* Pay Rates */}
@@ -322,18 +389,96 @@ const EnhancedStaff = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                      Role
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                      Staff Role (Hierarchy Rank)
                     </label>
-                    <input
-                      type="text"
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      required
-                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-600"
-                    />
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+                        {CORE_ROLES.map(r => (
+                            <button
+                                key={r}
+                                type="button"
+                                onClick={() => setFormData({ ...formData, role: r })}
+                                className={`py-2.5 px-2 rounded-xl text-[10px] font-black uppercase transition-all border ${
+                                    formData.role === r 
+                                    ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg' 
+                                    : 'bg-black/20 border-white/5 text-gray-500 hover:bg-white/5'
+                                }`}
+                            >
+                                {r}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="relative group">
+                        <input
+                          type="text"
+                          value={formData.role}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                          required
+                          placeholder="Or enter custom role..."
+                          className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-700 text-sm font-bold"
+                        />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-gray-600 uppercase tracking-widest pointer-events-none">Manual Override</div>
+                    </div>
                   </div>
+                </div>
+
+                {/* Skills DNA Section */}
+                <div className="bg-black/20 rounded-2xl p-6 border border-white/5">
+                    <h3 className="text-sm font-black text-emerald-400 mb-4 flex items-center gap-2 uppercase tracking-wider">
+                        <Tag size={16} /> Skill DNA (Certification Tags)
+                    </h3>
+                    <div className="flex gap-2 mb-4">
+                        <input 
+                            type="text" 
+                            value={newSkill}
+                            onChange={e => setNewSkill(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && addSkill(e)}
+                            placeholder="Add skill (e.g. Asbestos removal, Scaffolding)..."
+                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-emerald-500 outline-none transition-all"
+                        />
+                        <button 
+                            type="button"
+                            onClick={addSkill}
+                            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-all text-xs uppercase"
+                        >
+                            Add
+                        </button>
+                    </div>
+
+                    {/* Smart Suggestions */}
+                    {skillSuggestions.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest self-center mr-1">Suggestions:</span>
+                            {skillSuggestions.map((s, i) => (
+                                <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => {
+                                        setFormData(prev => ({ ...prev, skillTags: [...prev.skillTags, s] }));
+                                        setNewSkill('');
+                                    }}
+                                    className="px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[9px] font-bold text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all uppercase"
+                                >
+                                    + {s}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                        {formData.skillTags.map((skill, idx) => (
+                            <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
+                                <span className="text-[10px] font-bold uppercase">{skill}</span>
+                                <button type="button" onClick={() => removeSkill(skill)} className="hover:text-white transition-colors">
+                                    <XIcon size={12} />
+                                </button>
+                            </div>
+                        ))}
+                        {formData.skillTags.length === 0 && (
+                            <div className="text-[10px] text-gray-600 italic uppercase tracking-widest py-2">No skills established for this profile</div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Pay Rates Section */}

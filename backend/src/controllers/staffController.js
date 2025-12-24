@@ -55,7 +55,10 @@ const staffSchema = Joi.object({
     name: Joi.string().required(),
     rate: Joi.number().required(),
     type: Joi.string().valid('hourly', 'daily').required()
-  })).optional()
+  })).optional(),
+  skillTags: Joi.array().items(Joi.string()).optional(),
+  fatigueLevel: Joi.number().integer().min(0).max(100).optional(),
+  historicalPerformance: Joi.any().optional()
 });
 
 const getAllStaff = async (req, res) => {
@@ -125,7 +128,8 @@ const createStaff = async (req, res) => {
       chargeOutOT1: req.body.chargeOutOT1 === '' || req.body.chargeOutOT1 === null ? null : Number(req.body.chargeOutOT1),
       chargeOutOT2: req.body.chargeOutOT2 === '' || req.body.chargeOutOT2 === null ? null : Number(req.body.chargeOutOT2),
       chargeOutNight: req.body.chargeOutNight === '' || req.body.chargeOutNight === null ? null : Number(req.body.chargeOutNight),
-      allowances: req.body.allowances || []
+      allowances: req.body.allowances || [],
+      skillTags: req.body.skillTags || []
     };
 
     const { error } = staffSchema.validate(processedBody);
@@ -161,7 +165,8 @@ const updateStaff = async (req, res) => {
       chargeOutOT1: req.body.chargeOutOT1 === '' || req.body.chargeOutOT1 === null ? null : Number(req.body.chargeOutOT1),
       chargeOutOT2: req.body.chargeOutOT2 === '' || req.body.chargeOutOT2 === null ? null : Number(req.body.chargeOutOT2),
       chargeOutNight: req.body.chargeOutNight === '' || req.body.chargeOutNight === null ? null : Number(req.body.chargeOutNight),
-      allowances: req.body.allowances || []
+      allowances: req.body.allowances || [],
+      skillTags: req.body.skillTags || []
     };
 
     const { error } = staffSchema.validate(processedBody);

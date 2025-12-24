@@ -41,6 +41,7 @@ import PinnacleCopilot from './components/PinnacleCopilot'
 import SafetyDashboard from './components/Safety/SafetyDashboard'
 import SafetyFormViewer from './components/Safety/SafetyFormViewer'
 import SubscriptionPage from './components/SubscriptionPage'
+import OnboardingWizard from './components/Onboarding/OnboardingWizard'
 import { ClipboardCheck, Layout, Crown } from 'lucide-react'
 
 function App() {
@@ -324,6 +325,7 @@ function AppInner({
               <Route path="/safety/:id" element={<SafetyFormViewer />} />
               <Route path="/xero/callback" element={<XeroCallback />} />
               <Route path="/subscription" element={<SubscriptionPage />} />
+              <Route path="/onboarding" element={<OnboardingWizard />} />
               <Route path="/portal/view/:projectId" element={<ClientPortal />} />
             </Routes>
           </main>

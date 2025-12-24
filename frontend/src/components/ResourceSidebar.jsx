@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, User, Wrench, Package, X, GripVertical } from 'lucide-react';
+import { Search, User, Wrench, Package, X, GripVertical, Box, Zap, Clock, Activity, AlertTriangle, Ruler, Image as ImageIcon, Layout, Circle, Award } from 'lucide-react';
 
 const ResourceCard = ({ item, onClick, onDragStart, themeColor }) => {
   let wrapperClass = `bg-gradient-to-r from-${themeColor}-900/10 to-transparent border-${themeColor}-500/20 hover:border-${themeColor}-400 hover:bg-${themeColor}-900/30 hover:shadow-lg hover:shadow-${themeColor}-500/10`;
@@ -14,6 +14,20 @@ const ResourceCard = ({ item, onClick, onDragStart, themeColor }) => {
     wrapperClass = `bg-gradient-to-r from-amber-900/10 to-transparent border-amber-500/20 hover:border-amber-400 hover:bg-amber-900/30 hover:shadow-lg hover:shadow-amber-500/10`;
     iconClass = "bg-amber-500/20 text-amber-400";
     icon = <Wrench size={16} />;
+  } else if (['zone', 'taskNode', 'neuralPrism', 'chronos', 'wormhole', 'delay', 'impact', 'dimension', 'shapeNode', 'photoNode', 'allowance'].includes(item.type)) {
+    wrapperClass = `bg-gradient-to-r from-purple-900/10 to-transparent border-purple-500/20 hover:border-purple-400 hover:bg-purple-900/30 hover:shadow-lg hover:shadow-purple-500/10`;
+    iconClass = "bg-purple-500/20 text-purple-400";
+    if (item.type === 'zone') icon = <Box size={16} />;
+    else if (item.type === 'taskNode') icon = <Layout size={16} />;
+    else if (item.type === 'neuralPrism') icon = <Zap size={16} />;
+    else if (item.type === 'chronos') icon = <Clock size={16} />;
+    else if (item.type === 'wormhole') icon = <Circle size={16} />;
+    else if (item.type === 'delay') icon = <Clock size={16} />;
+    else if (item.type === 'impact') icon = <Activity size={16} />;
+    else if (item.type === 'dimension') icon = <Ruler size={16} />;
+    else if (item.type === 'shapeNode') icon = <Box size={16} />;
+    else if (item.type === 'photoNode') icon = <ImageIcon size={16} />;
+    else if (item.type === 'allowance') icon = <Award size={16} />;
   }
 
   const handleDragStart = (e) => {
@@ -50,7 +64,8 @@ const ResourceCard = ({ item, onClick, onDragStart, themeColor }) => {
         <div className="text-[10px] text-gray-500 font-mono mt-0.5">
             {item.type === 'staff' ? `$${item.chargeRate || item.chargeOutBase || 0}/hr` : 
              item.type === 'equipment' ? `$${item.costRate || item.costRateBase || 0}/day` : 
-             `$${item.pricePerUnit || 0}/unit`}
+             item.type === 'material' ? `$${item.pricePerUnit || 0}/unit` :
+             'System Node'}
         </div>
       </div>
       <GripVertical size={14} className={`text-${themeColor}-500 opacity-0 group-hover:opacity-100 transition-opacity`} />
@@ -70,6 +85,20 @@ const ResourceSidebar = ({ materials = [], staff = [], equipment = [], onSearch,
   };
 
   const filterItems = (items) => items.filter(i => i.name.toLowerCase().includes(localSearch.toLowerCase()));
+
+  const specialNodes = [
+      { id: 'prism-proto', name: 'Neural Prism', type: 'neuralPrism', category: 'logic' },
+      { id: 'zone-proto', name: 'Zone Container', type: 'zone', category: 'logic' },
+      { id: 'task-proto', name: 'Task Unit', type: 'taskNode', category: 'logic' },
+      { id: 'chronos-proto', name: 'Chronos Hub', type: 'chronos', category: 'logic' },
+      { id: 'delay-proto', name: 'Delay Event', type: 'delay', category: 'logic' },
+      { id: 'impact-proto', name: 'Impact Node', type: 'impact', category: 'logic' },
+      { id: 'allowance-proto', name: 'Allowance', type: 'allowance', category: 'logic' },
+      { id: 'wormhole-proto', name: 'Wormhole', type: 'wormhole', category: 'logic' },
+      { id: 'dim-proto', name: 'Dimension', type: 'dimension', category: 'logic' },
+      { id: 'shape-proto', name: 'Shape', type: 'shapeNode', category: 'logic' },
+      { id: 'photo-proto', name: 'Photo Plane', type: 'photoNode', category: 'logic' },
+  ];
 
   return (
     <div className={`
@@ -102,13 +131,13 @@ const ResourceSidebar = ({ materials = [], staff = [], equipment = [], onSearch,
 
         {/* Tabs */}
         <div className="flex gap-1 p-1 bg-black/40 rounded-xl border border-white/5">
-            {['all', 'mat', 'lab', 'eqp'].map(tab => (
+            {['all', 'nodes', 'mat', 'lab', 'eqp'].map(tab => (
                 <button 
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${activeTab === tab ? `bg-${themeColor}-600 text-white shadow-lg shadow-${themeColor}-900/50 scale-105` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
+                    className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${activeTab === tab ? `bg-${themeColor}-600 text-white shadow-lg shadow-${themeColor}-900/50 scale-105` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
                 >
-                    {tab === 'mat' ? 'Mat' : tab === 'lab' ? 'Lab' : tab === 'eqp' ? 'Eqp' : 'All'}
+                    {tab === 'mat' ? 'Mat' : tab === 'lab' ? 'Lab' : tab === 'eqp' ? 'Eqp' : tab === 'nodes' ? 'Nodes' : 'All'}
                 </button>
             ))}
         </div>
@@ -116,6 +145,15 @@ const ResourceSidebar = ({ materials = [], staff = [], equipment = [], onSearch,
 
       {/* List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+        {(activeTab === 'all' || activeTab === 'nodes') && (
+            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className={`text-[9px] font-black text-purple-400 uppercase tracking-[0.3em] px-2 opacity-80`}>System Nodes</div>
+                {filterItems(specialNodes).map(item => (
+                    <ResourceCard key={item.id} item={item} onClick={onTapAdd} themeColor={themeColor} />
+                ))}
+            </div>
+        )}
+
         {(activeTab === 'all' || activeTab === 'mat') && (
             <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className={`text-[9px] font-black text-${themeColor}-400 uppercase tracking-[0.3em] px-2 opacity-80`}>Materials</div>

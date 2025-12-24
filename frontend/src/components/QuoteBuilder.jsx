@@ -38,7 +38,7 @@ import PowerHeader from './ui/PowerHeader'
 import { useDiaryTheme } from './PaintDiary/ThemeContext'
 import QuoteSettingsModal from './Quotes/QuoteSettingsModal'
 import ConfigModal from './ConfigModal'
-import { DiaryNode, ChronosNode, ZoneNode, ImpactNode, DelayNode, DimensionNode, PhotoNode, ShapeNode, TaskNode } from './TimelineCanvas/TimelineNodes';
+import { DiaryNode, ChronosNode, ZoneNode, ImpactNode, DelayNode, DimensionNode, PhotoNode, ShapeNode, TaskNode, NeuralPrismNode, WormholeNode, AllowanceNode } from './TimelineCanvas/TimelineNodes';
 import { SmartEdgeTypes } from './TimelineCanvas/SmartEdges'
 import ResourceSidebar from './ResourceSidebar'
 import AestheticPicker from './PaintDiary/AestheticPicker'
@@ -197,7 +197,10 @@ const QuoteBuilderContent = () => {
       delay: DelayNode, 
       photoNode: PhotoNode, 
       shapeNode: ShapeNode,
-      taskNode: TaskNode
+      taskNode: TaskNode,
+      neuralPrism: NeuralPrismNode,
+      wormhole: WormholeNode,
+      allowance: AllowanceNode
   }), [])
   const edgeTypes = useMemo(() => SmartEdgeTypes, [])
   const [nodes, setNodes, onNodesChange] = useNodesState([]); const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -244,7 +247,42 @@ const QuoteBuilderContent = () => {
       }
   };
   const onTapAdd = (item) => { const position = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); setPendingNode({ item, position, suggestedQuantity: 1 }); };
-  const handleAddNode = (quantity, cost, charge) => { if (!pendingNode) return; const { item, position } = pendingNode; const nodeId = `${item.type}-${Date.now()}`; setNodes(nds => nds.concat({ id: nodeId, type: 'glass', position, data: { label: item.name, subLabel: item.type, quantity, type: item.type, onDelete: () => deleteNode(nodeId) } })); setQuoteItems(prev => [...prev, { nodeId: item.id, tempId: nodeId, quantity, material: item, type: item.type, customRate: charge > 0 ? charge : undefined }]); setPendingNode(null); };
+  const handleAddNode = (quantity, cost, charge, customName) => { 
+      if (!pendingNode) return; 
+      const { item, position } = pendingNode; 
+      const nodeId = `${item.type}-${Date.now()}`; 
+      const finalName = customName || item.name;
+      
+      const isZone = item.type === 'zone' || item.type === 'wormhole';
+      const isDimension = item.type === 'dimension';
+      
+      const newNode = { 
+          id: nodeId, 
+          type: item.type || 'glass', 
+          position, 
+          data: { 
+              label: finalName, 
+              subLabel: item.type, 
+              quantity, 
+              type: item.type, 
+              onDelete: () => deleteNode(nodeId),
+              // Default props for special nodes
+              ...(item.type === 'taskNode' ? { plannedHours: 8, status: 'pending' } : {}),
+              ...(item.type === 'zone' ? { zoneTotal: 0, nodeCount: 0 } : {})
+          },
+          style: (isZone || isDimension) ? { width: isZone ? 400 : 200, height: isZone ? 400 : 200, zIndex: -1 } : undefined
+      };
+
+      setNodes(nds => nds.concat(newNode)); 
+      
+      // Only add to BOM if it's a billable item (not a pure logic node like Zone/Dimension/Prism)
+      const isLogicNode = ['zone', 'wormhole', 'dimension', 'neuralPrism', 'chronos', 'shapeNode', 'photoNode'].includes(item.type);
+      if (!isLogicNode) {
+          setQuoteItems(prev => [...prev, { nodeId: item.id, tempId: nodeId, quantity, material: { ...item, name: finalName }, type: item.type, customRate: charge > 0 ? charge : undefined }]); 
+      }
+      
+      setPendingNode(null); 
+  };
   
   const handleNewQuote = () => {
       if(quoteItems.length > 0 && !confirm("Discard current quote?")) return;

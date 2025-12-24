@@ -46,7 +46,7 @@ const generateWorkflow = async (req, res) => {
       
       Request: "${prompt || type}"
     `;
-    const workflowData = await pinnacleAi.generateJSON(prompt, systemPrompt, 1800);
+    const workflowData = await pinnacleAi.generateJSON(prompt, systemPrompt, 1000);
 
     // Validation
     if (workflowData.nodes && Array.isArray(workflowData.nodes)) {
@@ -114,6 +114,22 @@ const chatGlobal = async (req, res) => {
                         }
                     }
                 }
+            } else {
+                // GLOBAL CONTEXT FETCH (When no specific project selected)
+                const allProjects = await Project.findAll({ 
+                    attributes: ['id', 'name', 'status', 'client'],
+                    limit: 20 
+                });
+                const recentDiaries = await Diary.findAll({
+                    limit: 5,
+                    order: [['date', 'DESC']],
+                    include: [{ model: Project, attributes: ['name'] }]
+                });
+                
+                additionalData += `\n--- Global Portfolio Overview ---\n`;
+                additionalData += `Total Projects: ${allProjects.length}\n`;
+                additionalData += `Projects List: ${JSON.stringify(allProjects)}\n`;
+                additionalData += `Recent Diaries: ${JSON.stringify(recentDiaries.map(d => ({ date: d.date, project: d.Project?.name, weather: d.weather })))}`;
             }
         }
 
@@ -128,6 +144,7 @@ const chatGlobal = async (req, res) => {
             **Available Data:**
             - Projects, Clients, Staff, Equipment, Quotes, and Invoices.
             - Real-time Canvas (nodes, links, duration).
+            - If "Global Portfolio Overview" is provided, use it to answer questions about the user's entire business.
             
             **Rules:**
             - Be concise but extremely insightful.
@@ -138,7 +155,7 @@ const chatGlobal = async (req, res) => {
             Additional Data: ${additionalData || 'No specific project data in current view.'}
         `;
 
-        const reply = await pinnacleAi.generateText(message, systemPrompt, 1200);
+        const reply = await pinnacleAi.generateText(message, systemPrompt, 500);
         res.json({ reply });
     } catch (error) {
         console.error("AI Chat Error:", error.message);
@@ -224,7 +241,7 @@ const generateQuote = async (req, res) => {
             Request: "${prompt}"
         `;
 
-        const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 3500);
+        const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 1000);
         res.json(result);
 
     } catch (error) {
@@ -299,7 +316,7 @@ const chatDiaryAssistant = async (req, res) => {
             }
         `;
         
-        const result = await pinnacleAi.generateJSON(`User: "${message}". Context: ${JSON.stringify(context).substring(0, 500)}`, systemPrompt, 600);
+        const result = await pinnacleAi.generateJSON(`User: "${message}". Context: ${JSON.stringify(context).substring(0, 500)}`, systemPrompt, 400);
         res.json(result);
     } catch (error) {
         res.json({ reply: "Ready to log.", suggestedActions: [] });
@@ -444,7 +461,7 @@ const parseDiaryLog = async (req, res) => {
             }
         `;
 
-        const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 2000);
+        const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 1000);
         res.json(result);
 
     } catch (error) {
@@ -590,6 +607,17 @@ const analyzePrismVelocity = async (req, res) => {
 
         const command = context.command || 'auto';
         const quotedData = context.quotedData || null;
+        const topology = Array.isArray(context.topology) ? context.topology : [];
+
+        // Descriptive topology string for AI - Hardened
+        const topologyStr = topology.filter(n => n && n.id).map(n => {
+            const label = n.label || n.name || n.type || 'Unknown Node';
+            let details = `Type:${n.type || n.nodeType || 'Generic'}`;
+            if (n.role) details += `, Role:${n.role}`;
+            if (n.duration) details += `, Dur:${n.duration}h`;
+            if (n.weather) details += `, Weather:${n.weather}`;
+            return `[${n.id}] ${label} (${details})`;
+        }).join('\n');
 
         const systemPrompt = `
             You are "Neural Progress Prism", the central intelligence of MasterDiaryOS.
@@ -597,24 +625,30 @@ const analyzePrismVelocity = async (req, res) => {
             
             **TEMPORAL & BASELINE CONTEXT:**
             - HISTORICAL TRENDS (Last 5 Days): ${JSON.stringify(history)}
+            - PROJECT TIMELINE: Start ${context.projectFinancials?.startDate || 'N/A'} -> End ${context.projectFinancials?.endDate || 'N/A'}
+            - PROJECT FINANCIALS (Live Baseline): ${JSON.stringify(context.projectFinancials || {})}
             - APPROVED QUOTE: ${quotedData ? JSON.stringify({
                 totalRevenue: quotedData.totalRevenue,
                 totalCost: quotedData.totalCost,
                 margin: quotedData.marginPct,
                 staff: (quotedData.staff || []).map(s => `${s.name}: ${s.hours}h`),
                 equip: (quotedData.equipment || []).map(e => `${e.name}: ${e.days}d`)
-            }) : 'No baseline found.'}
+            }) : 'No granular quote found. Use Project Financials above.'}
+
+            **LIVE GRAPH TOPOLOGY (The Circuit):**
+            ${topologyStr || 'No nodes detected in current circuit.'}
 
             **INTELLIGENCE CORE MANDATES:**
-            1. **Structured Causal Path:** Return an array 'causalPath' tracing the root cause to final effect. Each step: { "nodeId": "...", "label": "...", "effect": "..." }.
-            2. **Drift Dashboard:** Calculate 'driftStats' for: Time, Cost, Labour, Equipment, Material, Zone, Task. 
+            1. **Autonomous Baseline:** Use "PROJECT FINANCIALS" as your primary anchor if "APPROVED QUOTE" is missing. Do not ask for a baseline; derive drift from the Contract Value and Timeline provided.
+            2. **Structured Causal Path:** Return an array 'causalPath' tracing the root cause to final effect. Each step: { "nodeId": "...", "label": "...", "effect": "..." }.
+            3. **Drift Dashboard:** Calculate 'driftStats' for: Time, Cost, Labour, Equipment, Material, Zone, Task. 
                Include: "variancePct", "absoluteVariance", "trend" ("up"|"down"|"stable"), "severity" ("low"|"med"|"high").
-            3. **Idle & Waste Detection:** 
-               - Detect **Equipment Idle Time** if hours are logged but no tasks are linked or velocity is low.
-               - Detect **Material Waste** if actual quantities exceed quoted estimates without corresponding progress.
-            4. **Margin Forecasting:** Predict "finalMargin" and "marginRisk" ("low"|"med"|"critical").
-            5. **Interventions:** Suggest "stabilizers" (nodes to add) and "sequencingChanges".
-            6. **Insights:** Group by "severity" (critical|warning|info). Include "nodeReferences" (IDs).
+            4. **High-Fidelity Insights:** Group by "severity" (critical|warning|info). 
+               - "text": A 2-sentence professional analysis of a specific issue (e.g., "Crew A's current burn rate of $X/hr is exceeding the $Y/hr baseline due to idle equipment.").
+               - "tacticalAdvice": One concrete action the user should take (e.g., "De-mobilize Excavator 3.5T until Ground Zero task is ready.").
+               - "nodeReferences": Array of IDs mentioned in the analysis.
+            5. **Margin Forecasting:** Predict "finalMargin" and "marginRisk" ("low"|"med"|"critical").
+            6. **Dynamic Scenarios:** Generate 'scenarios' for Simulation Mode based on real site risks (e.g., "Double Crew", "Wet Weather 2 Days").
 
             **Output Format (RAW JSON ONLY):**
             {
@@ -625,25 +659,17 @@ const analyzePrismVelocity = async (req, res) => {
                 "marginRisk": "med",
                 "status": "optimal" | "stable" | "critical",
                 "completionDrift": "+2.5 Days",
-                "causalPath": [
-                    { "nodeId": "d1", "label": "Rain Delay", "effect": "Stopped Work" },
-                    { "nodeId": "s1", "label": "Crew A", "effect": "Idle / Non-Productive" },
-                    { "nodeId": "t1", "label": "Fencing", "effect": "Schedule Slip" }
-                ],
-                "driftStats": {
-                    "labour": { "variancePct": 15, "absoluteVariance": "12h", "trend": "up", "severity": "med" },
-                    "cost": { "variancePct": 8, "absoluteVariance": "$450", "trend": "up", "severity": "low" },
-                    "task": { "variancePct": 20, "absoluteVariance": "1 day", "trend": "up", "severity": "high" }
-                },
+                "causalPath": [...],
+                "driftStats": {...},
                 "insights": [
-                    { "severity": "critical", "type": "cost", "text": "...", "nodeReferences": ["s1", "d1"], "tacticalAdvice": "..." }
+                    { "severity": "critical", "type": "Cost Burn", "text": "Actual labor hours for Task X are tracking 20% above the quoted baseline.", "nodeReferences": ["node-id-1"], "tacticalAdvice": "Review site supervisor's shift allocation for tomorrow." }
                 ],
                 "scenarios": [...],
                 "suggestedNodes": [...]
             }
         `;
 
-        const result = await pinnacleAi.generateJSON(`Neural Command: ${command}`, systemPrompt, 2500);
+        const result = await pinnacleAi.generateJSON(`Neural Command: ${command}`, systemPrompt, 1500);
         res.json(result);
 
     } catch (error) {

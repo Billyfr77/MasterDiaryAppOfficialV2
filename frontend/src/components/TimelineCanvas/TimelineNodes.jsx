@@ -6,7 +6,7 @@ import {
     ShieldCheck, Timer, Cpu, Box, AlertTriangle, Ruler, PenTool, Layout, 
     Award, CloudRain, Sun, Snowflake, ChevronDown, Magnet, FileText,
     TrendingUp, Target, BrainCircuit, Waves, PaintBucket, Layers, ClipboardList,
-    GitFork, MessageSquare, ArrowRight, TrendingDown
+    GitFork, MessageSquare, ArrowRight, TrendingDown, Crown
 } from 'lucide-react';
 import { useDiaryTheme } from '../PaintDiary/ThemeContext';
 import { api } from '../../utils/api';
@@ -197,7 +197,7 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
         velocity = 1.0, status = 'analyzing', projectFinancials, hubData, 
         causalPath = [], driftStats = {}, insights = [], scenarios = [], 
         burnRate = '$0/hr', currentMargin = '0%', predictedFinalMargin = '0%', 
-        marginRisk = 'low', completionDrift = 'Pending'
+        marginRisk = 'low', completionDrift = 'Pending', suggestedNodes = []
     } = data;
 
     const [showInsight, setShowInsight] = useState(false);
@@ -273,7 +273,7 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
                         <path d="M50 5 L50 80" stroke="white" strokeWidth="0.2" opacity="0.4" />
                         <path d="M10 80 L50 50 L90 80" stroke="white" strokeWidth="0.2" opacity="0.3" fill="none" />
                     </motion.g>
-                    {isPluggedIn && <motion.circle cx="50" cy="50" r="40" fill="none" stroke={theme.color} strokeWidth="0.1" animate={{ r: [0, 50], opacity: [1, 0] }} transition={{ duration: 2, repeat: Infinity }} />}
+                    {isPluggedIn && <motion.circle cx="50" cy="50" r="40" fill="none" stroke={theme.color} strokeWidth="0.1" initial={{ r: 0, opacity: 0 }} animate={{ r: [0, 50], opacity: [1, 0] }} transition={{ duration: 2, repeat: Infinity }} />}
                 </svg>
             </div>
 
@@ -297,9 +297,14 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
                                         <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{status}</span>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Live Burn</div>
-                                    <div className="text-2xl font-black text-rose-400 font-mono tracking-tighter">{burnRate}</div>
+                                <div className="flex flex-col items-end gap-2">
+                                    <button onClick={(e) => { e.stopPropagation(); setShowInsight(false); }} className="p-2 -mr-2 -mt-2 text-gray-500 hover:text-white transition-colors rounded-full hover:bg-white/10">
+                                        <X size={20} />
+                                    </button>
+                                    <div className="text-right">
+                                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Live Burn</div>
+                                        <div className="text-2xl font-black text-rose-400 font-mono tracking-tighter">{burnRate}</div>
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex gap-1 p-1 bg-black/40 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
@@ -333,19 +338,34 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
                                         </div>
                                     </div>
                                     <div className="space-y-3">
-                                        {insights.map((ins, idx) => (
-                                            <div key={idx} className={`p-5 rounded-3xl border flex gap-4 ${ins.severity === 'critical' ? 'bg-rose-500/5 border-rose-500/20' : 'bg-white/5 border-white/10'}`}>
+                                        {(insights || []).map((ins, idx) => (
+                                            <div 
+                                                key={idx} 
+                                                onClick={() => ins.nodeReferences?.length > 0 && update('highlightNodes', ins.nodeReferences)}
+                                                className={`p-5 rounded-3xl border flex gap-4 transition-all ${ins.severity === 'critical' ? 'bg-rose-500/5 border-rose-500/20 hover:border-rose-500/50' : 'bg-white/5 border-white/10 hover:border-indigo-500/30'} ${ins.nodeReferences?.length > 0 ? 'cursor-pointer group/insight' : ''}`}
+                                            >
                                                 <div className={`mt-1.5 w-2 h-2 rounded-full ${ins.severity === 'critical' ? 'bg-rose-500 animate-pulse' : 'bg-amber-500'}`} />
                                                 <div className="flex-1">
                                                     <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{ins.type}</span>
+                                                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{ins.type || 'System Analysis'}</span>
                                                         <span className={`text-[8px] font-black uppercase ${ins.severity === 'critical' ? 'text-rose-400' : 'text-indigo-400'}`}>{ins.severity}</span>
                                                     </div>
-                                                    <p className="text-sm font-medium text-gray-200 leading-relaxed">{ins.text}</p>
-                                                    {ins.tacticalAdvice && <div className="mt-3 text-[10px] text-indigo-400 font-bold border-t border-white/5 pt-2 flex items-center gap-2"><Zap size={10} /> {ins.tacticalAdvice}</div>}
+                                                    <p className="text-sm font-medium text-gray-200 leading-relaxed">{ins.text || 'Generating detailed analysis...'}</p>
+                                                    {ins.nodeReferences?.length > 0 && (
+                                                        <div className="mt-2 text-[7px] font-black text-indigo-500 uppercase tracking-tighter opacity-40 group-hover/insight:opacity-100 transition-opacity">
+                                                            Click to View {ins.nodeReferences.length} Affected Nodes
+                                                        </div>
+                                                    )}
+                                                    {ins.tacticalAdvice && <div className="mt-3 text-[10px] text-indigo-400 font-bold border-t border-white/5 pt-2 flex items-center gap-2 animate-in slide-in-from-left-2 duration-500"><Zap size={10} /> {ins.tacticalAdvice}</div>}
                                                 </div>
                                             </div>
                                         ))}
+                                        {(!insights || insights.length === 0) && (
+                                            <div className="text-center py-10 opacity-30">
+                                                <Target size={32} className="mx-auto mb-2" />
+                                                <div className="text-[10px] font-black uppercase tracking-widest">No anomalies detected.</div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -382,13 +402,13 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
 
                             {activeView === 'sims' && (
                                 <div className="space-y-4">
-                                    {scenarios.map((sim, idx) => (
+                                    {(scenarios || []).map((sim, idx) => (
                                         <div key={idx} className="p-6 bg-white/[0.02] border border-white/5 rounded-[2rem] hover:bg-white/[0.05] transition-all">
                                             <div className="flex justify-between items-center mb-3">
-                                                <span className="text-lg font-black text-white tracking-tight">{sim.name}</span>
-                                                <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black ${sim.drift.includes('-') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>{sim.drift} DRIFT</div>
+                                                <span className="text-lg font-black text-white tracking-tight">{sim?.name || 'Simulation'}</span>
+                                                <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black ${(sim?.drift || '').includes('-') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>{sim?.drift || '0h'} DRIFT</div>
                                             </div>
-                                            <p className="text-sm text-gray-400 font-medium leading-relaxed">{sim.impact}</p>
+                                            <p className="text-sm text-gray-400 font-medium leading-relaxed">{sim?.impact || 'No impact analysis available.'}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -470,27 +490,86 @@ export const PhotoNode = ({ id, data, selected }) => {
 };
 
 export const DiaryNode = ({ id, data, selected }) => {
-  const { label, duration, type, costRate, quantity, onDelete, isGhost } = data;
+  const { label, duration, type, costRate, quantity, onDelete, isGhost, role, skillTags } = data;
+  
+  const getRoleIcon = (r) => {
+      const lowRole = r?.toLowerCase() || '';
+      if (lowRole.includes('boss') || lowRole.includes('director') || lowRole.includes('owner')) return <Crown size={22} className="text-amber-400" />;
+      if (lowRole.includes('super') || lowRole.includes('foreman') || lowRole.includes('lead') || lowRole.includes('manager')) return <ShieldCheck size={22} className="text-indigo-400" />;
+      return <User size={22} className="text-emerald-400" />;
+  };
+
   const getThemeStyles = (nodeType) => {
       const t = nodeType?.toLowerCase();
+      const lowRole = role?.toLowerCase() || '';
+      
       if (isGhost) return { bg: "from-slate-800/60 to-black", border: "border-white/10 border-dashed", glow: "shadow-white/5", icon: "text-slate-400", iconBg: "bg-white/5", accent: "text-slate-500" };
-      if (t === 'staff') return { bg: "from-emerald-600/80 via-emerald-900/90 to-black", border: "border-emerald-400/40", glow: "shadow-emerald-500/50", icon: "text-emerald-400", iconBg: "bg-emerald-500/20", accent: "text-emerald-200" };
+      
+      if (t === 'staff') {
+          if (lowRole.includes('boss') || lowRole.includes('director')) 
+              return { bg: "from-amber-900/80 via-black to-black", border: "border-amber-500/50", glow: "shadow-amber-500/40", icon: "text-amber-400", iconBg: "bg-amber-500/20", accent: "text-amber-200" };
+          
+          if (lowRole.includes('super') || lowRole.includes('manager'))
+              return { bg: "from-indigo-900/80 via-black to-black", border: "border-indigo-500/50", glow: "shadow-indigo-500/40", icon: "text-indigo-400", iconBg: "bg-indigo-500/20", accent: "text-indigo-200" };
+
+          return { bg: "from-emerald-600/80 via-emerald-900/90 to-black", border: "border-emerald-400/40", glow: "shadow-emerald-500/50", icon: "text-emerald-400", iconBg: "bg-emerald-500/20", accent: "text-emerald-200" };
+      }
+      
       if (t === 'equipment') return { bg: "from-amber-600/80 via-amber-900/90 to-black", border: "border-amber-400/40", glow: "shadow-amber-500/50", icon: "text-amber-400", iconBg: "bg-amber-500/20", accent: "text-amber-200" };
       return { bg: "from-indigo-600/80 via-indigo-900/90 to-black", border: "border-indigo-400/40", glow: "shadow-indigo-500/50", icon: "text-indigo-400", iconBg: "bg-indigo-500/20", accent: "text-indigo-200" };
   };
+
   const nodeTheme = getThemeStyles(type);
+  
   return (
     <JewelWrapper theme={nodeTheme} selected={selected} isGhost={isGhost} shapeClass="rounded-[2rem]">
       <div className="absolute top-2 right-4 text-[8px] font-mono text-white font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-50">ID:{id}::{type?.toUpperCase()}</div>
       <div className="flex flex-col gap-4">
           <div className="flex justify-between items-start">
-              <div className="relative"><div className={`absolute inset-0 rounded-2xl ${nodeTheme.iconBg} animate-ping opacity-20`} /><div className={`relative p-3.5 rounded-2xl ${nodeTheme.iconBg} backdrop-blur-md shadow-2xl border border-white/10 transition-all group-hover:rotate-3`}>{type === 'staff' ? <User size={22} className={nodeTheme.icon} /> : type === 'equipment' ? <Wrench size={22} className={nodeTheme.icon} /> : <Package size={22} className={nodeTheme.icon} />}</div></div>
+              <div className="relative">
+                  <div className={`absolute inset-0 rounded-2xl ${nodeTheme.iconBg} animate-ping opacity-20`} />
+                  <div className={`relative p-3.5 rounded-2xl ${nodeTheme.iconBg} backdrop-blur-md shadow-2xl border border-white/10 transition-all group-hover:rotate-3`}>
+                      {type === 'staff' ? getRoleIcon(role) : type === 'equipment' ? <Wrench size={22} className={nodeTheme.icon} /> : <Package size={22} className={nodeTheme.icon} />}
+                  </div>
+              </div>
               {!isGhost && (<button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-2 rounded-xl bg-white/5 text-white/20 hover:bg-red-500 hover:text-white transition-all scale-90 group-hover:scale-100"><X size={14} strokeWidth={3} /></button>)}
           </div>
-          <div><div className="flex items-center gap-2 mb-1"><span className={`text-[8px] font-black uppercase tracking-[0.4em] ${nodeTheme.accent} opacity-60`}>{isGhost ? 'SUGGESTION' : type}</span></div><div className="text-lg font-black text-white leading-tight tracking-tight uppercase line-clamp-2">{label}</div></div>
-          {!isGhost && (<div className="flex gap-2 items-center"><div className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/5 flex items-center gap-2"><Cpu size={10} className={`${nodeTheme.accent} opacity-50`} /><span className="text-[10px] font-mono font-black text-white">{type === 'staff' || type === 'equipment' ? `${duration || quantity}H` : `${quantity} UNIT`}</span></div>{costRate > 0 && (<div className={`px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5`}><DollarSign size={10} className={nodeTheme.icon} /><span className="text-[10px] font-mono font-black text-white">${costRate}</span></div>)}</div>)}
+          <div>
+              <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-[8px] font-black uppercase tracking-[0.4em] ${nodeTheme.accent} opacity-60`}>
+                      {isGhost ? 'SUGGESTION' : role || type}
+                  </span>
+              </div>
+              <div className="text-lg font-black text-white leading-tight tracking-tight uppercase line-clamp-2">{label}</div>
+          </div>
+          {type === 'staff' && skillTags?.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                  {skillTags.map((tag, i) => (
+                      <span key={i} className="px-1.5 py-0.5 rounded-[4px] bg-white/5 border border-white/10 text-[7px] font-bold text-gray-400 uppercase tracking-tighter">
+                          {tag}
+                      </span>
+                  ))}
+              </div>
+          )}
+          {!isGhost && (
+              <div className="flex gap-2 items-center">
+                  <div className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/5 flex items-center gap-2">
+                      <Cpu size={10} className={`${nodeTheme.accent} opacity-50`} />
+                      <span className="text-[10px] font-mono font-black text-white">
+                          {type === 'staff' || type === 'equipment' ? `${duration || quantity}H` : `${quantity} UNIT`}
+                      </span>
+                  </div>
+                  {costRate > 0 && (
+                      <div className={`px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5`}>
+                          <DollarSign size={10} className={nodeTheme.icon} />
+                          <span className="text-[10px] font-mono font-black text-white">${costRate}</span>
+                      </div>
+                  )}
+              </div>
+          )}
       </div>
-      <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-white !border-2 !border-black" /><Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-white !border-2 !border-black" />
+      <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-white !border-2 !border-black" />
+      <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-white !border-2 !border-black" />
     </JewelWrapper>
   );
 };
@@ -587,13 +666,13 @@ export const ZoneNode = ({ id, data, selected }) => {
 
                     </div>
 
-                    <div className="bg-black/40 rounded-2xl p-4 border border-white/5">
+                                        <div className="bg-black/40 rounded-2xl p-4 border border-white/5">
 
-                        <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Zone Drift</div>
+                                            <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Zone Drift</div>
 
-                        <div className={`text-lg font-black font-mono tracking-tighter ${drift.includes('+') ? 'text-rose-400' : 'text-white'}`}>{drift}</div>
+                                            <div className={`text-lg font-black font-mono tracking-tighter ${(drift || '').includes('+') ? 'text-rose-400' : 'text-white'}`}>{drift || '0h'}</div>
 
-                    </div>
+                                        </div>
 
                     <div className="bg-black/40 rounded-2xl p-4 border border-white/5 relative overflow-hidden">
 
@@ -785,15 +864,35 @@ export const TaskNode = ({ id, data, selected }) => {
 
             
 
-            {/* OCR & ZONE TAGS */}
+                        {/* OCR & ZONE TAGS */}
 
-            <div className="absolute -top-6 left-0 flex gap-2">
+            
 
-                <div className="px-3 py-1 bg-black/80 border border-white/10 rounded-lg text-[8px] font-mono text-indigo-400 font-bold tracking-widest shadow-xl uppercase">TSK-{id.split('-')[0]}</div>
+                        <div className="absolute -top-6 left-0 flex gap-2">
 
-                <div className={`px-3 py-1 bg-indigo-600 border border-indigo-400 rounded-lg text-[8px] font-black text-white shadow-xl uppercase tracking-widest ${zoneName === 'Unassigned' ? 'opacity-30' : ''}`}>{zoneName}</div>
+            
 
-            </div>
+                            <div className="px-3 py-1 bg-black/80 border border-white/10 rounded-lg text-[8px] font-mono text-indigo-400 font-bold tracking-widest shadow-xl uppercase">TSK-{id.split('-')[0]}</div>
+
+            
+
+                            <div className={`px-3 py-1 rounded-lg text-[8px] font-black text-white shadow-xl uppercase tracking-widest ${status === 'active' ? 'bg-emerald-600 border border-emerald-400' : 'bg-slate-700 border border-slate-500'}`}>
+
+            
+
+                                {status === 'active' ? 'ACTIVE' : 'PENDING'}
+
+            
+
+                            </div>
+
+            
+
+                            <div className={`px-3 py-1 bg-indigo-600 border border-indigo-400 rounded-lg text-[8px] font-black text-white shadow-xl uppercase tracking-widest ${zoneName === 'Unassigned' ? 'opacity-30' : ''}`}>{zoneName}</div>
+
+            
+
+                        </div>
 
 
 
@@ -825,27 +924,47 @@ export const TaskNode = ({ id, data, selected }) => {
 
 
 
-                {/* DRIFT INDICATOR PANEL */}
+                                {/* DRIFT INDICATOR PANEL */}
 
-                <div className="grid grid-cols-2 gap-2">
 
-                    <div className="flex items-center justify-between p-2 bg-white/5 rounded-xl border border-white/5">
 
-                        <span className="text-[8px] font-black text-gray-500 uppercase">Time Drift</span>
+                                <div className="grid grid-cols-2 gap-2">
 
-                        <span className={`text-[10px] font-mono font-black ${timeDrift.includes('+') ? 'text-rose-400' : 'text-emerald-400'}`}>{timeDrift}</span>
 
-                    </div>
 
-                    <div className="flex items-center justify-between p-2 bg-white/5 rounded-xl border border-white/5">
+                                    <div className="flex items-center justify-between p-2 bg-white/5 rounded-xl border border-white/5">
 
-                        <span className="text-[8px] font-black text-gray-500 uppercase">Cost Drift</span>
 
-                        <span className={`text-[10px] font-mono font-black ${costDrift.includes('+') ? 'text-rose-400' : 'text-emerald-400'}`}>{costDrift}</span>
 
-                    </div>
+                                        <span className="text-[8px] font-black text-gray-500 uppercase">Time Drift</span>
 
-                </div>
+
+
+                                        <span className={`text-[10px] font-mono font-black ${(timeDrift || '').includes('+') ? 'text-rose-400' : 'text-emerald-400'}`}>{timeDrift || '0h'}</span>
+
+
+
+                                    </div>
+
+
+
+                                    <div className="flex items-center justify-between p-2 bg-white/5 rounded-xl border border-white/5">
+
+
+
+                                        <span className="text-[8px] font-black text-gray-500 uppercase">Cost Drift</span>
+
+
+
+                                        <span className={`text-[10px] font-mono font-black ${(costDrift || '').includes('+') ? 'text-rose-400' : 'text-emerald-400'}`}>{costDrift || '$0'}</span>
+
+
+
+                                    </div>
+
+
+
+                                </div>
 
 
 

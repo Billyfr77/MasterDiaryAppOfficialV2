@@ -14,84 +14,88 @@
  * Patent Pending: Drag-and-drop construction quote builder system
  * Trade Secret: Real-time calculation algorithms and optimization techniques
  */import React, { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, BarChart3, PieChart, Activity, Target, AlertCircle, CheckCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, BarChart3, PieChart, Activity, Target, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { api } from '../utils/api'
 
 const PredictiveAnalytics = ({ projectData, historicalData }) => {
   const [predictions, setPredictions] = useState({})
   const [risks, setRisks] = useState([])
+  const [insights, setInsights] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    if (projectData && historicalData) {
-      calculatePredictions()
-      assessRisks()
+    if (projectData) {
+      fetchPredictions()
     }
   }, [projectData, historicalData])
 
-  const calculatePredictions = () => {
-    // Simple predictive modeling based on historical data
-    const avgProjectDuration = historicalData.reduce((sum, p) => sum + p.duration, 0) / historicalData.length
-    const avgCostOverrun = historicalData.reduce((sum, p) => sum + (p.actualCost - p.estimatedCost), 0) / historicalData.length
-    const avgProfitMargin = historicalData.reduce((sum, p) => sum + p.profitMargin, 0) / historicalData.length
+  const fetchPredictions = async () => {
+    setIsLoading(true)
+    try {
+      const res = await api.post('/ai/analyze-prism', {
+        context: {
+            ...projectData,
+            command: 'predictive_dashboard' // Signal for broader analysis
+        },
+        history: historicalData || []
+      })
+      
+      const data = res.data
+      
+      setPredictions({
+        duration: data.completionDrift || 'On Track',
+        cost: data.driftStats?.cost?.absoluteVariance || '$0',
+        profit: data.predictedFinalMargin || '0%',
+        confidence: Math.min(100, Math.max(50, (data.velocity || 1) * 75)) // Derived confidence
+      })
 
-    const currentProject = projectData
-    const predictedDuration = avgProjectDuration * (currentProject.complexity || 1)
-    const predictedCost = currentProject.estimatedCost * (1 + avgCostOverrun / currentProject.estimatedCost)
-    const predictedProfit = predictedCost * (1 + avgProfitMargin / 100)
+      const aiRisks = (data.insights || [])
+        .filter(i => i.severity === 'critical' || i.severity === 'warning')
+        .map(i => ({
+            level: i.severity === 'critical' ? 'high' : 'medium',
+            title: i.type?.toUpperCase() || 'RISK DETECTED',
+            description: i.text,
+            impact: 'Margin Erosion',
+            mitigation: i.tacticalAdvice || 'Review resource allocation'
+        }))
+      
+      setRisks(aiRisks.length > 0 ? aiRisks : [{
+          level: 'low',
+          title: 'System Stable',
+          description: 'No significant risks detected by Neural Engine.',
+          impact: 'None',
+          mitigation: 'Monitor'
+      }])
 
-    setPredictions({
-      duration: predictedDuration,
-      cost: predictedCost,
-      profit: predictedProfit,
-      confidence: 75 // Mock confidence score
-    })
+      setInsights((data.insights || []).map(i => i.text))
+
+    } catch (err) {
+      console.error("AI Prediction Error:", err)
+      // Fallback/Error state is handled by showing empty or preserved data
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const assessRisks = () => {
-    const risks = []
-
-    if (projectData.staffCount < projectData.optimalStaff) {
-      risks.push({
-        level: 'high',
-        title: 'Staff Shortage',
-        description: 'Current staffing levels are below optimal for this project size.',
-        impact: 'Delayed completion, quality issues',
-        mitigation: 'Hire additional staff or extend timeline'
-      })
-    }
-
-    if (projectData.materialCost > projectData.budget * 0.4) {
-      risks.push({
-        level: 'medium',
-        title: 'High Material Costs',
-        description: 'Material costs exceed 40% of budget, potentially impacting profitability.',
-        impact: 'Reduced margins',
-        mitigation: 'Negotiate bulk discounts or find alternative suppliers'
-      })
-    }
-
-    if (projectData.weatherSensitivity > 7) {
-      risks.push({
-        level: 'medium',
-        title: 'Weather Risk',
-        description: 'Project is highly sensitive to weather conditions.',
-        impact: 'Schedule delays',
-        mitigation: 'Include weather contingency in timeline'
-      })
-    }
-
-    setRisks(risks)
+  const formatCurrency = (val) => {
+      if (typeof val === 'string' && val.includes('$')) return val;
+      return `$${(parseFloat(val) || 0).toLocaleString()}`;
   }
-
-  const formatCurrency = (amount) => `$${amount.toLocaleString()}`
 
   return (
-    <div className="predictive-analytics">
+    <div className="predictive-analytics relative">
+      {isLoading && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-xl">
+              <Loader2 className="animate-spin text-emerald-400" size={32} />
+          </div>
+      )}
+      
       <div className="analytics-header">
         <BarChart3 size={24} />
         <h3>Predictive Analytics Dashboard</h3>
         <div className="confidence-score">
           <Activity size={16} />
-          <span>{predictions.confidence}% Confidence</span>
+          <span>{predictions.confidence?.toFixed(0)}% Confidence</span>
         </div>
       </div>
 
@@ -101,11 +105,11 @@ const PredictiveAnalytics = ({ projectData, historicalData }) => {
             <TrendingUp size={32} color="#4ecdc4" />
           </div>
           <div className="prediction-content">
-            <h4>Predicted Duration</h4>
-            <div className="prediction-value">{predictions.duration?.toFixed(1)} days</div>
+            <h4>Predicted Drift</h4>
+            <div className="prediction-value">{predictions.duration}</div>
             <div className="prediction-trend">
               <TrendingUp size={16} />
-              <span>+12% from average</span>
+              <span>Schedule Impact</span>
             </div>
           </div>
         </div>
@@ -115,11 +119,11 @@ const PredictiveAnalytics = ({ projectData, historicalData }) => {
             <Target size={32} color="#667eea" />
           </div>
           <div className="prediction-content">
-            <h4>Predicted Cost</h4>
-            <div className="prediction-value">{formatCurrency(predictions.cost || 0)}</div>
+            <h4>Cost Variance</h4>
+            <div className="prediction-value">{predictions.cost}</div>
             <div className="prediction-trend">
               <TrendingDown size={16} />
-              <span>-5% optimization potential</span>
+              <span>Projected Variance</span>
             </div>
           </div>
         </div>
@@ -129,11 +133,11 @@ const PredictiveAnalytics = ({ projectData, historicalData }) => {
             <PieChart size={32} color="#764ba2" />
           </div>
           <div className="prediction-content">
-            <h4>Predicted Profit</h4>
-            <div className="prediction-value">{formatCurrency(predictions.profit || 0)}</div>
+            <h4>Predicted Margin</h4>
+            <div className="prediction-value">{predictions.profit}</div>
             <div className="prediction-trend positive">
               <TrendingUp size={16} />
-              <span>+18% margin</span>
+              <span>Final Outlook</span>
             </div>
           </div>
         </div>
@@ -172,18 +176,17 @@ const PredictiveAnalytics = ({ projectData, historicalData }) => {
       <div className="analytics-insights">
         <h4>Key Insights</h4>
         <div className="insights-list">
-          <div className="insight-item">
-            <span className="insight-bullet">•</span>
-            <span>Based on 50+ similar projects, this estimate has a 75% confidence level</span>
-          </div>
-          <div className="insight-item">
-            <span className="insight-bullet">•</span>
-            <span>Historical data shows 85% of projects complete within 10% of predicted duration</span>
-          </div>
-          <div className="insight-item">
-            <span className="insight-bullet">•</span>
-            <span>Cost optimization potential identified in material procurement and labor allocation</span>
-          </div>
+          {insights.length > 0 ? insights.map((text, i) => (
+              <div key={i} className="insight-item">
+                <span className="insight-bullet">•</span>
+                <span>{text}</span>
+              </div>
+          )) : (
+              <div className="insight-item">
+                <span className="insight-bullet">•</span>
+                <span>Gathering neural intelligence...</span>
+              </div>
+          )}
         </div>
       </div>
     </div>

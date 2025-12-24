@@ -54,12 +54,28 @@ const WeatherSystem = React.memo(({ nodes }) => {
                 <div className="absolute inset-0 animate-in fade-in duration-700">
                     <div className="absolute inset-0 bg-indigo-50/20 opacity-0 animate-lightning-strike z-50" />
                     {particles.map(p => (
-                        <div key={p.id} className="absolute bg-gradient-to-b from-transparent via-slate-200/20 to-transparent w-[1.5px] h-[120px] animate-rain-storm-light" style={{
+                        <div key={p.id} className="absolute bg-gradient-to-b from-transparent via-slate-200/40 to-transparent w-[2px] h-[150px] animate-rain-storm-light" style={{
                             left: `${p.left}%`,
                             top: `${p.top}%`,
-                            transform: 'rotate(15deg)',
+                            transform: 'rotate(25deg)',
                             willChange: 'transform',
-                            animationDuration: `${0.3 + (p.duration % 0.2)}s`,
+                            animationDuration: `${0.2 + (p.duration % 0.2)}s`,
+                            animationDelay: `${p.delay}s`
+                        }} />
+                    ))}
+                </div>
+            )}
+            {activeWeather === 'snow' && (
+                <div className="absolute inset-0 animate-in fade-in duration-1000">
+                    {particles.map(p => (
+                        <div key={p.id} className="absolute bg-white rounded-full blur-[1px] animate-snow-fall" style={{
+                            left: `${p.left}%`,
+                            top: `${p.top}%`,
+                            width: `${p.size}px`,
+                            height: `${p.size}px`,
+                            opacity: p.opacity,
+                            willChange: 'transform',
+                            animationDuration: `${3 + (p.duration % 4)}s`,
                             animationDelay: `${p.delay}s`
                         }} />
                     ))}
@@ -69,8 +85,12 @@ const WeatherSystem = React.memo(({ nodes }) => {
                 .animate-rain-light { animation: rain-light linear infinite; }
                 .animate-rain-storm-light { animation: rain-storm-light linear infinite; }
                 .animate-lightning-strike { animation: lightning-strike 7s linear infinite; }
+                .animate-snow-fall { animation: snow-fall linear infinite; }
+                
                 @keyframes rain-light { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(120vh); opacity: 0; } }
-                @keyframes lightning-strike { 0%, 98%, 100% { opacity: 0; } 98.5% { opacity: 1; } 98.7% { opacity: 0; } 99% { opacity: 0.4; } }
+                @keyframes rain-storm-light { 0% { transform: translateY(0) translateX(0) rotate(25deg); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(120vh) translateX(-20vh) rotate(25deg); opacity: 0; } }
+                @keyframes lightning-strike { 0%, 92%, 100% { opacity: 0; } 93% { opacity: 0.8; } 93.5% { opacity: 0; } 94% { opacity: 0.3; } 96% { opacity: 0; } }
+                @keyframes snow-fall { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(110vh) translateX(20px); opacity: 0; } }
             `}</style>
         </div>
     );

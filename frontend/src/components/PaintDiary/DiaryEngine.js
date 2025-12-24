@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
 import { useSettings } from '../../context/SettingsContext';
@@ -270,6 +270,8 @@ export const useDiaryEngine = () => {
         const staffItem = staff.find(s => String(s.id) === String(lookupId));
         if (staffItem) { 
             resolved.name = staffItem.name; 
+            resolved.role = staffItem.role;
+            resolved.skillTags = staffItem.skillTags || [];
             resolved.costRate = staffItem.payRateBase; 
             resolved.chargeRate = staffItem.chargeOutBase;
             resolved.payRateOT1 = staffItem.payRateOT1;
@@ -453,10 +455,13 @@ export const useDiaryEngine = () => {
       setCost(0); setRevenue(0); setProfit(0);
   }, []);
 
+  const resolvedItems = useMemo(() => resolveItems(currentEntry.items), [currentEntry.items, staff, equipment, materials, resolveItems]);
+
   return {
     selectedDate, setSelectedDate, currentEntry, setCurrentEntry, projects, selectedProject, setSelectedProject, projectFinancials, quotedData, projectJobs, selectedJobId, setSelectedJobId,
     selectedClient, setSelectedClient, staff, equipment, materials, isSaved, setIsSaved, isSaving, cost, revenue, profit, productivityScore,
-    chatMessages, chatTyping, smartLogLoading, setSmartLogLoading, handleUpdateItem, handleRemoveItem, handleUpdateEdges,
-    handleSave, handleSmartLog, handleSmartChat, fetchData, generateId, createNewDiary, loadDiary, handleDeleteDiary
+    chatMessages, chatTyping, handleUpdateItem, handleRemoveItem, handleUpdateEdges,
+    handleSave, handleSmartLog, handleSmartChat, fetchData, generateId, createNewDiary, loadDiary, handleDeleteDiary, resolvedItems,
+    smartLogLoading, setSmartLogLoading
   };
 };

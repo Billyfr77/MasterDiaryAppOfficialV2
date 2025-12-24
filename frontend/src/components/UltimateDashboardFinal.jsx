@@ -11,6 +11,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import {
   // Core navigation and data icons
@@ -448,6 +449,7 @@ class ComprehensiveAIEngine {
 
 // Main Enhanced Ultimate Dashboard Component
 const EnhancedUltimateDashboardFinal = () => {
+  const navigate = useNavigate()
   // Core state with safe defaults
   const [projects, setProjects] = useState([])
   const [staff, setStaff] = useState([])
@@ -492,8 +494,14 @@ const EnhancedUltimateDashboardFinal = () => {
           api.get('/nodes') // Fixed: materials are nodes
         ])
 
+      const fetchedProjects = Array.isArray(projectsRes.data.data) ? projectsRes.data.data : []
+      if (fetchedProjects.length === 0) {
+          navigate('/onboarding')
+          return
+      }
+
       // Ensure all data is always arrays to prevent filter errors
-      setProjects(Array.isArray(projectsRes.data.data) ? projectsRes.data.data : [])
+      setProjects(fetchedProjects)
       setStaff(Array.isArray(staffRes.data.data) ? staffRes.data.data : [])
       setEquipment(Array.isArray(equipRes.data.data) ? equipRes.data.data : [])
       setMaterials(Array.isArray(nodesRes.data.data) ? nodesRes.data.data : [])

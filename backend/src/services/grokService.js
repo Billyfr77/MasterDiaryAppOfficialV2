@@ -28,7 +28,7 @@ class GrokService {
             { role: "system", content: systemInstruction },
             { role: "user", content: prompt }
         ],
-        model: "grok-4-1-fast-reasoning", // Updated to grok-4 as per user confirmation
+        model: "grok-4-1-fast-reasoning", 
         max_tokens: maxTokens
       });
 
@@ -45,15 +45,25 @@ class GrokService {
     try {
       const completion = await this.client.chat.completions.create({
         messages: [
-            { role: "system", content: systemInstruction + "\nIMPORTANT: Return ONLY valid JSON. No markdown formatting." },
+            { role: "system", content: systemInstruction + "\nIMPORTANT: Return ONLY valid JSON. No markdown formatting. No preamble." },
             { role: "user", content: prompt }
         ],
         model: "grok-4-1-fast-reasoning", 
-        response_format: { type: "json_object" },
         max_tokens: maxTokens 
       });
 
-      return JSON.parse(completion.choices[0].message.content);
+      let content = completion.choices[0].message.content;
+      
+      // ROBUST JSON EXTRACTION
+      const startIdx = content.indexOf('{');
+      const endIdx = content.lastIndexOf('}');
+      
+      if (startIdx === -1 || endIdx === -1) {
+          throw new Error("No JSON object found in response");
+      }
+      
+      const jsonStr = content.substring(startIdx, endIdx + 1);
+      return JSON.parse(jsonStr);
     } catch (error) {
       console.error("[Grok] JSON Gen Error:", error.message);
       throw error; 

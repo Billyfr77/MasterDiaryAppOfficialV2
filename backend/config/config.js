@@ -1,3 +1,5 @@
+const path = require('path');
+
 module.exports = {
   development: {
     username: process.env.DB_USER,
@@ -6,7 +8,7 @@ module.exports = {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT || 5432,
     dialect: process.env.DB_DIALECT || 'sqlite',
-    storage: process.env.DB_STORAGE || '../database.sqlite',
+    storage: process.env.DB_STORAGE || path.join(__dirname, '../../database.sqlite'),
     logging: console.log
   },
   test: {

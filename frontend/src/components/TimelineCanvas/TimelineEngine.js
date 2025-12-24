@@ -77,7 +77,7 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                   const isBreak = extra.type === 'chronos' && !extra.data?.startTime;
                   if (extra.type === 'delay') delays.push(extra);
                   else if (isBreak) breaks.push(extra);
-                  else extras.push({ id: extra.id, type: extra.type, label: extra.data?.label || extra.type });
+                  else extras.push(extra); // FULL OBJECT
               }
           }
 
@@ -116,7 +116,61 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           branch.workers.forEach(w => reachableFromHub.add(w.id));
           branch.resources.forEach(r => reachableFromHub.add(r.id));
           branch.extras.forEach(e => reachableFromHub.add(e.id));
+          branch.delays.forEach(d => reachableFromHub.add(d.id));
+          branch.breaks.forEach(b => reachableFromHub.add(b.id));
       });
+
+      // --- CHAINED INHERITANCE (Advanced Team Mechanic) ---
+      // If a resource node is NOT directly reachable but IS connected via a supervisor or task...
+      let changed = true;
+      const resourceHubAssignment = new Map(); // itemId -> hubId
+      
+      // Seed with direct connections from harvest
+      hubs.forEach(hub => {
+          const s = hubStateMap.get(hub.id);
+          s.workers.forEach(w => resourceHubAssignment.set(w.id, hub.id));
+          s.resources.forEach(r => resourceHubAssignment.set(r.id, hub.id));
+          s.extras.forEach(e => resourceHubAssignment.set(e.id, hub.id));
+          s.delays.forEach(d => resourceHubAssignment.set(d.id, hub.id));
+          s.breaks.forEach(b => resourceHubAssignment.set(b.id, hub.id));
+      });
+
+      while (changed) {
+          changed = false;
+          // Traverse through all resource items (Staff/Equip)
+          currentItems.forEach(item => {
+              if (!resourceHubAssignment.has(item.id)) {
+                  const neighborId = currentEdges
+                      .filter(e => e.source === item.id || e.target === item.id)
+                      .map(e => e.source === item.id ? e.target : e.source)
+                      .find(nid => resourceHubAssignment.has(nid));
+                  
+                  if (neighborId) {
+                      const hubId = resourceHubAssignment.get(neighborId);
+                      resourceHubAssignment.set(item.id, hubId);
+                      reachableFromHub.add(item.id);
+                      changed = true;
+                  }
+              }
+          });
+          
+          // Traverse through extra nodes (Tasks/Prisms can act as bridges)
+          currentExtras.forEach(extra => {
+              if (!resourceHubAssignment.has(extra.id)) {
+                  const neighborId = currentEdges
+                      .filter(e => e.source === extra.id || e.target === extra.id)
+                      .map(e => e.source === extra.id ? e.target : e.source)
+                      .find(nid => resourceHubAssignment.has(nid) || hubStateMap.has(nid));
+                  
+                  if (neighborId) {
+                      const hubId = hubStateMap.has(neighborId) ? neighborId : resourceHubAssignment.get(neighborId);
+                      resourceHubAssignment.set(extra.id, hubId);
+                      reachableFromHub.add(extra.id);
+                      changed = true;
+                  }
+              }
+          });
+      }
 
       // 2. Map Items to Final Visual Nodes
       const processedItems = currentItems.map(item => {
@@ -136,10 +190,9 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                   id: a.id,
                   name: a.data?.name || 'Allowance',
                   rate: parseFloat(a.data?.rate) || 0,
-                  type: a.data?.allowanceType || 'hourly' // 'hourly' or 'daily'
+                  type: a.data?.allowanceType || 'hourly' 
               }));
 
-              // Sync to persistent state if changed
               const prevAllowances = JSON.stringify(item.activeAllowances || []);
               const newAllowances = JSON.stringify(activeAllowances);
               
@@ -149,18 +202,18 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           }
 
           if (reachableFromHub.has(item.id) && !item.isOverridden) {
-              const state = Array.from(hubStateMap.values()).find(s => s.workers.some(w => w.id === item.id) || s.resources.some(r => r.id === item.id));
+              const hubId = resourceHubAssignment.get(item.id);
+              const state = hubId ? hubStateMap.get(hubId) : Array.from(hubStateMap.values()).find(s => s.workers.some(w => w.id === item.id) || s.resources.some(r => r.id === item.id));
+              
               if (state && (item.type === 'staff' || item.type === 'equipment')) {
                   duration = state.finalDuration;
                   isChronosLinked = true;
-                  // Push back to persistent state if mismatch (DEFERRED)
                   if (Math.abs(parseFloat(item.duration) - duration) > 0.01) {
                       const orig = item.isChronosLinked ? item.originalDuration : item.duration;
                       setTimeout(() => onUpdateItem(item.id, { duration, isChronosLinked: true, originalDuration: orig }), 0);
                   }
               }
           } else if (item.isChronosLinked) {
-              // Disconnected Reset (DEFERRED)
               setTimeout(() => onUpdateItem(item.id, { isChronosLinked: false, duration: item.originalDuration || item.duration }), 0);
           }
 
@@ -182,19 +235,58 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           if (hubStateMap.has(node.id)) {
               const state = hubStateMap.get(node.id);
               duration = state.finalDuration;
-              hubData = { workers: state.workers, resources: state.resources, extras: state.extras };
+              hubData = { workers: state.workers, resources: state.resources, extras: state.extras, delays: state.delays, breaks: state.breaks };
               status = (state.delays.length || state.breaks.length) ? 'impacted' : 'normal';
               if (Math.abs((parseFloat(node.data?.duration) || 0) - duration) > 0.01) {
                   setTimeout(() => onUpdateItem(node.id, { duration }), 0);
               }
           }
 
-          // Neural Prism Logic
+          // Universal Hub Data Inheritance (Reverse Lookup)
+          if (!hubData && !hubStateMap.has(node.id)) {
+              const parentHubId = resourceHubAssignment.get(node.id) || Array.from(hubStateMap.keys()).find(hid => {
+                  const s = hubStateMap.get(hid);
+                  return s.extras.some(e => e.id === node.id) || 
+                         s.workers.some(w => w.id === node.id) || 
+                         s.resources.some(r => r.id === node.id);
+              });
+              
+              if (parentHubId) {
+                  const s = hubStateMap.get(parentHubId);
+                  hubData = { 
+                      workers: s.workers, 
+                      resources: s.resources, 
+                      extras: s.extras,
+                      delays: s.delays,
+                      breaks: s.breaks,
+                      duration: s.finalDuration 
+                  };
+              }
+          }
+
+          // Neural Prism Logic - Enhanced Discovery
           if (node.type === 'neuralPrism') {
-              const hubId = Array.from(hubStateMap.keys()).find(hid => currentEdges.some(e => (e.source === node.id && e.target === hid) || (e.target === node.id && e.source === hid)));
-              if (hubId) {
-                  const s = hubStateMap.get(hubId);
-                  hubData = { workers: s.workers, resources: s.resources, duration: s.finalDuration };
+              const parentHubId = resourceHubAssignment.get(node.id) || Array.from(hubStateMap.keys()).find(hid => {
+                  const s = hubStateMap.get(hid);
+                  return s.extras.some(e => e.id === node.id);
+              });
+
+              if (parentHubId) {
+                  const s = hubStateMap.get(parentHubId);
+                  hubData = { 
+                      workers: s.workers, 
+                      resources: s.resources, 
+                      extras: s.extras, 
+                      delays: s.delays, 
+                      breaks: s.breaks, 
+                      duration: s.finalDuration 
+                  };
+                  // DO NOT force status to 'analyzing' to allow AI EFFECT to trigger
+                  status = node.data?.status || 'pending';
+                  if (status === 'disconnected') status = 'pending';
+              } else {
+                  status = 'disconnected';
+                  hubData = null;
               }
           }
 
@@ -219,15 +311,27 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
               
               const connectedItems = processedItems.filter(i => connectedItemIds.includes(i.id));
               
-              const totalActualHrs = connectedItems
-                  .filter(i => i.data?.type === 'staff' || i.data?.type === 'equipment')
-                  .reduce((sum, s) => sum + (parseFloat(s.data?.duration) || 0), 0);
+              // MERGE: Task uses both direct connections AND resources from its inherited hub
+              let taskWorkers = [...(hubData?.workers || [])];
+              let taskResources = [...(hubData?.resources || [])];
 
-              const totalActualCost = connectedItems.reduce((sum, i) => {
-                  const qty = parseFloat(i.data?.quantity) || 0;
-                  const dur = parseFloat(i.data?.duration) || 0;
-                  const rate = parseFloat(i.data?.costRate) || 0;
-                  if (i.data?.type === 'staff' || i.data?.type === 'equipment') return sum + (dur * rate);
+              // Add direct connections if they aren't already part of the hub
+              connectedItems.forEach(ci => {
+                  if (ci.data?.type === 'staff' && !taskWorkers.find(w => w.id === ci.id)) taskWorkers.push(ci.data);
+                  if (ci.data?.type !== 'staff' && !taskResources.find(r => r.id === ci.id)) taskResources.push(ci.data);
+              });
+
+              // Check if Task is linked to Chronos (Active)
+              const isLinkedToChronos = reachableFromHub.has(node.id) || !!hubData;
+              status = isLinkedToChronos ? 'active' : 'pending';
+
+              const totalActualHrs = taskWorkers.reduce((sum, s) => sum + (parseFloat(s.duration) || 0), 0);
+
+              const totalActualCost = [...taskWorkers, ...taskResources].reduce((sum, i) => {
+                  const qty = parseFloat(i.quantity) || 0;
+                  const dur = parseFloat(i.duration) || 0;
+                  const rate = parseFloat(i.costRate) || 0;
+                  if (i.type === 'staff' || i.type === 'equipment') return sum + (dur * rate);
                   return sum + (qty * rate);
               }, 0);
 
@@ -240,9 +344,11 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                   costDrift = `${costVariance > 0 ? '+' : ''}$${Math.abs(costVariance).toLocaleString()}`;
               }
 
+              // Update persistent state if values changed
               if (Math.abs((parseFloat(node.data?.actualHours) || 0) - totalActualHrs) > 0.01 || 
-                  Math.abs((parseFloat(node.data?.actualCost) || 0) - totalActualCost) > 0.01) {
-                  setTimeout(() => onUpdateItem(node.id, { actualHours: totalActualHrs, actualCost: totalActualCost }), 0);
+                  Math.abs((parseFloat(node.data?.actualCost) || 0) - totalActualCost) > 0.01 ||
+                  node.data?.status !== status) {
+                  setTimeout(() => onUpdateItem(node.id, { actualHours: totalActualHrs, actualCost: totalActualCost, status }), 0);
               }
               duration = totalActualHrs; 
           }
@@ -304,7 +410,7 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           });
       });
 
-  }, [items, extraNodes, edges, projectFinancials, harvestBranch, onUpdateItem, onRemoveItem, onDeployFixes]);
+  }, [items, extraNodes, edges, projectFinancials, harvestBranch, onUpdateItem, onRemoveItem, onDeployFixes, quotedData]);
 
   // Decoupled AI Logic (Fixed Infinite Loop)
   useEffect(() => {
@@ -319,7 +425,8 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
               w: hubData.workers?.length, 
               r: hubData.resources?.length, 
               d: hubData.duration,
-              e: edges.length // Edge count included for structural awareness
+              e: edges.length,
+              q: !!quotedData // Trigger if quote status changes
           });
           
           // Only analyze if hash changed or never analyzed
@@ -332,16 +439,24 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
 
               window[`prism_${prismId}`] = setTimeout(async () => {
                   try {
+                      // Unified Topology for AI
+                      const fullTopology = [
+                          ...(hubData.workers || []).map(w => ({ ...w, nodeType: 'staff' })),
+                          ...(hubData.resources || []).map(r => ({ ...r, nodeType: r.type || 'equipment' })),
+                          ...(hubData.extras || []).map(e => ({ id: e.id, type: e.type, label: e.data?.label || e.label })),
+                          ...(hubData.delays || []).map(d => ({ id: d.id, type: 'delay', label: d.data?.label, duration: d.data?.duration, weather: d.data?.weatherType })),
+                          ...(hubData.breaks || []).map(b => ({ id: b.id, type: 'break', duration: b.data?.duration }))
+                      ];
+
                       const res = await api.post('/ai/analyze-prism', { 
                           context: { 
-                              workers: hubData.workers, 
-                              tasks: hubData.resources, 
+                              topology: fullTopology,
                               duration: hubData.duration, 
                               projectFinancials: financials,
                               graphEdges: edges.length,
-                              quotedData: quotedData // GRANULAR ESTIMATES
+                              quotedData: quotedData 
                           },
-                          history // Send temporal memory
+                          history 
                       });
                       
                       if (res.data) {
@@ -351,10 +466,10 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                       console.error("AI Analysis Failed", e);
                       onUpdateItem(prismId, { status: 'disconnected' });
                   }
-              }, 3500);
+              }, 1500);
           }
       });
-  }, [nodes, edges.length, history, onUpdateItem]);
+  }, [nodes, edges.length, history, onUpdateItem, quotedData]);
 
   const onNodeDragStop = useCallback((event, node) => {
     if (!node.parentId) onUpdateItem(node.id, { position: node.position });
