@@ -1,56 +1,48 @@
 # 🏗️ MasterDiaryOS // The Neural Construction Operating System
-**Version:** 2.7.0 (Phase Orchestrator Edition)
-**Intelligence Core:** grok-4-1-fast-reasoning (Flagship Flagship)
+**Version:** 2.8.0 (Generative Construct Edition)
+**Intelligence Core:** grok-4-1-fast-reasoning (Flagship)
 **Architecture:** AI-Native Topological Logic Circuit
 
 ---
 
 ## 📜 Executive Overview
-MasterDiaryOS is an **AI-Native Construction Operating System** that transforms site management into a high-fidelity **Operational Circuit**. By treating personnel, time, money, and geography as interconnected nodes in a living logic graph, the system automates forensic reporting, predicts margin erosion, and handles complex payroll logic with zero manual intervention.
+MasterDiaryOS is an **AI-Native Construction Operating System** that transforms site management into a high-fidelity **Operational Circuit**. It is not a database; it is a **Generative Logic Engine**. By treating personnel, time, money, and geography as interconnected nodes in a living graph, the system automates forensic reporting, predicts margin erosion, and generates complex quotes from simple natural language prompts.
 
 ---
 
 ## 🧠 Core Intelligence Modules
 
-### 1. Neural Diary Engine (NDE) // Site Execution
-The core execution layer. It treats the construction site as a **Topological Graph**.
-*   **Weekly Unified Canvas:** Supports up to 7+ **Chronos Hubs** on a single workspace, allowing for Daily, Weekly, or Monthly phase mapping.
-*   **Intelligent Shift Engine:** Automatically decomposes shifts into **Normal, 1.5x (OT1), 2.0x (OT2), and Night** pay tiers. Features a visual "Shift Intensity Bar" for instant payroll auditing.
-*   **Chained Command Propagation:** Advanced hierarchy where subordinates and machinery inherit temporal data from linked supervisors (Director -> Supervisor -> Crew).
-*   **Causal Site Notes:** High-fidelity interactive nodes for observations. The AI "reads" these notes to find the root cause of delays (e.g., linking a 'Crane Breakdown' note to a $2k cost variance).
-*   **Apex Weather Engine:** Renders multiple simultaneous atmospheric conditions (Turbulent Wind Ribbons, Parallax Flooding, Lightning Storms) linked to real site delays.
+### 1. Neural Estimation Engine (NEE) // Generative Quoting
+*   **Living Circuit:** Replaces static spreadsheets with a dynamic, visual node graph.
+    *   **Spatial Dominance:** Drag an **Area Node** (e.g., "Living Room"), set dimensions, and connect it to a **Material Node** (e.g., "Timber"). Quantities auto-calculate based on coverage rates.
+    *   **Labour Intelligence:** Linked **Labour Nodes** automatically calculate required man-hours based on productivity rates (m²/hr).
+    *   **Financial Sink:** The **Profit Node** acts as a live command center for markup, overhead, and contingency, updating the Contract Value instantly.
+*   **AI Co-Pilot:** The "Senior Estimator" AI can architect entire sub-assemblies. Ask "Add a deck," and it drops an Area node pre-wired to Bearers, Joists, Decking, and Labour.
+*   **Forensic Audit:** The **Intelligence Layer** scans for "Orphaned Areas" (spaces with no cost) and "Zero Rate" items, displaying a **Margin Heatmap** to visualize financial risk.
 
-### 2. Neural Estimation Engine (NEE) // Visual Quoting
-Replaces static spreadsheets with a dynamic visual blueprint.
-*   **AI Blueprinting:** Converts natural language prompts (e.g., "Estimate a 500sqm fitout") into a complete visual node graph.
-*   **Dimensional Yield Nodes:** Perimeter and area nodes that auto-calculate material requirements (Paint, Flooring, Concrete) based on spatial logic.
-*   **Ghost Baselines:** Approved quotes serve as a "Ghost" layer on the diary canvas, allowing real-time "Quoted vs Actual" forensic analysis.
+### 2. Neural Diary Engine (NDE) // Visual Site Execution
+*   **Topological Time:** Treats the site diary as a visual circuit.
+    *   **Chronos Hub:** The central timekeeper. Connecting a **Delay Node** (e.g., "Rain Event") to the Hub instantly propagates the time loss to all linked Staff and Equipment nodes.
+    *   **Intelligent Shift Engine:** Automatically decomposes shifts into **Normal, 1.5x (OT1), 2.0x (OT2), and Night** pay tiers.
+    *   **Smart Connect:** Drag a connection line into empty space to summon a context-aware menu that suggests the next logical node (e.g., drag from Zone -> suggests Task).
+*   **Inline Editing:** Click any quantity or duration directly on the node face to edit it instantly without breaking flow.
 
-### 3. Workflow Automator // The Project Router
-A visual logic builder for firm-wide business automation.
-*   **Node-Based Logic:** Map out the lifecycle of a project visually.
-*   **Trigger-Action Sync:** Automatically trigger events like "Generate Invoice" or "Flag Project Risk" when specific logic gates are met on the canvas.
+### 3. Pinnacle Tutor // Neural Onboarding
+*   **Interactive AI Guide:** A built-in "Neural Tutor" that spotlights screen elements and teaches users how to master the OS in real-time.
+*   **Module-Based Training:** Specific training modules for "Quote Building," "Diary Management," and "Financial Auditing."
 
-### 4. GeoSpatial Map Architect // Digital Twin
-Interactive site positioning layered with neural intelligence.
+### 4. Workflow Automator // The Project Router
+*   **Visual Logic Builder:** Map out the lifecycle of a project visually.
+*   **Trigger-Action Sync:** Automatically trigger events like "Generate Invoice," "Send Email," or "Flag Risk" when specific logic gates are met on the canvas.
+
+### 5. GeoSpatial Map Architect // Digital Twin
 *   **Georeferenced Nodes:** Links visual diary nodes to exact GPS coordinates.
 *   **AI Site Compounds:** Automatically generates exclusion zones, site offices, and resource laydown areas on interactive maps.
 
-### 5. Revenue Recovery // Forensic Invoicing
-An elite financial engine designed for maximum recovery and complete audit trails.
-*   **Multi-Instance Harvesting:** Directly import work segments from the weekly canvas. If a staff member worked 5 days in a week view, the system creates 5 distinct billable records automatically.
-*   **Xero & ERP Sync:** Bi-directional synchronization with professional accounting and ERP suites.
+### 6. Revenue Recovery // Forensic Invoicing
+*   **Multi-Instance Harvesting:** Directly import work segments from the diary canvas.
+*   **Xero & ERP Sync:** Bi-directional synchronization with professional accounting suites.
 *   **Variation Tracking:** Forensic management of project variations and retention percentages.
-
-### 6. Safety & Compliance Hub // Autonomous SWMS
-AI-Native compliance management.
-*   **Reasoning SWMS Generator:** Generates high-fidelity, high-risk work method statements using the flagship grok-4 core.
-*   **Visual Safety Verification:** AI analyzes site photos and notes to verify compliance against generated safety documents.
-
-### 7. Resource Command // Crew DNA
-The HR and Asset management layer.
-*   **Crew DNA:** Tracks individual staff certification tags, fatigue levels, and historical productivity "velocity."
-*   **Command Roles:** Visual hierarchy (Crown for Directors, Shield for Supervisors) that dictates data flow on the canvas.
 
 ---
 
@@ -62,16 +54,25 @@ The system exclusively utilizes **grok-4-1-fast-reasoning**.
 *   **Robust Parsing:** Custom logic handles the reasoning model's `<thought>` tags and preambles to ensure 100% valid JSON data flow.
 
 ### **The Visual Circuit Engine**
-*   **Recursive Harvester:** Uses a `harvestBranch` algorithm to traverse the graph and calculate aggregate costs across infinite hierarchical links.
-*   **Jewel-Tier Aesthetic:** Utilizes glassmorphism, high-contrast industrial accents, and cinematic animations (Framer Motion) to maintain a premium "Operating System" feel.
+*   **React Flow Integration:** Custom node types (`DiaryNode`, `AreaNode`, `EstimationPrismNode`) rendered with a premium "Jewel" aesthetic (Glassmorphism + Neon Glows).
+*   **Recursive Propagation:** Data (Time, Cost, Allowance) flows through infinite chains of connected nodes.
+*   **Smart Edge Logic:** Connections enforce business rules (e.g., Areas can only drive Materials/Labour).
 
 ---
 
-📂 **Directory Map:**
-- `frontend/src/components/TimelineCanvas/`: The topological graph heart.
-- `frontend/src/components/PaintDiary/IntelligenceLayer.jsx`: The Strategic Reporting engine.
-- `frontend/src/components/Quotes/`: The Estimation & Blueprint engine.
-- `backend/src/controllers/intelligenceController.js`: Modular AI Logic Nodes.
+## 📂 Directory Map
+
+*   `frontend/src/components/Quotes/`: **The Neural Estimation Engine.**
+    *   `QuoteBuilder.jsx`: The main canvas and orchestration logic.
+    *   `QuoteNodes.jsx`: Implementation of Power Nodes (Prism, Area, Profit).
+    *   `QuoteIntelligenceLayer.jsx`: The forensic audit and insights system.
+*   `frontend/src/components/TimelineCanvas/`: **The Neural Diary Engine.**
+    *   `TimelineNodes.jsx`: Implementation of Diary Nodes (Staff, Equipment, Chronos).
+    *   `TimelineEngine.js`: The recursive logic for time/cost propagation.
+*   `frontend/src/components/Onboarding/`: **Pinnacle Tutor.**
+    *   `AIOnboardingOverlay.jsx`: The spotlight and tutorial engine.
+*   `backend/src/controllers/aiController.js`: **The AI Brain.**
+    *   Handles `generateQuote`, `chatQuoteAssistant`, and `add_complex_node` logic.
 
 ---
 

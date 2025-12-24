@@ -344,9 +344,10 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                 {activeTab === 'command' && (
                     <motion.div 
                         key="command"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
                         className="space-y-6"
                     >
                         {/* 6.1 NARRATIVE BANNER */}
@@ -387,9 +388,10 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                 {activeTab === 'timeline' && (
                     <motion.div 
                         key="timeline"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
                         className="p-8 bg-[#0a0a0c] border border-white/5 rounded-[3rem] shadow-xl"
                     >
                         <div className="flex items-center gap-3 mb-8 px-4">
@@ -414,9 +416,10 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                 {activeTab === 'strategy' && (
                     <motion.div 
                         key="strategy"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
                         className="p-8 bg-[#0a0a0c] border border-white/5 rounded-[3rem] shadow-xl"
                     >
                         <div className="flex items-center gap-3 mb-10 px-4">
@@ -441,9 +444,10 @@ const IntelligenceLayer = ({ diaryData, active }) => {
                 {activeTab === 'audit' && (
                     <motion.div 
                         key="audit"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
                         className="space-y-6"
                     >
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

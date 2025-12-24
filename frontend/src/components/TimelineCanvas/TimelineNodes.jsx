@@ -500,10 +500,32 @@ export const DiaryNode = ({ id, data, selected }) => {
       return { bg: "from-indigo-600/80 via-indigo-900/90 to-black", border: "border-indigo-400/40", glow: "shadow-indigo-500/50", icon: "text-indigo-400", iconBg: "bg-indigo-500/20", accent: "text-indigo-200" };
   };
   const nodeTheme = getThemeStyles(type);
+  const [isEditingQty, setIsEditingQty] = useState(false);
+
   return (
     <JewelWrapper theme={nodeTheme} selected={selected} isGhost={isGhost} shapeClass="rounded-[2rem]">
       <div className="absolute top-2 right-4 text-[8px] font-mono text-white font-bold tracking-widest pointer-events-none select-none z-30 drop-shadow-md opacity-50">ID:{id}::{type?.toUpperCase()}</div>
-      <div className="flex flex-col gap-4"><div className="flex justify-between items-start"><div className="relative"><div className={`absolute inset-0 rounded-2xl ${nodeTheme.iconBg} animate-ping opacity-20`} /><div className={`relative p-3.5 rounded-2xl ${nodeTheme.iconBg} backdrop-blur-md shadow-2xl border border-white/10 transition-all group-hover:rotate-3`}>{type === 'staff' ? getRoleIcon(role) : type === 'equipment' ? <Wrench size={22} className={nodeTheme.icon} /> : <Package size={22} className={nodeTheme.icon} />}</div></div>{!isGhost && (<button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-2 rounded-xl bg-white/5 text-white/20 hover:bg-red-500 hover:text-white transition-all scale-90 group-hover:scale-100"><X size={14} strokeWidth={3} /></button>)}</div><div><div className="flex items-center gap-2 mb-1"><span className={`text-[8px] font-black uppercase tracking-[0.4em] ${nodeTheme.accent} opacity-60`}>{isGhost ? 'SUGGESTION' : role || type}</span></div><div className="text-lg font-black text-white leading-tight tracking-tight uppercase line-clamp-2">{label}</div></div>{type === 'staff' && skillTags?.length > 0 && (<div className="flex flex-wrap gap-1 mt-1">{skillTags.map((tag, i) => (<span key={i} className="px-1.5 py-0.5 rounded-[4px] bg-white/5 border border-white/10 text-[7px] font-bold text-gray-400 uppercase tracking-tighter">{tag}</span>))}</div>)}{!isGhost && (<div className="flex gap-2 items-center"><div className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/5 flex items-center gap-2"><Cpu size={10} className={`${nodeTheme.accent} opacity-50`} /><span className="text-[10px] font-mono font-black text-white">{type === 'staff' || type === 'equipment' ? `${duration || quantity}H` : `${quantity} UNIT`}</span></div>{costRate > 0 && (<div className={`px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5`}><DollarSign size={10} className={nodeTheme.icon} /><span className="text-[10px] font-mono font-black text-white">${costRate}</span></div>)}</div>)}</div>
+      <div className="flex flex-col gap-4"><div className="flex justify-between items-start"><div className="relative"><div className={`absolute inset-0 rounded-2xl ${nodeTheme.iconBg} animate-ping opacity-20`} /><div className={`relative p-3.5 rounded-2xl ${nodeTheme.iconBg} backdrop-blur-md shadow-2xl border border-white/10 transition-all group-hover:rotate-3`}>{type === 'staff' ? getRoleIcon(role) : type === 'equipment' ? <Wrench size={22} className={nodeTheme.icon} /> : <Package size={22} className={nodeTheme.icon} />}</div></div>{!isGhost && (<button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-2 rounded-xl bg-white/5 text-white/20 hover:bg-red-500 hover:text-white transition-all scale-90 group-hover:scale-100"><X size={14} strokeWidth={3} /></button>)}</div><div><div className="flex items-center gap-2 mb-1"><span className={`text-[8px] font-black uppercase tracking-[0.4em] ${nodeTheme.accent} opacity-60`}>{isGhost ? 'SUGGESTION' : role || type}</span></div><div className="text-lg font-black text-white leading-tight tracking-tight uppercase line-clamp-2">{label}</div></div>{type === 'staff' && skillTags?.length > 0 && (<div className="flex flex-wrap gap-1 mt-1">{skillTags.map((tag, i) => (<span key={i} className="px-1.5 py-0.5 rounded-[4px] bg-white/5 border border-white/10 text-[7px] font-bold text-gray-400 uppercase tracking-tighter">{tag}</span>))}</div>)}{!isGhost && (<div className="flex gap-2 items-center"><div className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/5 flex items-center gap-2 transition-all hover:bg-white/5 group/qty">
+          <Cpu size={10} className={`${nodeTheme.accent} opacity-50 group-hover/qty:opacity-100`} />
+          {isEditingQty ? (
+              <input 
+                type="number" 
+                autoFocus 
+                className="w-12 bg-transparent border-b border-indigo-500 text-[10px] font-mono font-black text-white outline-none nodrag" 
+                defaultValue={type === 'staff' || type === 'equipment' ? duration : quantity} 
+                onBlur={(e) => { 
+                    const val = parseFloat(e.target.value) || 0;
+                    data.onUpdate?.(id, type === 'staff' || type === 'equipment' ? { duration: val } : { quantity: val });
+                    setIsEditingQty(false);
+                }} 
+                onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+              />
+          ) : (
+              <span onClick={() => setIsEditingQty(true)} className="text-[10px] font-mono font-black text-white cursor-pointer hover:text-indigo-400">
+                  {type === 'staff' || type === 'equipment' ? `${duration || 0}H` : `${quantity || 1} UNIT`}
+              </span>
+          )}
+      </div>{costRate > 0 && (<div className={`px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5`}><DollarSign size={10} className={nodeTheme.icon} /><span className="text-[10px] font-mono font-black text-white">${costRate}/{type==='material'?'U':'H'}</span></div>)}</div>)}</div>
       <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-white !border-2 !border-black" /><Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-white !border-2 !border-black" />
     </JewelWrapper>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, User, Wrench, Package, X, GripVertical, Box, Zap, Clock, Activity, AlertTriangle, Ruler, Image as ImageIcon, Layout, Circle, Award } from 'lucide-react';
+import { Search, User, Wrench, Package, X, GripVertical, Box, Zap, Clock, Activity, AlertTriangle, Ruler, Image as ImageIcon, Layout, Circle, Award, DollarSign } from 'lucide-react';
 
 const ResourceCard = ({ item, onClick, onDragStart, themeColor }) => {
   let wrapperClass = `bg-gradient-to-r from-${themeColor}-900/10 to-transparent border-${themeColor}-500/20 hover:border-${themeColor}-400 hover:bg-${themeColor}-900/30 hover:shadow-lg hover:shadow-${themeColor}-500/10`;
@@ -14,7 +14,7 @@ const ResourceCard = ({ item, onClick, onDragStart, themeColor }) => {
     wrapperClass = `bg-gradient-to-r from-amber-900/10 to-transparent border-amber-500/20 hover:border-amber-400 hover:bg-amber-900/30 hover:shadow-lg hover:shadow-amber-500/10`;
     iconClass = "bg-amber-500/20 text-amber-400";
     icon = <Wrench size={16} />;
-  } else if (['zone', 'taskNode', 'neuralPrism', 'chronos', 'wormhole', 'delay', 'impact', 'dimension', 'shapeNode', 'photoNode', 'allowance'].includes(item.type)) {
+  } else if (['zone', 'taskNode', 'neuralPrism', 'chronos', 'wormhole', 'delay', 'impact', 'dimension', 'shapeNode', 'photoNode', 'allowance', 'areaNode', 'quoteMaterial', 'quoteLabour', 'profitNode', 'estimationPrism'].includes(item.type)) {
     wrapperClass = `bg-gradient-to-r from-purple-900/10 to-transparent border-purple-500/20 hover:border-purple-400 hover:bg-purple-900/30 hover:shadow-lg hover:shadow-purple-500/10`;
     iconClass = "bg-purple-500/20 text-purple-400";
     if (item.type === 'zone') icon = <Box size={16} />;
@@ -25,6 +25,11 @@ const ResourceCard = ({ item, onClick, onDragStart, themeColor }) => {
     else if (item.type === 'delay') icon = <Clock size={16} />;
     else if (item.type === 'impact') icon = <Activity size={16} />;
     else if (item.type === 'dimension') icon = <Ruler size={16} />;
+    else if (item.type === 'areaNode') icon = <Ruler size={16} className="text-cyan-400" />;
+    else if (item.type === 'quoteMaterial') icon = <Package size={16} className="text-indigo-400" />;
+    else if (item.type === 'quoteLabour') icon = <User size={16} className="text-emerald-400" />;
+    else if (item.type === 'profitNode') icon = <DollarSign size={16} className="text-amber-400" />;
+    else if (item.type === 'estimationPrism') icon = <Zap size={16} className="text-indigo-400" />;
     else if (item.type === 'shapeNode') icon = <Box size={16} />;
     else if (item.type === 'photoNode') icon = <ImageIcon size={16} />;
     else if (item.type === 'allowance') icon = <Award size={16} />;
@@ -73,7 +78,7 @@ const ResourceCard = ({ item, onClick, onDragStart, themeColor }) => {
   );
 };
 
-const ResourceSidebar = ({ materials = [], staff = [], equipment = [], onSearch, onTapAdd, isOpen, onClose, theme = 'indigo' }) => {
+const ResourceSidebar = ({ materials = [], staff = [], equipment = [], onSearch, onTapAdd, isOpen, onClose, theme = 'indigo', mode = 'diary' }) => {
   const [activeTab, setActiveTab] = useState('all');
   const [localSearch, setLocalSearch] = useState('');
 
@@ -86,7 +91,17 @@ const ResourceSidebar = ({ materials = [], staff = [], equipment = [], onSearch,
 
   const filterItems = (items) => items.filter(i => i.name.toLowerCase().includes(localSearch.toLowerCase()));
 
-  const specialNodes = [
+  const specialNodes = mode === 'quote' ? [
+      { id: 'prism-est', name: 'Estimation Prism', type: 'estimationPrism', category: 'logic' },
+      { id: 'area-proto', name: 'Area Node', type: 'areaNode', category: 'logic' },
+      { id: 'qmat-proto', name: 'Material Yield', type: 'quoteMaterial', category: 'logic' },
+      { id: 'qlab-proto', name: 'Labour Estimator', type: 'quoteLabour', category: 'logic' },
+      { id: 'profit-proto', name: 'Profit Node', type: 'profitNode', category: 'logic' },
+      { id: 'zone-proto', name: 'Zone Container', type: 'zone', category: 'logic' },
+      { id: 'dim-proto', name: 'Dimension', type: 'dimension', category: 'logic' },
+      { id: 'shape-proto', name: 'Shape', type: 'shapeNode', category: 'logic' },
+      { id: 'photo-proto', name: 'Photo Plane', type: 'photoNode', category: 'logic' },
+  ] : [
       { id: 'prism-proto', name: 'Neural Prism', type: 'neuralPrism', category: 'logic' },
       { id: 'zone-proto', name: 'Zone Container', type: 'zone', category: 'logic' },
       { id: 'task-proto', name: 'Task Unit', type: 'taskNode', category: 'logic' },

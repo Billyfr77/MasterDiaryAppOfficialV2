@@ -15,7 +15,7 @@ import {
   ArrowRight, Sparkles, Command, Box, X, Hammer, Briefcase, Wrench,
   Globe, Layers, PenTool, CreditCard, GitBranch, FileText, Palette, AlertTriangle, Settings,
   User, Timer, Package, Ruler, BarChart3, ClipboardCheck, Crown, Landmark, Map as MapIcon, Truck,
-  List, Loader2, Wand2, Calendar, Maximize, Plus, TrendingUp
+  List, Loader2, Wand2, Calendar, Maximize, Plus, TrendingUp, BrainCircuit, GraduationCap
 } from 'lucide-react'
 
 // --- ASSETS & CONFIG ---
@@ -66,8 +66,8 @@ const Nav = () => {
                     <span className="font-black text-xl tracking-tighter text-white uppercase">MasterDiary<span className="text-indigo-500">OS</span></span>
                 </div>
                 <div className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
-                    {['Features', 'Intelligence', 'Security', 'Pricing'].map(item => (
-                        <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-white transition-colors">{item}</a>
+                    {['Neural Engine', 'Estimation', 'Diary', 'Pricing'].map(item => (
+                        <a key={item} href={`#${item.toLowerCase().replace(' ', '-')}`} className="hover:text-white transition-colors">{item}</a>
                     ))}
                 </div>
                 <div className="flex gap-4">
@@ -81,7 +81,7 @@ const Nav = () => {
     );
 };
 
-// --- SIMULATED QUOTE BUILDER (MIRRORED VERSION) ---
+// --- SIMULATED QUOTE BUILDER (UPDATED FOR NEURAL ESTIMATION) ---
 
 const DraggableResource = ({ name, type, icon: Icon, color }) => {
     const onDragStart = (e) => {
@@ -106,7 +106,7 @@ const DraggableResource = ({ name, type, icon: Icon, color }) => {
 
 const InteractiveQuoteEngine = () => {
     const [nodes, setNodes] = useState([
-        { id: 'z1', name: 'Master Suite', type: 'dimension', x: 50, y: 50, width: 350, height: 350, color: 'border-indigo-500/30' }
+        { id: 'prism', name: 'Estimation Prism', type: 'estimationPrism', x: 50, y: 50, width: 250, height: 250, color: 'border-indigo-500/50' }
     ]);
     const [resources, setResources] = useState([]);
     const [aiStatus, setAiStatus] = useState('Standby');
@@ -147,7 +147,6 @@ const InteractiveQuoteEngine = () => {
         }
 
         const rect = canvasRef.current.getBoundingClientRect();
-        // Adjust mouse pos for scale and offset
         const x = Math.round(((e.clientX - rect.left - offset.x) / scale) / 20) * 20;
         const y = Math.round(((e.clientY - rect.top - offset.y) / scale) / 20) * 20;
         setMousePos({ x, y });
@@ -160,11 +159,10 @@ const InteractiveQuoteEngine = () => {
         const data = JSON.parse(e.dataTransfer.getData('resource'));
         const rect = canvasRef.current.getBoundingClientRect();
         
-        // Adjust for scale and offset
         const x = Math.round(((e.clientX - rect.left - offset.x) / scale) / 20) * 20;
         const y = Math.round(((e.clientY - rect.top - offset.y) / scale) / 20) * 20;
         
-        setAiStatus('Optimizing Placement...');
+        setAiStatus('Connecting Neural Link...');
         
         setTimeout(() => {
             const newRes = {
@@ -176,30 +174,30 @@ const InteractiveQuoteEngine = () => {
                 icon: data.type === 'staff' ? User : data.type === 'equipment' ? Wrench : Package
             };
             setResources(prev => [...prev, newRes]);
-            setAiStatus('Graph Sync Complete');
-            setTimeout(() => setAiStatus('Monitoring'), 2000);
-        }, 800);
+            setAiStatus('Calculating Yield...');
+            setTimeout(() => setAiStatus('Monitoring'), 1500);
+        }, 600);
     };
 
     const simulateBlueprint = () => {
         if (!prompt.trim()) return;
         setIsGenerating(true);
-        setAiStatus('Parsing Scope...');
+        setAiStatus('Parsing Natural Language...');
         
         setTimeout(() => {
-            setAiStatus('Generating Nodes...');
+            setAiStatus('Architecting Graph...');
             setTimeout(() => {
+                // Generate a complex subgraph: Area -> Material -> Labour
                 const newNodes = [
-                    { id: `z-${Date.now()}-1`, name: 'Kitchen Area', type: 'dimension', x: 450, y: 50, width: 300, height: 300, color: 'border-indigo-500/30' },
-                    { id: `z-${Date.now()}-2`, name: 'Living Zone', type: 'dimension', x: 250, y: 450, width: 500, height: 250, color: 'border-indigo-500/30' }
+                    { id: `area-${Date.now()}`, name: 'Decking Zone', type: 'areaNode', x: 400, y: 100, width: 200, height: 200, color: 'border-cyan-500/50' }
                 ];
                 const newRes = [
-                    { id: `r-${Date.now()}-1`, name: 'Premium Paint', type: 'material', x: 500, y: 150, color: 'text-indigo-400', quantity: 120, cost: 4500, icon: Package },
-                    { id: `r-${Date.now()}-2`, name: 'Flooring Crew', type: 'staff', x: 300, y: 500, color: 'text-emerald-400', quantity: 3, cost: 2400, icon: User }
+                    { id: `mat-${Date.now()}`, name: 'Merbau Decking', type: 'quoteMaterial', x: 550, y: 250, color: 'text-indigo-400', quantity: 65, cost: 3200, icon: Package },
+                    { id: `lab-${Date.now()}`, name: 'Carpenter Crew', type: 'quoteLabour', x: 550, y: 350, color: 'text-emerald-400', quantity: 16, cost: 1800, icon: User }
                 ];
                 setNodes(prev => [...prev, ...newNodes]);
                 setResources(prev => [...prev, ...newRes]);
-                setAiStatus('Blueprint Active');
+                setAiStatus('Neural Circuit Active');
                 setIsGenerating(false);
                 setPrompt('');
             }, 1500);
@@ -207,16 +205,16 @@ const InteractiveQuoteEngine = () => {
     };
 
     return (
-        <div className="w-full py-32 relative overflow-hidden bg-black/40 border-y border-white/5" id="intelligence">
+        <div className="w-full py-32 relative overflow-hidden bg-black/40 border-y border-white/5" id="estimation">
             <div className="max-w-7xl mx-auto px-6 flex flex-col gap-12">
                 <div className="flex flex-col md:flex-row justify-between items-end gap-8">
                     <div className="max-w-2xl">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6">Visual_Computation</div>
-                        <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none">The Operational <br/><span className="text-indigo-500">Masterpiece</span></h2>
-                        <p className="text-gray-400 text-lg mt-6">Experience the high-fidelity node engine. Describe a project to generate a blueprint or drag resources manually.</p>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6">Neural_Estimation_Engine</div>
+                        <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none">Generative <br/><span className="text-indigo-500">Estimation</span></h2>
+                        <p className="text-gray-400 text-lg mt-6">Type "Build a deck" and watch the AI architect a fully calculated node graph. Or drag "Area Nodes" to drive automatic material yields.</p>
                         <div className="mt-4 flex gap-4 text-[10px] font-black uppercase text-gray-500 tracking-widest">
-                            <span className="flex items-center gap-2"><MousePointer2 size={12}/> Ctrl+Scroll to Zoom</span>
-                            <span className="flex items-center gap-2"><Layout size={12}/> Middle Click to Pan</span>
+                            <span className="flex items-center gap-2"><MousePointer2 size={12}/> Drag Area Nodes</span>
+                            <span className="flex items-center gap-2"><Layout size={12}/> Connect Logic</span>
                         </div>
                     </div>
                     
@@ -227,7 +225,7 @@ const InteractiveQuoteEngine = () => {
                             value={prompt}
                             onChange={e => setPrompt(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && simulateBlueprint()}
-                            placeholder="e.g. 'Build a 3-bedroom house quote...'" 
+                            placeholder="e.g. 'Build a 50sqm timber deck...'" 
                             className="flex-1 bg-transparent px-4 py-3 text-sm outline-none placeholder-gray-600 relative z-10"
                         />
                         <button 
@@ -241,7 +239,7 @@ const InteractiveQuoteEngine = () => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 h-[750px]">
-                    {/* Library (Mirrored) */}
+                    {/* Library */}
                     <div className="bg-indigo-950/40 backdrop-blur-xl border border-indigo-500/20 rounded-[2rem] p-6 flex flex-col gap-6 shadow-2xl overflow-hidden relative group/sidebar">
                         <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/10 to-transparent opacity-50"></div>
                         <div className="flex justify-between items-center px-2 relative z-10">
@@ -251,12 +249,13 @@ const InteractiveQuoteEngine = () => {
                             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping"></div>
                         </div>
                         <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar relative z-10">
-                            <DraggableResource name="Lead Fencer" type="staff" icon={Users} color="text-emerald-400" />
-                            <DraggableResource name="Excavator 3.5T" type="equipment" icon={Truck} color="text-amber-400" />
-                            <DraggableResource name="Treated Pine" type="material" icon={Package} color="text-indigo-400" />
-                            <DraggableResource name="Concrete Mix" type="material" icon={Package} color="text-indigo-400" />
-                            <DraggableResource name="Project Manager" type="staff" icon={Users} color="text-emerald-400" />
-                            <DraggableResource name="Skid Steer" type="equipment" icon={Wrench} color="text-amber-400" />
+                            <div className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Power Nodes</div>
+                            <DraggableResource name="Area Node" type="areaNode" icon={Ruler} color="text-cyan-400" />
+                            <DraggableResource name="Estimation Prism" type="estimationPrism" icon={BrainCircuit} color="text-indigo-400" />
+                            <div className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-1 mt-4">Resources</div>
+                            <DraggableResource name="Material Yield" type="quoteMaterial" icon={Package} color="text-indigo-400" />
+                            <DraggableResource name="Labour Estimator" type="quoteLabour" icon={User} color="text-emerald-400" />
+                            <DraggableResource name="Profit Sink" type="profitNode" icon={DollarSign} color="text-amber-400" />
                         </div>
                         <div className="mt-auto p-5 bg-indigo-900/40 border border-indigo-500/30 rounded-2xl relative z-10 shadow-xl overflow-hidden">
                              <motion.div 
@@ -275,7 +274,7 @@ const InteractiveQuoteEngine = () => {
                         </div>
                     </div>
 
-                    {/* Canvas Area (Mirrored) */}
+                    {/* Canvas Area */}
                     <div className="flex flex-col gap-6 relative">
                         <div 
                             ref={canvasRef}
@@ -311,7 +310,7 @@ const InteractiveQuoteEngine = () => {
                                 <div className="absolute inset-[-2000px] bg-[linear-gradient(to_right,#6366f108_1px,transparent_1px),linear-gradient(to_bottom,#6366f108_1px,transparent_1px)] bg-[size:20px_20px]"></div>
                                 <div className="absolute inset-[-2000px] bg-[linear-gradient(to_right,#6366f110_1px,transparent_1px),linear-gradient(to_bottom,#6366f110_1px,transparent_1px)] bg-[size:100px_100px]"></div>
                                 
-                                {/* Dimension Nodes (Rooms) */}
+                                {/* Power Nodes (Rooms/Prisms) */}
                                 {nodes.map(z => (
                                     <motion.div 
                                         key={z.id} 
@@ -322,12 +321,16 @@ const InteractiveQuoteEngine = () => {
                                     >
                                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent -translate-x-full group-hover/node:translate-x-full transition-transform duration-1000"></div>
                                         <div className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4 flex justify-between items-center relative z-10">
-                                            <span className="flex items-center gap-2"><Layout size={12}/> {z.name}</span>
+                                            <span className="flex items-center gap-2">
+                                                {z.type === 'estimationPrism' ? <BrainCircuit size={12} /> : <Ruler size={12}/>} 
+                                                {z.name}
+                                            </span>
                                             <div className="flex gap-1">
                                                 <div className="w-1 h-1 rounded-full bg-indigo-500/30"></div>
                                                 <div className="w-1 h-1 rounded-full bg-indigo-500/30"></div>
                                             </div>
                                         </div>
+                                        {z.type === 'areaNode' && <div className="text-3xl font-black text-white/20 mt-auto">50m²</div>}
                                     </motion.div>
                                 ))}
 
@@ -346,12 +349,12 @@ const InteractiveQuoteEngine = () => {
                                             </div>
                                             <div className="flex justify-between items-center mb-3">
                                                 <div className={`p-2 rounded-lg bg-black/40 ${res.color}`}><res.icon size={16} /></div>
-                                                <div className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[8px] font-black text-emerald-400 uppercase tracking-widest">Linked</div>
+                                                <div className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[8px] font-black text-emerald-400 uppercase tracking-widest">Auto-Calc</div>
                                             </div>
                                             <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{res.type}</div>
                                             <div className="text-xs font-black text-white uppercase truncate group-hover/res:text-indigo-400 transition-colors">{res.name}</div>
                                             <div className="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
-                                                <span className="text-[8px] font-bold text-indigo-400 uppercase">Live Estimate</span>
+                                                <span className="text-[8px] font-bold text-indigo-400 uppercase">Yield</span>
                                                 <span className="text-[10px] font-mono font-bold text-emerald-400 animate-pulse">${res.cost.toLocaleString()}</span>
                                             </div>
                                         </motion.div>
@@ -361,13 +364,15 @@ const InteractiveQuoteEngine = () => {
                                 {/* Connectors (Simulated Edges) */}
                                 <svg className="absolute inset-0 w-full h-full">
                                     {resources.map((res, i) => {
-                                        const closestZone = nodes[i % nodes.length] || nodes[0];
+                                        // Simple logic: Link all resources to the 'area' node if it exists, otherwise the prism
+                                        const source = nodes.find(n => n.type === 'areaNode') || nodes[0];
+                                        if (!source) return null;
                                         return (
                                             <motion.path 
                                                 key={i} 
                                                 initial={{ pathLength: 0, opacity: 0 }}
                                                 animate={{ pathLength: 1, opacity: 0.3 }}
-                                                d={`M ${closestZone.x + closestZone.width/2} ${closestZone.y + closestZone.height/2} Q ${mousePos.x} ${mousePos.y} ${res.x} ${res.y}`}
+                                                d={`M ${source.x + source.width/2} ${source.y + source.height/2} Q ${source.x + source.width/2 + 100} ${res.y + 40} ${res.x} ${res.y}`}
                                                 fill="none"
                                                 stroke="url(#grad1)" 
                                                 strokeWidth="2" 
@@ -404,7 +409,7 @@ const InteractiveQuoteEngine = () => {
 
                             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 bg-indigo-600/10 border border-indigo-600/30 backdrop-blur-md rounded-full flex items-center gap-3 shadow-2xl z-50">
                                 <Sparkles size={14} className="text-indigo-400 animate-spin-slow" />
-                                <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Master Architect Protocol: Online</span>
+                                <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Neural Yield Engine: Online</span>
                             </div>
                         </div>
 
@@ -418,12 +423,12 @@ const InteractiveQuoteEngine = () => {
                                     </div>
                                     <div>
                                         <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Operational Manifest</h3>
-                                        <span className="text-[8px] font-bold text-indigo-400/60 uppercase tracking-widest">{resources.length} System Nodes Active</span>
+                                        <span className="text-[8px] font-bold text-indigo-400/60 uppercase tracking-widest">{resources.length} Nodes Harvested</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-8">
                                     <div className="text-right">
-                                        <div className="text-[8px] font-black text-gray-500 uppercase mb-1">Total Revenue</div>
+                                        <div className="text-[8px] font-black text-gray-500 uppercase mb-1">Contract Value</div>
                                         <div className="text-lg font-black text-emerald-400 font-mono tracking-tighter">
                                             $<CountUp end={resources.reduce((acc, r) => acc + r.cost, 0)} duration={2} separator="," />
                                         </div>
@@ -452,7 +457,7 @@ const InteractiveQuoteEngine = () => {
                                     {resources.length === 0 && (
                                         <div className="col-span-full text-center py-8">
                                             <div className="text-indigo-500/20 mb-2 flex justify-center"><Package size={32} /></div>
-                                            <div className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em]">Awaiting System Input...</div>
+                                            <div className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em]">Awaiting Estimation Data...</div>
                                         </div>
                                     )}
                                 </div>
@@ -490,10 +495,10 @@ const FeaturesGrid = () => (
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <FeatureCard icon={Crown} title="AI Blueprint Engine" desc="Convert natural language into detailed construction blueprints. Dimensions auto-calculate material needs." color="indigo" />
-                <FeatureCard icon={Palette} title="AI Diary Engine" desc="The Chronos System propagates time events across all resources. Track productivity with zero-context speed." color="emerald" />
-                <FeatureCard icon={Shield} title="Compliance & Safety" desc="AI-verified SWMS and Risk Assessments. Custom safety form builder with professional human-approval layers." color="orange" />
-                <FeatureCard icon={Zap} title="Workflow Automator" desc="The 'Zapier of Construction'. A visual logic builder that triggers invoicing, notifications, and status pulses." color="violet" />
+                <FeatureCard icon={Crown} title="Neural Estimation" desc="Generative quoting. Convert text prompts into visual logic circuits with spatial awareness." color="indigo" />
+                <FeatureCard icon={Palette} title="Neural Diary" desc="The Chronos System propagates time events across all resources. Track productivity with zero-context speed." color="emerald" />
+                <FeatureCard icon={GraduationCap} title="Pinnacle Tutor" desc="An interactive AI guide that highlights the screen to teach you how to master the OS in real-time." color="orange" />
+                <FeatureCard icon={Zap} title="Forensic Insights" desc="Live margin heatmaps and risk audits. Detect zero-rate items and orphaned areas before you quote." color="violet" />
                 <FeatureCard icon={MapIcon} title="GeoSpatial Site Plan" desc="Layer site plans onto real maps. AI-generated compounds and resource positioning for elite project management." color="blue" />
                 <FeatureCard icon={Calendar} title="Intelligent Scheduling" desc="Unified fleet and staff scheduler. Real-time availability sync across all project nodes." color="cyan" />
                 <FeatureCard icon={Landmark} title="Financial Harvest" desc="Harvest diary entries directly into branded invoices. Retention tracking and variation workflows built-in." color="rose" />
@@ -550,15 +555,15 @@ const OSCapabilities = () => (
                             <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
                                 <div className="p-3 bg-emerald-600 rounded-xl text-white"><Zap size={20}/></div>
                                 <div>
-                                    <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Auto_Fit_Logic</div>
-                                    <div className="text-sm font-bold text-white">Material Quantities Synchronized</div>
+                                    <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Neural_Yield</div>
+                                    <div className="text-sm font-bold text-white">Area Node -> Material Auto-Calc</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
                                 <div className="p-3 bg-amber-600 rounded-xl text-white"><Layers size={20}/></div>
                                 <div>
-                                    <div className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Wormhole_Nodes</div>
-                                    <div className="text-sm font-bold text-white">Nested Project Hierarchy Ready</div>
+                                    <div className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Margin_Heatmap</div>
+                                    <div className="text-sm font-bold text-white">Visual Risk Assessment</div>
                                 </div>
                             </div>
                         </div>
@@ -575,9 +580,9 @@ const OSCapabilities = () => (
                 />
                 <CapabilityCard 
                     icon={Ruler} 
-                    tag="Auto_Fit"
-                    title="Geometric Logic" 
-                    desc="Drop a Dimension Node for any room and the system automatically calculates coverage for paint, flooring, and skirting based on area and perimeter."
+                    tag="Neural_Yield"
+                    title="Living Estimation" 
+                    desc="Link 'Area Nodes' to 'Materials' and the graph will calculate quantities based on coverage. Update dimensions, and the whole quote recalculates."
                 />
                 <CapabilityCard 
                     icon={GitBranch} 
@@ -592,10 +597,10 @@ const OSCapabilities = () => (
                     desc="Our proprietary algorithm harvests billable nodes from site diaries and clusters them into professional, branded invoices with zero manual entry."
                 />
                 <CapabilityCard 
-                    icon={BarChart3} 
-                    tag="Gantt_Warp"
-                    title="Multi-Scale Viewports" 
-                    desc="Switch between Day, Week, Month, and Year views instantly. High-performance grid rendering for projects spanning multiple years."
+                    icon={BrainCircuit} 
+                    tag="Pinnacle_Core"
+                    title="Insights Layer" 
+                    desc="A dedicated forensic audit layer. It detects orphaned areas, zero-rate items, and margin leaks before you hit save."
                 />
                 <CapabilityCard 
                     icon={Shield} 
@@ -1038,16 +1043,17 @@ const Landing = () => {
                 >
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-indigo-300 uppercase tracking-[0.3em] mb-10 hover:bg-white/10 transition-colors cursor-default backdrop-blur-md">
                         <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                        MasterDiaryOS v2.5 Enterprise Edition
+                        MasterDiaryOS v2.7 Enterprise Edition
                     </div>
                     
                     <h1 className="text-7xl md:text-9xl lg:text-[10rem] font-black tracking-tighter mb-8 leading-[0.8] uppercase">
-                        <span className="block bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-600">The Future</span>
-                        <span className="block italic bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400">Of Construct.</span>
+                        <span className="block bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-600">Generative</span>
+                        <span className="block italic bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400">Construct.</span>
                     </h1>
                     
                     <p className="text-xl md:text-2xl text-gray-400 mb-16 max-w-3xl mx-auto leading-relaxed font-medium">
-                        The world’s first <span className="text-white font-bold">AI-Native Operating System</span> for construction. From rapid visual quoting to autonomous compliance.
+                        The world’s first <span className="text-white font-bold">Neural Estimation & Diary Engine</span>. 
+                        Where geometric logic drives material yield and AI architects your entire project.
                     </p>
 
                     <div className="flex flex-wrap justify-center gap-6 mb-32">

@@ -23,9 +23,10 @@ import {
   User, Wrench, Package, Plus, Save, Search, Trash2,
   Crown, List, GripVertical, CheckCircle2, X, Sparkles, MapPin, Eye, EyeOff, UploadCloud,
   Settings, FileText, Download, Calendar, FileType, Ruler, PenTool, MessageSquare, Send, Calculator, Maximize, Minimize,
-  Layout, Focus, Image as ImageIcon, Zap, DollarSign, Wand2, ArrowRight, Loader2, Folder, Palette
+  Layout, Focus, Image as ImageIcon, Zap, DollarSign, Wand2, ArrowRight, Loader2, Folder, Palette, GraduationCap
 } from 'lucide-react'
 import { useNotification } from '../context/NotificationContext'
+import { useUI } from '../context/UIContext'
 import { api } from '../utils/api'
 import CountUp from 'react-countup'
 import MapBackground from './MapBackground'
@@ -38,10 +39,12 @@ import PowerHeader from './ui/PowerHeader'
 import { useDiaryTheme } from './PaintDiary/ThemeContext'
 import QuoteSettingsModal from './Quotes/QuoteSettingsModal'
 import ConfigModal from './ConfigModal'
+import { AreaNode, QuoteMaterialNode, QuoteLabourNode, ProfitNode, EstimationPrismNode } from './Quotes/QuoteNodes';
 import { DiaryNode, ChronosNode, ZoneNode, ImpactNode, DelayNode, DimensionNode, PhotoNode, ShapeNode, TaskNode, NeuralPrismNode, WormholeNode, AllowanceNode } from './TimelineCanvas/TimelineNodes';
 import { SmartEdgeTypes } from './TimelineCanvas/SmartEdges'
 import ResourceSidebar from './ResourceSidebar'
 import AestheticPicker from './PaintDiary/AestheticPicker'
+import QuoteIntelligenceLayer from './Quotes/QuoteIntelligenceLayer'
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-US', {
@@ -104,7 +107,7 @@ const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
             <div className={`max-w-[90%] p-3 rounded-2xl text-sm mb-1 ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-stone-800 text-gray-200 border border-white/10 rounded-tl-sm'}`}>{msg.content}</div>
             {msg.actions?.map((action, i) => (
                 <button key={i} onClick={() => onAction(action)} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold transition-all mt-2">
-                    <Plus size={12} /> {action.type === 'add_node' ? `Add ${action.quantity}x ${action.label}` : 'Action'}
+                    <Plus size={12} /> {action.type === 'add_node' ? `Add ${action.quantity}x ${action.label}` : action.type === 'add_complex_node' ? action.label : 'Action'}
                 </button>
             ))}
           </div>
@@ -186,10 +189,19 @@ const LoadQuoteModal = ({ isOpen, onClose, onLoad, quotes, isLoading }) => {
 
 const QuoteBuilderContent = () => {
   const navigate = useNavigate(); const location = useLocation(); const { id } = useParams(); const { addNotification } = useNotification();
+  const { startOnboarding } = useUI();
   const { theme, allThemes, setActiveTheme, activeTheme } = useDiaryTheme();
   const [isSaving, setIsSaving] = useState(false); const [isGeneratingBlueprint, setIsGeneratingBlueprint] = useState(false); const [dataLoading, setDataLoading] = useState(true);
   const nodeTypes = useMemo(() => ({ 
       glass: DiaryNode, 
+      staff: DiaryNode,
+      equipment: DiaryNode,
+      material: DiaryNode,
+      areaNode: AreaNode,
+      quoteMaterial: QuoteMaterialNode,
+      quoteLabour: QuoteLabourNode,
+      profitNode: ProfitNode,
+      estimationPrism: EstimationPrismNode,
       dimension: DimensionNode, 
       zone: ZoneNode, 
       chronos: ChronosNode, 
@@ -217,29 +229,181 @@ const QuoteBuilderContent = () => {
   const [isPulseActive, setIsPulseActive] = useState(false); const [showSidebar, setShowSidebar] = useState(true);
   const canvasRef = useRef(null); const { screenToFlowPosition, getNodes, fitView } = useReactFlow();
   const [dropLocation, setDropLocation] = useState(null);
+  const [showInsights, setShowInsights] = useState(false);
+  const [heatmapMode, setHeatmapMode] = useState(false);
+  const [connectMenu, setConnectMenu] = useState(null); // { x, y, sourceId, sourceType }
+
+  // --- NEURAL YIELD ENGINE ---
+  useEffect(() => {
+      // 1. Identify all AreaNodes and their values
+      const areas = nodes.filter(n => n.type === 'areaNode');
+      const areaMap = new Map();
+      areas.forEach(an => {
+          const width = parseFloat(an.data?.width) || 0;
+          const length = parseFloat(an.data?.length) || 0;
+          areaMap.set(an.id, width * length);
+      });
+
+      // 2. Map Edges to find relationships
+      let hasChanges = false;
+      const updatedNodes = nodes.map(node => {
+          if (node.type === 'quoteMaterial' || node.type === 'quoteLabour') {
+              const incomingEdge = edges.find(e => e.target === node.id);
+              const parentArea = incomingEdge ? areaMap.get(incomingEdge.source) : 0;
+              
+              if (node.data.inheritedArea !== parentArea) {
+                  hasChanges = true;
+                  return { ...node, data: { ...node.data, inheritedArea: parentArea } };
+              }
+          }
+          return node;
+      });
+
+      if (hasChanges) setNodes(updatedNodes);
+  }, [nodes, edges, setNodes]);
 
   const handleAiSuggest = () => { handleAIChat("Review this quote. Suggest missing items. Return specific add_node actions."); };
+  
+  // --- SMART CONNECTION LOGIC ---
+  const isValidConnection = useCallback((connection) => {
+      const source = nodes.find(n => n.id === connection.source);
+      const target = nodes.find(n => n.id === connection.target);
+      if (!source || !target) return false;
+
+      // Logic: Areas drive Materials/Labour
+      if (source.type === 'areaNode') {
+          return ['quoteMaterial', 'quoteLabour'].includes(target.type);
+      }
+      // Logic: Zones organize everything
+      if (source.type === 'zone') {
+          return ['quoteMaterial', 'quoteLabour', 'areaNode', 'taskNode'].includes(target.type);
+      }
+      
+      // Default: Allow loose connections for other types (e.g. Logic nodes)
+      return true;
+  }, [nodes]);
+
   const getSmartEdgeParams = useCallback((sourceId) => { const sourceNode = nodes.find(n => n.id === sourceId); const type = sourceNode?.data?.type || 'material'; let edgeType = 'default'; if (type === 'staff' || type === 'equipment') edgeType = 'orbit'; else if (type === 'material') edgeType = 'gradient'; return { type: edgeType, data: { type, sourceType: type } }; }, [nodes]);
-  const onConnect = useCallback((params) => { const smartParams = getSmartEdgeParams(params.source); setEdges((eds) => addEdge({ ...params, ...smartParams, animated: true }, eds)); }, [setEdges, getSmartEdgeParams]);
+  const onConnect = useCallback((params) => { 
+      if (!isValidConnection(params)) {
+          addNotification('warning', 'Invalid Link', 'Connect Areas to Materials/Labor to enable auto-calculation.');
+          return;
+      }
+      const smartParams = getSmartEdgeParams(params.source); 
+      setEdges((eds) => addEdge({ ...params, ...smartParams, animated: true }, eds)); 
+  }, [setEdges, getSmartEdgeParams, isValidConnection, addNotification]);
+
+  const getCompatibleNodes = (sourceType) => {
+      // Suggest logical next steps
+      if (sourceType === 'areaNode') return [
+          { id: 'quoteMaterial', label: 'Material', icon: <Package size={14}/> },
+          { id: 'quoteLabour', label: 'Labour', icon: <User size={14}/> }
+      ];
+      if (sourceType === 'zone') return [
+          { id: 'areaNode', label: 'Area', icon: <Ruler size={14}/> },
+          { id: 'taskNode', label: 'Task', icon: <List size={14}/> }
+      ];
+      // Default set
+      return [
+          { id: 'quoteMaterial', label: 'Material', icon: <Package size={14}/> },
+          { id: 'quoteLabour', label: 'Labour', icon: <User size={14}/> },
+          { id: 'areaNode', label: 'Area', icon: <Ruler size={14}/> },
+          { id: 'zone', label: 'Zone', icon: <Layout size={14}/> }
+      ];
+  };
+
+  const onConnectEnd = useCallback((event, connectionState) => {
+      if (!connectionState.isValid && connectionState.fromNodeId) {
+          // Dropped on pane
+          const { clientX, clientY } = event;
+          const sourceNode = nodes.find(n => n.id === connectionState.fromNodeId);
+          if (sourceNode) {
+              setConnectMenu({
+                  x: clientX,
+                  y: clientY,
+                  sourceId: sourceNode.id,
+                  sourceType: sourceNode.type
+              });
+          }
+      }
+  }, [nodes]);
+
+  const handleConnectMenuSelect = (targetType) => {
+      if (!connectMenu) return;
+      const position = screenToFlowPosition({ x: connectMenu.x, y: connectMenu.y });
+      const nodeId = `${targetType}-${Date.now()}`;
+      
+      // Define default data for auto-created nodes
+      const nodeData = {
+          label: `New ${targetType}`,
+          type: targetType,
+          onDelete: () => deleteNode(nodeId),
+          onUpdate: updateItemNodeData,
+          ...(targetType === 'quoteMaterial' ? { rate: 0, coverage: 10 } : {}),
+          ...(targetType === 'quoteLabour' ? { rate: 50, prodRate: 2 } : {}),
+          ...(targetType === 'areaNode' ? { width: 5, length: 5, type: 'floor' } : {})
+      };
+
+      const newNode = {
+          id: nodeId,
+          type: targetType,
+          position,
+          data: nodeData,
+          style: targetType === 'areaNode' ? { width: 300, height: 300, zIndex: -1 } : undefined
+      };
+
+      setNodes(prev => [...prev, newNode]);
+      
+      // Auto-link
+      const smartParams = getSmartEdgeParams(connectMenu.sourceId);
+      setEdges(prev => addEdge({ 
+          id: `e-${connectMenu.sourceId}-${nodeId}`, 
+          source: connectMenu.sourceId, 
+          target: nodeId, 
+          animated: true, 
+          ...smartParams 
+      }, prev));
+
+      setConnectMenu(null);
+  };
+
   const updateItem = useCallback((tempId, updates) => { setQuoteItems(items => items.map(item => item.tempId === tempId ? { ...item, ...updates } : item)); }, [setQuoteItems]);
   const handleGenerateScope = async () => { if (quoteItems.length === 0) return; setIsGeneratingScope(true); try { const project = projects.find(p => p.id === selectedProject); const res = await api.post('/ai/generate-scope', { items: quoteItems.map(i => ({ name: i.material.name, qty: i.quantity, type: i.type })), projectName: project?.name }); setQuoteScope(res.data.scope); addNotification('success', 'Scope Generated'); } catch (err) { console.error(err); } finally { setIsGeneratingScope(false); } };
   const openLoadModal = async () => { setShowLoadModal(true); setQuotesLoading(true); try { const res = await api.get('/quotes?limit=50'); setExistingQuotes(res.data.data || []); } catch (err) { console.error(err); } finally { setQuotesLoading(false); } };
   const handleLoadQuote = (quote) => { navigate(`/quotes/${quote.id}`); setShowLoadModal(false); };
   const deleteNode = useCallback((id) => { setNodes((nds) => nds.filter(n => n.id !== id)); setQuoteItems((items) => items.filter(i => i.tempId !== id)); }, [setNodes]);
+  
   const handleAIChat = async (message) => {
       if (!message.trim()) return;
       setChatMessages(prev => [...prev, { role: 'user', content: message }]);
       setChatTyping(true);
       try {
+          // Prepare Rich Context for "World's Best" Estimation
+          const graphSummary = nodes.map(n => {
+              let value = 0;
+              if (n.data.quoteTotal) value = n.data.quoteTotal;
+              else if (n.data.rate && n.data.quantity) value = n.data.rate * n.data.quantity;
+              
+              return {
+                  id: n.id,
+                  type: n.type,
+                  label: n.data.label || n.type,
+                  data: n.data, // Include full data (dimensions, rates, coverage)
+                  value: value
+              };
+          });
+
           const context = { 
               project: projects.find(p => p.id === selectedProject) || {}, 
               items: quoteItems.map(i => ({ id: i.tempId, name: i.material.name, qty: i.quantity, type: i.type })), 
-              nodes, 
+              nodes: graphSummary, 
               edges,
-              settings: quoteSettings 
+              settings: quoteSettings,
+              financials // Pass the calculated totals
           };
+          
           const res = await api.post('/ai/chat-quote', { message, context });
-          setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply, actions: res.data.suggestedActions }]);
+          setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply, actions: res.data.suggestedActions, nodes: res.data.suggestedNodes }]);
       } catch (err) {
           console.error(err);
       } finally {
@@ -254,7 +418,7 @@ const QuoteBuilderContent = () => {
       const finalName = customName || item.name;
       
       const isZone = item.type === 'zone' || item.type === 'wormhole';
-      const isDimension = item.type === 'dimension';
+      const isDimension = item.type === 'dimension' || item.type === 'areaNode';
       
       const newNode = { 
           id: nodeId, 
@@ -266,23 +430,33 @@ const QuoteBuilderContent = () => {
               quantity, 
               type: item.type, 
               onDelete: () => deleteNode(nodeId),
+              onUpdate: updateItemNodeData,
               // Default props for special nodes
               ...(item.type === 'taskNode' ? { plannedHours: 8, status: 'pending' } : {}),
-              ...(item.type === 'zone' ? { zoneTotal: 0, nodeCount: 0 } : {})
+              ...(item.type === 'zone' ? { zoneTotal: 0, nodeCount: 0 } : {}),
+              ...(item.type === 'areaNode' ? { width: 10, length: 10, depth: 0 } : {}),
+              ...(item.type === 'quoteMaterial' ? { rate: charge || item.pricePerUnit || 0, coverage: 10, waste: 10, unit: item.unit || 'Unit' } : {}),
+              ...(item.type === 'quoteLabour' ? { rate: charge || item.chargeOutBase || 0, prodRate: 2 } : {}),
+              ...(item.type === 'profitNode' ? { markup: marginPct, overhead: 10, contingency: 5, quoteTotal: 0 } : {}),
+              ...(item.type === 'estimationPrism' ? { status: 'analyzing', quoteTotal: 0, profitMargin: '0%', riskLevel: 'low' } : {})
           },
-          style: (isZone || isDimension) ? { width: isZone ? 400 : 200, height: isZone ? 400 : 200, zIndex: -1 } : undefined
+          style: (isZone || isDimension) ? { width: isZone ? 400 : (item.type === 'areaNode' ? 300 : 200), height: isZone ? 400 : (item.type === 'areaNode' ? 300 : 200), zIndex: -1 } : undefined
       };
 
       setNodes(nds => nds.concat(newNode)); 
       
-      // Only add to BOM if it's a billable item (not a pure logic node like Zone/Dimension/Prism)
-      const isLogicNode = ['zone', 'wormhole', 'dimension', 'neuralPrism', 'chronos', 'shapeNode', 'photoNode'].includes(item.type);
+      // Only add to BOM if it's a billable item (not a pure logic node or an NEE dynamic node)
+      const isLogicNode = ['zone', 'wormhole', 'dimension', 'neuralPrism', 'chronos', 'shapeNode', 'photoNode', 'areaNode', 'quoteMaterial', 'quoteLabour', 'profitNode', 'estimationPrism'].includes(item.type);
       if (!isLogicNode) {
           setQuoteItems(prev => [...prev, { nodeId: item.id, tempId: nodeId, quantity, material: { ...item, name: finalName }, type: item.type, customRate: charge > 0 ? charge : undefined }]); 
       }
       
       setPendingNode(null); 
   };
+
+  const updateItemNodeData = useCallback((nodeId, updates) => {
+      setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n));
+  }, [setNodes]);
   
   const handleNewQuote = () => {
       if(quoteItems.length > 0 && !confirm("Discard current quote?")) return;
@@ -427,6 +601,59 @@ const QuoteBuilderContent = () => {
       if (action.type === 'add_node') {
           let item = { id: `ai-${Date.now()}`, name: action.label, pricePerUnit: action.cost || 0, type: action.category || 'material' };
           setPendingNode({ item, position: screenToFlowPosition({ x: window.innerWidth/2, y: window.innerHeight/2 }), suggestedQuantity: action.quantity || 1 });
+      } else if (action.type === 'add_complex_node') {
+          const center = screenToFlowPosition({ x: window.innerWidth/2, y: window.innerHeight/2 });
+          const newNodes = [];
+          const newEdges = [];
+          
+          // First pass: Create nodes
+          action.nodes.forEach((n, idx) => {
+              const nodeId = `${n.id}-${Date.now()}`;
+              n._realId = nodeId; // Temp mapping
+              
+              // Smart positioning (Area top left, Materials/Labour grouped)
+              let position = { x: center.x, y: center.y };
+              if (n.type === 'areaNode') position = { x: center.x, y: center.y };
+              else if (n.type === 'quoteMaterial') position = { x: center.x + 350, y: center.y + (idx * 150) };
+              else if (n.type === 'quoteLabour') position = { x: center.x + 350, y: center.y + (idx * 150) + 100 };
+              else position = { x: center.x + (idx * 50), y: center.y + (idx * 50) };
+
+              newNodes.push({
+                  id: nodeId,
+                  type: n.type,
+                  position,
+                  data: { 
+                      ...n.data, 
+                      label: n.label,
+                      // Ensure required props for Power Nodes
+                      onDelete: () => deleteNode(nodeId),
+                      onUpdate: updateItemNodeData,
+                      ...(n.type === 'areaNode' ? { width: n.data.width || 10, length: n.data.length || 10 } : {}),
+                      ...(n.type === 'quoteMaterial' ? { rate: n.data.rate || 0, coverage: n.data.coverage || 10 } : {})
+                  },
+                  style: n.type === 'areaNode' ? { width: 300, height: 300, zIndex: -1 } : undefined
+              });
+          });
+
+          // Second pass: Create edges
+          action.nodes.forEach(n => {
+              if (n.targetId) {
+                  const targetNode = action.nodes.find(t => t.id === n.targetId);
+                  if (targetNode) {
+                      newEdges.push({
+                          id: `e-${targetNode._realId}-${n._realId}`,
+                          source: targetNode._realId,
+                          target: n._realId,
+                          animated: true,
+                          type: 'gradient'
+                      });
+                  }
+              }
+          });
+
+          setNodes(prev => [...prev, ...newNodes]);
+          setEdges(prev => [...prev, ...newEdges]);
+          addNotification('success', 'Blueprint Expanded', `Added ${action.label}`);
       }
   };
 
@@ -512,7 +739,106 @@ const QuoteBuilderContent = () => {
       });
   };
 
-  const financials = useMemo(() => { const mats = quoteItems.filter(i => i.type === 'material').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.pricePerUnit || 0)), 0); const stf = quoteItems.filter(i => i.type === 'staff').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.chargeRate || 0)), 0); const eqp = quoteItems.filter(i => i.type === 'equipment').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.costRate || 0)), 0); const subtotal = mats + stf + eqp; const total = subtotal * (1 + marginPct / 100); return { materials: mats, staff: stf, equipment: eqp, subtotal, total }; }, [quoteItems, marginPct]);
+  const financials = useMemo(() => {
+      // Standard BOM items
+      const mats = quoteItems.filter(i => i.type === 'material').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.pricePerUnit || 0)), 0);
+      const stf = quoteItems.filter(i => i.type === 'staff').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.chargeRate || 0)), 0);
+      const eqp = quoteItems.filter(i => i.type === 'equipment').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.costRate || 0)), 0);
+
+      // Dynamic Canvas Nodes (NEE specific)
+      const dynamicMats = nodes.filter(n => n.type === 'quoteMaterial').reduce((acc, n) => {
+          const area = n.data?.inheritedArea || 0;
+          const qty = area > 0 ? (area / (n.data?.coverage || 10)) * (1 + (n.data?.waste || 10) / 100) : (n.data?.quantity || 1);
+          return acc + (qty * (n.data?.rate || 0));
+      }, 0);
+
+      const dynamicLabour = nodes.filter(n => n.type === 'quoteLabour').reduce((acc, n) => {
+          const area = n.data?.inheritedArea || 0;
+          const hours = area > 0 ? (area / (n.data?.prodRate || 2)) : (n.data?.duration || 8);
+          return acc + (hours * (n.data?.rate || 0));
+      }, 0);
+
+      // Profit Node Adjustment
+      const profitNode = nodes.find(n => n.type === 'profitNode');
+      const markup = profitNode ? (profitNode.data?.markup || 0) : marginPct;
+      const overhead = profitNode ? (profitNode.data?.overhead || 0) : 0;
+      const contingency = profitNode ? (profitNode.data?.contingency || 0) : 0;
+
+      const subtotal = mats + stf + eqp + dynamicMats + dynamicLabour;
+      const total = subtotal * (1 + markup / 100) * (1 + overhead / 100) * (1 + contingency / 100);
+
+      // Update profit node with subtotal for its internal calculation
+      if (profitNode && Math.abs(profitNode.data?.quoteTotal - subtotal) > 1) {
+          setTimeout(() => updateItem(profitNode.id, { quoteTotal: subtotal }), 0);
+      }
+
+      // Update Estimation Prism Node
+      const prismNode = nodes.find(n => n.type === 'estimationPrism');
+      if (prismNode) {
+          const margin = ((total - subtotal) / (total || 1) * 100).toFixed(1) + '%';
+          if (prismNode.data.quoteTotal !== total || prismNode.data.profitMargin !== margin) {
+              setTimeout(() => updateItem(prismNode.id, { quoteTotal: total, profitMargin: margin }), 0);
+          }
+      }
+
+      return { materials: mats + dynamicMats, staff: stf + dynamicLabour, equipment: eqp, subtotal, total };
+  }, [quoteItems, nodes, marginPct, updateItem]);
+
+  const allBillableItems = useMemo(() => {
+      // 1. Manual Items
+      const manual = quoteItems.map(i => ({ ...i, isDynamic: false }));
+      
+      // 2. Dynamic Node Items (Canvas)
+      const dynamic = nodes
+          .filter(n => ['quoteMaterial', 'quoteLabour'].includes(n.type))
+          .map(n => {
+              const isMat = n.type === 'quoteMaterial';
+              const area = n.data?.inheritedArea || 0;
+              const qty = isMat 
+                  ? (area > 0 ? (area / (n.data?.coverage || 10)) * (1 + (n.data?.waste || 10) / 100) : (n.data?.quantity || 1))
+                  : (area > 0 ? (area / (n.data?.prodRate || 2)) : (n.data?.duration || 8));
+              
+              return {
+                  nodeId: n.id,
+                  tempId: n.id,
+                  quantity: qty,
+                  material: { 
+                      name: n.data?.label || (isMat ? 'Material' : 'Labour'), 
+                      pricePerUnit: n.data?.rate || 0,
+                      chargeRate: n.data?.rate || 0,
+                      costRate: n.data?.rate || 0
+                  },
+                  type: isMat ? 'material' : 'staff',
+                  customRate: n.data?.rate,
+                  isDynamic: true
+              };
+          });
+      
+      return [...manual, ...dynamic];
+  }, [quoteItems, nodes]);
+
+  const handleHeatmapToggle = (active) => {
+      setHeatmapMode(active);
+      setNodes(nds => nds.map(n => {
+          if (!active) return { ...n, style: { ...n.style, opacity: 1, filter: 'none' } };
+          
+          // Heatmap Logic: High Cost = Bright, Low Cost = Dim
+          const cost = (n.data?.quantity || 1) * (n.data?.rate || 0);
+          const isHighValue = cost > 1000;
+          const isZero = cost === 0;
+          
+          return {
+              ...n,
+              style: {
+                  ...n.style,
+                  opacity: isHighValue ? 1 : 0.4,
+                  filter: isHighValue ? 'drop-shadow(0 0 20px rgba(244, 63, 94, 0.6))' : 'grayscale(100%)',
+                  transition: 'all 0.5s ease'
+              }
+          };
+      }));
+  };
+
   const stats = [ { label: 'Materials', value: formatCurrency(financials.materials), color: 'text-indigo-400' }, { label: 'Labor', value: formatCurrency(financials.staff), color: 'text-emerald-400' }, { label: 'Equipment', value: formatCurrency(financials.equipment), color: 'text-amber-400' }, { label: 'Total', value: formatCurrency(financials.total), color: 'text-white' } ];
 
   return (
@@ -527,7 +853,7 @@ const QuoteBuilderContent = () => {
           <div className="fixed w-32 h-32 rounded-full border-4 border-emerald-400 bg-emerald-400/20 animate-ping pointer-events-none z-[100]" style={{ left: dropLocation.x - 64, top: dropLocation.y - 64 }} />
       )}
 
-      <div className={`relative z-10 flex flex-col transition-all duration-500 ${showMap ? 'bg-stone-900/40 backdrop-blur-sm' : ''}`}>
+      <div className={`relative z-10 flex flex-col h-screen overflow-hidden transition-all duration-500 ${showMap ? 'bg-stone-900/40 backdrop-blur-sm' : ''}`}>
         <ConfigModal isOpen={!!pendingNode} item={pendingNode?.item} suggestedQuantity={pendingNode?.suggestedQuantity} onClose={() => setPendingNode(null)} onConfirm={handleAddNode} />
         
         {(isGeneratingBlueprint || dataLoading) && (
@@ -541,7 +867,8 @@ const QuoteBuilderContent = () => {
           </div>
         )}
 
-        <div className="w-full px-4 mb-8">
+        {/* FIXED HEADER */}
+        <div className="w-full px-4 pt-4 mb-4 shrink-0">
         <PowerHeader 
             title="Quote Builder" 
             icon={Crown} 
@@ -566,6 +893,8 @@ const QuoteBuilderContent = () => {
 
             <div className="h-8 w-px bg-white/10 mx-2"></div>
 
+            <button onClick={() => startOnboarding('quote')} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-widest flex items-center gap-2 mr-2"><GraduationCap size={16} /> Training</button>
+
             <button onClick={handleNewQuote} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg"><Plus size={16} /> New</button>
             <button onClick={() => setShowLoadModal(true)} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg"><Folder size={16} /> Load</button>
             
@@ -575,52 +904,132 @@ const QuoteBuilderContent = () => {
             </select>
 
             <button onClick={() => setShowMap(!showMap)} className={`px-4 py-2.5 bg-${theme.primary}-600/20 hover:bg-${theme.primary}-600/30 border border-${theme.primary}-500/20 text-${theme.primary}-400 rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-${theme.primary}-900/20`}><MapPin size={16} /> Induce Map</button>
-            <button onClick={() => syncManager.sync()} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg"><Zap size={16} /> Sync</button>
-            <button onClick={handlePrintToInvoice} className={`px-4 py-2.5 bg-${theme.primary}-600/20 hover:bg-${theme.primary}-600/30 border border-${theme.primary}-500/20 text-${theme.primary}-400 rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-${theme.primary}-900/20`}><Calculator size={16} /> Invoice</button>
+            <button onClick={() => setShowInsights(!showInsights)} className={`px-4 py-2.5 ${showInsights ? `bg-${theme.primary}-600 text-white` : 'bg-white/5 text-gray-300'} border border-white/5 rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg`}><Zap size={16} /> Insights</button>
+            <button onClick={() => {
+                if (allBillableItems.length === 0) {
+                    alert("Add items to the quote before invoicing.");
+                    return;
+                }
+                navigate('/invoices', { 
+                    state: { 
+                        diaryItems: allBillableItems.map(i => ({
+                            id: i.tempId,
+                            name: i.material.name,
+                            quantity: i.quantity,
+                            costRate: i.material.pricePerUnit || 0,
+                            chargeRate: i.customRate || i.material.pricePerUnit || 0,
+                            type: i.type
+                        })),
+                        projectId: selectedProject,
+                        clientId: quoteSettings.clientId,
+                        clientName: quoteSettings.clientName,
+                        date: new Date()
+                    } 
+                });
+            }} className={`px-4 py-2.5 bg-${theme.primary}-600/20 hover:bg-${theme.primary}-600/30 border border-${theme.primary}-500/20 text-${theme.primary}-400 rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-${theme.primary}-900/20`}><Calculator size={16} /> Invoice</button>
             <button onClick={handleSaveQuote} disabled={isSaving} className={`px-6 py-2.5 ${theme.button} text-white rounded-xl font-black uppercase tracking-widest shadow-xl transition-all disabled:opacity-50 text-xs`}>{isSaving ? 'Saving...' : 'Save Blueprint'}</button>
         </PowerHeader>
         </div>
 
-        <div className="w-full px-4 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 min-h-[700px]">
-            {/* RESOURCE DOCK */}
-            <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] overflow-hidden ${theme.glow} h-[700px] relative`}>
-                <ResourceSidebar isOpen={showSidebar} onClose={() => setShowSidebar(false)} materials={materials} staff={staff} equipment={equipment} onSearch={setSearchTerm} onTapAdd={onTapAdd} theme={theme.primary} />
+        {/* SCROLLABLE CONTENT AREA */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-4 space-y-6 pb-24">
+            {/* INTELLIGENCE LAYER OVERLAY */}
+            <div className="w-full">
+                <QuoteIntelligenceLayer 
+                    active={showInsights} 
+                    nodes={nodes} 
+                    edges={edges} 
+                    financials={financials} 
+                    onToggleHeatmap={handleHeatmapToggle}
+                />
             </div>
 
-            {/* CANVAS AREA */}
-            <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] p-1 relative shadow-2xl overflow-hidden flex flex-col h-[700px]`}>
-                {/* Background Grid */}
-                <div 
-                    className="absolute inset-0 pointer-events-none opacity-20" 
-                    style={{ backgroundImage: `linear-gradient(to right, ${theme.accent} 1px, transparent 1px), linear-gradient(to bottom, ${theme.accent} 1px, transparent 1px)`, backgroundSize: '40px 40px' }}
-                ></div>
-                
-                <div ref={canvasRef} className={`flex-1 relative rounded-[1.8rem] overflow-hidden bg-black/20 border border-white/5 transition-all duration-500 ${isDragOver ? `bg-${theme.primary}-900/10` : ''}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
-                  <div style={{ width: '100%', height: '100%' }}>
-                    <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onNodeClick={handleNodeClick} snapToGrid={true} snapGrid={[20, 20]} fitView minZoom={0.05} maxZoom={2} proOptions={{ hideAttribution: true }}>
-                      <Background color={theme.accent} gap={40} size={1} className="opacity-[0.1]" />
-                      <Controls className="!bg-slate-900 !border-white/10 !text-white" />
-                      <MiniMap className="!bg-slate-900/80 !border-white/10" nodeColor={n => n.type==='dimension'?'#3b82f6':n.type==='zone'?'#a855f7':theme.accent} />
-                    </ReactFlow>
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none"><div className="bg-amber-500/10 backdrop-blur-md border border-amber-500/30 px-6 py-2 rounded-full flex items-center gap-3 shadow-xl"><span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span><span className="text-[10px] font-black text-amber-200 uppercase tracking-widest">Human Review Required</span></div></div>
-                  </div>
+            <div className="w-full grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 min-h-[700px]">
+                {/* RESOURCE DOCK */}
+                <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] overflow-hidden ${theme.glow} h-[700px] relative`}>
+                <ResourceSidebar 
+                    materials={materials} 
+                    staff={staff} 
+                    equipment={equipment} 
+                    onSearch={setSearchTerm} 
+                    onTapAdd={onTapAdd}
+                    isOpen={showSidebar}
+                    onClose={() => setShowSidebar(false)}
+                    theme={theme.primary}
+                    mode="quote"
+                />
+                </div>
+
+                {/* CANVAS AREA */}
+                <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] p-1 relative shadow-2xl overflow-hidden flex flex-col h-[700px]`}>
+                    {/* Background Grid */}
+                    <div 
+                        className="absolute inset-0 pointer-events-none opacity-20" 
+                        style={{ backgroundImage: `linear-gradient(to right, ${theme.accent} 1px, transparent 1px), linear-gradient(to bottom, ${theme.accent} 1px, transparent 1px)`, backgroundSize: '40px 40px' }}
+                    ></div>
+                    
+                    <div ref={canvasRef} className={`flex-1 relative rounded-[1.8rem] overflow-hidden bg-black/20 border border-white/5 transition-all duration-500 ${isDragOver ? `bg-${theme.primary}-900/10` : ''}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+                    <div style={{ width: '100%', height: '100%' }}>
+                        <ReactFlow 
+                            nodes={nodes} 
+                            edges={edges} 
+                            nodeTypes={nodeTypes} 
+                            edgeTypes={edgeTypes} 
+                            onNodesChange={onNodesChange} 
+                            onEdgesChange={onEdgesChange} 
+                            onConnect={onConnect} 
+                            onConnectEnd={onConnectEnd} // Added Handler
+                            onNodeClick={handleNodeClick} 
+                            snapToGrid={true} 
+                            snapGrid={[20, 20]} 
+                            fitView minZoom={0.05} maxZoom={2} 
+                            proOptions={{ hideAttribution: true }}
+                        >
+                        <Background color={theme.accent} gap={40} size={1} className="opacity-[0.1]" />
+                        <Controls className="!bg-slate-900 !border-white/10 !text-white" />
+                        <MiniMap className="!bg-slate-900/80 !border-white/10" nodeColor={n => n.type==='dimension'?'#3b82f6':n.type==='zone'?'#a855f7':theme.accent} />
+                        </ReactFlow>
+                        
+                        {/* SMART CONNECT MENU */}
+                        {connectMenu && (
+                            <div 
+                                className="fixed z-[9999] bg-stone-900 border border-white/10 rounded-xl shadow-2xl p-2 flex flex-col gap-1 min-w-[160px] animate-in zoom-in-95 duration-200"
+                                style={{ left: connectMenu.x, top: connectMenu.y }}
+                            >
+                                <div className="text-[10px] font-black text-gray-500 uppercase px-2 py-1 tracking-widest border-b border-white/5 mb-1">Create & Link</div>
+                                {getCompatibleNodes(connectMenu.sourceType).map(type => (
+                                    <button 
+                                        key={type.id}
+                                        onClick={() => handleConnectMenuSelect(type.id)}
+                                        className="text-left px-3 py-2.5 hover:bg-white/10 rounded-lg text-xs font-bold text-white flex items-center gap-3 transition-colors"
+                                    >
+                                        <div className="p-1 rounded bg-white/5 text-indigo-400">{type.icon}</div> {type.label}
+                                    </button>
+                                ))}
+                                <button onClick={() => setConnectMenu(null)} className="mt-1 pt-2 border-t border-white/5 text-center text-[10px] text-gray-500 hover:text-white uppercase font-bold tracking-wider">Cancel</button>
+                            </div>
+                        )}
+
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none"><div className="bg-amber-500/10 backdrop-blur-md border border-amber-500/30 px-6 py-2 rounded-full flex items-center gap-3 shadow-xl"><span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span><span className="text-[10px] font-black text-amber-200 uppercase tracking-widest">Human Review Required</span></div></div>
+                    </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        {/* BILL OF MATERIALS - BOTTOM */}
-        <div className="w-full px-4 mt-6 pb-10">
-            <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-80 relative`}>
-                <div className={`p-4 border-b ${theme.border} bg-black/20 flex justify-between items-center px-8`}>
-                  <div className="flex items-center gap-6"><h3 className={`text-sm font-black ${theme.text} uppercase tracking-wider flex items-center gap-2`}><List size={16} /> Bill of Materials</h3><div className={`flex gap-4 text-xs font-bold ${theme.text} opacity-70 uppercase tracking-widest`}><span>Items: <span className="text-white">{quoteItems.length}</span></span><span>Total: <span className="text-emerald-400">{formatCurrency(financials.total)}</span></span></div></div>
-                  <button className={`p-2 hover:bg-white/10 rounded-lg ${theme.text} hover:text-white transition-colors`}><Maximize size={14} /></button>
-                </div>
-                <div className="flex-1 overflow-hidden flex">
-                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{quoteItems.map(item => <QuoteItem key={item.tempId} item={item} onUpdate={updateItem} onRemove={deleteNode} formatCurrency={formatCurrency} />)}</div></div>
-                    <div className={`w-72 bg-black/10 border-l ${theme.border} p-8 flex flex-col justify-center space-y-5`}>
-                        <div className="space-y-1"><div className="flex justify-between items-center"><span className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Net Materials</span><span className="text-sm font-mono text-white font-bold">{formatCurrency(financials.materials)}</span></div><div className="flex justify-between items-center"><span className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Net Labor</span><span className="text-sm font-mono text-white font-bold">{formatCurrency(financials.staff)}</span></div></div>
-                        <div className={`h-px ${theme.border} w-full`} /><div className="flex justify-between items-center"><span className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Applied Margin</span><span className={`text-sm font-mono ${theme.text} font-bold`}>{marginPct}%</span></div>
-                        <div className="pt-2"><div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">Grand Total</div><div className="text-3xl font-black text-white tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">{formatCurrency(financials.total)}</div></div>
+            {/* BILL OF MATERIALS - BOTTOM */}
+            <div className="w-full">
+                <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-80 relative`}>
+                    <div className={`p-4 border-b ${theme.border} bg-black/20 flex justify-between items-center px-8`}>
+                    <div className="flex items-center gap-6"><h3 className={`text-sm font-black ${theme.text} uppercase tracking-wider flex items-center gap-2`}><List size={16} /> Bill of Materials</h3><div className={`flex gap-4 text-xs font-bold ${theme.text} opacity-70 uppercase tracking-widest`}><span>Items: <span className="text-white">{allBillableItems.length}</span></span><span>Total: <span className="text-emerald-400">{formatCurrency(financials.total)}</span></span></div></div>
+                    <button className={`p-2 hover:bg-white/10 rounded-lg ${theme.text} hover:text-white transition-colors`}><Maximize size={14} /></button>
+                    </div>
+                    <div className="flex-1 overflow-hidden flex">
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{allBillableItems.map(item => <QuoteItem key={item.tempId} item={item} onUpdate={item.isDynamic ? (id, updates) => updateItemNodeData(id, updates) : updateItem} onRemove={item.isDynamic ? deleteNode : deleteNode} formatCurrency={formatCurrency} />)}</div></div>
+                        <div className={`w-72 bg-black/10 border-l ${theme.border} p-8 flex flex-col justify-center space-y-5`}>
+                            <div className="space-y-1"><div className="flex justify-between items-center"><span className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Net Materials</span><span className="text-sm font-mono text-white font-bold">{formatCurrency(financials.materials)}</span></div><div className="flex justify-between items-center"><span className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Net Labor</span><span className="text-sm font-mono text-white font-bold">{formatCurrency(financials.staff)}</span></div></div>
+                            <div className={`h-px ${theme.border} w-full`} /><div className="flex justify-between items-center"><span className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Applied Margin</span><span className={`text-sm font-mono ${theme.text} font-bold`}>{marginPct}%</span></div>
+                            <div className="pt-2"><div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">Grand Total</div><div className="text-3xl font-black text-white tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">{formatCurrency(financials.total)}</div></div>
+                        </div>
                     </div>
                 </div>
             </div>

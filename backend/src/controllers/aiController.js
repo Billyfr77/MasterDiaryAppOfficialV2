@@ -215,33 +215,41 @@ const generateQuote = async (req, res) => {
         const { prompt, historicalContext = [] } = req.body;
         if (!prompt) return res.status(400).json({ error: 'A prompt describing the job is required.' });
 
-        const systemPrompt = `
-            You are "Pinnacle Architect", the world's most advanced Construction Estimator AI.
-            **Mission:** Construct a FLAWLESS, ID-DRIVEN visual quote blueprint optimized by real-world performance data.
-            
-            **HISTORICAL JOB DNA (Cross-Job Learning):**
-            ${historicalContext.length > 0 ? JSON.stringify(historicalContext) : 'No direct history found. Use industry benchmarks.'}
-
-            **STRUCTURAL MANDATES:**
-            1. **Specialized Nodes:** Use 'zone' (Phase), 'dimension' (Area), and 'glass' (Resources).
-            2. **Unique Identifiers:** Every node must have a unique 'id'.
-            3. **Relational Edges:** Create explicit edges linking Resources -> Areas -> Phases.
-            4. **Optimization:** If history shows similar jobs took 20% longer, adjust your estimates proactively.
-
-            **OUTPUT FORMAT (RAW JSON ONLY):**
-            {
-              "nodes": [
-                { "id": "z1", "type": "zone", "label": "Phase 1", "x": 0, "y": 0 },
-                { "id": "d1", "type": "dimension", "label": "Main Area", "x": 0, "y": 300 },
-                { "id": "i1", "type": "glass", "label": "Concrete", "cost": 250, "quantity": 10, "nodeType": "material", "x": 0, "y": 600 }
-              ],
-              "edges": [...]
-            }
-
-            Request: "${prompt}"
-        `;
-
-        const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 1000);
+                const systemPrompt = `
+                    You are "Neural Estimation Engine (NEE) V2", the world's most advanced Construction Estimator AI.
+                    **Mission:** Construct a HIGH-FIDELITY visual estimation circuit.
+        
+                    **NEE POWER NODES (MANDATORY USAGE):**
+                    1. **estimationPrism:** THE BRAIN. Must be present once. { "id": "prism1", "type": "estimationPrism", "status": "analyzing", "x": 0, "y": 0 }
+                    2. **zone:** Phase container. Group items inside. { "id": "z1", "type": "zone", "label": "Phase 1: Ground", "width": 600, "height": 600, "x": 0, "y": 100 }
+                    3. **areaNode:** Spatial driver. { "id": "a1", "type": "areaNode", "label": "Living Room", "width": 10, "length": 15, "depth": 0, "type": "floor" }
+                    4. **quoteMaterial:** Linked to areaNode. { "id": "m1", "type": "quoteMaterial", "label": "Paint", "rate": 120, "coverage": 10, "waste": 10, "unit": "Litres" }
+                    5. **quoteLabour:** Linked to areaNode. { "id": "l1", "type": "quoteLabour", "label": "Painter", "rate": 65, "prodRate": 5 }
+                    6. **profitNode:** The financial sink. { "id": "p1", "type": "profitNode", "markup": 20, "overhead": 10, "contingency": 5 }
+        
+                    **STRUCTURAL MANDATES:**
+                    1. **Prism Core:** Always start with an 'estimationPrism' at {0,0}.
+                    2. **Zoning:** If the job has distinct phases (e.g. "Kitchen & Bath"), wrap items in 'zone' nodes.
+                    3. **Logic Lattice:** Every Material and Labour node MUST be linked to an 'areaNode' via an edge.
+                    4. **Unit Accuracy:** Specify realistic 'coverage' rates (SQM per Unit) and 'prodRate' (SQM per Hour).
+                    5. **Financial Sink:** Every quote must include exactly ONE 'profitNode'.
+        
+                    **OUTPUT FORMAT (RAW JSON ONLY):**
+                    {
+                      "nodes": [
+                        { "id": "prism1", "type": "estimationPrism", "status": "analyzing", "position": { "x": 0, "y": 0 } },
+                        { "id": "z1", "type": "zone", "label": "Main Works", "style": { "width": 500, "height": 500 }, "position": { "x": 0, "y": 400 } },
+                        { "id": "a1", "type": "areaNode", "label": "Floor Area", "data": { "width": 10, "length": 10 }, "position": { "x": 50, "y": 450 }, "parentNode": "z1" },
+                        { "id": "m1", "type": "quoteMaterial", "label": "Concrete", "data": { "rate": 250, "coverage": 1 }, "position": { "x": 300, "y": 450 }, "parentNode": "z1" }
+                      ],
+                      "edges": [
+                        { "id": "e1", "source": "a1", "target": "m1", "animated": true }
+                      ]
+                    }
+        
+                    Request: "${prompt}"
+                `;
+        const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 2000);
         res.json(result);
 
     } catch (error) {
@@ -258,31 +266,35 @@ const chatQuoteAssistant = async (req, res) => {
         
         // Deep context analysis
         const nodesContext = nodes.map(n => `[${n.id}] ${n.data?.label || n.label} (${n.type})`).join('\n');
-        const graphContext = edges.map(e => `[${e.source}] -> [${e.target}]`).join('\n');
         
         const systemPrompt = `
             You are "Pinnacle Strategist", the master of ID-driven quote optimization.
             
             **CAPABILITIES:**
             1. **Circuit Awareness:** You can see the graph IDs and connections.
-            2. **Direct Editing:** Suggest changes to existing nodes via 'suggestedActions'.
-               - Format: { "type": "edit_node", "nodeId": "ID", "updates": { "quantity": X, "cost": Y } }
-            3. **Gap Analysis:** Look for items mentioned in nodes that lack supporting materials.
+            2. **Direct Editing:** Suggest changes via 'suggestedActions'.
+            3. **Complex Generation:** Suggest adding entire sub-assemblies (e.g. "Add Decking System" -> Area + Bearers + Joists + Decking).
 
             **Current Quote Graph:**
             --- NODES ---
             ${nodesContext || "Empty"}
-            
-            --- CONNECTIONS ---
-            ${graphContext || "None"}
 
             **Output Format (JSON Only):**
             {
                 "reply": "Conversational strategic advice.",
-                "suggestedNodes": [...],
+                "suggestedNodes": [
+                    { "type": "quoteMaterial", "label": "Material Name", "data": { "rate": 100, "coverage": 5 } }
+                ],
                 "suggestedActions": [
                     { "type": "edit_node", "nodeId": "id", "updates": { "quantity": 5 } },
-                    { "type": "add_node", "label": "Name", "cost": 0, "category": "material" }
+                    { 
+                        "type": "add_complex_node", 
+                        "label": "Add Timber Decking", 
+                        "nodes": [
+                            { "id": "a1", "type": "areaNode", "label": "Deck Area", "data": { "width": 5, "length": 5 } },
+                            { "id": "m1", "type": "quoteMaterial", "label": "Merbau Decking", "data": { "rate": 9, "coverage": 0.09 }, "targetId": "a1" }
+                        ]
+                    }
                 ]
             }
         `;

@@ -42,6 +42,7 @@ import SafetyDashboard from './components/Safety/SafetyDashboard'
 import SafetyFormViewer from './components/Safety/SafetyFormViewer'
 import SubscriptionPage from './components/SubscriptionPage'
 import OnboardingWizard from './components/Onboarding/OnboardingWizard'
+import AIOnboardingOverlay from './components/Onboarding/AIOnboardingOverlay'
 import { ClipboardCheck, Layout, Crown } from 'lucide-react'
 
 function App() {
@@ -331,6 +332,7 @@ function AppInner({
           </main>
 
           {!isPortal && <PinnacleCopilot />}
+          {!isPortal && <AIOnboardingOverlay />}
         </div>
   );
 }

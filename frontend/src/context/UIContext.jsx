@@ -11,6 +11,29 @@ export const useUI = () => {
 
 export const UIProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
+  
+  // Onboarding State
+  const [onboarding, setOnboarding] = useState({
+    activeModule: null, // 'quote', 'diary', 'dashboard'
+    stepIndex: 0,
+    isVisible: false
+  });
+
+  const startOnboarding = useCallback((moduleName) => {
+    setOnboarding({ activeModule: moduleName, stepIndex: 0, isVisible: true });
+  }, []);
+
+  const nextStep = useCallback(() => {
+    setOnboarding(prev => ({ ...prev, stepIndex: prev.stepIndex + 1 }));
+  }, []);
+
+  const prevStep = useCallback(() => {
+    setOnboarding(prev => ({ ...prev, stepIndex: Math.max(0, prev.stepIndex - 1) }));
+  }, []);
+
+  const closeOnboarding = useCallback(() => {
+    setOnboarding(prev => ({ ...prev, isVisible: false, activeModule: null }));
+  }, []);
 
   const showToast = useCallback((message, type = 'info') => {
     const id = Date.now().toString();
@@ -28,7 +51,10 @@ export const UIProvider = ({ children }) => {
   const info = (msg) => showToast(msg, 'info');
 
   return (
-    <UIContext.Provider value={{ showToast, removeToast, success, error, warning, info }}>
+    <UIContext.Provider value={{ 
+      showToast, removeToast, success, error, warning, info,
+      onboarding, startOnboarding, nextStep, prevStep, closeOnboarding
+    }}>
       {children}
       
       {/* Toast Container */}

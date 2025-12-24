@@ -2,12 +2,13 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { 
-  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList, Circle, ShieldCheck, Crown, Cpu
+  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList, Circle, ShieldCheck, Crown, Cpu, GraduationCap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../utils/api';
 import { useNotification } from '../../context/NotificationContext';
+import { useUI } from '../../context/UIContext';
 
 import { useDiaryEngine } from './DiaryEngine';
 import { useDiaryTheme } from './ThemeContext';
@@ -492,6 +493,7 @@ const DEFAULT_TASKS = [
 const PaintDiary = () => {
   const navigate = useNavigate();
   const { theme, setActiveTheme, allThemes, activeTheme } = useDiaryTheme();
+  const { startOnboarding } = useUI();
   const {
     selectedDate, setSelectedDate, currentEntry, setCurrentEntry, projects, selectedProject, setSelectedProject, projectFinancials, quotedData, projectJobs, selectedJobId, setSelectedJobId,
     selectedClient, setSelectedClient, staff, equipment, materials, isSaved, setIsSaved, isSaving, cost, revenue, profit, productivityScore,
@@ -1012,6 +1014,8 @@ const PaintDiary = () => {
                 </button>
 
                 <div className="h-8 w-px bg-white/10 mx-2 hidden lg:block"></div>
+
+                <button onClick={() => startOnboarding('diary')} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-widest flex items-center gap-2"><GraduationCap size={16} /> Training</button>
 
                 <button onClick={handleNewEntry} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><Plus size={16} /> New</button>
                 <button onClick={handleLoadEntries} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><List size={16} /> Load</button>
