@@ -5,7 +5,7 @@ import {
     ArrowRight, MoreHorizontal, User, AlertTriangle, 
     DollarSign, HardHat, Calendar, ExternalLink, Zap, Sparkles, Clock
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const IntegrationIcon = ({ type }) => {
     switch (type) {
@@ -111,6 +111,31 @@ export default memo(({ data, type, selected }) => {
              <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
                 {/* Header Stripe */}
                 <div className={`absolute top-0 left-0 right-0 h-1 ${IntegrationColor({ type }).replace('text-', 'bg-')}`} />
+
+                {/* MASTERPIECE: PULSE FLASH */}
+                <AnimatePresence>
+                    {data.isSimulating && (
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: [0, 1, 0] }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.8 }}
+                            className="absolute inset-0 bg-white/20 z-30"
+                        />
+                    )}
+                </AnimatePresence>
+
+                {/* MASTERPIECE: ERROR FLASH */}
+                <AnimatePresence>
+                    {data.simulationError && (
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: [0, 1, 0, 1, 0] }}
+                            transition={{ duration: 0.4, repeat: Infinity }}
+                            className="absolute inset-0 bg-red-500/30 z-30"
+                        />
+                    )}
+                </AnimatePresence>
              </div>
 
              {/* Handles */}
@@ -145,7 +170,7 @@ export default memo(({ data, type, selected }) => {
                     </div>
                 </div>
 
-                {/* Specific Data Display */}
+                {/* Specific Data Display (ENHANCED FOR INLINE EDITING) */}
                 <div className="space-y-3 bg-white/5 rounded-xl p-3 border border-white/5 mb-4">
                     
                     {/* Invoice Specifics */}
@@ -153,63 +178,39 @@ export default memo(({ data, type, selected }) => {
                         <>
                             <div className="flex justify-between items-center text-xs">
                                 <span className="text-slate-400 font-medium">Amount</span>
-                                <span className="text-emerald-400 font-mono font-bold">${config.amount || '0.00'}</span>
+                                <input 
+                                    type="number"
+                                    value={config.amount || 0}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        data.config = { ...config, amount: val };
+                                        // Note: In memoized nodes we rely on the parent to update state via props
+                                        // but for speed we can sometimes use local state or direct ref access if needed.
+                                        // Here we assume the parent handles the re-render.
+                                    }}
+                                    className="bg-black/40 border border-emerald-500/20 rounded px-2 py-0.5 w-20 text-emerald-400 font-mono font-bold text-right outline-none focus:border-emerald-500"
+                                />
                             </div>
-                            <div className="flex justify-between items-center text-xs">
+                            <div className="flex justify-between items-center text-xs pt-1">
                                 <span className="text-slate-400 font-medium">Client</span>
                                 <span className="text-slate-200 font-bold truncate max-w-[120px]">{config.client || 'Unassigned'}</span>
                             </div>
                         </>
                     )}
 
-                    {/* Safety Specifics */}
-                    {type === 'safetyNode' && (
-                        <>
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-400 font-medium">Template</span>
-                                <span className="text-slate-200 font-bold truncate max-w-[140px]">{config.template || 'Standard SWMS'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                                <div className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 text-[10px] font-black uppercase border border-rose-500/30">
-                                    Risk Level: {config.riskLevel || 'High'}
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {/* Resource Specifics */}
-                    {type === 'resourceNode' && (
-                         <>
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-400 font-medium">Resource</span>
-                                <span className="text-slate-200 font-bold">{config.resourceType || 'General Staff'}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-400 font-medium">Quantity</span>
-                                <span className="text-amber-400 font-mono font-bold">x{config.quantity || '1'}</span>
-                            </div>
-                        </>
-                    )}
-
-                    {/* Forensic Specifics */}
-                    {type === 'forensicNode' && (
-                        <>
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-400 font-medium">Audit Category</span>
-                                <span className="text-violet-400 font-bold">{config.category || 'Financial Risk'}</span>
-                            </div>
-                            <div className="px-2 py-1 rounded bg-violet-500/10 border border-violet-500/20 text-[9px] font-black text-violet-300 uppercase mt-1">
-                                Sensitivity: {config.sensitivity || 'High'}
-                            </div>
-                        </>
-                    )}
-
-                    {/* Delay Specifics */}
+                    {/* Delay Specifics (INLINE EDIT) */}
                     {type === 'delayNode' && (
                         <>
                             <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-400 font-medium">Duration</span>
-                                <span className="text-orange-400 font-mono font-bold">{config.duration || '24'} Hours</span>
+                                <span className="text-slate-400 font-medium">Wait Time</span>
+                                <div className="flex items-center gap-1">
+                                    <input 
+                                        type="number"
+                                        value={config.duration || 0}
+                                        className="bg-black/40 border border-orange-500/20 rounded px-2 py-0.5 w-16 text-orange-400 font-mono font-bold text-right outline-none focus:border-orange-500"
+                                    />
+                                    <span className="text-[8px] text-slate-500">HRS</span>
+                                </div>
                             </div>
                             <div className="text-[9px] text-slate-500 uppercase font-bold mt-1 italic">
                                 Logic Hold Type: {config.type || 'Standard'}
@@ -217,7 +218,15 @@ export default memo(({ data, type, selected }) => {
                         </>
                     )}
 
-                    {/* Generic Fallback or Description */}
+                    {/* Propagation Visual (TIMELINE) */}
+                    {config.calculatedStart !== undefined && (
+                        <div className="pt-2 border-t border-white/5 mt-2 flex justify-between items-center">
+                            <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Calculated Arrival</span>
+                            <span className="text-[10px] font-mono font-bold text-white">T+{config.calculatedStart}H</span>
+                        </div>
+                    )}
+
+                    {/* Generic Fallback */}
                     {(!['invoiceNode', 'safetyNode', 'resourceNode', 'forensicNode', 'delayNode'].includes(type) || data.description) && (
                         <p className="text-slate-400 text-xs leading-relaxed line-clamp-2">
                             {data.description || 'No specific configuration set. Logic will proceed to next node.'}

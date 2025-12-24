@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, CheckCircle, AlertTriangle, Info, Bell } from 'lucide-react';
+import { api } from '../utils/api';
 
 const NotificationContext = createContext();
 
@@ -9,9 +10,19 @@ export const useNotification = () => useContext(NotificationContext);
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
 
-  const addNotification = useCallback((type, title, message, duration = 5000) => {
-    const id = Date.now();
+  const addNotification = useCallback(async (type, title, message, duration = 5000) => {
+    const id = crypto.randomUUID();
+    
+    // Add to ephemeral state for on-screen popup
     setNotifications(prev => [...prev, { id, type, title, message }]);
+    
+    // Persist to Database Hub (Silent)
+    try {
+      await api.post('/notifications', { type, title, message });
+    } catch (error) {
+      console.error('Failed to persist notification to hub:', error);
+    }
+
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, duration);

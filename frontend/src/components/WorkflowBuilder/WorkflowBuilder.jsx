@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { 
   ReactFlow, 
   ReactFlowProvider, 
@@ -29,6 +29,9 @@ import ConnectionLine from './ConnectionLine';
 import WorkflowCopilot from './WorkflowCopilot';
 import { api } from '../../utils/api';
 import { useNotification } from '../../context/NotificationContext';
+import { useDiaryTheme } from '../PaintDiary/ThemeContext';
+import PowerHeader from '../ui/PowerHeader';
+import AestheticPicker from '../PaintDiary/AestheticPicker';
 
 const nodeTypes = {
   milestone: CustomNode,
@@ -60,6 +63,7 @@ const getId = () => `node_${new Date().getTime()}`;
 
 const WorkflowBuilderContent = () => {
   const { addNotification } = useNotification();
+  const { theme, allThemes, setActiveTheme, activeTheme } = useDiaryTheme();
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -262,9 +266,93 @@ const WorkflowBuilderContent = () => {
   
   const navigate = useNavigate();
 
+  // --- STATS MEMO ---
+  const stats = useMemo(() => [
+    { label: 'Active Nodes', value: nodes.length, color: 'text-indigo-400' },
+    { label: 'Connections', value: edges.length, color: 'text-emerald-400' },
+    { label: 'Smart Configs', value: nodes.filter(n => n.data.config && Object.keys(n.data.config).length > 0).length, color: 'text-amber-400' },
+    { label: 'Risk Points', value: nodes.filter(n => n.data.simulationError).length, color: 'text-rose-400' }
+  ], [nodes, edges]);
+
   // --- MASTERPIECE STATES ---
   const [forensicLens, setForensicLens] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  // --- LIVE CIRCUIT SIMULATOR ENGINE ---
+  const simulateLogicFlow = useCallback(async () => {
+      if (nodes.length === 0) return;
+      
+      setIsSimulating(true);
+      addNotification('info', 'Simulator Initialized', 'Injecting neural pulse into circuit...');
+
+      // Reset all nodes/edges from previous simulation states
+      setNodes(nds => nds.map(n => ({ ...n, data: { ...n.data, simulationError: false, isSimulating: false } })));
+      setEdges(eds => eds.map(e => ({ ...e, animated: true, data: { ...e.data, isActive: false } })));
+
+      // Helper to find start nodes (triggers or nodes with no incoming edges)
+      const startNodes = nodes.filter(n => 
+          n.type === 'trigger' || n.type === 'input' || !edges.some(e => e.target === n.id)
+      );
+
+      if (startNodes.length === 0 && nodes.length > 0) {
+          addNotification('error', 'Circuit Error', 'No entry point detected in the logic graph.');
+          setIsSimulating(false);
+          return;
+      }
+
+      // Recursive traversal with delay for visual effect
+      const traverse = async (nodeId, visited = new Set()) => {
+          if (visited.has(nodeId)) return; // Prevent infinite loops in simulation
+          visited.add(nodeId);
+
+          const node = nodes.find(n => n.id === nodeId);
+          if (!node) return;
+
+          // 1. Mark node as active in simulation
+          setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, isSimulating: true } } : n));
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          // 2. Validate Node Configuration
+          let hasError = false;
+          let errorMessage = '';
+
+          if (node.type === 'invoiceNode' && !node.data.config?.amount) {
+              hasError = true;
+              errorMessage = 'Invoice node missing contract value.';
+          } else if (node.type === 'decision') {
+              const hasYes = edges.some(e => e.source === node.id && e.sourceHandle === 'true');
+              const hasNo = edges.some(e => e.source === node.id && e.sourceHandle === 'false');
+              if (!hasYes || !hasNo) {
+                  hasError = true;
+                  errorMessage = 'Logic Gate missing binary exit paths.';
+              }
+          }
+
+          if (hasError) {
+              setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, simulationError: true, isSimulating: false } } : n));
+              addNotification('error', 'Short Circuit Detected', errorMessage);
+              return; // Stop this branch
+          }
+
+          // 3. Mark node as complete and pulse outgoing edges
+          setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, isSimulating: false } } : n));
+          
+          const outgoingEdges = edges.filter(e => e.source === nodeId);
+          for (const edge of outgoingEdges) {
+              setEdges(eds => eds.map(e => e.id === edge.id ? { ...e, data: { ...e.data, isActive: true } } : e));
+              await new Promise(resolve => setTimeout(resolve, 400));
+              await traverse(edge.target, visited);
+          }
+      };
+
+      for (const startNode of startNodes) {
+          await traverse(startNode.id);
+      }
+
+      setIsSimulating(false);
+      addNotification('success', 'Simulation Complete', 'Operational lattice integrity verified.');
+  }, [nodes, edges, addNotification, setNodes, setEdges]);
 
   // Load Staff for assignment
   useEffect(() => {
@@ -427,16 +515,21 @@ const WorkflowBuilderContent = () => {
       const targetIsPane = event.target.classList.contains('react-flow__pane');
 
       if (targetIsPane && reactFlowInstance) {
-        // Remove the connection line by forcing a re-render or letting it fade (RF handles drag stop)
         const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event;
         const position = reactFlowInstance.screenToFlowPosition({
             x: clientX,
             y: clientY,
         });
         
+        // --- MASTERPIECE: BOUNDARY CHECK FOR POPUP ---
+        const menuWidth = 220;
+        const menuHeight = 250;
+        const x = Math.min(clientX, window.innerWidth - menuWidth / 2 - 20);
+        const y = Math.min(clientY, window.innerHeight - menuHeight / 2 - 20);
+
         setQuickAddMenu({
-            x: clientX,
-            y: clientY,
+            x: Math.max(menuWidth / 2 + 20, x),
+            y: Math.max(menuHeight / 2 + 20, y),
             flowPosition: position,
             sourceId: connectingNodeId.current
         });
@@ -595,6 +688,40 @@ const WorkflowBuilderContent = () => {
     );
   };
 
+  // --- ULTIMATE: RECURSIVE DATA PROPAGATION ENGINE ---
+  useEffect(() => {
+      if (isSimulating) return; // Don't propagate during active simulation to avoid loops
+
+      setNodes(nds => {
+          const newNodes = [...nds];
+          let changed = false;
+
+          // Process each node and propagate data to its targets
+          edges.forEach(edge => {
+              const source = newNodes.find(n => n.id === edge.source);
+              const target = newNodes.find(n => n.id === edge.target);
+
+              if (source && target) {
+                  // Propagate temporal data (Cumulative Duration)
+                  const sourceDuration = parseInt(source.data.config?.duration || 0);
+                  const currentTargetStart = target.data.config?.calculatedStart || 0;
+                  
+                  if (currentTargetStart !== sourceDuration) {
+                      target.data.config = { ...target.data.config, calculatedStart: sourceDuration };
+                      changed = true;
+                  }
+
+                  // Propagate status (Auto-block if source not done)
+                  if (source.data.status !== 'completed' && target.data.status !== 'error') {
+                      // Optionally auto-set to blocked/error if needed
+                  }
+              }
+          });
+
+          return changed ? [...newNodes] : nds;
+      });
+  }, [edges, nodes.map(n => JSON.stringify(n.data.config)).join(',')]);
+
   const onDeleteNode = (id) => {
       setNodes((nds) => nds.filter((n) => n.id !== id));
       setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
@@ -640,23 +767,100 @@ const WorkflowBuilderContent = () => {
   };
 
   const runWorkflow = async () => {
-      // 1. Save (or Create) first
-      const currentId = await saveWorkflow(true); // Silent save
+      if (nodes.length === 0) return;
       
-      if (!currentId) return;
-      
-      try {
-          // 2. Trigger Run using the ID we just got
-          const res = await api.post(`/workflows/${currentId}/run`);
+      await saveWorkflow(true);
+      setIsSimulating(true);
+      addNotification('info', 'Analytical Pulse Initiated', 'Performing deep logic scan and temporal trajectory audit...');
+
+      // Reset states
+      setNodes(nds => nds.map(n => ({ ...n, data: { ...n.data, simulationError: false, isSimulating: false } })));
+      setEdges(eds => eds.map(e => ({ ...e, animated: true, data: { ...e.data, isActive: false } })));
+
+      const startNodes = nodes.filter(n => 
+          n.type === 'trigger' || n.type === 'input' || !edges.some(e => e.target === n.id)
+      );
+
+      // --- MASTERCLASS ANALYTICS PASS ---
+      const analyzeLattice = () => {
+          const bottlenecks = [];
+          const orphans = nodes.filter(n => !edges.some(e => e.source === n.id) && n.type !== 'output');
+          const unassigned = nodes.filter(n => !n.data.assignee && !['trigger', 'decision', 'delayNode'].includes(n.type));
           
-          // 3. Update local state
-          setNodes(res.data.nodes);
-          setEdges(res.data.edges);
-          addNotification('success', 'Workflow Executing', 'Process initiated successfully.');
-      } catch (err) {
-          console.error("Run failed", err);
-          addNotification('error', 'Execution Failed', 'Could not start workflow.');
+          if (orphans.length > 0) bottlenecks.push(`${orphans.length} orphaned modules detected.`);
+          if (unassigned.length > 0) bottlenecks.push(`Unassigned critical paths may stall execution.`);
+          
+          // Check for lone logic gates
+          nodes.filter(n => n.type === 'decision').forEach(n => {
+              const outputs = edges.filter(e => e.source === n.id);
+              if (outputs.length < 2) bottlenecks.push(`Logic Gate "${n.data.label}" lacks binary divergence.`);
+          });
+
+          if (bottlenecks.length > 0) {
+              addNotification('warning', 'Analytical Insight', bottlenecks[0]);
+          }
+      };
+
+      analyzeLattice();
+
+      if (startNodes.length === 0) {
+          addNotification('error', 'Circuit Failure', 'No architectural entry point detected.');
+          setIsSimulating(false);
+          return;
       }
+
+      const traverse = async (nodeId, visited = new Set()) => {
+          if (visited.has(nodeId)) return;
+          visited.add(nodeId);
+
+          const node = nodes.find(n => n.id === nodeId);
+          if (!node) return;
+
+          setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, isSimulating: true } } : n));
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          let hasError = false;
+          let errorMessage = '';
+
+          // CORE VALIDATION
+          if (node.type === 'invoiceNode' && !node.data.config?.amount) {
+              hasError = true; errorMessage = 'Financial Sync Failure: Null amount.';
+          } else if (node.type === 'safetyNode' && !node.data.config?.template) {
+              hasError = true; errorMessage = 'Compliance Breach: No SWMS template.';
+          } else if (node.type === 'decision') {
+              const hasYes = edges.some(e => e.source === node.id && e.sourceHandle === 'true');
+              const hasNo = edges.some(e => e.source === node.id && e.sourceHandle === 'false');
+              if (!hasYes || !hasNo) {
+                  hasError = true; errorMessage = 'Logic Gate Loophole: Binary path missing.';
+              }
+          }
+
+          if (hasError) {
+              setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, simulationError: true, isSimulating: false } } : n));
+              addNotification('error', 'Critical Short Circuit', errorMessage);
+              return;
+          }
+
+          setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, isSimulating: false } } : n));
+          
+          const outgoingEdges = edges.filter(e => e.source === nodeId);
+          if (outgoingEdges.length === 0 && node.type !== 'output') {
+              addNotification('info', 'Process Dead-End', `Node "${node.data.label}" terminates the flow unexpectedly.`);
+          }
+
+          for (const edge of outgoingEdges) {
+              setEdges(eds => eds.map(e => e.id === edge.id ? { ...e, data: { ...e.data, isActive: true } } : e));
+              await new Promise(resolve => setTimeout(resolve, 400));
+              await traverse(edge.target, visited);
+          }
+      };
+
+      for (const startNode of startNodes) {
+          await traverse(startNode.id);
+      }
+
+      setIsSimulating(false);
+      addNotification('success', 'Masterclass Audit Complete', 'Operational circuit integrity verified at Level 4.');
   };
 
   // Poll for updates if any node is in-progress
@@ -788,14 +992,15 @@ const WorkflowBuilderContent = () => {
           </div>
 
           <div className="flex items-center gap-3">
-             {/* Run Button */}
+             {/* Pulse Simulation Button */}
              <button 
                 onClick={runWorkflow}
-                className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-400 hover:bg-green-500/20 rounded-lg border border-green-500/20 transition-all"
-                title="Run Workflow"
+                disabled={isSimulating}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg border transition-all ${isSimulating ? 'bg-emerald-600/20 border-emerald-500 text-emerald-400 animate-pulse' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white hover:shadow-[0_0_20px_#10b981]'}`}
+                title="Inject Neural Pulse (Simulate Flow)"
               >
-                <Play size={16} fill="currentColor" />
-                <span className="text-xs font-bold uppercase tracking-wider">Run</span>
+                <Zap size={16} fill={isSimulating ? "currentColor" : "none"} />
+                <span className="text-xs font-black uppercase tracking-[0.2em]">{isSimulating ? 'PULSING...' : 'PULSE'}</span>
               </button>
 
              {/* AI Button */}
@@ -904,29 +1109,31 @@ const WorkflowBuilderContent = () => {
             onDragOver={onDragOver}
         >
           {viewMode === 'graph' && (
-            <ReactFlow
-              nodes={nodes.map(n => ({ ...n, data: { ...n.data, forensicActive: forensicLens } }))}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onConnectStart={onConnectStart}
-              onConnectEnd={onConnectEnd}
-              onInit={setReactFlowInstance}
-              onNodeClick={onNodeClick}
-              onPaneClick={onPaneClick}
-              onPaneContextMenu={onPaneContextMenu}
-              onDoubleClick={onPaneDoubleClick}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              connectionLineComponent={ConnectionLine}
-              fitView
-              className="bg-slate-950"
-              defaultEdgeOptions={{ type: 'custom', animated: true, style: { strokeWidth: 2, stroke: '#64748b' } }}
-              minZoom={0.1}
-              maxZoom={4}
-            >
-              {/* MASTERPIECE CYBER GRID */}
+                              <ReactFlow
+                                nodes={nodes.map(n => ({ ...n, data: { ...n.data, forensicActive: forensicLens } }))}
+                                edges={edges}
+                                onNodesChange={onNodesChange}
+                                onEdgesChange={onEdgesChange}
+                                onConnect={onConnect}
+                                onConnectStart={onConnectStart}
+                                onConnectEnd={onConnectEnd}
+                                onInit={setReactFlowInstance}
+                                onNodeClick={onNodeClick}
+                                onPaneClick={onPaneClick}
+                                onPaneContextMenu={onPaneContextMenu}
+                                onDoubleClick={onPaneDoubleClick}
+                                nodeTypes={nodeTypes}
+                                edgeTypes={edgeTypes}
+                                connectionLineComponent={ConnectionLine}
+                                fitView
+                                fitViewOptions={{ padding: 0.2 }}
+                                className="bg-slate-950"
+                                defaultEdgeOptions={{ type: 'custom', animated: true, style: { strokeWidth: 2, stroke: '#64748b' } }}
+                                minZoom={0.1}
+                                maxZoom={4}
+                                snapToGrid={true}
+                                snapGrid={[25, 25]}
+                              >              {/* MASTERPIECE CYBER GRID */}
               <Background 
                 color={forensicLens ? "#4c1d95" : "#1e1b4b"} 
                 gap={25} 
@@ -971,15 +1178,15 @@ const WorkflowBuilderContent = () => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
                       style={{ left: quickAddMenu.x, top: quickAddMenu.y }}
-                      className="absolute z-50 bg-slate-900/90 backdrop-blur-xl border border-white/10 p-2 rounded-xl shadow-2xl flex flex-col gap-1 -translate-x-1/2 -translate-y-1/2"
+                      className="fixed z-[1000] bg-slate-950 border border-white/10 p-2 rounded-2xl shadow-2xl flex flex-col gap-1 -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
                   >
-                      <div className="text-[10px] text-slate-500 uppercase font-bold px-2 py-1">Quick Add</div>
+                      <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest px-2 py-1">Quick Add</div>
                       <div className="grid grid-cols-2 gap-1">
                           {quickAddItems.map(item => (
                               <button 
                                 key={item.label}
                                 onClick={() => handleQuickAdd(item.type, item.label)}
-                                className="flex items-center gap-2 px-3 py-2 hover:bg-white/10 rounded-lg transition-colors group text-left"
+                                className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 rounded-xl transition-colors group text-left"
                               >
                                   <item.icon size={14} className={item.color} />
                                   <span className="text-xs text-slate-300 font-medium group-hover:text-white">{item.label}</span>
@@ -1002,10 +1209,18 @@ const WorkflowBuilderContent = () => {
           {viewMode === 'list' && (
              <ListView nodes={nodes} onNodeClick={onNodeClick} />
           )}
-          
-          {/* Properties Panel Overlay */}
+          {/* Help Modal */}
           <AnimatePresence>
-            {selectedNode && (
+            {showHelp && <WorkflowHelp onClose={() => setShowHelp(false)} />}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* --- MASTERPIECE GLOBAL OVERLAYS --- */}
+      {/* Moving Properties Panel here ensures it is never clipped by relative parents */}
+      <AnimatePresence>
+        {selectedNode && (
+          <div className="fixed inset-0 z-[110] pointer-events-auto">
               <PropertiesPanel 
                 selectedNode={selectedNode} 
                 updateNodeData={updateNodeData} 
@@ -1014,134 +1229,9 @@ const WorkflowBuilderContent = () => {
                 staffList={staffList}
                 onResumeNode={resumeNode}
               />
-            )}
-          </AnimatePresence>
-
-          {/* AI Modal */}
-          <AnimatePresence>
-            {showAIModal && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <motion.div 
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
-                    >
-                        <div className="p-6 border-b border-slate-800">
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                <Sparkles className="text-indigo-400" /> AI Workflow Assistant
-                            </h2>
-                            <p className="text-slate-400 text-sm mt-1">Generate a workflow from a description or pick a template.</p>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Describe Workflow Goal</label>
-                                <textarea 
-                                    value={aiPrompt}
-                                    onChange={(e) => setAiPrompt(e.target.value)}
-                                    placeholder="e.g. A detailed survey process for a 2-story residential house..."
-                                    className="w-full h-24 bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                            </div>
-                            <div className="max-h-60 overflow-y-auto custom-scrollbar pr-2">
-                                {aiTemplates.map((cat, idx) => (
-                                    <div key={idx} className="mb-4 last:mb-0">
-                                        <h3 className="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-wider sticky top-0 bg-slate-900 py-1 z-10">{cat.category}</h3>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {cat.items.map(template => (
-                                                <button 
-                                                    key={template.type}
-                                                    onClick={() => generateAiTemplate(template.type)}
-                                                    className="p-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left transition-colors hover:border-indigo-500/50 group"
-                                                >
-                                                    <span className="text-slate-300 text-xs font-bold group-hover:text-white">{template.label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="p-4 bg-slate-900 border-t border-slate-800 flex justify-end gap-2">
-                            <button 
-                                onClick={() => setShowAIModal(false)}
-                                className="px-4 py-2 text-slate-400 hover:text-white text-sm"
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                onClick={() => generateAiTemplate('custom')}
-                                disabled={aiLoading}
-                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                                Generate
-                            </button>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-          </AnimatePresence>
-
-          {/* Load Modal */}
-          <AnimatePresence>
-            {showLoadModal && (
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-                    <motion.div 
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        className="bg-slate-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
-                    >
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                <FolderOpen className="text-indigo-400" /> Saved Workflows
-                            </h2>
-                            <button onClick={() => setShowLoadModal(false)} className="text-slate-400 hover:text-white">Close</button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                            {savedWorkflows.length === 0 ? (
-                                <div className="text-center text-slate-500 py-10">No saved workflows found.</div>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-3">
-                                    {savedWorkflows.map(wf => (
-                                        <div key={wf.id} className="flex items-center justify-between p-4 bg-slate-800/50 hover:bg-slate-800 border border-white/5 hover:border-indigo-500/30 rounded-xl transition-all group text-left">
-                                            <button 
-                                                onClick={() => loadWorkflow(wf)}
-                                                className="flex-1 flex items-center justify-between pr-4"
-                                            >
-                                                <div>
-                                                    <h3 className="text-white font-bold">{wf.title}</h3>
-                                                    <p className="text-xs text-slate-500 mt-1">{new Date(wf.createdAt).toLocaleDateString()} • {wf.nodes?.length} nodes</p>
-                                                </div>
-                                                <ArrowRight size={16} className="text-slate-500 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-all" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation(); // Prevent loading workflow when deleting
-                                                    deleteWorkflow(wf.id, wf.title);
-                                                }}
-                                                className="p-2 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                                                title="Delete Workflow"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-          </AnimatePresence>
-
-          {/* Help Modal */}
-          <AnimatePresence>
-            {showHelp && <WorkflowHelp onClose={() => setShowHelp(false)} />}
-          </AnimatePresence>
-        </div>
-      </div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

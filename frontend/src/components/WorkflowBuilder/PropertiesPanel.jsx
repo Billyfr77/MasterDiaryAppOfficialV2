@@ -94,7 +94,7 @@ export default function PropertiesPanel({ selectedNode, updateNodeData, closePan
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 450, opacity: 0 }}
       transition={{ type: "spring", stiffness: 350, damping: 35 }}
-      className="w-[450px] h-[calc(100vh-80px)] border-l border-white/10 bg-slate-950/90 backdrop-blur-3xl absolute right-0 top-0 z-50 flex flex-col shadow-[-20px_0_60px_rgba(0,0,0,0.8)]"
+      className="w-full sm:w-[450px] h-[calc(100vh-80px)] border-l border-white/10 bg-slate-950/90 backdrop-blur-3xl absolute right-0 top-0 z-50 flex flex-col shadow-[-20px_0_60px_rgba(0,0,0,0.8)]"
     >
       {/* --- PREMUM HEADER --- */}
       <div className="relative p-8 border-b border-white/5 overflow-hidden">

@@ -5,7 +5,7 @@ import {
     CreditCard, Zap, Mail, MoreHorizontal, ListChecks, 
     Lock, Play, ArrowRight, Sparkles, AlertCircle 
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const NodeIcon = ({ type }) => {
   switch (type) {
@@ -95,6 +95,31 @@ export default memo(({ data, type, selected }) => {
           {/* Header Stripe */}
           <div className={`absolute top-0 left-0 right-0 h-1 ${NodeColor({ type }).replace('text-', 'bg-')}`} />
           
+          {/* MASTERPIECE: PULSE FLASH OVERLAY */}
+          <AnimatePresence>
+              {data.isSimulating && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0] }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8, ease: "easeInOut" }}
+                    className="absolute inset-0 bg-white/20 z-30"
+                  />
+              )}
+          </AnimatePresence>
+
+          {/* MASTERPIECE: SHORT CIRCUIT (ERROR) FLASH */}
+          <AnimatePresence>
+              {data.simulationError && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0, 1, 0] }}
+                    transition={{ duration: 0.4, repeat: Infinity }}
+                    className="absolute inset-0 bg-red-500/30 z-30"
+                  />
+              )}
+          </AnimatePresence>
+
           {/* Active Pulse Overlay */}
           {status === 'in-progress' && (
               <motion.div 

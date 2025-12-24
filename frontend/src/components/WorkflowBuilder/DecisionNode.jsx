@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { GitFork, HelpCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default memo(({ data, selected }) => {
   // Styles
@@ -25,6 +25,31 @@ export default memo(({ data, selected }) => {
          
          {/* Tech Lines */}
          <div className="absolute inset-2 border border-white/5 rounded-2xl" />
+
+         {/* MASTERPIECE: PULSE FLASH */}
+         <AnimatePresence>
+            {data.isSimulating && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0] }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="absolute inset-0 bg-white/20 z-30 rounded-3xl"
+                />
+            )}
+         </AnimatePresence>
+
+         {/* MASTERPIECE: ERROR FLASH */}
+         <AnimatePresence>
+            {data.simulationError && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0, 1, 0] }}
+                    transition={{ duration: 0.4, repeat: Infinity }}
+                    className="absolute inset-0 bg-red-500/30 z-30 rounded-3xl"
+                />
+            )}
+         </AnimatePresence>
       </motion.div>
 
       {/* Input Handle (Left) */}

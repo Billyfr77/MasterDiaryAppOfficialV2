@@ -43,6 +43,7 @@ import SafetyFormViewer from './components/Safety/SafetyFormViewer'
 import SubscriptionPage from './components/SubscriptionPage'
 import OnboardingWizard from './components/Onboarding/OnboardingWizard'
 import AIOnboardingOverlay from './components/Onboarding/AIOnboardingOverlay'
+import NotificationDropdown from './components/NotificationDropdown'
 import { ClipboardCheck, Layout, Crown } from 'lucide-react'
 
 function App() {
@@ -136,6 +137,7 @@ function App() {
   const location = useLocation();
   const isPortal = location.pathname.startsWith('/portal');
   const isLanding = location.pathname === '/';
+  const isWorkflowBuilder = location.pathname.startsWith('/workflows');
 
   return (
     <ErrorBoundary>
@@ -153,6 +155,7 @@ function App() {
                     scrollThumbWidth={scrollThumbWidth} scrollThumbLeft={scrollThumbLeft}
                     handleThumbMouseDown={handleThumbMouseDown}
                     isLanding={isLanding} isPortal={isPortal}
+                    isWorkflowBuilder={isWorkflowBuilder}
                   />
                 </DndProvider>
               </DiaryThemeProvider>
@@ -169,7 +172,7 @@ function AppInner({
     token, onLogin,
     darkMode, setDarkMode, mobileMenuOpen, setMobileMenuOpen, 
     navRef, handleNavScroll, scrollThumbWidth, scrollThumbLeft, 
-    handleThumbMouseDown, isLanding, isPortal 
+    handleThumbMouseDown, isLanding, isPortal, isWorkflowBuilder
 }) {
   const { theme, allThemes, setActiveTheme, activeTheme } = useDiaryTheme();
   const location = useLocation();
@@ -288,6 +291,7 @@ function AppInner({
                 </div>
 
                 <div className="flex items-center gap-3 flex-shrink-0">
+                   <NotificationDropdown />
                    <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-white/10 transition-colors text-gray-400">
                       {darkMode ? <Sun size={20} /> : <Moon size={20} />}
                    </button>
@@ -298,7 +302,7 @@ function AppInner({
             </header>
           )}
 
-          <main className={`flex-1 ${(!isPortal && !isLanding) ? 'container mx-auto px-4 py-8' : ''} animate-fade-in`}>
+          <main className={`flex-1 ${(!isPortal && !isLanding && !isWorkflowBuilder) ? 'container mx-auto px-4 py-8' : ''} animate-fade-in`}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login onLogin={onLogin} />} />

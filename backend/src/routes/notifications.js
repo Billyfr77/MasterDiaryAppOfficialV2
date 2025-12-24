@@ -32,4 +32,22 @@ router.put('/:id/read', async (req, res) => {
   }
 });
 
+// Create a new notification
+router.post('/', async (req, res) => {
+  try {
+    const { type, title, message, data } = req.body;
+    const notification = await Notification.create({
+      userId: req.user.id,
+      type: type.toUpperCase(),
+      title,
+      message,
+      isRead: false,
+      data
+    });
+    res.status(201).json(notification);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
