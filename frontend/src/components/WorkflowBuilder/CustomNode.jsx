@@ -63,15 +63,32 @@ export default memo(({ data, type, selected }) => {
   const totalItems = checklist.length;
   const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
   
+  // --- MASTERPIECE: NEURAL HEALTH CALCULATION ---
+  const getHealth = () => {
+      if (status === 'error' || data.simulationError) return 'broken';
+      if (!data.label || data.label.includes('New Node')) return 'incomplete';
+      if (!data.assignee || !data.description) return 'warning';
+      return 'optimized';
+  };
+  const health = getHealth();
+
   // Smart Config Detection
   const hasSmartConfig = (data.automation && Object.keys(data.automation).length > 0) || totalItems > 0 || data.assignee || data.deadline;
 
   // Styles
-  let baseClasses = "relative min-w-[320px] rounded-2xl border backdrop-blur-2xl transition-all duration-300 group hover:-translate-y-1 hover:shadow-2xl";
+  let baseClasses = "relative min-w-[320px] rounded-2xl border backdrop-blur-2xl transition-all duration-500 group hover:-translate-y-1 hover:shadow-2xl";
   
   let borderColor = NodeColor({ type, isBorder: true });
   let bgGradient = 'bg-gradient-to-b from-slate-900/95 to-black';
-  let shadow = selected ? `shadow-[0_0_40px_rgba(99,102,241,0.3)]` : 'shadow-lg shadow-black/50';
+  
+  // --- DYNAMIC HEALTH GLOWS ---
+  const healthShadows = {
+      optimized: 'shadow-[0_0_20px_rgba(16,185,129,0.15)]',
+      warning: 'shadow-[0_0_20px_rgba(245,158,11,0.15)]',
+      incomplete: 'shadow-[0_0_20px_rgba(59,130,246,0.15)]',
+      broken: 'shadow-[0_0_30px_rgba(239,68,68,0.3)]'
+  };
+  let shadow = selected ? `shadow-[0_0_40px_rgba(99,102,241,0.3)]` : healthShadows[health];
 
   // Status Overrides
   if (status === 'completed') {

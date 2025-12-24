@@ -5,7 +5,7 @@ import {
     Zap, Trash2, Mail, CreditCard, ArrowRight, ListChecks, 
     Layers, Settings, Plus, MinusCircle, Sparkles, ShieldCheck,
     Truck, BookOpen, FileText, Clock, AlertTriangle, Cpu,
-    Wand2, HardHat, DollarSign, Activity, ClipboardList, GitFork, Play, Bell
+    Wand2, HardHat, DollarSign, Activity, ClipboardList, GitFork, Play, Bell, TrendingUp
 } from 'lucide-react';
 
 export default function PropertiesPanel({ selectedNode, updateNodeData, closePanel, onDeleteNode, staffList = [] }) {
@@ -407,6 +407,87 @@ export default function PropertiesPanel({ selectedNode, updateNodeData, closePan
                                 <option value="Approval">External Sign-off Gateway</option>
                                 <option value="Curing">Material Curing Process</option>
                             </select>
+                        </div>
+                    </div>
+                )}
+
+                {/* WORMHOLE HUB */}
+                {type === 'wormholeNode' && (
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Target Project/Logic Link</label>
+                            <input 
+                                type="text" 
+                                value={data.config?.targetWorkflow || ''} 
+                                onChange={(e) => handleConfigChange('targetWorkflow', e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white focus:border-fuchsia-500 outline-none"
+                                placeholder="E.G. RESIDENTIAL_SITE_B"
+                            />
+                        </div>
+                        <div className="p-4 bg-fuchsia-500/5 border border-fuchsia-500/10 rounded-2xl">
+                            <p className="text-[9px] text-fuchsia-200/60 uppercase font-black leading-relaxed">
+                                HUB LINK: This node acts as a neural bridge, triggering logic across separate project instances.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* GEOFENCE MAP SYNC */}
+                {type === 'mapNode' && (
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Site Anchor Name</label>
+                            <input 
+                                type="text" 
+                                value={data.config?.locationName || ''} 
+                                onChange={(e) => handleConfigChange('locationName', e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white focus:border-blue-500 outline-none"
+                                placeholder="E.G. EXCLUSION_ZONE_ALPHA"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Activation Radius (M)</label>
+                            <input 
+                                type="number" 
+                                value={data.config?.radius || '50'} 
+                                onChange={(e) => handleConfigChange('radius', e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white focus:border-blue-500 outline-none"
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* CLIENT HUB */}
+                {type === 'clientNode' && (
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Client CRM Identity</label>
+                            <input 
+                                type="text" 
+                                value={data.config?.clientName || ''} 
+                                onChange={(e) => handleConfigChange('clientName', e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white focus:border-indigo-500 outline-none"
+                                placeholder="Search Client Hub..."
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* VARIATION TRACKER */}
+                {type === 'variationNode' && (
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Variation Value ($)</label>
+                            <div className="relative">
+                                <TrendingUp size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" />
+                                <input 
+                                    type="number" 
+                                    value={data.config?.variationAmount || ''} 
+                                    onChange={(e) => handleConfigChange('variationAmount', e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-5 py-4 text-xl font-mono font-bold text-white focus:border-emerald-500 outline-none"
+                                    placeholder="0.00"
+                                />
+                            </div>
                         </div>
                     </div>
                 )}

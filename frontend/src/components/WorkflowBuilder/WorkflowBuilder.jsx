@@ -52,7 +52,11 @@ const nodeTypes = {
   diaryNode: AppIntegrationNode,
   quoteNode: AppIntegrationNode,
   forensicNode: AppIntegrationNode,
-  delayNode: AppIntegrationNode
+  delayNode: AppIntegrationNode,
+  wormholeNode: AppIntegrationNode,
+  mapNode: AppIntegrationNode,
+  clientNode: AppIntegrationNode,
+  variationNode: AppIntegrationNode
 };
 
 const edgeTypes = {
@@ -278,6 +282,25 @@ const WorkflowBuilderContent = () => {
   const [forensicLens, setForensicLens] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  // --- MASTER ARCHITECT KEYBOARD SHORTCUTS ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      const key = e.key.toLowerCase();
+      if (key === 's') { e.preventDefault(); saveWorkflow(); }
+      if (key === 'p') { e.preventDefault(); runWorkflow(); }
+      if (key === 'f') { e.preventDefault(); setForensicLens(prev => !prev); }
+      if (key === 'c') { e.preventDefault(); setCopilotOpen(prev => !prev); }
+      if (key === 'delete' || key === 'backspace') {
+          if (selectedNodeId) onDeleteNode(selectedNodeId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, isSimulating, forensicLens, copilotOpen]);
 
   // --- LIVE CIRCUIT SIMULATOR ENGINE ---
   const simulateLogicFlow = useCallback(async () => {
@@ -897,6 +920,10 @@ const WorkflowBuilderContent = () => {
       { type: 'safetyNode', label: 'Safety', icon: CheckSquare, color: 'text-rose-400' },
       { type: 'resourceNode', label: 'Resource', icon: User, color: 'text-amber-400' },
       { type: 'diaryNode', label: 'Diary', icon: Calendar, color: 'text-cyan-400' },
+      { type: 'wormholeNode', label: 'Wormhole', icon: Zap, color: 'text-fuchsia-400' },
+      { type: 'mapNode', label: 'Geofence', icon: MapPin, color: 'text-blue-400' },
+      { type: 'clientNode', label: 'Client Hub', icon: User, color: 'text-indigo-400' },
+      { type: 'variationNode', label: 'Variation', icon: TrendingUp, color: 'text-emerald-500' },
   ];
 
   const resumeNode = (id) => {

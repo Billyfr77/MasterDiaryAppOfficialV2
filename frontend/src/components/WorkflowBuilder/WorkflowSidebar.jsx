@@ -35,15 +35,32 @@ export default function WorkflowSidebar({ onNodeClick, setShowSidebar }) {
         { type: 'forensicNode', label: 'Forensic Audit', icon: AlertTriangle, color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20', desc: 'Deep financial risk scan' },
         { type: 'delayNode', label: 'Logic Delay', icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', desc: 'Temporal flow control' },
       ]
+    },
+    {
+      name: 'Network & Hub',
+      items: [
+        { type: 'wormholeNode', label: 'Wormhole', icon: Zap, color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/20', desc: 'Bridge to other workflows' },
+        { type: 'mapNode', label: 'Geofence', icon: MapPin, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'Location-based logic' },
+        { type: 'clientNode', label: 'Client Hub', icon: User, color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', desc: 'Direct link to CRM' },
+        { type: 'variationNode', label: 'Variation', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', desc: 'Track financial variations' },
+      ]
     }
   ];
 
   return (
     <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col h-full z-20 shadow-2xl overflow-hidden">
       <div className="p-6 border-b border-slate-800 bg-slate-900/50">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles size={16} className="text-indigo-400" />
-          <h2 className="text-white font-black text-lg tracking-tight uppercase">Toolkit</h2>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-indigo-400" />
+            <h2 className="text-white font-black text-lg tracking-tight uppercase">Toolkit</h2>
+          </div>
+          {/* MASTERPIECE: KEYBOARD SHORTCUT BADGES */}
+          <div className="flex gap-1">
+              {['S', 'P', 'F', 'C'].map(k => (
+                  <span key={k} className="w-4 h-4 rounded bg-white/5 border border-white/10 text-[8px] font-black text-slate-500 flex items-center justify-center" title="Architect Shortcut">{k}</span>
+              ))}
+          </div>
         </div>
         <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Architectural Components</p>
       </div>
