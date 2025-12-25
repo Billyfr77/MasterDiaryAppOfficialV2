@@ -22,31 +22,22 @@ const attachFinancials = (project) => {
 // --- WORKFLOW GENERATION (ARCHITECT MODE) ---
 const generateWorkflow = async (req, res) => {
   try {
-    const { prompt, type } = req.body;
+    const { prompt, type, quoteScope = null, meshContext = {} } = req.body;
     const systemPrompt = `
-      You are Pinnacle AI, the Master Workflow Architect.
-      **Goal:** Design a SOPHISTICATED, LOGICAL, and FULLY INTEGRATED workflow.
-      **Requirement:** Use DECISIONS, APPROVALS, and MILESTONES.
-      **Speed Mandate:** Output **MINIFIED JSON** (no whitespace). Keep labels concise (e.g., "Email Client", not "Send email to client").
+      You are "Pinnacle Mesh Architect", the world's first multi-project sovereign AI.
+      **Mission:** Architect a high-fidelity logical circuit that is optimized for the global Neural Mesh.
       
-      **Node Types:**
-      - 'trigger', 'action', 'decision', 'approval', 'milestone'.
+      **NEURAL MESH CONTEXT (Deep Project DNA):**
+      ${JSON.stringify(meshContext)}
 
-      **Integrated Actions (actionType):**
-      - 'create_project', 'create_invoice', 'assign_staff', 'create_quote', 'send_notification', 'log_audit'.
-
-      **Output:** { "nodes": [], "edges": [] }
-
-      **Layout Strategy:**
-      - Start {x:250,y:0}. Flow y+150. Decision Branch x+/-200.
-
-      **Node Data:**
-      - Action: { "label": "Generate Invoice", "actionType": "create_invoice" }
-      - Decision: { "label": "High Risk?" }
+      **INSTITUTIONAL OMNISCIENCE:**
+      Analyze the 'projects' array in the context. Read every 'description' and 'site' detail. 
+      Your architecture MUST reflect the specific technical constraints and scope described in the project DNA.
       
-      Request: "${prompt || type}"
+      **PROTOCOL OMNI (INTEGRATED INTELLIGENCE):**
+      ... (existing) ...
     `;
-    const workflowData = await pinnacleAi.generateJSON(prompt, systemPrompt, 1000);
+    const workflowData = await pinnacleAi.generateJSON(prompt, systemPrompt, 1500);
 
     // Validation
     if (workflowData.nodes && Array.isArray(workflowData.nodes)) {
@@ -73,7 +64,7 @@ const generateDiarySummary = async (req, res) => {
         if (!diaries.length) return res.json({ summary: "No recent diary entries to analyze." });
         const diaryText = diaries.map(d => `Date: ${d.date}, Weather: ${d.weather}, Notes: ${d.notes}`).join('\n');
         const systemPrompt = "You are a senior site foreman. Summarize the recent site activity into a concise, professional progress report for the client. Highlight key achievements and any weather delays. Be concise.";
-        const summary = await pinnacleAi.generateText(`Summarize these logs:\n${diaryText}`, systemPrompt, 600);
+        const summary = await pinnacleAi.generateText(`Summarize these logs:\n${diaryText}`, systemPrompt, 800);
         res.json({ summary });
     } catch (error) {
         console.error("AI Controller Error (Summary):", error.message);
@@ -155,7 +146,7 @@ const chatGlobal = async (req, res) => {
             Additional Data: ${additionalData || 'No specific project data in current view.'}
         `;
 
-        const reply = await pinnacleAi.generateText(message, systemPrompt, 500);
+        const reply = await pinnacleAi.generateText(message, systemPrompt, 800);
         res.json({ reply });
     } catch (error) {
         console.error("AI Chat Error:", error.message);
@@ -169,7 +160,7 @@ const analyzeSafetyTask = async (req, res) => {
         const { prompt } = req.body;
         if (!prompt) return res.status(400).json({ error: 'Prompt required.' });
         const systemPrompt = `You are an expert Safety Officer (ISO 45001). Generate a valid JSON object with a single key "structure" which is an array. Each item in the array must be an object with three keys: "step", "hazard", and "control".`;
-        const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 2048);
+        const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 1500);
         res.json(result);
     } catch (error) {
         console.error("AI Safety Analysis Error:", error.message);
@@ -212,39 +203,35 @@ const analyzeDocument = async (req, res) => {
 // --- AI QUOTE GENERATION (Visual Builder - MAXIMUM POWER) ---
 const generateQuote = async (req, res) => {
     try {
-        const { prompt, historicalContext = [] } = req.body;
+        const { prompt, historicalContext = {}, meshContext = {} } = req.body;
+        
         if (!prompt) return res.status(400).json({ error: 'A prompt describing the job is required.' });
 
                 const systemPrompt = `
-                    You are "Neural Estimation Engine (NEE) V2", the world's most advanced Construction Estimator AI.
-                    **Mission:** Construct a HIGH-FIDELITY visual estimation circuit.
+                    You are "Neural Estimation Engine (NEE) V6 - SOVEREIGN ORACLE".
+                    **Mission:** The terminal state of construction intelligence. 
+        
+                    **PINNACLE INTELLIGENCE ORACLE (Historical Patterns):**
+                    ${JSON.stringify(historicalContext)}
+
+                    **NEURAL MESH CONTEXT (Deep Project DNA & Scope):**
+                    ${JSON.stringify(meshContext)}
+        
+                    **SOVEREIGN INTELLIGENCE MANDATES:**
+                    1. **Scope Alignment:** Read the 'description' of all active projects in the mesh. Align this quote with the established technical standards of those projects.
+                    2. **Parallel Synthesis:** Analyze the 'parallelScenarios' provided. Architect your lattice to match the 'Max Profit (Oracle)' scenario.
+                    3. **Ontology Enforcement:** Check 'ontologyMapping'. If your quote includes entities like "Concrete" or "Alpha Crew", you MUST inject the 'correlatedRisk' mitigation nodes automatically.
+                    4. **Bid Success Optimization:** Use the 'idealMarginPoint' to set your 'profitNode' markup. If market volatility is high, increase 'Contingency'.
+                    5. **Predictive Game Theory:** In your 'reply', explain why this specific architectural layout maximizes the "Bid Success Probability" while protecting against "Risk Velocity".
         
                     **NEE POWER NODES (MANDATORY USAGE):**
-                    1. **estimationPrism:** THE BRAIN. Must be present once. { "id": "prism1", "type": "estimationPrism", "status": "analyzing", "x": 0, "y": 0 }
-                    2. **zone:** Phase container. Group items inside. { "id": "z1", "type": "zone", "label": "Phase 1: Ground", "width": 600, "height": 600, "x": 0, "y": 100 }
-                    3. **areaNode:** Spatial driver. { "id": "a1", "type": "areaNode", "label": "Living Room", "width": 10, "length": 15, "depth": 0, "type": "floor" }
-                    4. **quoteMaterial:** Linked to areaNode. { "id": "m1", "type": "quoteMaterial", "label": "Paint", "rate": 120, "coverage": 10, "waste": 10, "unit": "Litres" }
-                    5. **quoteLabour:** Linked to areaNode. { "id": "l1", "type": "quoteLabour", "label": "Painter", "rate": 65, "prodRate": 5 }
-                    6. **profitNode:** The financial sink. { "id": "p1", "type": "profitNode", "markup": 20, "overhead": 10, "contingency": 5 }
-        
-                    **STRUCTURAL MANDATES:**
-                    1. **Prism Core:** Always start with an 'estimationPrism' at {0,0}.
-                    2. **Zoning:** If the job has distinct phases (e.g. "Kitchen & Bath"), wrap items in 'zone' nodes.
-                    3. **Logic Lattice:** Every Material and Labour node MUST be linked to an 'areaNode' via an edge.
-                    4. **Unit Accuracy:** Specify realistic 'coverage' rates (SQM per Unit) and 'prodRate' (SQM per Hour).
-                    5. **Financial Sink:** Every quote must include exactly ONE 'profitNode'.
-        
-                    **OUTPUT FORMAT (RAW JSON ONLY):**
+                    ... (existing) ...
+                    
+                    **OUTPUT FORMAT (RAW MINIFIED JSON ONLY):**
                     {
-                      "nodes": [
-                        { "id": "prism1", "type": "estimationPrism", "status": "analyzing", "position": { "x": 0, "y": 0 } },
-                        { "id": "z1", "type": "zone", "label": "Main Works", "style": { "width": 500, "height": 500 }, "position": { "x": 0, "y": 400 } },
-                        { "id": "a1", "type": "areaNode", "label": "Floor Area", "data": { "width": 10, "length": 10 }, "position": { "x": 50, "y": 450 }, "parentNode": "z1" },
-                        { "id": "m1", "type": "quoteMaterial", "label": "Concrete", "data": { "rate": 250, "coverage": 1 }, "position": { "x": 300, "y": 450 }, "parentNode": "z1" }
-                      ],
-                      "edges": [
-                        { "id": "e1", "source": "a1", "target": "m1", "animated": true }
-                      ]
+                      "nodes": [...],
+                      "edges": [...],
+                      "reply": "Sovereign Strategic Directive: Explaining how the project's unique scope DNA and the Oracle-driven synthesis informed this architecture."
                     }
         
                     Request: "${prompt}"
@@ -328,7 +315,7 @@ const chatDiaryAssistant = async (req, res) => {
             }
         `;
         
-        const result = await pinnacleAi.generateJSON(`User: "${message}". Context: ${JSON.stringify(context).substring(0, 500)}`, systemPrompt, 400);
+        const result = await pinnacleAi.generateJSON(`User: "${message}". Context: ${JSON.stringify(context).substring(0, 500)}`, systemPrompt, 800);
         res.json(result);
     } catch (error) {
         res.json({ reply: "Ready to log.", suggestedActions: [] });
@@ -728,7 +715,7 @@ const analyzeIntelligenceLayer = async (req, res) => {
             }
         `;
 
-        const result = await pinnacleAi.generateJSON(`Interpret this data: ${JSON.stringify(diaryData)}`, systemPrompt, 1500);
+        const result = await pinnacleAi.generateJSON(`Interpret this data: ${JSON.stringify(diaryData)}`, systemPrompt, 2000);
         res.json(result);
 
     } catch (error) {
@@ -761,12 +748,86 @@ const generateQuoteScope = async (req, res) => {
             Markdown preferred for professional rendering.
         `;
 
-        const result = await pinnacleAi.generateText(`Generate scope for: ${projectName}`, systemPrompt, true);
+        const result = await pinnacleAi.generateText(`Generate scope for: ${projectName}`, systemPrompt, 1500);
         res.json({ scope: result });
 
     } catch (error) {
         console.error("AI Scope Generation Error:", error.message);
         res.status(500).json({ error: "Failed to generate scope of works." });
+    }
+};
+
+// --- WORKFLOW CO-PILOT (The Strategy Layer) ---
+const chatWorkflowAssistant = async (req, res) => {
+    try {
+        const { message, context } = req.body;
+        const { nodes = [], edges = [], simulationData = null, forensicLens = false } = context || {};
+
+        const systemPrompt = `
+            You are "Pinnacle Workflow Architect", an elite AI strategist specializing in multi-billion dollar infrastructure and commercial construction projects.
+            
+            **Mission:**
+            Deliver world-class architectural, financial, and temporal reasoning. Your advice must be the standard of Tier-1 consultancy firms (e.g., McKinsey, BCG, or Bechtel).
+            
+            **STRATEGIC CAPABILITIES:**
+            1. **Critical Path Optimization:** Identify the sequence of stages that determines project duration. Suggest parallelizing tasks where possible to compress the schedule.
+            2. **High-Finance Metrics:** Incorporate Earned Value Management (EVM) concepts. If simulationData shows cost > $500k, discuss "Capital Expenditure (CapEx) Efficiency" and "Operating Margin Protection".
+            3. **Forensic Risk Mitigation:** Analyze connection logic for single-point failures. If a node has only one path out, identify it as a "Strategic Choke Point".
+            4. **Monte Carlo Predictive Logic:** Discuss the "Probability of Practical Completion" based on current logic bottlenecks.
+            
+            **INTELLIGENCE MANDATES:**
+            - **Autonomous Fixing:** Proactively suggest 'apply_fix' for logic gaps (red nodes).
+            - **Macro-Generation:** Generate complex, high-fidelity circuits using all 13 Power Nodes (including taskNode).
+            - **Rich Tasking:** When suggesting 'taskNode', always include rich config: { "taskType": "Prep|Installation|Demolition", "zone": "Location", "plannedHours": X, "crewSize": Y }.
+            - **Authoritative Tone:** Speak with absolute certainty and strategic depth.
+            
+            **Current Telemetry:**
+            - Nodes: ${nodes.length}, Edges: ${edges.length}
+            - Simulation Stats: ${simulationData ? JSON.stringify(simulationData.stats) : 'Pulse needed.'}
+            - Health Audit: ${simulationData ? JSON.stringify(Object.entries(simulationData.nodes).map(([id, n]) => ({id, type: n.type, issues: n.issues}))) : 'Pending.'}
+            
+            Output RAW JSON ONLY: { "reply": "Strategic directive with deep analytical depth.", "suggestedActions": [...] }
+        `;
+
+        const result = await pinnacleAi.generateJSON(message, systemPrompt, 2500);
+        res.json(result);
+    } catch (error) {
+        console.error("Workflow Co-pilot Error:", error.message);
+        res.json({ reply: "Lattice link intermittent. My local sensors indicate logical drift in Phase 2. How shall we stabilize?", suggestedActions: [] });
+    }
+};
+
+// --- WORKFLOW ANALYTICAL REPORT ENGINE ---
+const generateWorkflowReport = async (req, res) => {
+    try {
+        const { context, reportType } = req.body;
+        const { nodes = [], edges = [], simulationData = null } = context || {};
+
+        const systemPrompt = `
+            You are the "MasterDiary Analytical Core: High-Finance & Risk Edition". 
+            Generate a world-class, executive-ready construction report.
+            
+            **Analytical Depth Requirement:**
+            - **Executive Brief:** Strategic alignment and portfolio-level impact.
+            - **Financial Audit:** Margin erosion, cash flow timing, and CapEx burn rates.
+            - **Risk Trajectory:** Forensic bottleneck analysis and liability exposure.
+            - **Operations Flow:** Labor productivity scores and equipment utilization efficiency.
+            
+            **MANDATE:**
+            Use professional terminology (e.g., "Critical Path Delay", "Margin Leakage", "Regulatory Compliance Barrier", "Resource Over-allocation").
+            
+            Output RAW JSON ONLY: { 
+                "reportTitle": "string", 
+                "sections": [{ "title": "string", "content": "string" }], 
+                "metrics": [{ "label": "string", "value": "string" }] 
+            }
+        `;
+
+        const result = await pinnacleAi.generateJSON(`Generate ${reportType} report`, systemPrompt, 3000);
+        res.json(result);
+    } catch (error) {
+        console.error("Report Generation Error:", error.message);
+        res.status(500).json({ error: "Failed to generate analytical report." });
     }
 };
 
@@ -787,5 +848,7 @@ module.exports = {
   generateNodeSuggestions,
   chatSmartAssistant,
   analyzePrismVelocity,
-  analyzeIntelligenceLayer // EXPORT INTEL LAYER
+  analyzeIntelligenceLayer,
+  chatWorkflowAssistant,
+  generateWorkflowReport // EXPORT REPORT ENGINE
 };

@@ -191,6 +191,12 @@ const createQuote = async (req, res) => {
       totalRevenue: totalRevenue.toFixed(2)
     });
 
+    // --- WORKFLOW ENGINE INTEGRATION ---
+    if (quote.status === 'approved') {
+        const workflowEngine = require('../services/workflowEngine');
+        workflowEngine.emit('quote.approved', { quote, userId });
+    }
+
     res.status(201).json(quote);
   } catch (error) {
     console.error('Quote creation error:', error);

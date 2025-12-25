@@ -57,7 +57,8 @@ export default memo(({ data, selected }) => {
         type="target" 
         position={Position.Left} 
         id="input"
-        className="!bg-slate-900 !w-4 !h-4 !-left-2 !border-[3px] !border-orange-500 hover:!bg-orange-400 hover:!scale-125 transition-all z-50 cursor-crosshair shadow-[0_0_15px_rgba(249,115,22,0.6)]" 
+        className="!bg-slate-900 !w-4 !h-4 !border-[3px] !border-orange-500 hover:!bg-orange-400 hover:!scale-125 transition-all z-50 cursor-crosshair shadow-[0_0_15px_rgba(249,115,22,0.6)]" 
+        style={{ left: 0, top: '50%', transform: 'translate(-50%, -50%)' }}
       />
 
       {/* Content (Counter-Rotated) */}
@@ -69,35 +70,42 @@ export default memo(({ data, selected }) => {
         <p className="text-sm font-bold text-white leading-tight max-w-[120px] drop-shadow-md">
             {data.label || 'Condition Check?'}
         </p>
+        {data.config?.variable && (
+            <div className="mt-2 px-2 py-1 rounded bg-black/40 border border-orange-500/20 text-[8px] font-mono text-orange-200 uppercase tracking-tighter">
+                IF: {data.config.variable} {data.config.operator} {data.config.threshold}
+            </div>
+        )}
       </div>
 
       {/* Output Handles */}
       
       {/* TRUE / YES (Top) */}
-      <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center group/yes">
+      <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center group/yes pointer-events-none">
         <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md mb-2 transition-transform group-hover/yes:-translate-y-1">
             <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Yes</span>
         </div>
-        <Handle 
-            type="source" 
-            position={Position.Top} 
-            id="true"
-            className="!bg-emerald-500 !w-4 !h-4 !relative !top-0 !left-0 !transform-none !border-[3px] !border-slate-900 hover:!scale-125 transition-all cursor-crosshair shadow-[0_0_15px_rgba(16,185,129,0.6)]" 
-        />
       </div>
+      <Handle 
+          type="source" 
+          position={Position.Top} 
+          id="true"
+          className="!bg-emerald-500 !w-4 !h-4 !border-[3px] !border-slate-900 hover:!scale-125 transition-all cursor-crosshair shadow-[0_0_15px_rgba(16,185,129,0.6)]" 
+          style={{ top: 0, left: '50%', transform: 'translate(-50%, -50%)' }}
+      />
 
       {/* FALSE / NO (Bottom) */}
-      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex flex-col-reverse items-center group/no">
+      <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex flex-col-reverse items-center group/no pointer-events-none">
         <div className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 backdrop-blur-md mt-2 transition-transform group-hover/no:translate-y-1">
             <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">No</span>
         </div>
-        <Handle 
-            type="source" 
-            position={Position.Bottom} 
-            id="false"
-            className="!bg-rose-500 !w-4 !h-4 !relative !bottom-0 !left-0 !transform-none !border-[3px] !border-slate-900 hover:!scale-125 transition-all cursor-crosshair shadow-[0_0_15px_rgba(243,63,94,0.6)]" 
-        />
       </div>
+      <Handle 
+          type="source" 
+          position={Position.Bottom} 
+          id="false"
+          className="!bg-rose-500 !w-4 !h-4 !border-[3px] !border-slate-900 hover:!scale-125 transition-all cursor-crosshair shadow-[0_0_15px_rgba(243,63,94,0.6)]" 
+          style={{ bottom: 0, left: '50%', transform: 'translate(-50%, 50%)' }}
+      />
 
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Plus, Trash2, GripVertical, Type, CheckSquare, PenTool, Image, AlertTriangle, Sparkles, Loader2, X, List, Calendar, FileText, ChevronDown, Grid, Settings, MoveHorizontal, Copy, Wand2, Palette, Layout, Maximize2, Clock, Cloud, User, Hammer, Shield, Video, QrCode, Smartphone, File } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../../utils/api'; 
 import { RiskMatrix } from './SafetyComponents'; 
 import { useData } from '../../context/DataContext'; 
@@ -540,6 +541,8 @@ const PropertiesPanel = ({ field, onChange, accentColor, onAccentChange }) => {
 // ==========================================
 const SafetyFormBuilder = ({ onSave, initialData = [] }) => {
   const { getSession, saveSession } = useData();
+  const location = useLocation();
+  const hasAutoInitialized = useRef(false);
 
   const parseInitialData = (data) => {
       if (Array.isArray(data)) return data;
@@ -573,7 +576,35 @@ const SafetyFormBuilder = ({ onSave, initialData = [] }) => {
   const addField = (type) => { const newField = { id: window.crypto.randomUUID(), type, label: type === 'header' ? 'New Section' : type === 'paragraph' ? '' : `New ${type}`, value: type === 'paragraph' ? 'Enter text here...' : '', required: false, width: '100%', fontSize: type === 'header' ? '2xl' : 'normal', options: type === 'checkbox' || type === 'select' || type === 'radio' ? ['Option 1', 'Option 2'] : [] }; setFields((prev) => [...prev, newField]); };
   const duplicateField = (field) => { const newField = { ...field, id: window.crypto.randomUUID() }; setFields(prev => [...prev, newField]); };
   const handleAIPolish = async (field) => { if (!field.label && !field.value) return; setPolishingFieldId(field.id); try { const res = await api.post('/safety/ai-content', { prompt: `Polish and professionalize this text for a construction safety document: "${field.value || field.label}"`, mode: 'polish' }); const polishedText = res.data.result?.text || res.data.result || field.label; const updated = { ...field, isAI: true, verified: false }; if (field.type === 'paragraph') updated.value = polishedText; else updated.label = polishedText; handleFieldUpdate(updated); } catch (e) { console.error("Polish failed", e); } finally { setPolishingFieldId(null); } };
-  const generateWithAI = async () => { if (!aiPrompt) return; setAiLoading(true); try { const res = await api.post('/safety/ai-content', { prompt: aiPrompt, mode: 'full_form' }); if (res.data.result && res.data.result.fields) { const aiFields = res.data.result.fields.map(f => ({ ...f, id: window.crypto.randomUUID(), width: '100%', isAI: true, verified: false })); setFields(aiFields); setShowAIModal(false); } else { alert("AI Response format invalid."); } } catch (err) { console.error("AI Error:", err); alert("Failed to generate form."); } finally { setAiLoading(false); } };
+  const generateWithAI = async (promptOverride) => { 
+      const finalPrompt = promptOverride || aiPrompt;
+      if (!finalPrompt) return; 
+      setAiLoading(true); 
+      try { 
+          const res = await api.post('/safety/ai-content', { prompt: finalPrompt, mode: 'full_form' }); 
+          if (res.data.result && res.data.result.fields) { 
+              const aiFields = res.data.result.fields.map(f => ({ ...f, id: window.crypto.randomUUID(), width: '100%', isAI: true, verified: false })); 
+              setFields(aiFields); 
+              setShowAIModal(false); 
+          } else { 
+              alert("AI Response format invalid."); 
+          } 
+      } catch (err) { 
+          console.error("AI Error:", err); 
+          alert("Failed to generate form."); 
+      } finally { 
+          setAiLoading(false); 
+      } 
+  };
+
+  useEffect(() => {
+      if (location.state?.autoInitialize && !hasAutoInitialized.current) {
+          hasAutoInitialized.current = true;
+          const { template, projectName } = location.state;
+          const prompt = `Create a professional construction ${template || 'Safety Document'} for project: ${projectName || 'General Works'}. Include relevant hazards, controls, and sign-off sections.`;
+          generateWithAI(prompt);
+      }
+  }, [location.state]);
 
   return (
     <DndProvider backend={HTML5Backend}>

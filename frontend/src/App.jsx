@@ -8,7 +8,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command, GitBranch, Briefcase, CreditCard, Activity, PenTool, Menu, X } from 'lucide-react'
+import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command, GitBranch, Briefcase, CreditCard, Activity, PenTool, Menu, X, Globe } from 'lucide-react'
 import { NotificationProvider } from './context/NotificationContext'
 import { SettingsProvider } from './context/SettingsContext'
 import { UIProvider } from './context/UIContext'
@@ -35,6 +35,7 @@ import NodesLibrary from './components/NodesLibrary'
 import QuoteBuilder from './components/QuoteBuilder'
 import VisualMapBuilder from './components/VisualMapBuilder'
 import WorkflowBuilder from './components/WorkflowBuilder/WorkflowBuilder'
+import ExecutiveHQ from './components/ExecutiveHQ'
 import InvoiceBuilder from './components/InvoiceBuilder'
 import XeroCallback from './components/XeroCallback'
 import PinnacleCopilot from './components/PinnacleCopilot'
@@ -138,6 +139,7 @@ function App() {
   const isPortal = location.pathname.startsWith('/portal');
   const isLanding = location.pathname === '/';
   const isWorkflowBuilder = location.pathname.startsWith('/workflows');
+  const isExecutiveHQ = location.pathname.startsWith('/hq');
 
   return (
     <ErrorBoundary>
@@ -155,7 +157,7 @@ function App() {
                     scrollThumbWidth={scrollThumbWidth} scrollThumbLeft={scrollThumbLeft}
                     handleThumbMouseDown={handleThumbMouseDown}
                     isLanding={isLanding} isPortal={isPortal}
-                    isWorkflowBuilder={isWorkflowBuilder}
+                    isWorkflowBuilder={isWorkflowBuilder || isExecutiveHQ}
                   />
                 </DndProvider>
               </DiaryThemeProvider>
@@ -261,7 +263,7 @@ function AppInner({
                   
                   <div className="hidden md:flex flex-col flex-1 min-w-0 relative group/nav h-full justify-center">
                       <nav ref={navRef} className="flex items-center gap-1 overflow-x-auto custom-scrollbar-x h-full items-center" onScroll={handleNavScroll}>
-                        <NavLink to="/pulse" icon={<Activity size={16} />} label="Pulse" activeColor={theme.accent} />
+                        <NavLink to="/hq" icon={<Globe size={16} />} label="Neural HQ" activeColor={theme.accent} />
                         <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" activeColor={theme.accent} />
                         <NavLink to="/diary" icon={<PenTool size={16} />} label="Diary" activeColor={theme.accent} />
                         <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" activeColor={theme.accent} />
@@ -306,8 +308,9 @@ function AppInner({
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login onLogin={onLogin} />} />
-              <Route path="/pulse" element={<UltimatePulseDashboard />} />
-              <Route path="/dashboard" element={<UltimatePulseDashboard />} />
+              <Route path="/pulse" element={<ExecutiveHQ />} />
+              <Route path="/dashboard" element={<ExecutiveHQ />} />
+              <Route path="/hq" element={<ExecutiveHQ />} />
               <Route path="/projects" element={<EnhancedProjects />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/staff" element={<EnhancedStaff />} />
@@ -322,6 +325,7 @@ function AppInner({
               <Route path="/quotes/builder/:id" element={<QuoteBuilder />} />
               <Route path="/map-builder" element={<VisualMapBuilder />} />
               <Route path="/workflows" element={<WorkflowBuilder />} />
+              <Route path="/hq" element={<ExecutiveHQ />} />
               <Route path="/reports" element={<PinnacleIntelligentReports />} />
               <Route path="/reports/new" element={<DocumentForm />} />
               <Route path="/reports/edit/:id" element={<DocumentForm />} />

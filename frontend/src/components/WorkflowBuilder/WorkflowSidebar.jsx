@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   FileText, CheckSquare, MessageSquare, Truck, Clipboard, 
   Bell, User, Zap, GitFork, Clock, CreditCard, ShieldCheck, 
-  BookOpen, Sparkles, Wand2, AlertTriangle 
+  BookOpen, Sparkles, Wand2, AlertTriangle, MapPin, TrendingUp, Folder, BrainCircuit
 } from 'lucide-react';
 
 export default function WorkflowSidebar({ onNodeClick, setShowSidebar }) {
@@ -19,7 +19,7 @@ export default function WorkflowSidebar({ onNodeClick, setShowSidebar }) {
       items: [
         { type: 'trigger', label: 'Start Trigger', icon: Zap, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', desc: 'Begins the workflow on event' },
         { type: 'decision', label: 'Logic / Split', icon: GitFork, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', desc: 'Conditional branching (Yes/No)' },
-        { type: 'default', label: 'Standard Task', icon: Clipboard, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'General purpose action' },
+        { type: 'taskNode', label: 'Standard Task', icon: Clipboard, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'General purpose action' },
         { type: 'milestone', label: 'Milestone', icon: Bell, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', desc: 'Key project event' },
         { type: 'approval', label: 'Approval Gate', icon: User, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', desc: 'Requires manual sign-off' },
       ]
@@ -27,6 +27,7 @@ export default function WorkflowSidebar({ onNodeClick, setShowSidebar }) {
     {
       name: 'App Integrations',
       items: [
+        { type: 'projectNode', label: 'Project Hub', icon: Folder, color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', desc: 'Initialize or track project lifecycle' },
         { type: 'invoiceNode', label: 'Invoice Engine', icon: CreditCard, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', desc: 'Auto-generate or track invoices' },
         { type: 'safetyNode', label: 'Safety Document', icon: ShieldCheck, color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', desc: 'SWMS and Compliance checks' },
         { type: 'resourceNode', label: 'Resource Sync', icon: Truck, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', desc: 'Allocate staff or equipment' },
@@ -110,10 +111,10 @@ export default function WorkflowSidebar({ onNodeClick, setShowSidebar }) {
         <div className="mt-12 p-5 bg-indigo-600/5 rounded-2xl border border-indigo-500/20 relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <h3 className="text-white text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2">
-            <Wand2 size={14} className="text-indigo-400" /> AI Design Tip
+            <BrainCircuit size={14} className="text-indigo-400" /> AI Architect
           </h3>
           <p className="text-slate-400 text-[10px] font-medium leading-relaxed relative z-10">
-            Drag a <span className="text-emerald-400 font-bold">Invoice Engine</span> node to automatically trigger billing when a project phase reaches completion.
+            Ask the <span className="text-indigo-400 font-bold">Neural Co-pilot</span> to "Generate a complete workflow for a kitchen reno" to see immediate complex architecture.
           </p>
         </div>
       </div>

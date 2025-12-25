@@ -35,11 +35,13 @@ router.post('/dashboard-insights', aiController.generateDashboardInsights); // N
 router.post('/node-suggestions', aiController.generateNodeSuggestions); // Ghost Node Pulse
 router.post('/analyze-prism', aiController.analyzePrismVelocity); // PRISM POWER MODE
 router.post('/analyze-intelligence', aiController.analyzeIntelligenceLayer); // INTEL LAYER V1
+router.post('/generate-workflow-report', aiController.generateWorkflowReport);
 
 // Chat Aliases
 router.post('/chat-quote', aiController.chatQuoteAssistant);
 router.post('/chat-diary', aiController.chatDiaryAssistant);
 router.post('/chat-smart', aiController.chatSmartAssistant); // Advanced Canvas Assistant
+router.post('/chat-workflow', aiController.chatWorkflowAssistant);
 router.post('/cloud-assist', aiController.chatGlobal);
 
 module.exports = router;

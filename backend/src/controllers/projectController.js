@@ -30,7 +30,10 @@ const axios = require('axios');
           startDate: Joi.date().iso().optional().allow(null),
           endDate: Joi.date().iso().optional().allow(null),
           latitude: Joi.number().min(-90).max(90).optional().allow(null),
-          longitude: Joi.number().min(-180).max(180).optional().allow(null)
+          longitude: Joi.number().min(-180).max(180).optional().allow(null),
+          // Lattice Initialization Fields
+          totalCost: Joi.number().optional(),
+          totalDuration: Joi.number().optional()
         });
 
 // Helper to attach financial calculations

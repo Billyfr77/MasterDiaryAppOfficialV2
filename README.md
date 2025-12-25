@@ -1,88 +1,71 @@
-# 🏗️ MasterDiaryOS // The Neural Construction Operating System
-**Version:** 2.8.0 (Generative Construct Edition)
-**Intelligence Core:** grok-4-1-fast-reasoning (Flagship)
-**Architecture:** AI-Native Topological Logic Circuit
+# MasterDiaryOS // The Sovereign Operational Organism
+**Version:** 9.0.0-Singularity // **Valuation:** $1B+ Architectural Blueprint
+**Control Level:** Level 9 Operational Singularity // **Intelligence:** Pinnacle Core (Grok-4)
 
 ---
 
-## 📜 Executive Overview
-MasterDiaryOS is an **AI-Native Construction Operating System** that transforms site management into a high-fidelity **Operational Circuit**. It is not a database; it is a **Generative Logic Engine**. By treating personnel, time, money, and geography as interconnected nodes in a living graph, the system automates forensic reporting, predicts margin erosion, and generates complex quotes from simple natural language prompts.
+## 🌌 Vision: The Terminal State of Industry
+MasterDiaryOS is the world's first **Self-Learning Construction Operating System**. It moves beyond passive data entry to create a **Unitary Intelligence Mesh** that connects high-fidelity estimation, autonomous workflow architecture, and real-time field execution. 
+
+It is designed to **eliminate human strategic error** and maximize enterprise yield through a closed-loop neural feedback system.
 
 ---
 
-## 🧠 Core Intelligence Modules
+## 💎 The Sovereign Ecosystem
 
-### 1. Neural Estimation Engine (NEE) // Generative Quoting
-*   **Living Circuit:** Replaces static spreadsheets with a dynamic, visual node graph.
-    *   **Spatial Dominance:** Drag an **Area Node** (e.g., "Living Room"), set dimensions, and connect it to a **Material Node** (e.g., "Timber"). Quantities auto-calculate based on coverage rates.
-    *   **Labour Intelligence:** Linked **Labour Nodes** automatically calculate required man-hours based on productivity rates (m²/hr).
-    *   **Financial Sink:** The **Profit Node** acts as a live command center for markup, overhead, and contingency, updating the Contract Value instantly.
-*   **AI Co-Pilot:** The "Senior Estimator" AI can architect entire sub-assemblies. Ask "Add a deck," and it drops an Area node pre-wired to Bearers, Joists, Decking, and Labour.
-*   **Forensic Audit:** The **Intelligence Layer** scans for "Orphaned Areas" (spaces with no cost) and "Zero Rate" items, displaying a **Margin Heatmap** to visualize financial risk.
+### 1. 🏛️ The Neural HQ (Enterprise Command)
+The pinnacle of the OS. A SpaceX-grade mission control surface for managing a multi-project empire.
+- **Neural Mesh visualizer:** Visualizes the entire business as an interconnected galaxy of project Nexuses.
+- **Oracle War Room:** Full-viewport AI command center for issuing enterprise-wide directives.
+- **Anomaly Matrix:** A 144-bit logical grid that identifies cross-project resource collisions and risks in real-time.
+- **Quantum Time Warp:** A global temporal slider to scrub the state of the entire enterprise through history and into predictive futures.
 
-### 2. Neural Diary Engine (NDE) // Visual Site Execution
-*   **Topological Time:** Treats the site diary as a visual circuit.
-    *   **Chronos Hub:** The central timekeeper. Connecting a **Delay Node** (e.g., "Rain Event") to the Hub instantly propagates the time loss to all linked Staff and Equipment nodes.
-    *   **Intelligent Shift Engine:** Automatically decomposes shifts into **Normal, 1.5x (OT1), 2.0x (OT2), and Night** pay tiers.
-    *   **Smart Connect:** Drag a connection line into empty space to summon a context-aware menu that suggests the next logical node (e.g., drag from Zone -> suggests Task).
-*   **Inline Editing:** Click any quantity or duration directly on the node face to edit it instantly without breaking flow.
+### 2. 🧠 Neural Estimation Brain (Quote Builder)
+The first self-improving bidding engine in the construction industry.
+- **Protocol Gamma (Learning Loop):** The AI automatically adjusts productivity rates and pricing buffers based on real-world performance data captured in the field.
+- **Sovereign Oracle Interface:** Runs 10,000 parallel simulations to identify the "Ideal Margin Point"—the perfect price to win the bid and maximize profit.
+- **Visual Logic Estimation:** A node-based financial circuit board with 99% predictive accuracy.
 
-### 3. Pinnacle Tutor // Neural Onboarding
-*   **Interactive AI Guide:** A built-in "Neural Tutor" that spotlights screen elements and teaches users how to master the OS in real-time.
-*   **Module-Based Training:** Specific training modules for "Quote Building," "Diary Management," and "Financial Auditing."
+### 3. 🕸️ Neural Workflow Architect (Workflow Builder)
+The strategic nervous system that translates plans into actionable logic.
+- **Level 5 Autonomy:** Self-healing protocols (Auto-Compress Time & Auto-Balance Margin) that mutate the graph to fix bottlenecks.
+- **The Neural Time Machine:** Holographic temporal versioning with "Ghosting" to compare original plans vs. current drift.
+- **8 Geometric Structures:** Cinematic architectures (Radial, Star, Relay, etc.) that organize project logic with mathematical beauty.
+- **Predictive Ghosting:** AI foresight that projects "Shadow Nodes" of the next logical steps to accelerate architecture by 10x.
 
-### 4. Neural Workflow Engine (NWE) // Pinnacle OS Brain
-*   **The Masterpiece Logic Hub:** The most advanced feature of the OS, acting as the centralized brain for cross-module automation.
-    *   **Power Node Architecture:** Beyond standard tasks, the NWE utilizes high-fidelity **Integration Nodes** that execute real app functionality:
-        *   **Invoice Engine:** Configurable nodes that auto-draft financial claims with specific amounts and client targets.
-        *   **Compliance Lock:** Safety nodes pre-wired to SWMS templates and risk sensitivity levels (Low to Critical).
-        *   **Resource Sync:** Live allocation nodes for syncing machinery (Excavators, Fleet) and staff roles.
-        *   **Forensic Audit:** Specialized violet-glow nodes that perform deep financial risk scans and detect timeline drift.
-        *   **Temporal Delay:** Intelligent logic holds for material curing, weather events, or approval gateways.
-    *   **Neural Co-pilot:** A dedicated, floating AI chat interface specifically for the builder. Command the AI to *"Architect a high-risk demolition flow"* or *"Refactor this branch for maximum margin,"* and watch it execute in real-time.
-    *   **Forensic Lens Mode:** A masterpiece visual toggle that shifts the entire canvas into a high-contrast risk assessment view, highlighting anomalies with violet pulses and cyber-grid shifts.
-    *   **Smart Edge Logic:** Connection lines aren't just visual; they are intelligent logic paths. Connecting from a **Logic Gate** (Decision Node) automatically architects **YES (Pass)** and **NO (Fail)** paths with holographic badges and color-coded signals.
-    *   **Pinnacle Properties:** Every node type features a uniquely tailored "Jewel" interface, ensuring intuitive control over complex functional configurations.
-
-### 5. GeoSpatial Map Architect // Digital Twin
-*   **Georeferenced Nodes:** Links visual diary nodes to exact GPS coordinates.
-*   **AI Site Compounds:** Automatically generates exclusion zones, site offices, and resource laydown areas on interactive maps.
-
-### 6. Revenue Recovery // Forensic Invoicing
-*   **Multi-Instance Harvesting:** Directly import work segments from the diary canvas.
-*   **Xero & ERP Sync:** Bi-directional synchronization with professional accounting suites.
-*   **Variation Tracking:** Forensic management of project variations and retention percentages.
+### 4. 📱 Mission Control (Field Player & Diary)
+The bridge between office intelligence and site execution.
+- **Lattice Player:** A cinematic, card-based interface for site workers that turns complex graphs into simple "Mission Cards."
+- **Real-Time Telemetry:** Ambient status pulses that sync site actions (sign-offs, risks) to the Neural HQ in <14ms.
+- **Narrative Intelligence:** AI that performs sentiment analysis on site notes to predict morale-based productivity drops.
 
 ---
 
-## 🛠️ Technical Implementation
+## 🔄 The Sovereign Loop Protocols
 
-### **Flagship AI Strategy**
-The system exclusively utilizes **grok-4-1-fast-reasoning**.
-*   **Topological Stripping:** To minimize token costs by **85%**, the system strips nodes to their bare identity (ID, Role, Duration) before sending them to the AI.
-*   **Robust Parsing:** Custom logic handles the reasoning model's `<thought>` tags and preambles to ensure 100% valid JSON data flow.
-
-### **The Visual Circuit Engine**
-*   **React Flow Integration:** Custom node types (`DiaryNode`, `AreaNode`, `EstimationPrismNode`) rendered with a premium "Jewel" aesthetic (Glassmorphism + Neon Glows).
-*   **Recursive Propagation:** Data (Time, Cost, Allowance) flows through infinite chains of connected nodes.
-*   **Smart Edge Logic:** Connections enforce business rules (e.g., Areas can only drive Materials/Labour).
+| Protocol | Path | Action |
+| :--- | :--- | :--- |
+| **Alpha (Genesis)** | Quote -> Workflow | Approved quotes auto-architect the initial project workflow lattice. |
+| **Beta (Surge)** | Workflow -> Diary | Workflow taskNodes manifest as actionable Mission Cards for site workers. |
+| **Gamma (Learning)** | Diary -> Quote | Field actuals (speed/cost) automatically train the Quote AI for the next bid. |
+| **Omni (Mesh)** | HQ -> Global | Enterprise directives re-stagger project starts to optimize global resource mesh. |
 
 ---
 
-## 📂 Directory Map
-
-*   `frontend/src/components/Quotes/`: **The Neural Estimation Engine.**
-    *   `QuoteBuilder.jsx`: The main canvas and orchestration logic.
-    *   `QuoteNodes.jsx`: Implementation of Power Nodes (Prism, Area, Profit).
-    *   `QuoteIntelligenceLayer.jsx`: The forensic audit and insights system.
-*   `frontend/src/components/TimelineCanvas/`: **The Neural Diary Engine.**
-    *   `TimelineNodes.jsx`: Implementation of Diary Nodes (Staff, Equipment, Chronos).
-    *   `TimelineEngine.js`: The recursive logic for time/cost propagation.
-*   `frontend/src/components/Onboarding/`: **Pinnacle Tutor.**
-    *   `AIOnboardingOverlay.jsx`: The spotlight and tutorial engine.
-*   `backend/src/controllers/aiController.js`: **The AI Brain.**
-    *   Handles `generateQuote`, `chatQuoteAssistant`, and `add_complex_node` logic.
+## 🎨 Visual Identity: "The Masterpiece Standard"
+- **Obsidian Glass UI:** High-end dark theme with 90% opacity, backdrop-blur-3xl, and 1px borders.
+- **Neural Surge:** Vibrant, theme-driven connection paths with triple-layer neon glows and animated data packets.
+- **Tactile Motion:** 1.2s Cubic-Bezier transitions for all geometry shifts and re-architecting.
+- **Aerospace HUD:** High-density technical readouts, telemetry corners, and mono-spaced typography.
 
 ---
 
-**MasterDiaryOS: Interconnecting people, time, and money in a single visual circuit.**
+## 🛠️ Technological DNA
+- **Frontend:** React 18, Vite, React Flow, Framer Motion, Lucide Icons.
+- **Backend:** Node.js, Express, Grok-4 Reasoning AI, Sequelize ORM.
+- **Database:** SQLite (Current) // Architected for PostgreSQL Cluster Scaling.
+- **Intelligence:** Proprietary NEE (Estimation) and NWA (Workflow) Engines.
+
+---
+**MasterDiaryOS: Logic is Literal. Intelligence is Actionable.**
+*Copyright (c) 2025 Billy Fraser. All rights reserved.*

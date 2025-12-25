@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, AlertTriangle, FileText, Settings, Download, PenTool, Sparkles, Loader2, X } from 'lucide-react';
-import { api } from '../../utils/api';
+import { useLocation } from 'react-router-dom';
+import { api } from '../../utils/api'; 
 import SafetyFormViewer from './SafetyFormViewer';
 import SafetyFormBuilder from './SafetyFormBuilder';
 import SafetyImporter from './SafetyImporter';
@@ -134,9 +135,16 @@ const SafetyDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedForm, setSelectedForm] = useState(null);
   const [showCopilot, setShowCopilot] = useState(false);
+  const location = useLocation();
   
   // State to pass AI-generated data to builder
   const [aiGeneratedData, setAIGeneratedData] = useState(null);
+
+  useEffect(() => {
+      if (location.state?.autoInitialize) {
+          setActiveTab('builder');
+      }
+  }, [location.state]);
 
   useEffect(() => {
     fetchData();

@@ -3,6 +3,8 @@ const path = require('path');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const compression = require('compression');
 
 // Load root .env first (e.g., C:\Users\billy\.env)
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
@@ -39,6 +41,8 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(limiter);
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(compression());
 
 // CORS headers middleware - Allow All for Production
 app.use((req, res, next) => {

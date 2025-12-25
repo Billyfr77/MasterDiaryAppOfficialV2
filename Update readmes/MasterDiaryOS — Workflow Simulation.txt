@@ -1,0 +1,278 @@
+MasterDiaryOS — Workflow Simulation Mode Enhancement Specification
+Authoritative Requirements for Safe, Non‑Breaking Implementation
+This document defines the expected behaviour, capabilities, and non‑breaking constraints for upgrading the Workflow Builder’s Simulation Mode and related intelligence layers in MasterDiaryOS.
+
+Gemini 3 CLI should treat this as a feature‑expansion specification, not a refactor.
+All existing structures, naming conventions, and architectural patterns must remain intact.
+
+🎯 Purpose of This Upgrade
+Enhance the existing Simulation Mode so it becomes a predictive, diagnostic, and operational intelligence layer that:
+
+Simulates workflow execution
+
+Detects configuration issues
+
+Predicts time, cost, and risk
+
+Visualises execution paths
+
+Provides actionable insights
+
+Remains fully compatible with all existing nodes, engines, and logic
+
+This upgrade must not break any existing workflows, nodes, or integrations.
+
+🧩 Core Requirements
+1. Node‑Level Auto‑Analysis
+Simulation Mode must evaluate each node and provide:
+
+1.1 Configuration Validation
+Missing Smart Config fields
+
+Missing approvers
+
+Invalid or unreachable nodes
+
+Broken edges
+
+Unassigned resources
+
+Missing safety documents
+
+Invalid invoice parameters
+
+1.2 Auto‑Repair Suggestions
+Simulation Mode should suggest, not auto‑apply:
+
+Default values
+
+Recommended approvers
+
+Required safety docs
+
+Required diary entries
+
+Required resource allocations
+
+Missing milestones
+
+No destructive changes. Suggestions only.
+
+2. Execution Path Simulation
+Simulation Mode must simulate the workflow as if it were running in production.
+
+2.1 Path Traversal
+Follow all edges
+
+Evaluate logic gates
+
+Branch on conditions
+
+Detect infinite loops
+
+Detect dead ends
+
+2.2 Node State Prediction
+For each node:
+
+Will it run successfully?
+
+Will it error?
+
+Will it block?
+
+Will it wait for approval?
+
+Will it require external input?
+
+3. Time Simulation Layer
+Simulation Mode must estimate:
+
+Duration of each node
+
+Critical path
+
+Total job duration
+
+Bottlenecks
+
+Idle time
+
+Approval delays
+
+Use existing metadata where available; otherwise infer from:
+
+Node type
+
+Historical patterns (if available)
+
+Industry defaults
+
+No destructive writes.
+
+4. Cost Simulation Layer
+Simulation Mode must calculate:
+
+Cost accumulation over time
+
+Resource cost impact
+
+Equipment cost impact
+
+Variation cost impact
+
+Invoice timing
+
+Cost drift (expected vs simulated)
+
+This must not modify any real financial records.
+
+5. Risk Simulation Layer
+Simulation Mode must evaluate:
+
+SWMS completeness
+
+High‑risk nodes
+
+Missing safety steps
+
+Issue likelihood
+
+Potential compliance failures
+
+Required diary logs
+
+Output must be advisory only.
+
+6. Visual Simulation Output
+Simulation Mode must generate a non-destructive visual overlay on the workflow canvas:
+
+6.1 Node Overlays
+Green: passes simulation
+
+Yellow: warnings
+
+Red: errors
+
+Blue: waiting/approval
+
+Grey: unreachable
+
+6.2 Edge Overlays
+Highlight active paths
+
+Dim inactive paths
+
+Show branching probabilities (if applicable)
+
+6.3 Timeline View
+A separate panel showing:
+
+Gantt‑style timeline
+
+Critical path
+
+Bottlenecks
+
+Cost accumulation
+
+Risk spikes
+
+7. Insight Engine Integration
+Simulation Mode must output structured insights:
+
+7.1 Required Insights
+“Top 5 risks”
+
+“Top 5 delays”
+
+“Missing configuration items”
+
+“Unreachable nodes”
+
+“Cost hotspots”
+
+“Approval bottlenecks”
+
+7.2 Format
+JSON + human‑readable summaries.
+No destructive writes.
+
+🛡️ Non‑Breaking Constraints (Critical)
+Gemini 3 CLI must adhere to the following:
+
+1. Do not rename any existing classes, files, or nodes.
+2. Do not delete or refactor existing logic.
+3. Do not modify existing workflow execution behaviour.
+4. All enhancements must be additive.
+5. All new features must be behind clearly named, isolated modules.
+6. No existing workflows may change behaviour after this update.
+7. Simulation Mode must remain read‑only.
+📦 Implementation Boundaries
+Gemini 3 CLI may:
+
+Add new helper modules
+
+Add new UI overlays
+
+Add new simulation logic
+
+Add new insight generation logic
+
+Add new non-destructive validation logic
+
+Add new panels, views, or tabs
+
+Gemini 3 CLI must not:
+
+Change database schemas without explicit migration blocks
+
+Modify existing node execution logic
+
+Alter existing API contracts
+
+Change workflow save/load behaviour
+
+Change existing node types
+
+📘 Expected Output of Simulation Mode
+After upgrade, Simulation Mode should produce:
+
+1. A visual simulation overlay
+2. A structured insight report
+3. A timeline/cost/risk simulation
+4. Node‑level validation results
+5. Non-destructive suggestions for fixes
+All of this must be read‑only and advisory.
+
+🧠 Optional Enhancements (If Safe to Implement)
+These are allowed only if they do not break anything:
+
+Probability‑based branching
+
+Historical pattern learning
+
+Auto‑generated SWMS suggestions
+
+Auto‑generated resource allocation suggestions
+
+Cross‑job intelligence nodes (read‑only)
+
+🏁 Success Criteria
+Simulation Mode is considered successfully upgraded when:
+
+It can run a full simulation on any workflow
+
+It identifies configuration issues
+
+It predicts time, cost, and risk
+
+It visualises execution paths
+
+It provides actionable insights
+
+It does not break any existing workflows
+
+It does not modify any data
+
+It integrates seamlessly with the existing UI

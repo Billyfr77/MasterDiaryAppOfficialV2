@@ -207,6 +207,10 @@ const createPaintDiary = async (req, res) => {
     const diary = await Diary.create(diaryData, { transaction });
     await transaction.commit();
 
+    // Trigger Workflow Engine
+    const workflowEngine = require('../services/workflowEngine');
+    workflowEngine.emit('diary.saved', { diary, projectId, userId: req.user?.id });
+
     res.status(201).json(diary);
   } catch (error) {
     if (transaction) await transaction.rollback();

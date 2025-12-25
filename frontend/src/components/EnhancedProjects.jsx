@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
@@ -138,6 +138,19 @@ const EnhancedProjects = () => {
     totalValue: 0,
     avgProjectValue: 0
   })
+
+  const location = useLocation();
+
+  useEffect(() => {
+      if (location.state?.openProjectId) {
+          const pid = location.state.openProjectId;
+          api.get(`/projects/${pid}`).then(res => {
+              setSelectedProject(res.data);
+              // Clear state to prevent loop on refresh
+              window.history.replaceState({}, document.title);
+          }).catch(e => console.error("Failed to auto-launch project", e));
+      }
+  }, [location.state]);
 
   useEffect(() => {
     fetchData()

@@ -6,12 +6,13 @@ Based on the current pricing model ($0.20/1M Input Tokens, $0.50/1M Output Token
 
 | Feature | Input Tokens (Avg) | Output Tokens (Avg) | Cost Per Run |
 | :--- | :--- | :--- | :--- |
-| **Quote Blueprint** | 500 | 1000 | **$0.00060** |
-| **Workflow Architect** | 600 | 1000 | **$0.00062** |
-| **Smart Diary Log** | 300 | 400 | **$0.00026** |
-| **NDE Prism Analysis** | 800 | 1500 | **$0.00091** |
-| **Intelligence Layer V1** | 800 | 1500 | **$0.00091** |
-| **Copilot Chat** | 500 | 500 | **$0.00035** |
+| **Quote Blueprint** | 800 | 2000 | **$0.00116** |
+| **Workflow Architect** | 800 | 1500 | **$0.00091** |
+| **Smart Diary Log** | 400 | 800 | **$0.00048** |
+| **NDE Prism Analysis** | 1000 | 1500 | **$0.00095** |
+| **Intelligence Layer V1** | 1000 | 2000 | **$0.00120** |
+| **Copilot Chat** | 600 | 800 | **$0.00052** |
+| **Forensic Reports** | 1200 | 3000 | **$0.00174** |
 
 ## 📅 Projected Usage Costs (Per User)
 

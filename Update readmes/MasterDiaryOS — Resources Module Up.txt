@@ -1,0 +1,275 @@
+MasterDiaryOS — Resources Module Upgrade README
+Authoritative, Non‑Breaking Specification for Gemini 3 CLI
+Upgrades ONLY the Resources Page (Personnel, Assets, Calendar, Map)
+This document defines the enhancements required to elevate the Resources Module into a predictive, intelligent, cinematic command center — without modifying any existing workflow logic, job data, or system architecture.
+
+All changes must be:
+
+Additive
+
+Backward‑compatible
+
+Non‑destructive
+
+Isolated to the Resources Module
+
+Read‑only unless explicitly stated
+
+Fully reversible
+
+Respectful of existing naming and data structures
+
+🌍 Scope of This Upgrade
+This README applies ONLY to the following UI and data surfaces visible on the page:
+
+Personnel List
+
+Heavy Assets List
+
+Project Calendar (Weekly View)
+
+HR/Leave Entries
+
+Budget View
+
+Resource Allocator
+
+Geospatial Map (Google Maps)
+
+No other modules should be touched.
+
+🧩 Module 1 — Personnel Intelligence Layer
+Purpose
+Enhance personnel cards with predictive, advisory intelligence.
+
+Requirements
+Must not modify personnel records
+
+Must not auto‑assign staff
+
+Must generate suggestions only
+
+Capabilities
+Skill‑based suitability scoring
+
+Availability scoring
+
+Safety/compliance scoring
+
+Past performance indicators
+
+Conflict detection (double‑booking, leave overlap)
+
+UI Enhancements
+Color‑coded suitability rings
+
+Hover popups explaining “Why this match?”
+
+Mini‑timeline showing availability
+
+🚜 Module 2 — Heavy Asset Intelligence Layer
+Purpose
+Enhance equipment cards with predictive insights.
+
+Requirements
+Must not modify asset records
+
+Must not auto‑allocate equipment
+
+Must generate suggestions only
+
+Capabilities
+Equipment suitability scoring
+
+Predictive maintenance warnings
+
+Utilization forecasting
+
+Conflict detection
+
+Idle‑time detection
+
+UI Enhancements
+Health rings (green/yellow/red)
+
+Utilization bars
+
+Maintenance prediction badges
+
+📅 Module 3 — Intelligent Project Calendar
+Purpose
+Transform the weekly calendar into a predictive scheduling surface.
+
+Requirements
+Must not modify schedules
+
+Must not modify job data
+
+Must generate suggestions only
+
+Capabilities
+Predictive availability
+
+Conflict detection
+
+Cost impact overlays
+
+HR/Leave impact analysis
+
+Critical resource bottleneck detection
+
+UI Enhancements
+Color‑coded conflicts
+
+Cost/time overlays
+
+Hover insights for each day
+
+🗺️ Module 4 — Geospatial Intelligence Layer (Google Maps)
+Purpose
+Enhance the map with real‑time and predictive intelligence.
+
+Requirements
+Must not modify geofence rules
+
+Must not modify job data
+
+Must generate suggestions only
+
+Capabilities
+Live staff/equipment positioning
+
+Geofence entry/exit detection
+
+Travel time prediction
+
+Optimal dispatch suggestions
+
+Risk‑zone overlays
+
+Weather‑aware routing
+
+UI Enhancements
+Animated markers
+
+Pulsing geofences
+
+Heatmaps (risk, productivity, incidents)
+
+Timeline scrubber to replay movement
+
+🦾 Module 5 — Resource Allocator Upgrade
+Purpose
+Transform the allocator into a predictive, advisory engine.
+
+Requirements
+Must not auto‑allocate
+
+Must not modify job data
+
+Must generate drafts only
+
+Capabilities
+Staff suitability ranking
+
+Equipment suitability ranking
+
+Cross‑job conflict detection
+
+Cost impact prediction
+
+Travel‑time‑aware dispatch
+
+Team synergy scoring
+
+UI Enhancements
+Ranked lists
+
+“Best Match” badges
+
+Draft allocation panel
+
+One‑click “Apply Draft” (human‑approved only)
+
+📊 Module 6 — Resource Insights Panel
+Purpose
+Add a dedicated insights panel to the Resources page.
+
+Requirements
+Must be read‑only
+
+Must not modify any data
+
+Capabilities
+Top risks
+
+Top conflicts
+
+Under‑utilized assets
+
+Over‑allocated staff
+
+Predicted delays
+
+Cost hotspots
+
+UI Enhancements
+Side panel with live metrics
+
+“Neural Insights” stream (similar to Simulation Mode)
+
+🛡️ Global Non‑Breaking Constraints
+Gemini 3 CLI must:
+
+Never rename existing files
+
+Never delete existing code
+
+Never refactor existing logic
+
+Never modify job data
+
+Never modify workflow execution
+
+Never modify database schemas
+
+Never alter API contracts
+
+Never auto‑apply allocations
+
+Never modify real resource records
+
+All enhancements must be:
+
+Additive
+
+Isolated
+
+Backward compatible
+
+Human‑approved (for drafts)
+
+Reversible
+
+🏁 Success Criteria
+The Resources Module upgrade is successful when:
+
+Personnel intelligence exists
+
+Asset intelligence exists
+
+Calendar intelligence exists
+
+Geospatial intelligence exists
+
+Allocator intelligence exists
+
+Insights panel exists
+
+Nothing breaks
+
+No existing data changes
+
+No existing logic changes
+
+All enhancements are advisory or draft‑only

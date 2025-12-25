@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, GitFork, Clipboard, Bell, User, CheckSquare, FileText, Calendar, Search } from 'lucide-react';
+import { Zap, GitFork, Clipboard, Bell, User, CheckSquare, FileText, Calendar, Search, Folder } from 'lucide-react';
 
 export default function ContextMenu({ x, y, onClose, onAddNode }) {
   const menuRef = useRef(null);
@@ -25,6 +25,7 @@ export default function ContextMenu({ x, y, onClose, onAddNode }) {
         { label: 'Logic / Split', type: 'decision', icon: GitFork, color: 'text-orange-400' },
     ]},
     { label: 'Integrations', items: [
+        { label: 'Project Hub', type: 'projectNode', icon: Folder, color: 'text-indigo-400' },
         { label: 'Quote Action', type: 'quoteAction', icon: FileText, color: 'text-emerald-400' },
         { label: 'Diary Entry', type: 'diaryAction', icon: Calendar, color: 'text-purple-400' },
     ]},

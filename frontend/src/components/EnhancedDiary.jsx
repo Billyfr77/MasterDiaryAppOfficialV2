@@ -3,7 +3,7 @@
  * Copyright (c) 2025 Billy Fraser. All rights reserved.
  */
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { DndProvider, useDrag, useDrop } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { api } from '../utils/api'
@@ -135,9 +135,11 @@ const DiaryToolbar = () => {
 
 const PaintDiary = () => {
   const navigate = useNavigate(); const { addNotification } = useNotification();
+  const location = useLocation();
   const [selectedDate, setSelectedDate] = useState(new Date()); const [diaryEntries, setDiaryEntries] = useState([]);
   const [totalCost, setTotalCost] = useState(0); const [totalRevenue, setTotalRevenue] = useState(0);
-  const [isSaved, setIsSaved] = useState(true); const [selectedProject, setSelectedProject] = useState('');
+  const [isSaved, setIsSaved] = useState(true); 
+  const [selectedProject, setSelectedProject] = useState(location.state?.projectId || '');
   const [showMap, setShowMap] = useState(false); const [sessionLocation, setSessionLocation] = useState(null);
   const [showGeoModal, setShowGeoModal] = useState(false); const [sitePlan, setSitePlan] = useState(null);
   const [projects, setProjects] = useState([]); const [isPulseActive, setIsPulseActive] = useState(false);

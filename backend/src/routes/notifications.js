@@ -50,4 +50,32 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Delete a notification
+router.delete('/:id', async (req, res) => {
+  try {
+    const rows = await Notification.destroy({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+    if (rows > 0) {
+      res.json({ message: 'Notification deleted' });
+    } else {
+      res.status(404).json({ error: 'Notification not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete all notifications
+router.delete('/', async (req, res) => {
+  try {
+    await Notification.destroy({
+      where: { userId: req.user.id }
+    });
+    res.json({ message: 'All notifications cleared' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

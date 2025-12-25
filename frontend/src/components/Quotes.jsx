@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { useSearchParams, Link, useNavigate } from 'react-router-dom'
+import { useSearchParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { api } from '../utils/api'
 import jsPDF from 'jspdf'
 import { 
@@ -15,6 +15,7 @@ import {
 
 const Quotes = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [quotes, setQuotes] = useState([])
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -23,7 +24,8 @@ const Quotes = () => {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
-  const projectId = searchParams.get('projectId')
+  const projectIdFromUrl = searchParams.get('projectId')
+  const projectId = projectIdFromUrl || location.state?.projectId || ''
 
   // Form state
   const [formData, setFormData] = useState({

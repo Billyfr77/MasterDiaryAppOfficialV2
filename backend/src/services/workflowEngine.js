@@ -9,6 +9,11 @@ class WorkflowEngine extends EventEmitter {
     this.on('quote.approved', (data) => this.processEvent('quote.approved', data));
     this.on('job.completed', (data) => this.processEvent('job.completed', data));
     this.on('project.created', (data) => this.processEvent('project.created', data));
+    
+    // REFINED INTEGRATION EVENTS
+    this.on('diary.saved', (data) => this.processEvent('diary.saved', data));
+    this.on('invoice.saved', (data) => this.processEvent('invoice.saved', data));
+    this.on('safety.saved', (data) => this.processEvent('safety.saved', data));
   }
 
   async processEvent(eventName, payload) {
@@ -26,15 +31,51 @@ class WorkflowEngine extends EventEmitter {
       for (const wf of workflows) {
         const nodes = wf.nodes || [];
         const edges = wf.edges || [];
+        let wfChanged = false;
 
-        // 2. Find Trigger Nodes
+        // 2. Find Trigger Nodes (Start new chains)
         const triggers = nodes.filter(n => n.type === 'trigger' && n.data?.event === eventName);
 
         for (const trigger of triggers) {
           console.log(`[WorkflowEngine] ⚡ Trigger hit: ${trigger.data?.label} (Workflow: ${wf.title})`);
-          
-          // Start Recursive Execution
           await this.executeNodeChain(trigger, payload, wf, nodes, edges, new Set());
+        }
+
+        // 3. Find Matching Functional Nodes (Progress existing chains)
+        // Map external events to specific Power Node types
+        const functionalNodeTypeMap = {
+            'diary.saved': 'diaryNode',
+            'quote.approved': 'quoteNode',
+            'invoice.saved': 'invoiceNode',
+            'safety.saved': 'safetyNode',
+            'job.completed': 'diaryNode' // Legacy/Alt support
+        };
+
+        const targetType = functionalNodeTypeMap[eventName];
+        if (targetType) {
+            const matchingNodes = nodes.filter(n => 
+                n.type === targetType && 
+                n.data?.status !== 'completed' &&
+                (n.data?.config?.projectId === payload.projectId || !n.data?.config?.projectId)
+            );
+
+            for (const node of matchingNodes) {
+                console.log(`[WorkflowEngine] ✅ Auto-completing functional node: ${node.data?.label}`);
+                
+                // Mark as completed in the lattice
+                const updatedNodes = wf.nodes.map(n => 
+                    n.id === node.id ? { ...n, data: { ...n.data, status: 'completed' } } : n
+                );
+                wf.nodes = updatedNodes;
+                wfChanged = true;
+
+                // Propagate completion through the chain
+                await this.executeNodeChain(node, payload, wf, updatedNodes, edges, new Set());
+            }
+        }
+
+        if (wfChanged) {
+            await wf.save();
         }
       }
     } catch (err) {
@@ -76,6 +117,15 @@ class WorkflowEngine extends EventEmitter {
       // Execute current node logic
       const success = await this.executeAction(currentNode, payload, workflow);
       
+      if (success) {
+          // UPDATE NODE STATUS IN DB
+          const updatedNodes = allNodes.map(n => 
+              n.id === currentNode.id ? { ...n, data: { ...n.data, status: 'completed' } } : n
+          );
+          workflow.nodes = updatedNodes;
+          await workflow.save();
+      }
+
       if (!success && currentNode.type !== 'trigger') {
           console.warn(`[WorkflowEngine] Node execution failed or halted at ${currentNode.id}`);
           return;

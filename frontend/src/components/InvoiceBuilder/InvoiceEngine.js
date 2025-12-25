@@ -40,6 +40,7 @@ export const useInvoiceEngine = () => {
       // If creating from Quote or Diary
       let initialItems = [];
       let initialProject = state?.projectId || null;
+      let initialProjectName = state?.projectName || '';
       let initialClient = state?.clientId || null;
       let initialClientName = state?.clientName || '';
       let initialClientAddress = state?.clientAddress || '';
@@ -94,6 +95,7 @@ export const useInvoiceEngine = () => {
         notes: '', 
         terms: '', 
         projectId: initialProject || null, 
+        projectName: initialProjectName,
         jobId: null, 
         accentColor: '#4f46e5',
         theme: 'modern' // 'modern', 'classic', 'minimal'
@@ -148,7 +150,7 @@ export const useInvoiceEngine = () => {
 
   const importHarvest = () => {
       const selected = harvestableDiaries.filter(d => selectedDiaryIds.has(d.id));
-      let newItems = [...invoice.items];
+      let rawItems = [];
       
       selected.forEach(d => {
           const jobRef = d.job?.jobNumber ? `[#${d.job.jobNumber}] ` : '';
@@ -159,8 +161,9 @@ export const useInvoiceEngine = () => {
                   (entry.items || []).forEach(i => {
                       const qty = i.duration || i.quantity || 1;
                       const rate = i.chargeRate || 0;
-                      newItems.push({ 
-                          description: `${jobRef}${new Date(d.date).toLocaleDateString()}: ${i.name}`, 
+                      rawItems.push({ 
+                          description: i.name, 
+                          jobRef: jobRef,
                           quantity: qty, 
                           rate, 
                           amount: qty * rate, 
@@ -172,8 +175,9 @@ export const useInvoiceEngine = () => {
           } 
           // 2. Fallback to Total Revenue
           else if (d.totalRevenue > 0) {
-              newItems.push({
+              rawItems.push({
                   description: `${jobRef}Site Diary: ${new Date(d.date).toLocaleDateString()} - ${d.job?.serviceType || 'General Work'}`,
+                  jobRef: '',
                   quantity: 1,
                   rate: d.totalRevenue,
                   amount: d.totalRevenue,
@@ -182,8 +186,38 @@ export const useInvoiceEngine = () => {
               });
           }
       });
+
+      let finalItems = [...invoice.items];
+
+      if (consolidateItems) {
+          // Group by description and rate
+          const groups = {};
+          rawItems.forEach(item => {
+              const key = `${item.description}-${item.rate}-${item.unit}`;
+              if (!groups[key]) {
+                  groups[key] = { ...item, quantity: 0, amount: 0 };
+              }
+              groups[key].quantity += item.quantity;
+              groups[key].amount += item.amount;
+          });
+          
+          Object.values(groups).forEach(g => {
+              finalItems.push({
+                  ...g,
+                  description: `${g.jobRef}${g.description} (Consolidated)`
+              });
+          });
+      } else {
+          // Standard push
+          rawItems.forEach(item => {
+              finalItems.push({
+                  ...item,
+                  description: `${item.jobRef}${item.description}`
+              });
+          });
+      }
       
-      setInvoice(prev => ({ ...prev, items: newItems, diaryIds: Array.from(selectedDiaryIds) }));
+      setInvoice(prev => ({ ...prev, items: finalItems, diaryIds: Array.from(selectedDiaryIds) }));
       setShowHarvest(false);
   };
 

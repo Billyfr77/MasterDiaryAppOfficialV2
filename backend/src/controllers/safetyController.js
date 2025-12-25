@@ -123,6 +123,10 @@ exports.createForm = async (req, res) => {
       createdBy: req.user ? req.user.id : null
     });
 
+    // Trigger Workflow Engine
+    const workflowEngine = require('../services/workflowEngine');
+    workflowEngine.emit('job.completed', { safetyForm: newForm, projectId: targetProjectId, userId: req.user?.id });
+
     res.status(201).json(newForm);
   } catch (error) {
     console.error('Error creating safety form:', error);
@@ -147,9 +151,12 @@ exports.updateForm = async (req, res) => {
     if (riskLevel) form.riskLevel = riskLevel;
     
     // Simple Version bump logic
-    form.version = (form.version || 1) + 1;
-
     await form.save();
+
+    // Trigger Workflow Engine
+    const workflowEngine = require('../services/workflowEngine');
+    workflowEngine.emit('job.completed', { safetyForm: form, projectId: form.projectId, userId: req.user?.id });
+
     res.json(form);
   } catch (error) {
     console.error('Error updating safety form:', error);

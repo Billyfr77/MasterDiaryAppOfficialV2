@@ -114,9 +114,9 @@ const createInvoice = async (req, res) => {
 
     await transaction.commit();
 
-    // Generate PDF (Optional: can be done on demand)
-    // const pdfPath = await generateInvoicePDF(invoice);
-    // await Invoice.update({ pdfUrl: `/invoices/${invoice.id}.pdf` }, { where: { id: invoice.id } });
+    // Trigger Workflow Engine
+    const workflowEngine = require('../services/workflowEngine');
+    workflowEngine.emit('job.completed', { invoice, projectId: invoice.projectId, userId: req.user?.id });
 
     res.status(201).json(invoice);
 
@@ -182,6 +182,11 @@ const updateInvoiceStatus = async (req, res) => {
     );
     if (updated) {
       const updatedInvoice = await Invoice.findByPk(req.params.id);
+      
+      // Trigger Workflow Engine
+      const workflowEngine = require('../services/workflowEngine');
+      workflowEngine.emit('job.completed', { invoice: updatedInvoice, projectId: updatedInvoice.projectId, userId: req.user?.id });
+
       res.json(updatedInvoice);
     } else {
       res.status(404).json({ error: 'Invoice not found' });

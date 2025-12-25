@@ -61,7 +61,7 @@ const GeoreferenceModal = ({ isOpen, onClose, onSave, apiKey }) => {
       const url = URL.createObjectURL(file)
       setImageUrl(url)
       
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         setImageDimensions({ width: img.width, height: img.height })
         setStep(2)
