@@ -1,5 +1,31 @@
 const { Project, Diary, Quote, Allocation, Notification, Staff, Node, Equipment, Workflow, db } = require('../models');
 const { generateNeuralIntelligencePacket } = require('../utils/LearningEngine');
+const pinnacleAi = require('../services/grokService');
+
+const getMorningBriefing = async (req, res) => {
+    try {
+        const intelligence = await generateNeuralIntelligencePacket();
+        if (!intelligence) throw new Error("Learning Engine offline.");
+
+        const systemPrompt = `
+            You are the Neural Co-Founder. 
+            Provide a "Sovereign Sitrep" for the day. 
+            Use "We/Our" language. 
+            Keep it under 60 words. 
+            Format: [WIN] (one success), [RISK] (one danger), [MOVE] (one direct action for today).
+        `;
+
+        const briefing = await pinnacleAi.generateText(
+            `Company State: ${JSON.stringify(intelligence)}`, 
+            systemPrompt, 
+            500
+        );
+
+        res.json({ briefing });
+    } catch (e) {
+        res.status(500).json({ briefing: "Handshake intermittent. Stand by for neural recalibration." });
+    }
+};
 
 const getOracleStream = async (req, res) => {
     try {
@@ -101,4 +127,4 @@ const executeProtocol = async (req, res) => {
     }
 };
 
-module.exports = { getOracleStream, executeProtocol };
+module.exports = { getOracleStream, executeProtocol, getMorningBriefing };

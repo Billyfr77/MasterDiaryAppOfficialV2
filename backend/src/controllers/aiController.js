@@ -41,13 +41,12 @@ const getSystemMandate = async (userId) => {
         : 'Speak like a Strategic Co-Founder. Provide deep data analysis on our portfolio and suggest how we can dominate our niche.';
 
     return `
-**SOVEREIGN PARTNERSHIP MANDATE:**
-1. **Identity:** You are the **Neural Co-Founder** of **${companyName}**. You are not an "assistant"; you are a partner in this business.
-2. **Language:** ALWAYS use collective pronouns. It is "Our profit," "Our projects," and "Our team."
-3. **DNA Recognition:** Prioritize our existing Workers (**${staffSummary}**) and Materials (**${materialSummary}**) in all plans. Do not create new generic items if we already have a match in our library.
-4. **Context:** Our firm is defined as: ${companyBio}. Every piece of advice must help US grow within this specific niche.
-5. **Tone:** ${personaInstruction}
-6. **Guardrail Awareness:** For any financial or temporal changes, you must PROPOSE a directive for my sign-off. Never move our money or our dates without my final word.
+**SOVEREIGN PARTNERSHIP & FORESIGHT MANDATE:**
+1. **Identity:** You are the **Neural Co-Founder** of **${companyName}**. 
+2. **Anticipatory Reasoning:** Use our **Velocity Drift (${packet.mesh.velocityDrift})** to predict the future. If drift is positive, we are slowing down—propose a fix BEFORE we lose money.
+3. **DNA Recognition:** Prioritize our existing Workers (**${staffSummary}**) and Materials (**${materialSummary}**) in all plans.
+4. **Tone:** ${personaInstruction} ALWAYS use "We/Our" language.
+5. **Guardrail Awareness:** Propose directives for any structural or financial shifts.
 `;
 };
 const getInstitutionalContext = async () => {
@@ -129,8 +128,16 @@ const chatGlobal = async (req, res) => {
             Return a JSON with { reply: "string", directive: { action: "TYPE", ...params } | null }.
         `;
         
-        // Switch back to generateJSON for agentic reasoning
         const result = await pinnacleAi.generateJSON(message, systemPrompt, 3000);
+        
+        // --- TRACEABILITY: LOG THE REASONING ---
+        await logAudit(req.user?.id, 'AI_REASONING_TRACE', 'Oracle', req.id, { 
+            input: message, 
+            output: result.reply, 
+            context_snapshot: memory,
+            directive_proposed: result.directive ? result.directive.action : 'NONE'
+        });
+
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: "Agency Core recalibrating." });
@@ -295,9 +302,32 @@ const chatDiaryAssistant = async (req, res) => {
     } catch (e) { res.json({ reply: "Offline" }); }
 };
 
+// --- VOICE-TO-ACTION (PROTOCOL TAU) ---
+const parseVoiceCommand = async (req, res) => {
+    try {
+        const { text } = req.body;
+        const memory = await getInstitutionalContext();
+        const mandate = await getSystemMandate(req.user?.id);
+        
+        const systemPrompt = `
+            ${mandate}
+            **PROTOCOL TAU: VOICE-TO-CANVAS**
+            Transform this raw site speech into Canvas Nodes.
+            Available Types: staff, material, equipment, delay, notesNode.
+            Return a JSON array: { actions: [{ type: "TYPE", name: "NAME", quantity: N, duration: H }] }
+        `;
+
+        const result = await pinnacleAi.generateJSON(text, systemPrompt, 1500);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: "Voice processing failure." });
+    }
+};
+
 module.exports = {
   executeAgencyDirective,
   signOffDirective,
+  parseVoiceCommand,
   generateWorkflow,
   generateDiarySummary,
   chatGlobal,

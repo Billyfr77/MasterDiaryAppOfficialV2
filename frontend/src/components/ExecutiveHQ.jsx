@@ -10,7 +10,7 @@ import {
     Star, Sparkles, Gauge, ChevronRight, Link2, Server, Cpu, DollarSign,
     Wind, Waves, Maximize2, Minimize2, Search, Compass, MousePointer2,
     Lock, Unlock, Cpu as CpuIcon2, Activity as PulseIcon, Users, AlertCircle,
-    Sun, Flame, Rocket, Eye, Cpu as NeuralIcon, RotateCcw, HelpCircle
+    Sun, Flame, Rocket, Eye, Cpu as NeuralIcon, RotateCcw, HelpCircle, CheckCircle
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ export default function ExecutiveHQ() {
     const [meshStats, setMeshStats] = useState({ personnel: 0, nodes: 0, empireValue: 0, activeProjects: 0, totalPaid: 0, netMargin: '0%' });
     const [intelligence, setIntelligence] = useState(null);
     const [systemHealth, setSystemHealth] = useState({ database: 'up', ai_core: 'up', neural_mesh: 'up' });
+    const [morningBrief, setMorningBrief] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [lastSync, setLastSync] = useState(null);
@@ -64,10 +65,11 @@ export default function ExecutiveHQ() {
         const startTime = Date.now();
         setIsSyncing(true);
         try {
-            const [pRes, oRes, hRes] = await Promise.all([
+            const [pRes, oRes, hRes, bRes] = await Promise.all([
                 api.get('/projects'),
                 api.get('/intelligence/oracle-stream'),
-                api.get('/health').catch(() => ({ data: { services: { database: 'down', ai_core: 'down', neural_mesh: 'down' } } }))
+                api.get('/health').catch(() => ({ data: { services: { database: 'down', ai_core: 'down', neural_mesh: 'down' } } })),
+                api.get('/intelligence/morning-brief').catch(() => ({ data: { briefing: null } }))
             ]);
             const pData = pRes.data.data || pRes.data || [];
             setProjects(pData);
@@ -75,6 +77,7 @@ export default function ExecutiveHQ() {
             if (oRes.data.stats) setMeshStats(oRes.data.stats);
             if (oRes.data.intelligence) setIntelligence(oRes.data.intelligence);
             if (hRes.data.services) setSystemHealth(hRes.data.services);
+            if (bRes.data.briefing) setMorningBrief(bRes.data.briefing);
             setLatency(Date.now() - startTime);
             setLastSync(new Date().toLocaleTimeString());
         } catch (e) { 
@@ -301,6 +304,26 @@ export default function ExecutiveHQ() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Sovereign Sitrep (Morning Brief) */}
+                        {morningBrief && (
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                className="hidden xl:flex flex-1 max-w-2xl bg-indigo-500/5 border border-indigo-500/20 rounded-[2.5rem] p-6 items-center gap-6 shadow-inner mx-10 relative overflow-hidden group"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <div className="p-4 bg-indigo-600 rounded-2xl shadow-lg relative z-10 animate-pulse-slow">
+                                    <BrainCircuit size={24} className="text-white" />
+                                </div>
+                                <div className="relative z-10">
+                                    <div className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-1">Sovereign_Sitrep</div>
+                                    <p className="text-[11px] font-bold text-gray-300 leading-relaxed italic line-clamp-2">
+                                        "{morningBrief}"
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
+
                         <div className="flex gap-8 items-center">
                             {/* System Health Indicators */}
                             <div className="flex gap-4 px-8 py-4 bg-black/40 border border-white/5 rounded-3xl backdrop-blur-xl">
@@ -618,11 +641,13 @@ export default function ExecutiveHQ() {
                                             </div>
                                         </div>
                                         
-                                        <div className="grid grid-cols-2 gap-x-12 gap-y-6 relative z-10">
+                                        <div className="grid grid-cols-3 gap-x-12 gap-y-6 relative z-10">
                                             <PortfolioMetric icon={DollarSign} label="Paid Capital" value={`$${(meshStats.totalPaid/1000000).toFixed(2)}M`} color="text-emerald-400" />
                                             <PortfolioMetric icon={TrendingUp} label="Net Margin" value={meshStats.netMargin} color="text-indigo-400" />
                                             <PortfolioMetric icon={Users} label="Contention" value={`${Math.round((intelligence?.mesh?.resourceContentionIndex || 0) * 100)}%`} color="text-rose-400" />
-                                            <PortfolioMetric icon={Zap} label="Yield" value={intelligence?.financials?.collectionVelocity || '0%'} color="text-cyan-400" />
+                                            <PortfolioMetric icon={Activity} label="Velocity Drift" value={intelligence?.mesh?.velocityDrift || '0.00'} color={parseFloat(intelligence?.mesh?.velocityDrift) > 0 ? 'text-rose-500' : 'text-emerald-400'} />
+                                            <PortfolioMetric icon={Target} label="Lattice Accuracy" value={intelligence?.oracle?.bidSuccessProbability || '0%'} color="text-cyan-400" />
+                                            <PortfolioMetric icon={ShieldCheck} label="Mesh Integrity" value={`${Math.round((intelligence?.mesh?.integrity || 0) * 100)}%`} color="text-indigo-400" />
                                         </div>
                                     </motion.div>
                                 )}

@@ -528,6 +528,39 @@ const PaintDiary = () => {
   const [selectedChronos, setSelectedChronos] = useState(null);
   const [connectedNodes, setConnectedNodes] = useState([]);
   const [pendingItem, setPendingItem] = useState(null);
+  const [isListening, setIsListening] = useState(false);
+
+  const startVoiceCommand = () => {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+          alert("Voice commands not supported in this browser.");
+          return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.start();
+      setIsListening(true);
+
+      recognition.onresult = async (event) => {
+          const text = event.results[0][0].transcript;
+          addNotification('Voice Captured', 'Processing your update...');
+          try {
+              const res = await api.post('/ai/parse-voice', { text });
+              if (res.data.actions) {
+                  res.data.actions.forEach(action => {
+                      handleConfirmItem({ ...action, position: { x: 500, y: 500 } });
+                  });
+                  addNotification('Lattice Updated', 'Voice directive implemented.');
+              }
+          } catch (e) {
+              addNotification('Neural Sync Error', 'Could not parse voice memo.');
+          }
+          setIsListening(false);
+      };
+
+      recognition.onerror = () => setIsListening(false);
+  };
 
   const { addNotification } = useNotification();
 
@@ -1096,6 +1129,20 @@ const PaintDiary = () => {
                             </button>
                         ))}
                     </div>
+
+                    {/* NEW: NEURAL VOICE BUTTON */}
+                    <button 
+                        onClick={startVoiceCommand}
+                        className={`w-full py-4 rounded-2xl border transition-all flex items-center justify-center gap-3 group relative overflow-hidden mb-4 ${
+                            isListening ? 'bg-rose-600 border-rose-400 animate-pulse' : 'bg-indigo-600/20 border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white'
+                        }`}
+                    >
+                        {isListening ? <Activity size={20} /> : <div className="p-2 bg-indigo-500 rounded-lg text-white"><Sparkles size={16} /></div>}
+                        <span className="text-xs font-black uppercase tracking-widest">
+                            {isListening ? 'Listening...' : 'Neural Voice Update'}
+                        </span>
+                        {isListening && <div className="absolute inset-0 bg-white/10 animate-ping opacity-20" />}
+                    </button>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 p-6 relative z-10">

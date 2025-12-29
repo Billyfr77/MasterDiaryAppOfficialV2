@@ -169,6 +169,18 @@ const AuditUltraLog = () => {
                                     <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4 flex items-center gap-2">
                                         <Database size={14} /> Structural State Data
                                     </h4>
+                                    
+                                    {selectedLog.subType === 'AI_REASONING_TRACE' && (
+                                        <div className="mb-6 p-6 bg-indigo-500/5 border border-indigo-500/20 rounded-3xl">
+                                            <div className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                <Cpu size={10} /> Neural Context Snapshot (What the AI saw)
+                                            </div>
+                                            <div className="text-[10px] text-indigo-200/60 font-mono leading-relaxed whitespace-pre-wrap italic">
+                                                {selectedLog.details?.context_snapshot}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <pre className="bg-black/60 border border-white/10 p-8 rounded-3xl text-xs font-mono text-emerald-400/80 overflow-x-auto">
                                         {JSON.stringify(selectedLog.details, null, 2)}
                                     </pre>
