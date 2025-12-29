@@ -158,14 +158,25 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: 0
     },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: ''
+    },
     diaryType: {
       type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'legacy'
+    },
+    version: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false
     }
   }, {
     sequelize,
     modelName: 'Diary',
+    version: true,
     tableName: 'Diaries',
     timestamps: true,
     hooks: {

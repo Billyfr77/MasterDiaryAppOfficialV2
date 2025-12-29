@@ -101,12 +101,18 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     longitude: {
-      type: DataTypes.DECIMAL(10, 7),
+      type: DataTypes.DECIMAL(11, 8),
       allowNull: true
+    },
+    version: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false
     }
   }, {
     sequelize,
     modelName: 'Project',
+    version: true,
     timestamps: true
   });
 

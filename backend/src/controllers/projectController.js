@@ -18,6 +18,7 @@ require('dotenv').config();
 const { Project, Client, MapAsset, Allocation, Diary, Quote, Document, SafetyForm, Invoice, Job } = require('../models');
 const Joi = require('joi');
 const axios = require('axios');
+const { logAudit } = require('../services/auditService');
 
   const projectSchema = Joi.object({
           name: Joi.string().min(1).required(),
@@ -188,6 +189,8 @@ const createProject = async (req, res) => {
       userId: req.user?.id || null
     });
     
+    await logAudit(req.user?.id, 'CREATE_PROJECT', 'Project', project.id, { name: project.name });
+
     // Attach default financials (will be 0 except for contract value)
     const enhancedProject = attachFinancials(project);
     res.status(201).json(enhancedProject);
@@ -212,6 +215,7 @@ const updateProject = async (req, res) => {
     }
     const [updated] = await Project.update(value, { where: { id: req.params.id, userId: req.user?.id || null } });
     if (updated) {
+      await logAudit(req.user?.id, 'UPDATE_PROJECT', 'Project', req.params.id, value);
       // Re-fetch with associations to calculate financials correctly
       const updatedProject = await Project.findByPk(req.params.id, {
         include: [
@@ -263,6 +267,7 @@ const deleteProject = async (req, res) => {
     const deleted = await Project.destroy({ where: { id: projectId } });
     
     if (deleted) {
+      await logAudit(userId, 'DELETE_PROJECT', 'Project', projectId, { name: project.name });
       res.json({ message: 'Project and all associated data deleted' });
     } else {
       res.status(404).json({ error: 'Project could not be deleted' });

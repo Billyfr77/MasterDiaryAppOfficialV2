@@ -270,8 +270,24 @@ const NotificationDropdown = () => {
                                                 SIG_ID: {String(note.id || 'NULL').slice(0,4)}
                                             </span>
                                             
-                                            {/* Smart Action Buttons based on context (mocked for now) */}
-                                            {note.type === 'ERROR' ? (
+                                            {/* Smart Action Buttons */}
+                                            {note.type === 'PROPOSAL' ? (
+                                                <button 
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        if (window.confirm("Our Partner has proposed this shift to protect our margin. Sign off on this change?")) {
+                                                            try {
+                                                                await api.post('/ai/sign-off', { notificationId: note.id });
+                                                                fetchNotifications(); // Refresh
+                                                                alert("Directive executed. Our lattice has been updated.");
+                                                            } catch (err) { alert("Execution failed."); }
+                                                        }
+                                                    }}
+                                                    className="flex items-center gap-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-[9px] font-black text-white uppercase tracking-widest rounded-lg shadow-lg animate-pulse"
+                                                >
+                                                    <Shield size={10} /> Review & Sign-off
+                                                </button>
+                                            ) : note.type === 'ERROR' ? (
                                                 <button className="flex items-center gap-1 text-[9px] font-bold text-rose-400 uppercase tracking-wider hover:underline">
                                                     Review Log <TrendingUp size={10} />
                                                 </button>

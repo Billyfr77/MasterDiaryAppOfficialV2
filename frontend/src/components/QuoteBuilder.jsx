@@ -40,6 +40,7 @@ import PowerHeader from './ui/PowerHeader'
 import { useDiaryTheme } from './PaintDiary/ThemeContext'
 import QuoteSettingsModal from './Quotes/QuoteSettingsModal'
 import ConfigModal from './ConfigModal'
+import ConflictResolver from './ui/ConflictResolver'
 import { AreaNode, QuoteMaterialNode, QuoteLabourNode, ProfitNode, EstimationPrismNode } from './Quotes/QuoteNodes';
 import { DiaryNode, ChronosNode, ZoneNode, ImpactNode, DelayNode, DimensionNode, PhotoNode, ShapeNode, TaskNode, NeuralPrismNode, WormholeNode, AllowanceNode } from './TimelineCanvas/TimelineNodes';
 import { SmartEdgeTypes } from './TimelineCanvas/SmartEdges'
@@ -514,7 +515,42 @@ const QuoteBuilderContent = () => {
   const addDimensionNode = () => { const id = `dim-${Date.now()}`; setNodes(nds => nds.concat({ id, type: 'dimension', position: screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }), style: { width: 200, height: 200 }, data: { label: 'New Room', width: 200, height: 200, onDelete: () => deleteNode(id), onResize: (e, params) => { setNodes(curr => curr.map(cn => cn.id === id ? { ...cn, style: { ...cn.style, width: params.width, height: params.height }, data: { ...cn.data, width: params.width, height: params.height } } : cn)); } } })); };
   const addZoneNode = () => { const id = `zone-${Date.now()}`; setNodes(nds => nds.concat({ id, type: 'zone', position: screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }), style: { width: 400, height: 400, zIndex: -1 }, data: { label: 'New Zone', onDelete: () => deleteNode(id) } })); };
   const restructureLayout = useCallback(() => { const zones = nodes.filter(n => n.type === 'zone'); const newNodes = nodes.map((node, i) => { if (node.type === 'zone') return { ...node, position: { x: i * 800, y: 0 } }; return node; }); setNodes(newNodes); setTimeout(() => fitView({ padding: 0.2 }), 100); }, [nodes, fitView]);
-  const handleSaveQuote = async () => { if (!selectedProject) return; setIsSaving(true); try { const payload = { projectId: selectedProject, clientId: quoteSettings.clientId, marginPct, totalCost: financials.subtotal, totalRevenue: financials.total, nodes, edges, staff: quoteItems.filter(i=>i.type==='staff'), equipment: quoteItems.filter(i=>i.type==='equipment') }; if (id) await api.put(`/quotes/${id}`, payload); else { const res = await api.post('/quotes', payload); navigate(`/quotes/${res.data.id}`); } addNotification('success', 'Quote Saved'); } catch (err) { console.error(err); } finally { setIsSaving(false); } };
+  const handleSaveQuote = async (force = false) => { 
+      if (!selectedProject) return; 
+      setIsSaving(true); 
+      try { 
+          const payload = { 
+              projectId: selectedProject, 
+              clientId: quoteSettings.clientId, 
+              marginPct, 
+              totalCost: financials.subtotal, 
+              totalRevenue: financials.total, 
+              nodes, 
+              edges, 
+              staff: quoteItems.filter(i=>i.type==='staff'), 
+              equipment: quoteItems.filter(i=>i.type==='equipment'),
+              version: force ? conflictState.serverData?.version : (nodes[0]?.data?.version || 0)
+          }; 
+          
+          if (id) await api.put(`/quotes/${id}`, payload); 
+          else { 
+              const res = await api.post('/quotes', payload); 
+              navigate(`/quotes/builder/${res.data.id}`); 
+          } 
+          
+          addNotification('success', 'Quote Saved'); 
+          setConflictState({ isOpen: false, serverData: null });
+      } catch (err) { 
+          if (err.response?.status === 409) {
+              setConflictState({ isOpen: true, serverData: err.response.data.currentRecord });
+          } else {
+              console.error(err); 
+              addNotification('error', 'Save Failed');
+          }
+      } finally { 
+          setIsSaving(false); 
+      } 
+  };
 
   const onDragOver = useCallback((event) => {
     event.preventDefault();
@@ -891,6 +927,15 @@ const QuoteBuilderContent = () => {
         <GeoreferenceModal isOpen={showGeoModal} onClose={() => setShowGeoModal(false)} onConfirm={(loc) => { setProjectLocation(loc); setShowGeoModal(false); }} />
       <QuoteSettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={quoteSettings} setSettings={setQuoteSettings} projects={projects} selectedProject={selectedProject} />
       <LoadQuoteModal isOpen={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadQuote} quotes={existingQuotes} isLoading={quotesLoading} />
+      <ConflictResolver 
+        isOpen={conflictState.isOpen} 
+        serverData={conflictState.serverData} 
+        onCancel={() => setConflictState({ isOpen: false, serverData: null })}
+        onResolve={(choice) => {
+            if (choice === 'OVERWRITE') handleSaveQuote(true);
+            else window.location.reload();
+        }}
+      />
       {showMap && <div className="absolute inset-0 z-0"><MapBackground activeLocation={projectLocation} overlayImage={sitePlan} /></div>}
       
       {dropLocation && (

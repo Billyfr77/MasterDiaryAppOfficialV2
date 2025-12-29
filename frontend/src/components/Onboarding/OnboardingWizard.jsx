@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Terminal, CheckCircle2, ArrowRight, Building, User, MapPin, Cpu, Loader2, Sparkles } from 'lucide-react';
+import { Terminal, CheckCircle2, ArrowRight, Building, User, MapPin, Cpu, Loader2, Sparkles, BrainCircuit } from 'lucide-react';
 import { api } from '../../utils/api';
 
 const Step = ({ children, isActive }) => (
@@ -31,6 +31,7 @@ const OnboardingWizard = () => {
     
     // Form State
     const [orgName, setOrgName] = useState('');
+    const [orgDescription, setOrgDescription] = useState('');
     const [role, setRole] = useState('');
     const [projectName, setProjectName] = useState('');
     const [projectAddress, setProjectAddress] = useState('');
@@ -41,13 +42,15 @@ const OnboardingWizard = () => {
         setLoading(true);
         try {
             // 1. Update Settings / Org Profile
-            await api.put('/settings', { organizationName: orgName, userRole: role });
+            await api.post('/settings/upsert', { parameter: 'companyName', value: orgName });
+            await api.post('/settings/upsert', { parameter: 'companyDescription', value: orgDescription });
+            await api.post('/settings/upsert', { parameter: 'userRole', value: role });
             
             // 2. Create First Project
             if (projectName) {
                 await api.post('/projects', {
                     name: projectName,
-                    address: projectAddress || 'TBD',
+                    site: projectAddress || 'TBD',
                     status: 'active',
                     client: 'Internal'
                 });
@@ -59,7 +62,6 @@ const OnboardingWizard = () => {
             navigate('/dashboard');
         } catch (err) {
             console.error("Onboarding Failed", err);
-            // Even if fail, go to dashboard
             navigate('/dashboard');
         } finally {
             setLoading(false);
@@ -75,8 +77,8 @@ const OnboardingWizard = () => {
             {/* PROGRESS BAR */}
             <div className="absolute top-10 w-64 h-1 bg-white/10 rounded-full overflow-hidden">
                 <motion.div 
-                    animate={{ width: `${((step + 1) / 4) * 100}%` }}
-                    className="h-full bg-indigo-500 shadow-[0_0_10px_#6366f1]"
+                    animate={{ width: `${((step + 1) / 5) * 100}%` }}
+                    className="h-full bg-indigo-500 shadow-[0_0_100px_#6366f1]"
                 />
             </div>
 
@@ -144,8 +146,42 @@ const OnboardingWizard = () => {
                     </div>
                 </Step>
 
-                {/* STEP 2: PROJECT ZERO */}
+                {/* STEP 2: BRAIN CALIBRATION */}
                 <Step isActive={step === 2}>
+                    <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] backdrop-blur-xl">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="p-3 bg-indigo-500/20 rounded-xl text-indigo-400"><BrainCircuit size={24} /></div>
+                            <div>
+                                <h2 className="text-xl font-black uppercase tracking-tight">Brain Calibration</h2>
+                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Educate your AI Partner</p>
+                            </div>
+                        </div>
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Company Bio / Description</label>
+                                <textarea 
+                                    autoFocus
+                                    rows="5"
+                                    value={orgDescription}
+                                    onChange={e => setOrgDescription(e.target.value)}
+                                    placeholder="e.g. We are a medium-sized civil engineering firm specializing in underground services and pipeline restoration across Victoria. We pride ourselves on speed and safety..." 
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-indigo-500 outline-none transition-all placeholder-gray-700 text-sm font-medium leading-relaxed resize-none" 
+                                />
+                                <p className="px-2 text-[10px] text-gray-500 leading-relaxed italic">
+                                    This description is the foundation of the AI's intelligence. It uses this information to provide tailored advice specifically for your industry niche.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-10 flex justify-end">
+                            <button onClick={handleNext} disabled={!orgDescription} className="px-8 py-3 bg-white text-black rounded-xl font-black uppercase tracking-widest text-xs hover:bg-gray-200 disabled:opacity-50 transition-all flex items-center gap-2">
+                                Calibrate Brain <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                </Step>
+
+                {/* STEP 3: PROJECT ZERO */}
+                <Step isActive={step === 3}>
                     <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] backdrop-blur-xl">
                         <div className="flex items-center gap-4 mb-8">
                             <div className="p-3 bg-amber-500/20 rounded-xl text-amber-400"><MapPin size={24} /></div>
@@ -183,8 +219,8 @@ const OnboardingWizard = () => {
                     </div>
                 </Step>
 
-                {/* STEP 3: SYNC */}
-                <Step isActive={step === 3}>
+                {/* STEP 4: SYNC */}
+                <Step isActive={step === 4}>
                     <div className="text-center space-y-8 max-w-md mx-auto">
                         <div className="relative w-32 h-32 mx-auto">
                             <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping"></div>

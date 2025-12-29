@@ -6,7 +6,7 @@
  * FILTERS: Supports Status, Date Range, and Value Range.
  */
 const { Op } = require('sequelize');
-const { Document, Project, Invoice, Diary, Quote, Client, Staff, Equipment } = require('../models');
+const { Document, Project, Invoice, Diary, Quote, Client, Staff, Equipment, AuditLog, User } = require('../models');
 
 // Helper to calculate date range
 const getDateFilter = (range) => {
@@ -88,6 +88,28 @@ const searchHub = async (req, res) => {
                 link: `/documents/${r.id}`
             }))));
         }
+    }
+
+    // --- AUDIT LOGS ---
+    if (!type || type === 'AUDIT') {
+        queries.push(AuditLog.findAll({
+            where: buildWhere(['action', 'entity', 'entityId'], null, null, 'createdAt'),
+            include: [{ model: User, as: 'actor', attributes: ['username'] }],
+            limit,
+            order: [['createdAt', 'DESC']]
+        }).then(rows => rows.map(r => ({
+            id: r.id,
+            type: 'AUDIT',
+            subType: r.action,
+            title: `${r.action}: ${r.entity}`,
+            subtitle: `Actor: ${r.actor?.username || 'System'} | ID: ${r.entityId}`,
+            date: r.createdAt,
+            tags: ['Security', 'Traceability'],
+            value: null,
+            status: 'LOGGED',
+            link: null, // Audits don't necessarily have a link, or link to entity?
+            details: r.details
+        }))));
     }
 
     // --- PROJECTS ---

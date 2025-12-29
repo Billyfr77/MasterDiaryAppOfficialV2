@@ -1,77 +1,117 @@
 /**
  * MasterDiaryOS // Neural Mesh Engine
- * The Learning Engine // Level 8 Quantum Synthesis
- * REAL-TIME AGGREGATOR: Estimates vs Actuals
+ * The Learning Engine // Level 18 Sovereign Intelligence
+ * PROTOCOL OMEGA: Total Enterprise Ingestion
  */
-const { Diary, Quote, Project, sequelize } = require('../models');
+const { Diary, Quote, Project, Staff, Node, Equipment, Workflow, Invoice, Client, Allocation, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 const generateNeuralIntelligencePacket = async (projectId = null) => {
     try {
-        // 1. Fetch Real Historical Data from DB
-        const totalDiaries = await Diary.count();
-        const activeProjects = await Project.findAll({ where: { status: 'active' } });
-        
-        // Map Deep Project DNA
-        const projectDNA = activeProjects.map(p => ({
-            id: p.id,
-            name: p.name,
-            description: p.description || 'No detailed scope provided',
-            site: p.site,
-            status: p.status,
-            value: p.contractValue || 0
-        }));
+        // 1. UNITARY DATA INGESTION (THE TOTAL LATTICE)
+        const [projects, staff, nodes, equip, invoices, clients, allocations] = await Promise.all([
+            Project.findAll({ include: [{ model: Diary, limit: 5 }] }),
+            Staff.findAll(),
+            Node.count(),
+            Equipment.count(),
+            Invoice.findAll(),
+            Client.findAll(),
+            Allocation.findAll({ where: { status: 'active' } })
+        ]);
 
-        // 2. Mocking complex JSON aggregation for task drift
-        // In a high-end SQL setup, we would use JSON_EXTRACT on the canvasData column
-        // Here we simulate the result of that real DB scan
-        const patterns = [
-            { 
-                taskType: 'Prep', 
-                delta: 1.18, 
-                confidence: 0.98,
-                cause: 'Substrate Underestimation', 
-                sentiment: 'Frustrated',
-                fix: 'Increase default coverage buffer by 8% and inject "Humidity Hold" node' 
-            },
-            { 
-                taskType: 'Demolition', 
-                delta: 1.35, 
-                confidence: 0.95,
-                cause: 'Unforeseen Services', 
-                sentiment: 'Confused',
-                fix: 'Inject mandatory "Service Isolation" & "Mud Protocol" nodes' 
+        // 2. FINANCIAL TRACEABILITY (THE SOVEREIGN LEDGER)
+        const totalQuoted = await Quote.sum('totalRevenue', { where: { status: 'approved' } }) || 0;
+        const totalInvoiced = invoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
+        const totalPaid = invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
+        const totalDiaryCost = await Diary.sum('totalCost') || 0;
+
+        // Portfolio Yield Calculation
+        const netProfit = totalInvoiced - totalDiaryCost;
+        const profitMargin = totalInvoiced > 0 ? (netProfit / totalInvoiced) : 0;
+        const collectionVelocity = totalInvoiced > 0 ? (totalPaid / totalInvoiced) : 1.0;
+
+        // 3. RESOURCE CONTENTION (BOTTLENECK ANALYSIS)
+        // Find staff assigned to multiple projects simultaneously
+        const staffAssignments = {};
+        allocations.forEach(a => {
+            if (a.resourceType === 'staff') {
+                staffAssignments[a.resourceId] = (staffAssignments[a.resourceId] || 0) + 1;
             }
-        ];
+        });
+        const overAllocatedStaff = Object.values(staffAssignments).filter(count => count > 1).length;
+        const contentionIndex = staff.length > 0 ? (overAllocatedStaff / staff.length) : 0;
 
-        // 3. Real Mesh Integrity Check (Cross-Project Contention)
-        const resourceContention = activeProjects.length > 1 ? 0.74 : 0.12;
+        // 4. CLIENT HEALTH MATRIX
+        const clientHealthData = clients.map(c => {
+            const clientProjects = projects.filter(p => p.clientId === c.id);
+            const clientRevenue = invoices.filter(inv => inv.clientId === c.id).reduce((sum, i) => sum + (parseFloat(i.totalAmount) || 0), 0);
+            return {
+                name: c.name,
+                projectCount: clientProjects.length,
+                revenue: clientRevenue,
+                status: clientRevenue > 50000 ? 'PLATINUM' : 'STANDARD'
+            };
+        });
+
+        // 5. RESOURCE & MATERIAL INTELLIGENCE
+        const staffProfiles = staff.map(s => ({ name: s.name, role: s.role, skills: s.skillTags }));
+        
+        // Analyze common materials from the Nodes table
+        const topMaterials = await Node.findAll({ 
+            where: { category: 'material' },
+            limit: 10,
+            order: [['pricePerUnit', 'DESC']]
+        });
+
+        // 5. DEEP DIARY ANALYSIS (SITE FEEDBACK)
+        const recentDiaries = await Diary.findAll({ 
+            limit: 20, 
+            order: [['date', 'DESC']],
+            attributes: ['notes', 'totalCost', 'totalRevenue', 'date']
+        });
+        
+        const siteInsights = recentDiaries.map(d => d.notes).filter(Boolean).slice(0, 10);
 
         return {
             mesh: {
-                resourceContentionIndex: resourceContention,
-                activeChannels: activeProjects.length,
-                integrity: totalDiaries > 0 ? 0.982 : 1.0,
-                financialSynchronicity: 'Every $1.00 saved generates $1.14 in overall Mesh efficiency',
-                projects: projectDNA
+                integrity: (1 - contentionIndex).toFixed(3),
+                nodes: nodes + staff.length + equip + projects.length,
+                resourceContentionIndex: contentionIndex.toFixed(2),
+                institutionalEfficiency: (totalQuoted > 0 ? (totalInvoiced / totalQuoted) : 1.0).toFixed(2),
+                burnAcceleration: (totalDiaryCost > 0 ? (totalInvoiced / totalDiaryCost) : 1.0).toFixed(2),
+                frictionIndex: (frictionCount / 50).toFixed(2),
+                status: contentionIndex > 0.3 ? 'VOLATILE' : 'STABLE'
+            },
+            assets: {
+                staff: staffProfiles,
+                materials: topMaterials.map(m => ({ name: m.name, unit: m.unit, price: m.pricePerUnit })),
+                equipmentCount: equip
+            },
+            siteFeedback: siteInsights,
+            financials: {
+                totalValue: totalQuoted,
+                invoiced: totalInvoiced,
+                paid: totalPaid,
+                yieldDelta: (totalInvoiced - totalQuoted),
+                collectionVelocity: (collectionVelocity * 100).toFixed(1) + '%',
+                netProfit: netProfit.toFixed(2),
+                marginPct: (profitMargin * 100).toFixed(1) + '%'
             },
             oracle: {
-                bidSuccessProbability: '84%',
-                idealMarginPoint: '26.4%',
-                marketVolatilityIndex: 1.12,
-                revenueOptimization: '+$42,000'
+                bidSuccessProbability: (collectionVelocity * 85).toFixed(0) + '%',
+                idealMarginPoint: (25 + (contentionIndex * 10)).toFixed(1) + '%',
+                riskVelocity: contentionIndex > 0.2 ? 'ACCELERATING' : 'NOMINAL'
             },
-            patterns,
-            crewDNA: [
-                { crew: 'Alpha Team', skillLevel: 'Elite', speed: 1.05, reliability: 0.98, bestTask: 'Structural' }
+            clientHealth: clientHealthData.sort((a,b) => b.revenue - a.revenue).slice(0, 5),
+            parallelScenarios: [
+                { id: 'S1', name: 'Rapid Liquidity', impact: 'Boost Collection', cost: '5% Discount' },
+                { id: 'S2', name: 'Resource Leveling', impact: 'Lower Contention', cost: 'Extend Timelines' },
+                { id: 'S3', name: 'Growth Surge', impact: 'Max Revenue', cost: 'High Risk' }
             ],
-            globalAccuracy: 0.96,
-            riskVelocity: '+4.2%/week',
-            marginLeakage: '$12,450/month',
-            sentimentScore: 72
+            globalAccuracy: (1 - (frictionCount / 100)).toFixed(2)
         };
     } catch (e) {
-        console.error("Neural Mesh Logic Failure:", e);
+        console.error("Neural Mesh Omega Failure:", e);
         return null;
     }
 };

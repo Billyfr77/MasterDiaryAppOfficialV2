@@ -21,6 +21,8 @@ router.use(authenticateToken);
 router.post('/workflow', aiController.generateWorkflow);
 router.post('/summary', aiController.generateDiarySummary);
 router.post('/chat', aiController.chatGlobal);
+router.post('/execute-agency', aiController.executeAgencyDirective); // Propose
+router.post('/sign-off', aiController.signOffDirective); // Execute Approved
 router.post('/analyze-document', aiController.analyzeDocument);
 router.post('/safety-analysis', aiController.analyzeSafetyTask);
 

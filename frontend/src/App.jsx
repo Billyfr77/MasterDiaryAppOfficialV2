@@ -8,12 +8,12 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command, GitBranch, Briefcase, CreditCard, Activity, PenTool, Menu, X, Globe } from 'lucide-react'
+import { Home, Folder, Users, Calendar, Settings as SettingsIcon, Wrench, FileText, LogOut, Package, DollarSign, Moon, Sun, Command, GitBranch, Briefcase, CreditCard, Activity, PenTool, Menu, X, Globe, Shield } from 'lucide-react'
 import { NotificationProvider } from './context/NotificationContext'
 import { SettingsProvider } from './context/SettingsContext'
 import { UIProvider } from './context/UIContext'
 import { DataProvider } from './context/DataContext'
-import ErrorBoundary from './components/ErrorBoundary'
+import SovereignErrorBoundary from './components/ui/SovereignErrorBoundary'
 import CommandPalette from './components/CommandPalette'
 import Login from './components/Login'
 import Landing from './components/Landing'
@@ -39,6 +39,7 @@ import ExecutiveHQ from './components/ExecutiveHQ'
 import InvoiceBuilder from './components/InvoiceBuilder'
 import XeroCallback from './components/XeroCallback'
 import PinnacleCopilot from './components/PinnacleCopilot'
+import AuditUltraLog from './components/AuditUltraLog'
 import SafetyDashboard from './components/Safety/SafetyDashboard'
 import SafetyFormViewer from './components/Safety/SafetyFormViewer'
 import SubscriptionPage from './components/SubscriptionPage'
@@ -142,7 +143,7 @@ function App() {
   const isExecutiveHQ = location.pathname.startsWith('/hq');
 
   return (
-    <ErrorBoundary>
+    <SovereignErrorBoundary>
       <UIProvider>
         <NotificationProvider>
           <SettingsProvider>
@@ -165,7 +166,7 @@ function App() {
           </SettingsProvider>
         </NotificationProvider>
       </UIProvider>
-    </ErrorBoundary>
+    </SovereignErrorBoundary>
   );
 }
 
@@ -276,6 +277,7 @@ function AppInner({
                         <NavLink to="/equipment" icon={<Wrench size={16} />} label="Equipment" activeColor={theme.accent} />
                         <NavLink to="/workflows" icon={<GitBranch size={16} />} label="Flows" activeColor={theme.accent} />
                         <NavLink to="/safety" icon={<ClipboardCheck size={16} />} label="Safety" activeColor={theme.accent} />
+                        <NavLink to="/audit" icon={<Shield size={16} />} label="Audit" activeColor={theme.accent} />
                         <NavLink to="/reports" icon={<FileText size={16} />} label="Reports" activeColor={theme.accent} />
                         <NavLink to="/subscription" icon={<Crown size={16} />} label="Upgrade" activeColor={theme.accent} />
                       </nav>
@@ -330,6 +332,7 @@ function AppInner({
               <Route path="/reports/new" element={<DocumentForm />} />
               <Route path="/reports/edit/:id" element={<DocumentForm />} />
               <Route path="/invoices" element={<InvoiceBuilder />} />
+              <Route path="/audit" element={<AuditUltraLog />} />
               <Route path="/safety" element={<SafetyDashboard />} />
               <Route path="/safety/:id" element={<SafetyFormViewer />} />
               <Route path="/xero/callback" element={<XeroCallback />} />

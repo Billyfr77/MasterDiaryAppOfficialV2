@@ -30,6 +30,7 @@ const EnhancedSettings = () => {
   // Local state for the "Company Profile" form
   const [profileForm, setProfileForm] = useState({
     companyName: settings.companyName || '',
+    companyDescription: settings.companyDescription || '',
     companyAddress: settings.companyAddress || '',
     companyEmail: settings.companyEmail || '',
     companyPhone: settings.companyPhone || '',
@@ -38,13 +39,16 @@ const EnhancedSettings = () => {
     defaultTaxRate: settings.defaultTaxRate || '0',
     bankName: settings.bankName || '',
     bankAccount: settings.bankAccount || '',
-    bankSortCode: settings.bankSortCode || ''
+    bankSortCode: settings.bankSortCode || '',
+    aiPersona: settings.aiPersona || 'foreman',
+    aiVerbosity: settings.aiVerbosity || 'concise'
   });
 
   // Effect to sync local form with loaded settings
   React.useEffect(() => {
     setProfileForm({
       companyName: settings.companyName || '',
+      companyDescription: settings.companyDescription || '',
       companyAddress: settings.companyAddress || '',
       companyEmail: settings.companyEmail || '',
       companyPhone: settings.companyPhone || '',
@@ -53,7 +57,9 @@ const EnhancedSettings = () => {
       defaultTaxRate: settings.defaultTaxRate || '0',
       bankName: settings.bankName || '',
       bankAccount: settings.bankAccount || '',
-      bankSortCode: settings.bankSortCode || ''
+      bankSortCode: settings.bankSortCode || '',
+      aiPersona: settings.aiPersona || 'foreman',
+      aiVerbosity: settings.aiVerbosity || 'concise'
     });
   }, [settings]);
 
@@ -120,6 +126,12 @@ const EnhancedSettings = () => {
             <CreditCard size={20} /> Financial Defaults
         </button>
         <button 
+            onClick={() => setActiveTab('ai')}
+            className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${activeTab === 'ai' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+        >
+            <BrainCircuit size={20} /> AI & Intelligence
+        </button>
+        <button 
             onClick={() => setActiveTab('advanced')}
             className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${activeTab === 'advanced' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
         >
@@ -129,13 +141,13 @@ const EnhancedSettings = () => {
 
       <div className="max-w-[1600px] mx-auto">
         
-        {/* TAB: COMPANY PROFILE */}
-        {(activeTab === 'profile' || activeTab === 'financials') && (
+        {/* TAB: COMPANY PROFILE / FINANCIALS / AI */}
+        {(activeTab === 'profile' || activeTab === 'financials' || activeTab === 'ai') && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in-up">
                 <div className="bg-stone-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
                     <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                        {activeTab === 'profile' ? <Building2 className="text-indigo-400"/> : <CreditCard className="text-emerald-400"/>}
-                        {activeTab === 'profile' ? 'Business Details' : 'Financial Configuration'}
+                        {activeTab === 'profile' ? <Building2 className="text-indigo-400"/> : activeTab === 'financials' ? <CreditCard className="text-emerald-400"/> : <Sparkles className="text-purple-400"/>}
+                        {activeTab === 'profile' ? 'Business Details' : activeTab === 'financials' ? 'Financial Configuration' : 'Pinnacle AI Brain'}
                     </h3>
                     
                     <form onSubmit={handleProfileSave} className="space-y-6">
@@ -149,6 +161,16 @@ const EnhancedSettings = () => {
                                         className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
                                         placeholder="Acme Construction Ltd."
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Company Bio / Description (For AI Intelligence)</label>
+                                    <textarea 
+                                        value={profileForm.companyDescription} 
+                                        onChange={e => setProfileForm({...profileForm, companyDescription: e.target.value})}
+                                        className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none h-32 resize-none"
+                                        placeholder="e.g. We are a boutique home builder specializing in sustainable timber decks and luxury outdoor living spaces in the Sydney region..."
+                                    />
+                                    <p className="text-[10px] text-gray-500 mt-2 italic">The AI uses this bio to understand your specific niche, locations, and expertise.</p>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Address</label>
@@ -176,6 +198,53 @@ const EnhancedSettings = () => {
                                             className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
                                         />
                                     </div>
+                                </div>
+                            </>
+                        )}
+
+                        {activeTab === 'ai' && (
+                            <>
+                                <div className="p-6 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-6">
+                                    <h4 className="text-sm font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <BrainCircuit size={16} /> Autonomous Persona
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button 
+                                            type="button"
+                                            onClick={() => setProfileForm({...profileForm, aiPersona: 'foreman'})}
+                                            className={`p-4 rounded-xl border transition-all text-left ${profileForm.aiPersona === 'foreman' ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg' : 'bg-black/20 border-white/10 text-gray-500 hover:border-white/30'}`}
+                                        >
+                                            <div className="font-bold text-sm mb-1">Site Foreman</div>
+                                            <div className="text-[10px] opacity-70">Simple, clear, direct language. Perfect for site workers.</div>
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setProfileForm({...profileForm, aiPersona: 'executive'})}
+                                            className={`p-4 rounded-xl border transition-all text-left ${profileForm.aiPersona === 'executive' ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg' : 'bg-black/20 border-white/10 text-gray-500 hover:border-white/30'}`}
+                                        >
+                                            <div className="font-bold text-sm mb-1">Executive Analyst</div>
+                                            <div className="text-[10px] opacity-70">Detailed, professional, data-heavy analysis.</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">AI Output Verbosity</label>
+                                    <select 
+                                        value={profileForm.aiVerbosity} 
+                                        onChange={e => setProfileForm({...profileForm, aiVerbosity: e.target.value})}
+                                        className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer appearance-none"
+                                    >
+                                        <option value="concise" className="bg-stone-900">Concise (Fast & Direct)</option>
+                                        <option value="balanced" className="bg-stone-900">Balanced (Recommended)</option>
+                                        <option value="detailed" className="bg-stone-900">Detailed (Comprehensive)</option>
+                                    </select>
+                                </div>
+
+                                <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+                                    <p className="text-[10px] text-amber-200/70 leading-relaxed font-medium">
+                                        <strong>Note:</strong> Higher verbosity increases response time and token consumption. The "Concise" setting is optimized for the Billion-Dollar Feature suite.
+                                    </p>
                                 </div>
                             </>
                         )}

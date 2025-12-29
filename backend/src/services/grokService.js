@@ -19,7 +19,7 @@ class GrokService {
     }
   }
 
-  async generateText(prompt, systemInstruction = "You are a helpful assistant.", maxTokens = 2048) {
+  async generateText(prompt, systemInstruction = "You are a helpful assistant.", maxTokens = 8192) {
     if (!this.client) throw new Error("AI Service not configured (Missing GROK_API_KEY)");
 
     try {
@@ -29,7 +29,8 @@ class GrokService {
             { role: "user", content: prompt }
         ],
         model: "grok-4-1-fast-reasoning", 
-        max_tokens: maxTokens
+        max_tokens: maxTokens,
+        temperature: 0.7
       });
 
       return completion.choices[0].message.content;
@@ -39,7 +40,7 @@ class GrokService {
     }
   }
 
-  async generateJSON(prompt, systemInstruction = "", maxTokens = 4096) {
+  async generateJSON(prompt, systemInstruction = "", maxTokens = 8192) {
     if (!this.client) throw new Error("AI Service not configured");
 
     try {
@@ -49,12 +50,13 @@ class GrokService {
             { role: "user", content: prompt }
         ],
         model: "grok-4-1-fast-reasoning", 
-        max_tokens: maxTokens 
+        max_tokens: maxTokens,
+        temperature: 0.4
       });
 
       let content = completion.choices[0].message.content;
       
-      // STRIP REASONING TAGS (e.g. <thought>...</thought>)
+      // CRITICAL: Strip <thought> tags which break JSON parsing in reasoning models
       content = content.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim();
       
       // ROBUST JSON EXTRACTION
@@ -62,7 +64,7 @@ class GrokService {
       const endIdx = content.lastIndexOf('}');
       
       if (startIdx === -1 || endIdx === -1) {
-          console.error("[Grok] Raw Content:", content);
+          console.error("[Grok] Raw Content (JSON extraction failed):", content);
           throw new Error("No JSON object found in response");
       }
       

@@ -10,7 +10,7 @@ import {
     Star, Sparkles, Gauge, ChevronRight, Link2, Server, Cpu, DollarSign,
     Wind, Waves, Maximize2, Minimize2, Search, Compass, MousePointer2,
     Lock, Unlock, Cpu as CpuIcon2, Activity as PulseIcon, Users, AlertCircle,
-    Sun, Flame, Rocket
+    Sun, Flame, Rocket, Eye, Cpu as NeuralIcon, RotateCcw, HelpCircle
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
@@ -21,7 +21,8 @@ export default function ExecutiveHQ() {
     const { settings } = useSettings();
     const [projects, setProjects] = useState([]);
     const [oracleSignals, setOracleSignals] = useState([]);
-    const [meshStats, setMeshStats] = useState({ personnel: 0, nodes: 0, empireValue: 0, activeProjects: 0 });
+    const [meshStats, setMeshStats] = useState({ personnel: 0, nodes: 0, empireValue: 0, activeProjects: 0, totalPaid: 0, netMargin: '0%' });
+    const [intelligence, setIntelligence] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [lastSync, setLastSync] = useState(null);
@@ -29,12 +30,21 @@ export default function ExecutiveHQ() {
     const [viewMode, setViewMode] = useState('MESH'); 
     const [selectedNexusId, setSelectedNexusId] = useState(null);
     const [isMaximized, setIsMaximized] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
     const [commandInput, setCommandInput] = useState('');
     const [warRoomInput, setWarRoomInput] = useState('');
     const [warRoomMessages, setWarRoomMessages] = useState([
-        { role: 'oracle', content: "Sovereign Intelligence Oracle Online. The Galactic Core is synchronized. Awaiting strategic directives." }
+        { role: 'oracle', content: "Sovereign Intelligence Oracle Online. Galactic mesh is stabilized. Awaiting high-level strategic directives." }
     ]);
     
+    const chatEndRef = useRef(null);
+
+    useEffect(() => {
+        if (chatEndRef.current) {
+            chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [warRoomMessages]);
+
     // --- INFINITE SPACE NAVIGATION ---
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
@@ -43,10 +53,10 @@ export default function ExecutiveHQ() {
     const lastPos = useRef({ x: 0, y: 0 });
 
     const [terminalLines, setTerminalLines] = useState([
-        "> SOVEREIGN_SINGULARITY_OS_V15.0 INITIALIZED",
-        "> NEURAL_NEBULA_GENERATED: STABLE",
-        "> GRAVITATIONAL_LOCK: ESTABLISHED",
-        "> EMPIRE_COMMAND_READY..."
+        "> SOVEREIGN_SINGULARITY_OS_V15.5 INITIALIZED",
+        "> INSTITUTIONAL_DNA_SYNC: SUCCESSFUL",
+        "> LATTICE_GRAVITY: STABLE",
+        "> STANDING_BY_FOR_MISSION_DIRECTIVE..."
     ]);
 
     const fetchMesh = async () => {
@@ -57,12 +67,17 @@ export default function ExecutiveHQ() {
                 api.get('/projects'),
                 api.get('/intelligence/oracle-stream')
             ]);
-            setProjects(pRes.data.data || pRes.data || []);
+            const pData = pRes.data.data || pRes.data || [];
+            setProjects(pData);
             setOracleSignals(oRes.data.signals || []);
             if (oRes.data.stats) setMeshStats(oRes.data.stats);
+            if (oRes.data.intelligence) setIntelligence(oRes.data.intelligence);
             setLatency(Date.now() - startTime);
             setLastSync(new Date().toLocaleTimeString());
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e);
+            setTerminalLines(prev => [...prev, "> MESH_HANDSHAKE_TIMEOUT: RETRYING..."].slice(-12));
+        }
         setIsSyncing(false);
         setLoading(false);
     };
@@ -70,7 +85,19 @@ export default function ExecutiveHQ() {
     useEffect(() => {
         fetchMesh();
         const interval = setInterval(fetchMesh, 20000);
-        return () => clearInterval(interval);
+        
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setIsMaximized(false);
+                setPan({ x: 0, y: 0 });
+                setZoom(1);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
     }, []);
 
     // --- COSMIC NAVIGATION ---
@@ -98,18 +125,59 @@ export default function ExecutiveHQ() {
 
     const handleWheel = (e) => {
         if (viewMode !== 'MESH') return;
+        // Prevent page scroll when zooming the galaxy
+        e.preventDefault();
         const delta = e.deltaY * -0.001;
         setZoom(prev => Math.min(Math.max(0.1, prev + delta), 3.0));
     };
 
-    const handleCommandSubmit = (e) => {
+    const handleCommandSubmit = async (e) => {
         if (e.key === 'Enter' && commandInput.trim()) {
-            const cmd = commandInput.toUpperCase();
-            setTerminalLines(prev => [...prev, `> ${cmd}`, `SYSTEM_HANDSHAKE_INITIATED...`].slice(-15));
+            const raw = commandInput.trim();
+            const cmd = raw.toUpperCase();
+            setTerminalLines(prev => [...prev, `> ${raw}`, `ANALYZING_INTENT...`].slice(-15));
             setCommandInput('');
-            if (cmd === 'SYNC') fetchMesh();
-            if (cmd === 'CENTER') { setPan({ x: 0, y: 0 }); setZoom(1); }
-            setTimeout(() => setTerminalLines(prev => [...prev, `STATUS: SOVEREIGN.`].slice(-15)), 800);
+            
+            // --- 1. SYSTEM COMMANDS ---
+            if (['SYNC', 'REFRESH'].includes(cmd)) { fetchMesh(); return; }
+            if (cmd === 'CENTER') { setPan({ x: 0, y: 0 }); setZoom(1); return; }
+            if (cmd === 'ORACLE') { setViewMode('WAR_ROOM'); return; }
+            if (['MAXIMIZE', 'MAX'].includes(cmd)) { setIsMaximized(true); return; }
+            
+            // --- 2. PROJECT TARGETING ---
+            const foundProject = projects.find(p => p.name.toUpperCase().includes(cmd) || p.id.toUpperCase().includes(cmd));
+            if (foundProject) {
+                setTerminalLines(prev => [...prev, `> TARGET_LATTICE_LOCKED: ${foundProject.name}`].slice(-15));
+                setSelectedNexusId(foundProject.id);
+                return;
+            }
+
+            // --- 3. NATURAL LANGUAGE DELEGATION (WAR ROOM) ---
+            // If it's not a command or project, it's a question for the Partner
+            setTerminalLines(prev => [...prev, `> DELEGATING_TO_ORACLE...`].slice(-15));
+            
+            // Transition to War Room
+            setViewMode('WAR_ROOM');
+            
+            // Add to messages and trigger AI
+            const userMsg = raw;
+            setWarRoomMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+            
+            try {
+                const res = await api.post('/ai/chat-workflow', { 
+                    message: userMsg, 
+                    context: { 
+                        projects, 
+                        intelligence,
+                        type: 'EXECUTIVE' 
+                    } 
+                });
+                setWarRoomMessages(prev => [...prev, { role: 'oracle', content: res.data.reply }]);
+                setTerminalLines(prev => [...prev, `DIRECTIVE_EXECUTION: SOVEREIGN_SUCCESS.`].slice(-15));
+            } catch (err) {
+                console.error("Auto-Oracle Error:", err);
+                setTerminalLines(prev => [...prev, `ORACLE_LINK_FAILURE`].slice(-15));
+            }
         }
     };
 
@@ -119,7 +187,14 @@ export default function ExecutiveHQ() {
         setWarRoomInput('');
         setWarRoomMessages(prev => [...prev, { role: 'user', content: msg }]);
         try {
-            const res = await api.post('/ai/chat-workflow', { message: msg, context: { projects, type: 'EXECUTIVE' } });
+            const res = await api.post('/ai/chat-workflow', { 
+                message: msg, 
+                context: { 
+                    projects, 
+                    intelligence, // INJECT FULL BUSINESS INTELLIGENCE
+                    type: 'EXECUTIVE' 
+                } 
+            });
             setWarRoomMessages(prev => [...prev, { role: 'oracle', content: res.data.reply }]);
         } catch (e) { console.error(e); }
     };
@@ -133,15 +208,29 @@ export default function ExecutiveHQ() {
         } catch (e) { setTerminalLines(prev => [...prev, `> LINK_FAILURE`].slice(-10)); }
     };
 
-    // --- ORBITAL PHYSICS ENGINE ---
+    // --- RESPONSIVE ORBITAL ENGINE ---
+    const orbitalScale = useMemo(() => {
+        const width = window.innerWidth;
+        if (width < 1024) return 0.5; // Half size for mobile/small tablets
+        if (width < 1440) return 0.8;
+        return 1.0;
+    }, []);
+
     const galacticLattice = useMemo(() => {
-        return projects.map((p, i) => {
+        // Sort projects by value (largest first) to align by importance
+        const sortedProjects = [...projects].sort((a, b) => {
+            const valA = parseFloat(a.financials?.contractValue || a.value || 0);
+            const valB = parseFloat(b.financials?.contractValue || b.value || 0);
+            return valB - valA;
+        });
+
+        return sortedProjects.map((p, i) => {
             const lane = (i % 5) + 1;
-            const radius = 500 + (lane * 350);
-            const baseSpeed = 0.03 / lane;
+            const radius = (220 + (lane * 160)) * orbitalScale; // Balanced radius
+            const baseSpeed = 0.004 / lane; // Significantly slower, majestic orbit
             return { ...p, radius, speed: baseSpeed, angleOffset: (i * (360 / (projects.length || 1))) * (Math.PI / 180), lane, hue: (i * 72) % 360 };
         });
-    }, [projects]);
+    }, [projects, orbitalScale]);
 
     const selectedNexus = useMemo(() => projects.find(p => p.id === selectedNexusId), [projects, selectedNexusId]);
 
@@ -154,8 +243,8 @@ export default function ExecutiveHQ() {
     );
 
     return (
-        <div className="h-screen w-screen bg-[#010102] text-[#e2e8f0] font-mono overflow-hidden flex flex-col p-4 gap-4 relative select-none" 
-             onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={handleWheel}>
+        <div className="min-h-screen w-screen bg-[#010102] text-[#e2e8f0] font-mono overflow-y-auto custom-scrollbar flex flex-col p-4 gap-4 relative select-none" 
+             onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
             
             <style>{`
                 .cosmic-nebula {
@@ -176,13 +265,14 @@ export default function ExecutiveHQ() {
                     animation: rotate-corona 15s linear infinite;
                 }
                 @keyframes rotate-corona { to { transform: rotate(360deg); } }
-                .orbital-path { border: 1px solid rgba(255,255,255,0.03); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+                .orbital-path { border: 1px solid rgba(255,255,255,0.08); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
                 .glass-obsidian { 
-                    backdrop-filter: blur(80px); background: rgba(0,0,0,0.6); 
+                    backdrop-filter: blur(100px); background: rgba(0,0,0,0.7); 
                     border: 1px solid rgba(255,255,255,0.05); 
-                    box-shadow: 0 0 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(255,255,255,0.02);
+                    box-shadow: 0 0 80px rgba(0,0,0,0.9), inset 0 0 30px rgba(255,255,255,0.02);
                 }
-                .galaxy-viewport { perspective: 5000px; cursor: move; }
+                .galaxy-viewport { perspective: 5000px; cursor: move; min-height: 600px; }
+                .transform-style-3d { transform-style: preserve-3d; }
                 .sync-flicker { animation: flicker 0.2s ease-in-out; }
                 @keyframes flicker { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; filter: brightness(2); } }
             `}</style>
@@ -211,7 +301,12 @@ export default function ExecutiveHQ() {
                         <div className="flex gap-8 items-center">
                             <BridgeStat label="Neural_Bus" value={`${latency}ms`} color="indigo" icon={Zap} />
                             <BridgeStat label="Integrity" value="99.8%" color="emerald" icon={ShieldCheck} />
-                            <button onClick={() => setIsMaximized(true)} className="p-10 bg-white/5 hover:bg-white/10 rounded-[3.5rem] border border-white/10 transition-all group shadow-2xl"><Maximize2 size={40} className="text-gray-400 group-hover:text-white" /></button>
+                            <div className="flex gap-2">
+                                <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); }} className="p-10 bg-white/5 hover:bg-white/10 rounded-[3.5rem] border border-white/10 transition-all group shadow-2xl" title="Reset Camera">
+                                    <RotateCcw size={32} className="text-indigo-400 group-hover:rotate-[-180deg] transition-transform duration-700" />
+                                </button>
+                                <button onClick={() => setIsMaximized(true)} className="p-10 bg-white/5 hover:bg-white/10 rounded-[3.5rem] border border-white/10 transition-all group shadow-2xl"><Maximize2 size={40} className="text-gray-400 group-hover:text-white" /></button>
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -221,6 +316,7 @@ export default function ExecutiveHQ() {
             <div 
                 className={`flex-1 relative galaxy-viewport overflow-hidden bg-black/40 border border-white/5 rounded-[6rem] shadow-inner maximize-transition ${isMaximized ? 'fixed inset-6 z-[60] !m-0 rounded-[4rem]' : 'mx-4'}`}
                 onMouseDown={handleMouseDown}
+                onWheel={handleWheel}
             >
                 <motion.div 
                     className="absolute inset-0 transform-style-3d h-full w-full"
@@ -237,11 +333,27 @@ export default function ExecutiveHQ() {
                                             {settings.companyLogo ? <img src={settings.companyLogo} className="w-56 h-56 object-contain filter brightness-200 contrast-150" /> : <Globe size={140} className="text-white animate-pulse" />}
                                         </div>
                                     </motion.div>
+                                    
+                                    {projects.length === 0 && (
+                                        <div className="absolute top-[400px] left-1/2 -translate-x-1/2 w-[400px] text-center">
+                                            <p className="text-indigo-400/40 font-black uppercase tracking-[0.4em] animate-pulse">Awaiting Project Manifestation...</p>
+                                        </div>
+                                    )}
                                 </div>
-                                {galacticLattice.map((p) => (<ProjectPlanet key={p.id} project={p} isSelected={selectedNexusId === p.id} onSelect={() => setSelectedNexusId(p.id)} zoom={zoom} />))}
+                                {galacticLattice.map((p) => (
+                                    <ProjectPlanet 
+                                        key={p.id} 
+                                        project={p} 
+                                        isSelected={selectedNexusId === p.id} 
+                                        onSelect={() => setSelectedNexusId(p.id)} 
+                                        zoom={zoom} 
+                                        orbitalScale={orbitalScale}
+                                        intelligence={intelligence}
+                                    />
+                                ))}
                             </motion.div>
                         )}
-
+                        {/* FLIGHT_PLAN, YIELD, WAR_ROOM Restoration... */}
                         {viewMode === 'FLIGHT_PLAN' && (
                             <motion.div key="flight" initial={{ opacity: 0, x: 200 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -200 }} className="absolute inset-0 p-32 overflow-y-auto custom-scrollbar">
                                 <h2 className="text-7xl font-black uppercase tracking-[0.6em] mb-24 text-indigo-400 flex items-center gap-10 italic drop-shadow-[0_0_30px_rgba(99,102,241,0.4)]"><Navigation size={80} /> Orbit Trajectories</h2>
@@ -271,7 +383,6 @@ export default function ExecutiveHQ() {
                                 </div>
                             </motion.div>
                         )}
-
                         {viewMode === 'YIELD' && (
                             <motion.div key="yield" initial={{ opacity: 0, rotateX: 45 }} animate={{ opacity: 1, rotateX: 0 }} exit={{ opacity: 0, rotateX: -45 }} className="absolute inset-0 p-32 overflow-y-auto custom-scrollbar">
                                 <h2 className="text-7xl font-black uppercase tracking-[0.6em] mb-24 text-emerald-400 flex items-center gap-10 italic drop-shadow-[0_0_30px_rgba(16,185,129,0.4)]"><TrendingUp size={80} /> Yield Surface</h2>
@@ -292,22 +403,57 @@ export default function ExecutiveHQ() {
                                 </div>
                             </motion.div>
                         )}
-
                         {viewMode === 'WAR_ROOM' && (
-                            <motion.div key="war" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="absolute inset-0 p-24 flex flex-col gap-12">
-                                <div className="flex-1 bg-black/40 border border-white/5 rounded-[6rem] p-20 overflow-y-auto custom-scrollbar flex flex-col gap-16 shadow-inner glass-obsidian">
+                            <motion.div key="war" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} className="absolute inset-0 p-12 flex flex-col gap-6">
+                                <div className="flex justify-between items-center px-10">
+                                    <h2 className="text-4xl font-black uppercase tracking-[0.4em] text-indigo-400 italic">Oracle War Room</h2>
+                                    <button onClick={() => setWarRoomMessages([{ role: 'oracle', content: "Sovereign Intelligence Oracle Online. Galactic mesh is stabilized." }])} className="px-6 py-2 bg-white/5 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 rounded-xl border border-white/5 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
+                                        <RotateCcw size={14} /> Clear Log
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 bg-black/60 border border-white/10 rounded-[3rem] p-10 overflow-y-auto custom-scrollbar flex flex-col gap-8 shadow-inner glass-obsidian">
                                     {warRoomMessages.map((m, i) => (
                                         <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[70%] p-16 rounded-[5rem] text-2xl leading-relaxed shadow-3xl ${m.role === 'user' ? 'bg-indigo-600 text-white font-bold rounded-br-none' : 'bg-white/[0.03] border border-white/10 text-indigo-200 rounded-bl-none'}`}>
-                                                {m.role === 'oracle' && (<div className="flex items-center gap-6 mb-10 text-indigo-400 font-black uppercase text-[14px] tracking-[0.8em] border-b border-indigo-500/20 pb-8"><RadioIcon size={32}/> Sovereign_Oracle_Directive</div>)}
-                                                {m.content}
+                                            <div className={`max-w-[80%] p-8 rounded-[2.5rem] text-sm leading-relaxed shadow-2xl border transition-all ${
+                                                m.role === 'user' 
+                                                ? 'bg-indigo-600 border-indigo-400 text-white font-bold rounded-br-none' 
+                                                : 'bg-white/[0.03] border-white/10 text-indigo-100 rounded-bl-none'
+                                            }`}>
+                                                {m.role === 'oracle' && (
+                                                    <div className="flex items-center gap-3 mb-4 text-indigo-400 font-black uppercase text-[9px] tracking-[0.4em] border-b border-indigo-500/20 pb-3">
+                                                        <Sparkles size={14}/> Advice from your Partner
+                                                    </div>
+                                                )}
+                                                <div className="whitespace-pre-wrap">{m.content}</div>
                                             </div>
                                         </div>
                                     ))}
+                                    <div ref={chatEndRef} />
                                 </div>
-                                <div className="relative p-8 shrink-0 group">
-                                    <input type="text" value={warRoomInput} onChange={e => setWarRoomInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleWarRoomSend()} placeholder="INPUT_GLOBAL_DIRECTIVE_ENCRYPTED..." className="w-full bg-white/[0.03] border border-white/10 rounded-[6rem] pl-24 pr-48 py-16 text-4xl text-white focus:outline-none focus:border-indigo-500 transition-all font-black placeholder:text-slate-900 tracking-widest shadow-3xl" />
-                                    <button onClick={handleWarRoomSend} className="absolute right-20 top-1/2 -translate-y-1/2 p-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[4rem] transition-all shadow-[0_0_80px_rgba(99,102,241,0.6)] active:scale-95"><Send size={64}/></button>
+
+                                <div className="relative px-4 pb-4 shrink-0 group">
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-[3rem] blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                                    <div className="relative flex items-center bg-stone-900/80 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl focus-within:border-indigo-500/50 transition-all">
+                                        <div className="pl-8 text-indigo-500">
+                                            <MessageSquare size={24} />
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            value={warRoomInput} 
+                                            onChange={e => setWarRoomInput(e.target.value)} 
+                                            onKeyDown={e => e.key === 'Enter' && handleWarRoomSend()} 
+                                            placeholder="Ask a simple question about your business..." 
+                                            className="flex-1 bg-transparent border-none outline-none px-6 py-10 text-lg text-white font-medium placeholder:text-slate-700 tracking-wide" 
+                                        />
+                                        <button 
+                                            onClick={handleWarRoomSend} 
+                                            disabled={!warRoomInput.trim()}
+                                            className="mr-6 p-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl transition-all shadow-lg disabled:opacity-20 disabled:scale-95 active:scale-90"
+                                        >
+                                            <Send size={24}/>
+                                        </button>
+                                    </div>
                                 </div>
                             </motion.div>
                         )}
@@ -316,77 +462,187 @@ export default function ExecutiveHQ() {
 
                 {/* VIEW HUD (Floating) */}
                 {!isMaximized && (
-                    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 flex bg-black/80 p-4 rounded-[3.5rem] border border-white/10 shadow-3xl backdrop-blur-[100px]">
-                        {['MESH', 'FLIGHT_PLAN', 'YIELD', 'WAR_ROOM'].map(id => (
-                            <button key={id} onClick={() => setViewMode(id)} className={`flex items-center gap-6 px-16 py-6 rounded-[2.5rem] text-[13px] font-black uppercase tracking-[0.5em] transition-all duration-700 ${viewMode === id ? 'bg-indigo-600 text-white shadow-[0_0_80px_rgba(99,102,241,0.6)] scale-110' : 'text-slate-600 hover:text-white hover:bg-white/5'}`}>
-                                {id}
-                            </button>
-                        ))}
+                    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-black/80 p-4 rounded-[3.5rem] border border-white/10 shadow-3xl backdrop-blur-[100px]">
+                        <div className="flex gap-2">
+                            {['MESH', 'FLIGHT_PLAN', 'YIELD', 'WAR_ROOM'].map(id => (
+                                <button key={id} onClick={() => setViewMode(id)} className={`flex items-center gap-6 px-12 py-6 rounded-[2.5rem] text-[13px] font-black uppercase tracking-[0.5em] transition-all duration-700 ${viewMode === id ? 'bg-indigo-600 text-white shadow-[0_0_80px_rgba(99,102,241,0.6)] scale-110' : 'text-slate-600 hover:text-white hover:bg-white/5'}`}>
+                                    {id}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="h-10 w-px bg-white/10 mx-2" />
+                        <button 
+                            onClick={() => setShowHelp(true)}
+                            className="p-6 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-full border border-indigo-500/20 transition-all flex items-center gap-3 group"
+                        >
+                            <HelpCircle size={24} />
+                            <span className="max-w-0 overflow-hidden group-hover:max-w-[150px] transition-all duration-500 whitespace-nowrap text-[10px] font-black uppercase tracking-widest">How this helps</span>
+                        </button>
                     </div>
                 )}
+
+                {/* HELP OVERLAY */}
+                <AnimatePresence>
+                    {showHelp && (
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-[100] bg-black/90 backdrop-blur-2xl p-24 flex items-center justify-center"
+                            onClick={() => setShowHelp(false)}
+                        >
+                            <motion.div 
+                                initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
+                                className="bg-stone-900 border border-white/10 rounded-[4rem] p-20 max-w-4xl shadow-2xl relative"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <button onClick={() => setShowHelp(false)} className="absolute top-10 right-10 p-4 hover:bg-white/5 rounded-full text-gray-500 hover:text-white transition-all"><X size={32}/></button>
+                                
+                                <div className="flex items-center gap-6 mb-12">
+                                    <div className="p-5 bg-indigo-600 rounded-3xl text-white shadow-xl"><BrainCircuit size={48} /></div>
+                                    <h2 className="text-5xl font-black text-white uppercase tracking-tighter">Your AI Partner</h2>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-12">
+                                    <div className="space-y-6">
+                                        <h3 className="text-xl font-bold text-indigo-400 flex items-center gap-3"><Globe size={24}/> The Neural Mesh</h3>
+                                        <p className="text-lg text-gray-400 leading-relaxed">Each project orbits your core logo. If a project glows red, it needs your attention. Green means it is profitable and on track.</p>
+                                    </div>
+                                    <div className="space-y-6">
+                                        <h3 className="text-xl font-bold text-indigo-400 flex items-center gap-3"><MessageSquare size={24}/> The War Room</h3>
+                                        <p className="text-lg text-gray-400 leading-relaxed">Talk to the Oracle like a real business partner. Ask things like "How much did I spend yesterday?" or "Which client is best?" in plain English.</p>
+                                    </div>
+                                    <div className="space-y-6">
+                                        <h3 className="text-xl font-bold text-indigo-400 flex items-center gap-3"><Target size={24}/> Actionable Planning</h3>
+                                        <p className="text-lg text-gray-400 leading-relaxed">Use the input bar at the bottom to give direct instructions. You don't need complex menus—just type what you want to achieve.</p>
+                                    </div>
+                                    <div className="space-y-6">
+                                        <h3 className="text-xl font-bold text-indigo-400 flex items-center gap-3"><CheckCircle size={24}/> Simple Decisions</h3>
+                                        <p className="text-lg text-gray-400 leading-relaxed">The AI simplifies complex data into a few clear options. It ensures you are always on the right path without getting overwhelmed.</p>
+                                    </div>
+                                </div>
+
+                                <button onClick={() => setShowHelp(false)} className="mt-16 w-full py-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-xl transition-all">I understand, let's go</button>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* --- SECTION 3: COMMAND DECK --- */}
             <AnimatePresence>
                 {!isMaximized && (
-                    <motion.div initial={{ opacity: 0, y: 200 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 200 }} className="z-20 h-80 flex gap-10 shrink-0 mx-4 mb-2">
-                        <div className="flex-[2.5] bg-[#020204] border border-white/5 rounded-[5rem] p-16 flex flex-col gap-10 shadow-3xl relative overflow-hidden glass-obsidian">
-                            <div className="flex-1 overflow-y-auto custom-scrollbar text-[15px] font-mono space-y-5 text-indigo-400/80 relative z-10">
-                                {terminalLines.map((l, i) => (<motion.p initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} key={i} className={l.startsWith('>') ? 'text-white font-black' : 'opacity-60 italic'}>{l}</motion.p>))}
+                    <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }} className="z-20 h-64 flex gap-6 shrink-0 mx-4 mb-4">
+                        {/* Friendly Activity Feed */}
+                        <div className="flex-[1.8] bg-indigo-950/20 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 flex flex-col gap-4 shadow-2xl overflow-hidden relative group">
+                            <div className="flex items-center gap-3 mb-2">
+                                <Activity size={18} className="text-indigo-400" />
+                                <h3 className="text-xs font-bold text-white uppercase tracking-widest opacity-60">Company Pulse</h3>
                             </div>
-                            <div className="flex items-center gap-12 border-t border-white/10 pt-12 relative z-10">
-                                <span className="text-indigo-500 text-5xl font-black animate-pulse">&gt;</span>
-                                <input type="text" value={commandInput} onChange={e => setCommandInput(e.target.value)} onKeyDown={handleCommandSubmit} placeholder="INPUT_MISSION_DIRECTIVE..." className="flex-1 bg-transparent border-none outline-none text-4xl text-white font-black uppercase tracking-[0.6em] placeholder:text-slate-900 focus:placeholder:text-slate-800 transition-all" />
+                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                                {terminalLines.slice(-5).map((l, i) => (
+                                    <div key={i} className="flex items-center gap-3 animate-fade-in">
+                                        <div className="w-1 h-1 rounded-full bg-indigo-500/40" />
+                                        <p className="text-[10px] font-medium text-indigo-200/70">{l.replace('>', '').replace('_', ' ')}</p>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
-                        <div className="flex-[4.5] relative">
+                        {/* Main Content Area: Portfolio or Nexus Details */}
+                        <div className="flex-[6] relative group">
                             <AnimatePresence mode="wait">
                                 {selectedNexus ? (
-                                    <motion.div key="detail" initial={{ opacity: 0, scale: 0.9, y: 100 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 100 }} className="absolute inset-0 bg-white/[0.03] border border-white/10 rounded-[6rem] p-16 backdrop-blur-[120px] flex items-center justify-between shadow-[0_0_150px_rgba(0,0,0,0.9)] glass-obsidian overflow-hidden">
-                                        <div className="flex items-center gap-20 relative z-10">
-                                            <div className="w-56 h-52 rounded-[5rem] bg-indigo-600 flex items-center justify-center text-white shadow-[0_0_120px_rgba(99,102,241,0.6)] relative overflow-hidden group/icon">
-                                                <Briefcase size={100} className="relative z-10 group-hover/icon:scale-110 transition-transform duration-700" />
+                                    <motion.div 
+                                        key="detail" 
+                                        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                                        className="absolute inset-0 bg-indigo-900/20 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 flex items-center justify-between shadow-2xl overflow-hidden"
+                                    >
+                                        <div className="flex items-center gap-10 relative z-10">
+                                            <div className="w-24 h-24 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl relative overflow-hidden">
+                                                <Briefcase size={32} className="relative z-10" />
                                                 <div className="absolute inset-0 bg-white/10 animate-shimmer" />
                                             </div>
                                             <div>
-                                                <h2 className="text-8xl font-black text-white uppercase tracking-tighter italic leading-none drop-shadow-3xl">{selectedNexus.name}</h2>
-                                                <div className="flex items-center gap-12 mt-12">
-                                                    <div className="px-10 py-4 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-[2.5rem] text-[16px] font-black uppercase tracking-[0.6em] animate-pulse flex items-center gap-6 shadow-2xl shadow-emerald-900/40"><Unlock size={20} /> DNA_ACCESS_SECURED</div>
-                                                    <span className="text-slate-500 text-[16px] font-black uppercase tracking-[0.8em]">CHANNEL_ALPHA_STABLE</span>
+                                                <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">{selectedNexus.name}</h2>
+                                                <div className="flex items-center gap-4 mt-3">
+                                                    <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
+                                                        <Unlock size={10} /> SECURED
+                                                    </div>
+                                                    <span className="text-slate-500 text-[8px] font-black uppercase tracking-widest">ACTIVE_CHANNEL</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex gap-24 items-center relative z-10">
-                                            <div className="grid grid-cols-3 gap-28 text-right">
-                                                <NexusMetric label="CapEx_Burn" value="$142/hr" color="text-rose-400" />
-                                                <NexusMetric label="Net_Yield" value="+$42k" color="text-emerald-400" />
-                                                <NexusMetric label="Temp_Drift" value="+2.5D" color="text-amber-400" />
+                                        
+                                        <div className="flex gap-10 items-center relative z-10">
+                                            <div className="grid grid-cols-3 gap-10 text-right">
+                                                <NexusMetric label="Burn Rate" value="$142/h" color="text-rose-400" />
+                                                <NexusMetric label="Profit" value="+$42k" color="text-emerald-400" />
+                                                <NexusMetric label="Drift" value="+2.5D" color="text-amber-400" />
                                             </div>
-                                            <button onClick={() => setSelectedNexusId(null)} className="p-10 bg-white/5 hover:bg-rose-600/20 text-slate-500 hover:text-rose-400 rounded-full border border-white/10 transition-all active:scale-90 shadow-3xl"><X size={56}/></button>
+                                            <div className="flex flex-col gap-2">
+                                                <button 
+                                                    onClick={() => navigate('/projects', { state: { openProjectId: selectedNexus.id } })}
+                                                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase tracking-widest text-[9px] flex items-center gap-2 shadow-xl transition-all active:scale-95"
+                                                >
+                                                    <Rocket size={14} /> LAUNCH
+                                                </button>
+                                                <button onClick={() => setSelectedNexusId(null)} className="p-3 bg-white/5 hover:bg-rose-600/20 text-slate-500 hover:text-rose-400 rounded-full border border-white/10 transition-all flex items-center justify-center">
+                                                    <X size={20}/>
+                                                </button>
+                                            </div>
                                         </div>
                                     </motion.div>
                                 ) : (
-                                    <motion.div key="portfolio" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-black/40 border border-white/5 rounded-[6rem] flex items-center justify-between p-24 glass-obsidian">
-                                        <div className="flex items-center gap-20">
-                                            <div className="p-12 bg-indigo-500/10 rounded-[5rem] border border-indigo-500/30 relative shadow-inner">
-                                                <CpuIcon2 size={120} className="text-indigo-400 animate-pulse" />
-                                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: "linear" }} className="absolute inset-[-30px] border border-white/5 rounded-full" />
+                                    <motion.div 
+                                        key="portfolio" 
+                                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                        className="absolute inset-0 bg-stone-900/40 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 flex items-center justify-between shadow-2xl overflow-hidden"
+                                    >
+                                        <div className="flex items-center gap-10 relative z-10">
+                                            <div className="p-6 bg-indigo-500/10 rounded-[1.5rem] border border-indigo-500/30 relative shadow-inner">
+                                                <NeuralIcon size={48} className="text-indigo-400 animate-pulse" />
                                             </div>
                                             <div>
-                                                <h3 className="text-7xl font-black text-white uppercase tracking-tighter italic leading-none">Portfolio_Hub</h3>
-                                                <p className="text-indigo-400 text-[16px] font-bold uppercase tracking-[0.8em] mt-8 flex items-center gap-6"><PulseIcon size={24} className="animate-pulse" /> Global_Handshake_Active</p>
+                                                <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Portfolio Hub</h3>
+                                                <p className="text-indigo-400 text-[9px] font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
+                                                    <PulseIcon size={12} className="animate-pulse" /> Live_Sync_Active
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-20">
-                                            <PortfolioMetric icon={DollarSign} label="Empire Value" value={`$${(meshStats.empireValue/1000000).toFixed(1)}M`} color="text-emerald-400" />
-                                            <PortfolioMetric icon={Users} label="Personnel" value={meshStats.personnel} color="text-indigo-400" />
-                                            <PortfolioMetric icon={Rocket} label="Lattice Nodes" value={meshStats.nodes} color="text-cyan-400" />
-                                            <PortfolioMetric icon={Shield} label="Security Index" value="99.8%" color="text-emerald-500" />
+                                        
+                                        <div className="grid grid-cols-2 gap-x-12 gap-y-6 relative z-10">
+                                            <PortfolioMetric icon={DollarSign} label="Paid Capital" value={`$${(meshStats.totalPaid/1000000).toFixed(2)}M`} color="text-emerald-400" />
+                                            <PortfolioMetric icon={TrendingUp} label="Net Margin" value={meshStats.netMargin} color="text-indigo-400" />
+                                            <PortfolioMetric icon={Users} label="Contention" value={`${Math.round((intelligence?.mesh?.resourceContentionIndex || 0) * 100)}%`} color="text-rose-400" />
+                                            <PortfolioMetric icon={Zap} label="Yield" value={intelligence?.financials?.collectionVelocity || '0%'} color="text-cyan-400" />
                                         </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
+                        </div>
+
+                        {/* Interactive Guiding Partner Input */}
+                        <div className="flex-[3.5] bg-indigo-950/20 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-4 flex flex-col justify-center relative shadow-2xl focus-within:border-indigo-500/50 transition-all">
+                            <div className="absolute top-[-15px] left-12 px-6 py-1.5 bg-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-xl flex items-center gap-2">
+                                <BrainCircuit size={12} /> AI Guiding Partner
+                            </div>
+                            
+                            <div className="flex items-center gap-4 px-8">
+                                <Search size={20} className="text-indigo-500/40" />
+                                <input 
+                                    type="text" 
+                                    value={commandInput} 
+                                    onChange={e => setCommandInput(e.target.value)} 
+                                    onKeyDown={handleCommandSubmit} 
+                                    placeholder="Ask your partner..." 
+                                    className="flex-1 bg-transparent border-none outline-none text-xl text-white font-medium placeholder:text-stone-700 transition-all py-4" 
+                                />
+                                <button 
+                                    onClick={() => handleCommandSubmit({ key: 'Enter' })}
+                                    className="p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl shadow-xl transition-all active:scale-95 group"
+                                >
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -396,8 +652,18 @@ export default function ExecutiveHQ() {
 }
 
 // --- COSMIC COMPONENTS ---
-const ProjectPlanet = ({ project, isSelected, onSelect, zoom }) => {
+const ProjectPlanet = ({ project, isSelected, onSelect, zoom, orbitalScale, intelligence }) => {
     const [angle, setAngle] = useState(project.angleOffset);
+    
+    // Derived Intelligence for this project
+    const projectInsight = useMemo(() => {
+        return intelligence?.patterns?.find(p => p.projectId === project.id || project.name.includes(p.taskType));
+    }, [intelligence, project]);
+
+    const isProfitable = project.financials?.profit > 0;
+    const planetColor = isProfitable ? '#FFD700' : '#FF4500'; // Gold vs Red-Orange
+    const glowColor = isProfitable ? 'rgba(255, 215, 0, 0.4)' : 'rgba(255, 69, 0, 0.4)';
+
     useEffect(() => {
         let animFrame;
         const tick = () => { setAngle(prev => prev + project.speed); animFrame = requestAnimationFrame(tick); };
@@ -407,22 +673,87 @@ const ProjectPlanet = ({ project, isSelected, onSelect, zoom }) => {
 
     const x = Math.cos(angle) * project.radius;
     const y = Math.sin(angle) * project.radius;
-    const z = Math.sin(angle * 2) * 100;
+    const z = Math.sin(angle * 2) * 50;
 
     return (
         <motion.div 
-            style={{ position: 'absolute', left: `calc(50% + ${x}px)`, top: `calc(50% + ${y}px)`, translateZ: z, zIndex: Math.round(z) + 2000 }}
+            style={{ 
+                position: 'absolute', 
+                left: `calc(50% + ${x}px)`, 
+                top: `calc(50% + ${y}px)`, 
+                zIndex: Math.round(z) + 2000 
+            }}
+            animate={{ transform: `translate(-50%, -50%) translateZ(${z}px)` }}
             onClick={(e) => { e.stopPropagation(); onSelect(); }}
-            className={`group crystalline-node p-12 rounded-[5rem] border transition-all duration-1000 cursor-pointer glass-obsidian ${isSelected ? 'border-indigo-500 shadow-[0_0_150px_rgba(99,102,241,0.6)] bg-indigo-600/10 scale-110' : 'hover:border-white/20'}`}
+            className={`group crystalline-node cursor-pointer`}
         >
-            <div className="flex flex-col items-center gap-10 relative z-10">
-                <div className={`p-10 rounded-[3rem] transition-all duration-1000 relative ${isSelected ? 'bg-indigo-600 shadow-3xl' : 'bg-black/60 shadow-inner'}`}>
-                    <Activity size={56} className="text-white" />
-                    {isSelected && <motion.div animate={{ scale: [1, 1.5], opacity: [0.5, 0] }} transition={{ duration: 1, repeat: Infinity }} className="absolute inset-[-15px] border-4 border-indigo-500 rounded-[4rem]" />}
+            {/* Neural Tether (Line to Sun) */}
+            <div 
+                className="absolute top-1/2 left-1/2 origin-left pointer-events-none opacity-20"
+                style={{ 
+                    width: project.radius, 
+                    height: '1px', 
+                    background: `linear-gradient(to right, transparent, ${planetColor})`,
+                    transform: `rotate(${angle + Math.PI}rad) translateX(${orbitalScale * 100}px)`
+                }}
+            />
+
+            {/* Smart Insight Badge (Hovering above planet) */}
+            <AnimatePresence>
+                {projectInsight && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: -60 }}
+                        className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap z-50 pointer-events-none"
+                    >
+                        <div className="bg-black/80 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl flex items-center gap-2 shadow-2xl">
+                            <Sparkles size={12} className={isProfitable ? 'text-amber-400' : 'text-rose-500'} />
+                            <span className="text-[8px] font-black uppercase tracking-widest text-white">
+                                {projectInsight.fix?.split('(')[0] || 'Insight Detected'}
+                            </span>
+                        </div>
+                        <div className="w-px h-8 bg-white/20 mx-auto" />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <div className="flex flex-col items-center gap-6 relative z-10">
+                {/* Neon Planet Core */}
+                <div 
+                    className={`relative w-20 h-24 rounded-[3rem] transition-all duration-1000 flex items-center justify-center border-2`}
+                    style={{ 
+                        backgroundColor: isSelected ? planetColor : 'rgba(0,0,0,0.6)',
+                        borderColor: isSelected ? '#fff' : planetColor,
+                        boxShadow: `0 0 40px ${glowColor}, inset 0 0 20px ${glowColor}`
+                    }}
+                >
+                    <Activity size={32} className={isSelected ? 'text-black' : 'text-white'} />
+                    
+                    {/* Atmospheric Ring */}
+                    <div 
+                        className="absolute inset-[-10px] border border-white/5 rounded-[4rem] animate-spin-slow" 
+                        style={{ borderTopColor: planetColor, borderRightColor: planetColor }}
+                    />
+                    
+                    {/* Status Pulse */}
+                    {isSelected && (
+                        <motion.div 
+                            animate={{ scale: [1, 1.4], opacity: [0.5, 0] }} 
+                            transition={{ duration: 1.5, repeat: Infinity }} 
+                            className="absolute inset-[-20px] border-2 rounded-[5rem]"
+                            style={{ borderColor: planetColor }}
+                        />
+                    )}
                 </div>
-                <div className="space-y-4 text-center">
-                    <h3 className={`text-[12px] font-black uppercase tracking-[0.4em] leading-tight line-clamp-2 italic drop-shadow-3xl ${isSelected ? 'text-white' : 'text-slate-400 group-hover:text-white'}`}>{project.name}</h3>
-                    {zoom > 0.8 && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2 justify-center">{Array.from({ length: 12 }).map((_, i) => (<motion.div key={i} animate={{ height: [4, 14, 4] }} transition={{ duration: 0.5+Math.random(), repeat: Infinity }} className="w-1 rounded-full bg-indigo-500/30" />))}</motion.div>)}
+
+                <div className="space-y-2 text-center max-w-[150px]">
+                    <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] leading-tight line-clamp-2 italic drop-shadow-2xl ${isSelected ? 'text-white' : 'text-slate-400'}`}>
+                        {project.name}
+                    </h3>
+                    <div className="flex items-center justify-center gap-2">
+                        <span className={`text-[8px] font-mono font-bold ${isProfitable ? 'text-amber-400' : 'text-rose-500'}`}>
+                            {isProfitable ? 'YIELD_POSITIVE' : 'RISK_DETECTED'}
+                        </span>
+                    </div>
                 </div>
             </div>
         </motion.div>
@@ -440,18 +771,18 @@ const BridgeStat = ({ label, value, color, icon: Icon }) => (
 );
 
 const PortfolioMetric = ({ icon: Icon, label, value, color }) => (
-    <div className="flex flex-col gap-5 group/port">
-        <div className="flex items-center gap-6">
-            <div className={`p-4 rounded-3xl bg-white/5 ${color} group-hover/port:scale-110 transition-transform shadow-xl`}><Icon size={32} /></div>
-            <span className="text-[13px] font-black text-slate-600 uppercase tracking-[0.8em]">{label}</span>
+    <div className="flex flex-col gap-2 group/port">
+        <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl bg-white/5 ${color} group-hover/port:scale-110 transition-transform shadow-xl`}><Icon size={16} /></div>
+            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{label}</span>
         </div>
-        <span className={`text-6xl font-black text-white tracking-tighter italic leading-none ml-20 drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]`}>{value}</span>
+        <span className={`text-3xl font-black text-white tracking-tighter italic leading-none ml-10 drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]`}>{value}</span>
     </div>
 );
 
 const NexusMetric = ({ label, value, color }) => (
-    <div className="flex flex-col gap-6 group/metric">
-        <span className="text-[14px] font-black text-slate-600 uppercase tracking-[0.8em] group-hover/metric:text-indigo-400 transition-colors">{label}</span>
-        <span className={`text-7xl font-mono font-black ${color} drop-shadow-[0_0_40px_currentColor] tracking-tighter italic leading-none`}>{value}</span>
+    <div className="flex flex-col gap-2 group/metric">
+        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest group-hover/metric:text-indigo-400 transition-colors">{label}</span>
+        <span className={`text-2xl font-mono font-black ${color} drop-shadow-[0_0_20px_currentColor] tracking-tighter italic leading-none`}>{value}</span>
     </div>
 );

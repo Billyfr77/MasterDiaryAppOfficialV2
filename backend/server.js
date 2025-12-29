@@ -5,6 +5,10 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const compression = require('compression');
+const hpp = require('hpp');
+const mongoSanitize = require('express-mongo-sanitize');
+const { v4: uuidv4 } = require('uuid');
+const { logAudit } = require('./src/services/auditService');
 
 // Load root .env first (e.g., C:\Users\billy\.env)
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
@@ -28,6 +32,13 @@ const { loadSettings } = require('./src/utils/settingsCache');
 
 const app = express();
 
+// --- HARDENING: REQUEST TRACEABILITY ---
+app.use((req, res, next) => {
+  req.id = uuidv4();
+  res.setHeader('X-Request-Id', req.id);
+  next();
+});
+
 // Trust Proxy for Cloud Run
 app.set('trust proxy', 1);
 
@@ -42,6 +53,8 @@ const limiter = rateLimit({
 // Middleware
 app.use(limiter);
 app.use(helmet({ contentSecurityPolicy: false }));
+app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(hpp()); // Prevent Parameter Pollution
 app.use(compression());
 
 // CORS headers middleware - Allow All for Production
@@ -71,7 +84,49 @@ app.use(express.json({
 
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ... (Error handling middleware) ...
+// Health Check Route
+app.get('/api/health', async (req, res) => {
+  const health = {
+    uptime: process.uptime(),
+    timestamp: Date.now(),
+    services: {
+      database: 'down',
+      ai_core: 'down',
+      neural_mesh: 'nominal'
+    }
+  };
+
+  try {
+    await db.sequelize.authenticate();
+    health.services.database = 'up';
+  } catch (e) { health.services.database = 'down'; }
+
+  health.services.ai_core = process.env.GROK_API_KEY ? 'up' : 'down';
+  
+  const status = Object.values(health.services).every(s => s === 'up') ? 200 : 207;
+  res.status(status).json(health);
+});
+
+// --- HARDENING: GLOBAL ERROR HANDLER ---
+const globalErrorHandler = (err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  console.error(`[Error][Req:${req.id}] ${err.stack}`);
+  
+  // Record fatal errors in Audit Log
+  if (statusCode === 500) {
+    try {
+      logAudit(req.user?.id, 'SYSTEM_CRASH', 'Server', req.id, { 
+        error: err.message, 
+        path: req.originalUrl 
+      });
+    } catch (e) {}
+  }
+
+  res.status(statusCode).json({
+    error: process.env.NODE_ENV === 'production' ? 'Internal Operational Failure' : err.message,
+    requestId: req.id
+  });
+};
 
 app.use('/api/projects', require('./src/routes/projects'));
 app.use('/api/jobs', require('./src/routes/jobs'));
@@ -104,6 +159,9 @@ app.use('/api/ai', require('./src/routes/ai')); // Grok AI Service
 app.use('/api/intelligence', require('./src/routes/intelligenceRoutes')); // NEW: Intelligence Stack
 app.use('/api/weather', require('./src/routes/weather')); // Weather Service
 app.use('/api/diary-templates', require('./src/routes/diaryTemplates')); // Diary Templates Route
+
+// Force register error handler last
+app.use(globalErrorHandler);
 
 const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 

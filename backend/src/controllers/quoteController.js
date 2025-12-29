@@ -210,6 +210,16 @@ const updateQuote = async (req, res) => {
     if (error) return res.status(400).json({ error: error.details[0].message });
 
     const userId = req.user?.id;
+    const existingQuote = await Quote.findByPk(req.params.id);
+    if (!existingQuote) return res.status(404).json({ error: 'Quote not found' });
+
+    // --- CONFLICT RESOLUTION CORE (OPTIMISTIC LOCK) ---
+    if (req.body.version !== undefined && existingQuote.version !== req.body.version) {
+        return res.status(409).json({ 
+            error: 'Conflict detected', 
+            currentRecord: existingQuote 
+        });
+    }
 
     // 1. Process New Items
     const processedNodes = await processNewItems(value.nodes, 'material', userId);
