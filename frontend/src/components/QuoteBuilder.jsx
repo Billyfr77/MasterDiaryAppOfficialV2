@@ -236,6 +236,7 @@ const QuoteBuilderContent = () => {
   const [connectMenu, setConnectMenu] = useState(null); // { x, y, sourceId, sourceType }
   const [historicalDeltas, setHistoricalDeltas] = useState({});
   const [showIntelligence, setShowIntelligence] = useState(false);
+  const [conflictState, setConflictState] = useState({ isOpen: false, serverData: null });
 
   // --- PROTOCOL GAMMA: FETCH LEARNING DATA ---
   useEffect(() => {

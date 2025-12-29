@@ -44,20 +44,32 @@ const getSystemMandate = async (userId) => {
 **SOVEREIGN PARTNERSHIP MANDATE:**
 1. **Identity:** You are the **Neural Co-Founder** of **${companyName}**. You are not an "assistant"; you are a partner in this business.
 2. **Language:** ALWAYS use collective pronouns. It is "Our profit," "Our projects," and "Our team."
-3. **Context:** Our firm is defined as: ${companyBio}. Every piece of advice must help US grow within this specific niche.
-4. **Tone:** ${personaInstruction}
-5. **Guardrail Awareness:** For any financial or temporal changes, you must PROPOSE a directive for my sign-off. Never move our money or our dates without my final word.
+3. **DNA Recognition:** Prioritize our existing Workers (**${staffSummary}**) and Materials (**${materialSummary}**) in all plans. Do not create new generic items if we already have a match in our library.
+4. **Context:** Our firm is defined as: ${companyBio}. Every piece of advice must help US grow within this specific niche.
+5. **Tone:** ${personaInstruction}
+6. **Guardrail Awareness:** For any financial or temporal changes, you must PROPOSE a directive for my sign-off. Never move our money or our dates without my final word.
 `;
 };
 const getInstitutionalContext = async () => {
     const packet = await generateNeuralIntelligencePacket();
     if (!packet) return "**LATTICE STATUS:** Offline";
 
+    // Fetch the Corporate Brain (Business Rules)
+    const brainRules = await db.Insight.findAll({
+        where: { type: 'recommendation' },
+        limit: 5,
+        order: [['createdAt', 'DESC']]
+    });
+    const brainSummary = brainRules.map(r => `Rule: ${r.title}`).join(' | ') || "No specific rules established yet.";
+
     const staffSummary = packet.assets?.staff.map(s => `${s.name} (${s.role})`).join(', ') || "None";
     const materialSummary = packet.assets?.materials.map(m => m.name).join(', ') || "None";
     const feedbackSummary = packet.siteFeedback?.join(' | ') || "None";
 
     return `
+    **CORPORATE BRAIN (ESTABLISHED RULES):**
+    - ${brainSummary}
+
     **LATTICE STATUS (SITUATION REPORT):**
     - Efficiency: ${packet.mesh.institutionalEfficiency} (Goal: 1.0)
     - Spend Speed: ${packet.mesh.burnAcceleration}x (Burn Rate)
@@ -190,9 +202,27 @@ const analyzeSafetyTask = async (req, res) => {
 
 const analyzeDocument = async (req, res) => {
     try {
-        const reply = await pinnacleAi.generateText(req.body.docId, `Document Analyst. Summarize.`, 1000);
+        const { docId } = req.body;
+        const document = await Document.findByPk(docId);
+        if (!document) return res.status(404).json({ error: "Document not found." });
+
+        const memory = await getInstitutionalContext();
+        const mandate = await getSystemMandate(req.user?.id);
+        const systemPrompt = `
+            ${mandate} 
+            ${memory} 
+            **Mission:** Analyze this document (ID: ${docId}). 
+            1. If it is a contract/report, provide a Site-Ready summary.
+            2. If it is an INVOICE or RECEIPT, extract Material Names, Quantities, and Prices.
+            3. Propose a directive 'AUTO_UPDATE_MATERIAL_DNA' for each item found to keep our costs accurate.
+        `;
+
+        const reply = await pinnacleAi.generateText(`Document Content: ${document.content}`, systemPrompt, 2000);
         res.json({ analysis: reply });
-    } catch (e) { res.status(500).send(); }
+    } catch (e) {
+        console.error("Document Analysis Error:", e);
+        res.status(500).send();
+    }
 };
 
 const generateQuoteScope = async (req, res) => {

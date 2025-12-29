@@ -60,6 +60,12 @@ class AgencyEngine {
             case 'AUTO_CORRECT_LABOUR_DNA':
                 result = await this.patchLabourRates(directive.staffId, directive.suggestedRate, userId);
                 break;
+            case 'UPDATE_MATERIAL_PRICE':
+                result = await this.patchMaterialPrice(directive.nodeId, directive.newPrice, userId);
+                break;
+            case 'CREATE_BUSINESS_RULE':
+                result = await this.recordBusinessRule(directive.title, directive.description, userId);
+                break;
             default:
                 throw new Error("Action type invalid.");
         }
@@ -71,6 +77,31 @@ class AgencyEngine {
         }
 
         return result;
+    }
+
+    async recordBusinessRule(title, description, userId) {
+        await db.Insight.create({
+            title,
+            description,
+            type: 'recommendation',
+            priority: 1, // High priority for learned rules
+            isRead: false
+        });
+        
+        await this.logAgencyAction(userId, 'BRAIN_RULE_CREATED', `New Business Rule: ${title}`);
+        return { success: true, message: "Rule stored in Corporate Brain." };
+    }
+
+    async patchMaterialPrice(id, price, userId) {
+        const node = await db.Node.findByPk(id);
+        if (!node) throw new Error("Material node not found.");
+        
+        const oldPrice = node.pricePerUnit;
+        node.pricePerUnit = price;
+        await node.save();
+        
+        await this.logAgencyAction(userId, 'MATERIAL_PRICE_SYNC', `Updated ${node.name} price from $${oldPrice} to $${price} based on recent receipt analysis.`);
+        return { success: true, message: "Material DNA synchronized." };
     }
 
     async patchQuoteMargin(id, margin, userId) {

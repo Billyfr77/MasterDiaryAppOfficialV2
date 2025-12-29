@@ -23,6 +23,7 @@ export default function ExecutiveHQ() {
     const [oracleSignals, setOracleSignals] = useState([]);
     const [meshStats, setMeshStats] = useState({ personnel: 0, nodes: 0, empireValue: 0, activeProjects: 0, totalPaid: 0, netMargin: '0%' });
     const [intelligence, setIntelligence] = useState(null);
+    const [systemHealth, setSystemHealth] = useState({ database: 'up', ai_core: 'up', neural_mesh: 'up' });
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [lastSync, setLastSync] = useState(null);
@@ -63,15 +64,17 @@ export default function ExecutiveHQ() {
         const startTime = Date.now();
         setIsSyncing(true);
         try {
-            const [pRes, oRes] = await Promise.all([
+            const [pRes, oRes, hRes] = await Promise.all([
                 api.get('/projects'),
-                api.get('/intelligence/oracle-stream')
+                api.get('/intelligence/oracle-stream'),
+                api.get('/health').catch(() => ({ data: { services: { database: 'down', ai_core: 'down', neural_mesh: 'down' } } }))
             ]);
             const pData = pRes.data.data || pRes.data || [];
             setProjects(pData);
             setOracleSignals(oRes.data.signals || []);
             if (oRes.data.stats) setMeshStats(oRes.data.stats);
             if (oRes.data.intelligence) setIntelligence(oRes.data.intelligence);
+            if (hRes.data.services) setSystemHealth(hRes.data.services);
             setLatency(Date.now() - startTime);
             setLastSync(new Date().toLocaleTimeString());
         } catch (e) { 
@@ -299,6 +302,12 @@ export default function ExecutiveHQ() {
                             </div>
                         </div>
                         <div className="flex gap-8 items-center">
+                            {/* System Health Indicators */}
+                            <div className="flex gap-4 px-8 py-4 bg-black/40 border border-white/5 rounded-3xl backdrop-blur-xl">
+                                <HealthIndicator label="DB" status={systemHealth.database} icon={Database} />
+                                <HealthIndicator label="AI" status={systemHealth.ai_core} icon={Cpu} />
+                                <HealthIndicator label="MESH" status={systemHealth.neural_mesh} icon={Activity} />
+                            </div>
                             <BridgeStat label="Neural_Bus" value={`${latency}ms`} color="indigo" icon={Zap} />
                             <BridgeStat label="Integrity" value="99.8%" color="emerald" icon={ShieldCheck} />
                             <div className="flex gap-2">
@@ -784,5 +793,14 @@ const NexusMetric = ({ label, value, color }) => (
     <div className="flex flex-col gap-2 group/metric">
         <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest group-hover/metric:text-indigo-400 transition-colors">{label}</span>
         <span className={`text-2xl font-mono font-black ${color} drop-shadow-[0_0_20px_currentColor] tracking-tighter italic leading-none`}>{value}</span>
+    </div>
+);
+
+const HealthIndicator = ({ label, status, icon: Icon }) => (
+    <div className="flex flex-col items-center gap-1 group/health">
+        <div className={`p-2 rounded-lg transition-all duration-500 ${status === 'up' || status === 'nominal' ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-rose-500/20 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse'}`}>
+            <Icon size={14} />
+        </div>
+        <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
     </div>
 );

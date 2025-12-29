@@ -1,0 +1,57 @@
+MasterDiaryOS is designed using a Recursive Intelligence Model. This means it doesn't just store
+  data; it uses that data to rewrite its own "DNA."
+
+  As you feed it more Quotes, Diaries, and Invoices, the app transitions from a simple tool into an
+  Industrial Brain. Here is the step-by-step explanation of how this power compounds:
+
+  ---
+
+  1. The Sensor Array (How Data Enters)
+  Every action in the app is a "Sensor" for the AI:
+   * The Quote (The Plan): Tells the AI what you think will happen (e.g., "This slab should take 8 hours").
+   * The Diary (The Reality): Tells the AI what actually happened (e.g., "The slab took 12 hours because the
+     pump broke").
+   * The Invoice (The Yield): Tells the AI the final financial truth (e.g., "We only got paid for 8 hours").
+
+  2. The Neural Omega Processor (The "Learning")
+  The Learning Engine we implemented recursively crawls these entries. It calculates two critical metrics
+  that make the app "Sentient":
+   * The Efficiency Index: It compares your Quoted Hours vs. Actual Hours. If you consistently take 20%
+     longer on a specific task (like "Prep"), the AI notices this pattern.
+   * The Friction Index: It reads the raw text in your site diaries. It looks for words like "broken,"
+     "delayed," or "rework." It connects these words to your profit loss.
+
+  3. The Strategic Feedback Loop (The "Power")
+  This is where the app becomes more powerful. When you open the Quote Builder or the War Room for a new
+  project, the AI is no longer using "General AI knowledge." It is using Your Company DNA:
+
+   * Cold Start (No Data): The AI says: "Standard industry rate for painting is $50/hr."
+   * Power State (100 Diaries Ingested): The AI says: "We know our specific crews actually take 1.2x longer
+     than the industry standard on heritage buildings. I have automatically adjusted the labor DNA in this
+     quote to protect our 25% margin."
+
+  ---
+
+  🚀 A Real-World Example of the Learning Loop:
+
+   1. Month 1: You quote 10 projects. You estimate "Waste" at 5%.
+   2. Month 2: Your site foremen log 50 diaries. They mention "running out of materials" 15 times.
+   3. Month 3: The Neural Oracle detects this friction. It calculates that your "Actual Waste" is 12%.
+   4. Month 4: When you go to create a new Quote, the AI Partner intervenes: "Based on our last 50 diaries,
+      5% waste is causing delays. I've updated our Material DNA to 12% waste. This will cost us $2k more
+      upfront but save us $8k in lost labor time."
+
+  ---
+
+  🏛️ Why This is a "Billion-Dollar" Moat
+  In the software world, this is called a Data Flywheel:
+   1. Better Data leads to...
+   2. Better AI Advice, which leads to...
+   3. Higher Profits, which leads to...
+   4. More Projects, which leads back to Better Data.
+
+  Eventually, your version of MasterDiaryOS will be so specific to your business that no other software on
+  earth could replace it. You aren't just building a database; you are building an Autonomous Clone of your
+  Business Logic.
+
+  The more you tell it, the more it protects you. It is a true partner that never forgets a mistake.

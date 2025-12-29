@@ -21,46 +21,62 @@ const quoteSchema = Joi.object({
 const processNewItems = async (items, type, userId) => {
     const processed = [];
     for (const item of items || []) {
-        // Check if item is marked as new or has a temp ID (starts with 'ai-')
         const idField = type === 'material' ? 'nodeId' : type === 'staff' ? 'staffId' : 'equipmentId';
         const idVal = item[idField];
 
+        // --- SMART RECOGNITION CORE ---
+        // If the item is marked as new, check if we ALREADY have this in our DNA library
         if (item.isNew || (typeof idVal === 'string' && idVal.startsWith('ai-'))) {
             try {
-                let newItem;
+                let existingItem;
+                const name = item.name?.trim();
+
                 if (type === 'material') {
-                    newItem = await Node.create({
-                        name: item.name || 'New Material',
-                        pricePerUnit: parseFloat(item.pricePerUnit) || 0,
-                        category: 'material',
-                        unit: 'unit',
-                        userId
-                    });
-                    item.nodeId = newItem.id;
+                    existingItem = await Node.findOne({ where: { name, userId } });
                 } else if (type === 'staff') {
-                    newItem = await Staff.create({
-                        name: item.name || 'New Staff',
-                        role: 'General', // Default required field
-                        payRateBase: parseFloat(item.chargeRate) || 0, 
-                        chargeOutBase: parseFloat(item.chargeRate) || 0,
-                        userId
-                    });
-                    item.staffId = newItem.id;
+                    existingItem = await Staff.findOne({ where: { name, userId } });
                 } else if (type === 'equipment') {
-                    newItem = await Equipment.create({
-                        name: item.name || 'New Equipment',
-                        category: 'General', // Default required field
-                        ownership: 'Owned',   // Default required field
-                        costRateBase: parseFloat(item.costRate) || 0,
-                        userId
-                    });
-                    item.equipmentId = newItem.id;
+                    existingItem = await Equipment.findOne({ where: { name, userId } });
                 }
-                // Remove temp flags
+
+                if (existingItem) {
+                    console.log(`[SmartMatch] Linked to existing ${type}: ${name}`);
+                    item[idField] = existingItem.id;
+                } else {
+                    // Only create if it truly doesn't exist
+                    let newItem;
+                    if (type === 'material') {
+                        newItem = await Node.create({
+                            name: item.name || 'New Material',
+                            pricePerUnit: parseFloat(item.pricePerUnit) || 0,
+                            category: 'material',
+                            unit: 'unit',
+                            userId
+                        });
+                        item.nodeId = newItem.id;
+                    } else if (type === 'staff') {
+                        newItem = await Staff.create({
+                            name: item.name || 'New Staff',
+                            role: 'General',
+                            payRateBase: parseFloat(item.chargeRate) || 0, 
+                            chargeOutBase: parseFloat(item.chargeRate) || 0,
+                            userId
+                        });
+                        item.staffId = newItem.id;
+                    } else if (type === 'equipment') {
+                        newItem = await Equipment.create({
+                            name: item.name || 'New Equipment',
+                            category: 'General',
+                            ownership: 'Owned',
+                            costRateBase: parseFloat(item.costRate) || 0,
+                            userId
+                        });
+                        item.equipmentId = newItem.id;
+                    }
+                }
                 delete item.isNew; 
             } catch (err) {
-                console.error(`Failed to auto-create resource: ${err.message}`);
-                // Proceed without creating (will likely fail FK constraint or save with temp ID which is bad)
+                console.error(`Failed to auto-recognize/create resource: ${err.message}`);
             }
         }
         processed.push(item);
