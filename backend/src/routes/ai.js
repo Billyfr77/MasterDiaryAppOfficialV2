@@ -41,6 +41,7 @@ router.post('/analyze-intelligence', aiController.analyzeIntelligenceLayer); // 
 router.post('/analyze-business', aiController.analyzeBusiness); // Dashboard Analysis
 router.post('/generate-workflow-report', aiController.generateWorkflowReport);
 router.post('/oracle-sync', aiController.generateOracleIntelligence); // Sovereign Oracle 10k Sim
+router.post('/optimize-fleet', aiController.optimizeFleet); // Resource Command Neural Opt
 
 // Chat Aliases
 router.post('/chat-quote', aiController.chatQuoteAssistant);

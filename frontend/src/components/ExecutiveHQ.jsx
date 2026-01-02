@@ -120,7 +120,7 @@ export default function ExecutiveHQ() {
 
     useEffect(() => {
         fetchMesh();
-        const interval = setInterval(fetchMesh, 20000);
+        const interval = setInterval(fetchMesh, 60000);
         
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
@@ -411,10 +411,16 @@ export default function ExecutiveHQ() {
                         )}
                         {/* FLIGHT_PLAN, YIELD, WAR_ROOM Restoration... */}
                         {viewMode === 'FLIGHT_PLAN' && (
-                            <motion.div key="flight" initial={{ opacity: 0, x: 200 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -200 }} className="absolute inset-0 p-32 overflow-y-auto custom-scrollbar">
+                            <motion.div 
+                                key="flight" 
+                                initial={{ opacity: 0, x: 200 }} 
+                                animate={{ opacity: 1, x: 0 }} 
+                                exit={{ opacity: 0, x: -200 }} 
+                                className="absolute inset-0 p-32 overflow-y-auto custom-scrollbar bg-[#010102] z-50"
+                            >
                                 <h2 className="text-7xl font-black uppercase tracking-[0.6em] mb-24 text-indigo-400 flex items-center gap-10 italic drop-shadow-[0_0_30px_rgba(99,102,241,0.4)]"><Navigation size={80} /> Orbit Trajectories</h2>
                                 <div className="space-y-20 max-w-6xl mx-auto">
-                                    {projects.map(p => (
+                                    {projects?.map(p => (
                                         <div key={p.id} className="space-y-10 group/trajectory cursor-pointer">
                                             <div className="flex justify-between items-end">
                                                 <div>
@@ -440,10 +446,16 @@ export default function ExecutiveHQ() {
                             </motion.div>
                         )}
                         {viewMode === 'YIELD' && (
-                            <motion.div key="yield" initial={{ opacity: 0, rotateX: 45 }} animate={{ opacity: 1, rotateX: 0 }} exit={{ opacity: 0, rotateX: -45 }} className="absolute inset-0 p-32 overflow-y-auto custom-scrollbar">
+                            <motion.div 
+                                key="yield" 
+                                initial={{ opacity: 0, rotateX: 45 }} 
+                                animate={{ opacity: 1, rotateX: 0 }} 
+                                exit={{ opacity: 0, rotateX: -45 }} 
+                                className="absolute inset-0 p-32 overflow-y-auto custom-scrollbar bg-[#010102] z-50"
+                            >
                                 <h2 className="text-7xl font-black uppercase tracking-[0.6em] mb-24 text-emerald-400 flex items-center gap-10 italic drop-shadow-[0_0_30px_rgba(16,185,129,0.4)]"><TrendingUp size={80} /> Yield Surface</h2>
                                 <div className="grid grid-cols-1 gap-12">
-                                    {projects.map(p => (
+                                    {projects?.map(p => (
                                         <div key={p.id} className="p-20 bg-white/[0.01] border border-white/5 rounded-[6rem] flex items-center justify-between group hover:bg-emerald-500/5 hover:border-emerald-500/30 transition-all duration-1000 relative overflow-hidden shadow-3xl glass-obsidian">
                                             <div className="absolute left-0 top-0 bottom-0 w-4 bg-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-1000 shadow-[0_0_50px_#10b981]" />
                                             <div className="flex items-center gap-20 relative z-10">
@@ -460,7 +472,13 @@ export default function ExecutiveHQ() {
                             </motion.div>
                         )}
                         {viewMode === 'WAR_ROOM' && (
-                            <motion.div key="war" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} className="absolute inset-0 p-12 flex flex-col gap-6">
+                            <motion.div 
+                                key="war" 
+                                initial={{ opacity: 0, scale: 0.98 }} 
+                                animate={{ opacity: 1, scale: 1 }} 
+                                exit={{ opacity: 0, scale: 1.02 }} 
+                                className="absolute inset-0 p-12 flex flex-col gap-6 bg-[#010102] z-50"
+                            >
                                 <div className="flex justify-between items-center px-10">
                                     <h2 className="text-4xl font-black uppercase tracking-[0.4em] text-indigo-400 italic">Oracle War Room</h2>
                                     <button onClick={() => setWarRoomMessages([{ role: 'oracle', content: "Sovereign Intelligence Oracle Online. Galactic mesh is stabilized." }])} className="px-6 py-2 bg-white/5 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 rounded-xl border border-white/5 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
@@ -587,19 +605,33 @@ export default function ExecutiveHQ() {
             <AnimatePresence>
                 {!isMaximized && (
                     <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }} className="z-20 h-64 flex gap-6 shrink-0 mx-4 mb-4">
-                        {/* Friendly Activity Feed */}
+                        {/* Friendly Activity Feed -> STRATEGIC INTERVENTION FEED */}
                         <div className="flex-[1.8] bg-indigo-950/20 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 flex flex-col gap-4 shadow-2xl overflow-hidden relative group">
                             <div className="flex items-center gap-3 mb-2">
-                                <Activity size={18} className="text-indigo-400" />
-                                <h3 className="text-xs font-bold text-white uppercase tracking-widest opacity-60">Company Pulse</h3>
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-indigo-500 rounded-full animate-ping opacity-75"></div>
+                                    <Activity size={18} className="text-indigo-400 relative z-10" />
+                                </div>
+                                <h3 className="text-xs font-bold text-white uppercase tracking-widest opacity-60">Neural Interventions</h3>
                             </div>
                             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
-                                {terminalLines.slice(-5).map((l, i) => (
-                                    <div key={i} className="flex items-center gap-3 animate-fade-in">
-                                        <div className="w-1 h-1 rounded-full bg-indigo-500/40" />
-                                        <p className="text-[10px] font-medium text-indigo-200/70">{l.replace('>', '').replace('_', ' ')}</p>
+                                {oracleSignals.length > 0 ? oracleSignals.slice(0, 5).map((s, i) => (
+                                    <div key={i} className="flex items-start gap-3 animate-fade-in group/signal cursor-pointer hover:bg-white/5 p-2 rounded-xl transition-all">
+                                        <div className={`mt-1 w-1.5 h-1.5 rounded-full ${s.severity === 'high' ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 'bg-emerald-500'}`} />
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">{s.signal}</p>
+                                            <p className="text-[11px] font-medium text-indigo-100/90 leading-tight">{s.desc}</p>
+                                        </div>
+                                        {s.severity === 'high' && <button onClick={() => handleExecuteProtocol(s)} className="ml-auto opacity-0 group-hover/signal:opacity-100 text-[8px] font-bold bg-rose-500/20 text-rose-400 px-2 py-1 rounded hover:bg-rose-500 hover:text-white transition-all">RESOLVE</button>}
                                     </div>
-                                ))}
+                                )) : (
+                                    terminalLines.slice(-5).map((l, i) => (
+                                        <div key={i} className="flex items-center gap-3 animate-fade-in">
+                                            <div className="w-1 h-1 rounded-full bg-indigo-500/40" />
+                                            <p className="text-[10px] font-medium text-indigo-200/70">{l.replace('>', '').replace('_', ' ')}</p>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
 

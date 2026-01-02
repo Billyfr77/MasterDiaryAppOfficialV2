@@ -766,6 +766,54 @@ const generateOracleIntelligence = async (req, res) => {
     }
 };
 
+// --- FLEET OPTIMIZER (NEURAL RESOURCE COMMAND) ---
+const optimizeFleet = async (req, res) => {
+    try {
+        const { weekStart, allocations, staff, projects } = req.body;
+        const memory = await getInstitutionalContext();
+        
+        // Safety: Strip heavy objects to save tokens
+        const leanAllocations = allocations.map(a => ({ id: a.id, resourceId: a.resourceId, projectId: a.projectId, day: a.startDate }));
+        const leanStaff = staff.map(s => ({ id: s.id, role: s.role, rate: s.payRateBase }));
+        const leanProjects = projects.map(p => ({ id: p.id, name: p.name, priority: 'Normal' }));
+
+        const systemPrompt = `
+            You are "Fleet Commander AI". ${memory}
+            **Mission:** Optimize the construction schedule for the week of ${weekStart}.
+            
+            **Goals:**
+            1. Resolve any double-bookings (Conflicts).
+            2. Minimize cost (avoid overtime).
+            3. Ensure high-priority projects are staffed.
+            
+            **Input Data:**
+            - Allocations: ${JSON.stringify(leanAllocations)}
+            - Staff: ${JSON.stringify(leanStaff)}
+            - Projects: ${JSON.stringify(leanProjects)}
+            
+            **CRITICAL OUTPUT SCHEMA:**
+            Return ONLY valid JSON.
+            {
+                "analysis": "Brief summary of the current state (e.g., '3 conflicts detected').",
+                "suggestedMoves": [
+                    { 
+                        "allocationId": "id_of_allocation_to_move", 
+                        "newDate": "YYYY-MM-DD", 
+                        "newProjectId": "id_of_project", 
+                        "reason": "Resolves conflict / Reduces cost" 
+                    }
+                ]
+            }
+        `;
+
+        const result = await pinnacleAi.generateJSON("Optimize Fleet", systemPrompt, 2000);
+        res.json(result);
+    } catch (error) {
+        console.error("Fleet Opt Error:", error);
+        res.status(500).json({ error: "Optimization Core Offline" });
+    }
+};
+
 module.exports = {
   executeAgencyDirective,
   signOffDirective,
@@ -790,5 +838,6 @@ module.exports = {
   analyzeBusiness,
   chatWorkflowAssistant,
   generateWorkflowReport,
-  generateOracleIntelligence
+  generateOracleIntelligence,
+  optimizeFleet
 };
