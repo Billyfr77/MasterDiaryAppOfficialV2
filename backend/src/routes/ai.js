@@ -38,7 +38,9 @@ router.post('/dashboard-insights', aiController.generateDashboardInsights); // N
 router.post('/node-suggestions', aiController.generateNodeSuggestions); // Ghost Node Pulse
 router.post('/analyze-prism', aiController.analyzePrismVelocity); // PRISM POWER MODE
 router.post('/analyze-intelligence', aiController.analyzeIntelligenceLayer); // INTEL LAYER V1
+router.post('/analyze-business', aiController.analyzeBusiness); // Dashboard Analysis
 router.post('/generate-workflow-report', aiController.generateWorkflowReport);
+router.post('/oracle-sync', aiController.generateOracleIntelligence); // Sovereign Oracle 10k Sim
 
 // Chat Aliases
 router.post('/chat-quote', aiController.chatQuoteAssistant);

@@ -1,28 +1,38 @@
-Uncaught Exception: Error: listen EADDRINUSE: address already in use :::5003
-    at Server.setupListenHandle [as _listen2] (node:net:1904:16)
-    at listenInCluster (node:net:1961:12)
-    at Server.listen (node:net:2063:7)
-    at Function.listen (C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\express\lib\application.js:635:24)
-    at Object.<anonymous> (C:\Users\billy\MasterDiaryAppOfficialV2\backend\server.js:291:5)
-    at Module._compile (node:internal/modules/cjs/loader:1469:14)
-    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
-    at Module.load (node:internal/modules/cjs/loader:1288:32)
-    at Module._load (node:internal/modules/cjs/loader:1104:12)
-    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12) {
-  code: 'EADDRINUSE',
-  errno: -4091,
-  syscall: 'listen',
-  address: '::',
-  port: 5003
+Unable to connect to the database: Error
+    at Database.<anonymous> (C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\sequelize\lib\dialects\sqlite\query.js:185:27)
+    at C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\sequelize\lib\dialects\sqlite\query.js:183:50
+    at new Promise (<anonymous>)
+    at Query.run (C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\sequelize\lib\dialects\sqlite\query.js:183:12)
+    at C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async SQLiteQueryInterface.changeColumn (C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\sequelize\lib\dialects\sqlite\query-interface.js:43:7)
+    at async Subscription.sync (C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\sequelize\lib\model.js:984:11)
+    at async C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\sequelize\lib\sequelize.js:389:11
+    at async withSqliteForeignKeysOff (C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\sequelize\lib\dialects\sqlite\sqlite-utils.js:14:12)
+    at async Sequelize._syncModelsWithCyclicReferences (C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\sequelize\lib\sequelize.js:387:7) {
+  name: 'SequelizeUniqueConstraintError',
+  errors: [
+    ValidationErrorItem {
+      message: 'id must be unique',
+      type: 'unique violation',
+      path: 'id',
+      value: null,
+      origin: 'DB',
+      instance: null,
+      validatorKey: 'not_unique',
+      validatorName: null,
+      validatorArgs: []
+    }
+  ],
+  parent: [Error: SQLITE_CONSTRAINT: UNIQUE constraint failed: Subscriptions_backup.id] {
+    errno: 19,
+    code: 'SQLITE_CONSTRAINT',
+    sql: 'INSERT INTO `Subscriptions_backup` SELECT `id`, `userId`, `plan`, `status`, `startDate`, `endDate`, `stripeSubscriptionId`, `createdAt`, `updatedAt` FROM `Subscriptions`;'
+  },
+  original: [Error: SQLITE_CONSTRAINT: UNIQUE constraint failed: Subscriptions_backup.id] {
+    errno: 19,
+    code: 'SQLITE_CONSTRAINT',
+    sql: 'INSERT INTO `Subscriptions_backup` SELECT `id`, `userId`, `plan`, `status`, `startDate`, `endDate`, `stripeSubscriptionId`, `createdAt`, `updatedAt` FROM `Subscriptions`;'
+  },
+  fields: [ 'id' ],
+  sql: 'INSERT INTO `Subscriptions_backup` SELECT `id`, `userId`, `plan`, `status`, `startDate`, `endDate`, `stripeSubscriptionId`, `createdAt`, `updatedAt` FROM `Subscriptions`;'
 }
-Stack: Error: listen EADDRINUSE: address already in use :::5003
-    at Server.setupListenHandle [as _listen2] (node:net:1904:16)
-    at listenInCluster (node:net:1961:12)
-    at Server.listen (node:net:2063:7)
-    at Function.listen (C:\Users\billy\MasterDiaryAppOfficialV2\backend\node_modules\express\lib\application.js:635:24)
-    at Object.<anonymous> (C:\Users\billy\MasterDiaryAppOfficialV2\backend\server.js:291:5)
-    at Module._compile (node:internal/modules/cjs/loader:1469:14)
-    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
-    at Module.load (node:internal/modules/cjs/loader:1288:32)
-    at Module._load (node:internal/modules/cjs/loader:1104:12)
-    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)

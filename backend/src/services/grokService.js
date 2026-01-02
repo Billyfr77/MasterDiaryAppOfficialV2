@@ -2,7 +2,8 @@ const OpenAI = require('openai');
 
 class GrokService {
   constructor() {
-    this.apiKey = process.env.GROK_API_KEY;
+    // Ensure we pick up the key and trim whitespace/quotes if any
+    this.apiKey = process.env.GROK_API_KEY ? process.env.GROK_API_KEY.replace(/["']/g, '').trim() : null;
     this.client = null;
     this.init();
   }
@@ -36,6 +37,7 @@ class GrokService {
       return completion.choices[0].message.content;
     } catch (error) {
       console.error("[Grok] Text Gen Error:", error.message);
+      // Fallback or rethrow
       throw error;
     }
   }
@@ -56,9 +58,12 @@ class GrokService {
 
       let content = completion.choices[0].message.content;
       
-      // CRITICAL: Strip <thought> tags which break JSON parsing in reasoning models
+      // CRITICAL: Strip <thought> tags which break JSON parsing in reasoning models (if they appear)
       content = content.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim();
       
+      // Attempt to strip markdown code blocks if present
+      content = content.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+
       // ROBUST JSON EXTRACTION
       const startIdx = content.indexOf('{');
       const endIdx = content.lastIndexOf('}');

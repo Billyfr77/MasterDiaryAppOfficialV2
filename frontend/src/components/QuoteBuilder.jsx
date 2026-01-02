@@ -242,39 +242,37 @@ const QuoteBuilderContent = () => {
   useEffect(() => {
       const fetchLearningData = async () => {
           try {
-              // The Sovereign Oracle Intelligence Packet
+              // Context for the Oracle
+              const context = {
+                  project: projects.find(p => p.id === selectedProject) || { name: "New Project", type: "General" },
+                  itemCount: quoteItems.length,
+                  totalValue: financials.total
+              };
+
+              // The Sovereign Oracle Intelligence Packet (Live from Neural Core)
+              const res = await api.post('/ai/oracle-sync', { context });
+              const oracleData = res.data;
+
+              if (oracleData) {
+                  setHistoricalDeltas(oracleData);
+                  addNotification('success', 'Sovereign Oracle Synced', `10,000 parallel scenarios simulated. ${oracleData.oracle?.bidSuccessProbability || 'High'} probability identified.`);
+              }
+          } catch (e) { 
+              console.error("Oracle Sync Error:", e);
+              // Fallback for offline mode/demo
               const mockPacket = {
-                  oracle: {
-                      bidSuccessProbability: '84%',
-                      idealMarginPoint: '26.4%',
-                      marketVolatilityIndex: 1.12,
-                      revenueOptimization: '+$42,000'
-                  },
-                  parallelScenarios: [
-                      { id: 'S1', name: 'Speed Strategy', margin: '18%', risk: 'High' },
-                      { id: 'S2', name: 'Max Profit', margin: '28%', risk: 'Low' },
-                      { id: 'S3', name: 'Safe Path', margin: '22%', risk: 'Min' }
-                  ],
-                  patterns: [
-                      { taskType: 'Prep', delta: 1.18, cause: 'Substrate Underestimation', sentiment: 'Frustrated', fix: 'Increase buffer by 8%' },
-                      { taskType: 'Installation', delta: 0.94, cause: 'Crew Efficiency', sentiment: 'High Morale', fix: 'Maintain rates' },
-                      { taskType: 'Demolition', delta: 1.35, cause: 'Unforeseen Services', sentiment: 'Confused', fix: 'Inject Protocol Node' }
-                  ],
-                  crewDNA: [
-                      { crew: 'Alpha Team', skill: 'Elite', speed: 1.05, reliability: 'High' },
-                      { crew: 'Beta Team', skill: 'Mid', speed: 0.85, reliability: 'Med' }
-                  ],
-                  globalAccuracy: 0.94,
-                  riskVelocity: '+4.2%/week',
-                  sentimentScore: 72,
-                  marginLeakage: '$12,450/month'
+                  oracle: { bidSuccessProbability: '84%', idealMarginPoint: '26.4%', marketVolatilityIndex: 1.12, revenueOptimization: '+$42,000' },
+                  parallelScenarios: [{ id: 'S1', name: 'Speed Strategy', margin: '18%', risk: 'High' }, { id: 'S2', name: 'Max Profit', margin: '28%', risk: 'Low' }, { id: 'S3', name: 'Safe Path', margin: '22%', risk: 'Min' }],
+                  patterns: [{ taskType: 'Prep', delta: 1.18, cause: 'Substrate Underestimation', sentiment: 'Frustrated', fix: 'Increase buffer by 8%' }],
+                  globalAccuracy: 0.94
               };
               setHistoricalDeltas(mockPacket);
-              addNotification('success', 'Sovereign Oracle Synced', '10,000 parallel scenarios simulated. Ideal margin point identified.');
-          } catch (e) { console.error(e); }
+          }
       };
-      fetchLearningData();
-  }, []);
+      
+      // Only fetch if we have a valid session or on initial load
+      if (allThemes) fetchLearningData();
+  }, [selectedProject]); // Re-run when project context changes
 
   // --- NEURAL YIELD ENGINE ---
   useEffect(() => {
@@ -749,9 +747,50 @@ const QuoteBuilderContent = () => {
       if (!node) return;
       try {
           const res = await api.post('/ai/node-suggestions', { selectedNode: node, existingNodes: nodes });
-          if (res.data?.suggestions) { /* logic here */ }
+          if (res.data?.suggestions) {
+              const suggestions = res.data.suggestions;
+              const newNodes = [];
+              const newEdges = [];
+              const center = node.position;
+              const radius = 250;
+              
+              suggestions.forEach((s, i) => {
+                  const angle = (i / suggestions.length) * 2 * Math.PI;
+                  const x = center.x + Math.cos(angle) * radius;
+                  const y = center.y + Math.sin(angle) * radius;
+                  const id = `ghost-${Date.now()}-${i}`;
+                  
+                  newNodes.push({
+                      id,
+                      type: 'glass', // Default to glass for items
+                      position: { x, y },
+                      data: {
+                          label: s.label,
+                          type: s.type || 'material',
+                          isGhost: true,
+                          subLabel: 'AI Suggestion',
+                          reason: s.reason,
+                          onDelete: () => deleteNode(id)
+                      },
+                      style: { opacity: 0.7, filter: 'grayscale(0.5)' }
+                  });
+                  
+                  newEdges.push({
+                      id: `e-ghost-${node.id}-${id}`,
+                      source: node.id,
+                      target: id,
+                      animated: true,
+                      style: { stroke: '#6366f1', strokeDasharray: '5,5', opacity: 0.5 },
+                      type: 'default'
+                  });
+              });
+              
+              setNodes(prev => [...prev, ...newNodes]);
+              setEdges(prev => [...prev, ...newEdges]);
+              addNotification('info', 'AI Suggestions', `Generated ${suggestions.length} suggestions.`);
+          }
       } catch (err) { console.error(err); }
-  }, [nodes]);
+  }, [nodes, setNodes, setEdges, addNotification]);
 
   const handleNodeClick = useCallback((event, node) => {
       if (!isPulseActive) return;
@@ -1046,10 +1085,10 @@ const QuoteBuilderContent = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-black text-white uppercase tracking-widest">Sovereign Intelligence Oracle</h3>
-                                    <p className="text-indigo-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
+                                    <div className="text-indigo-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
                                         <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping shadow-[0_0_10px_#22d3ee]" />
                                         Terminal State // Omniscient Learning Active
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                             

@@ -561,6 +561,10 @@ export default memo(({ data, type, selected }) => {
                                     <input 
                                         type="number"
                                         value={config.duration || 0}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            data.config = { ...config, duration: val };
+                                        }}
                                         className="bg-black/40 border border-orange-500/20 rounded px-2 py-0.5 w-16 text-orange-400 font-mono font-bold text-right outline-none focus:border-orange-500"
                                     />
                                     <span className="text-[8px] text-slate-500">HRS</span>

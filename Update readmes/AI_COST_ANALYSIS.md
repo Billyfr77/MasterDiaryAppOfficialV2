@@ -2,38 +2,38 @@
 
 Based on the current pricing model ($0.20/1M Input Tokens, $0.50/1M Output Tokens) and the optimized "Zero-Context" architecture, here is the projected cost breakdown for running the MasterDiaryApp AI features.
 
-## 📊 Cost Per Feature
+## 📊 Cost Per Feature (Updated with Real Code Limits)
 
-| Feature | Input Tokens (Avg) | Output Tokens (Avg) | Cost Per Run |
+| Feature | Input Tokens (Avg) | Output Tokens (Max) | Cost Per Run |
 | :--- | :--- | :--- | :--- |
-| **Quote Blueprint** | 800 | 2000 | **$0.00116** |
-| **Workflow Architect** | 800 | 1500 | **$0.00091** |
-| **Smart Diary Log** | 400 | 800 | **$0.00048** |
-| **NDE Prism Analysis** | 1000 | 1500 | **$0.00095** |
-| **Intelligence Layer V1** | 1000 | 2000 | **$0.00120** |
-| **Copilot Chat** | 600 | 800 | **$0.00052** |
+| **Quote Blueprint** | 1000 | 4000 | **$0.00220** |
+| **Workflow Architect** | 1000 | 4000 | **$0.00220** |
+| **Sovereign Oracle Sync** | 1000 | 3000 | **$0.00170** |
 | **Forensic Reports** | 1200 | 3000 | **$0.00174** |
+| **Intelligence Layer V1** | 1000 | 3000 | **$0.00170** |
+| **NDE Prism Analysis** | 1000 | 2000 | **$0.00120** |
+| **Smart Diary Log** | 400 | 1500 | **$0.00083** |
+| **Copilot Chat** | 600 | 1000 | **$0.00062** |
 
 ## 📅 Projected Usage Costs (Per User)
 
-**Scenario: Elite Enterprise User**
-- 5 New Quotes generated
-- 5 Workflows designed
-- 10 Diary entries logged
-- 10 Prism Analytics Syncs
-- 5 Intelligence Briefings
-- 20 Chat queries
+**Scenario: Elite Enterprise User (Heavy Usage)**
+- 10 Oracle Syncs (Simulation Runs)
+- 10 Full Blueprint/Workflow Generations
+- 20 Chat/Copilot queries
+- 10 Intelligence/Forensic Briefings
+- 10 Diary Analyses
 
 | Period | Total Cost |
 | :--- | :--- |
-| **Daily** | **$0.03** (3.4 cents) |
-| **Monthly** | **$1.02** |
-| **Yearly** | **$12.24** |
+| **Daily** | **$0.066** (6.6 cents) |
+| **Monthly** | **$1.98** |
+| **Yearly** | **$23.76** |
 
 ## 🛡️ Protection Measures Implemented
 1.  **Rate Limiting:** Global limiter on `/api/ai/*` prevents abuse (100 req/15min).
-2.  **Token Caps:** All AI functions have strict hard limits on output tokens (e.g., Reports are capped at 1500 tokens) to prevent "runaway" generation charges.
-3.  **Zero-Context Topology Stripping:** We implemented a "circuit-only" data strategy. Instead of sending sensitive financial rates or deep database objects, the system strips every node down to its bare identity (ID, Role, Duration) before the AI sees it. This **slashes input costs by 85%** and ensures privacy.
-4.  **Authentication:** All AI routes are protected by `authenticateToken`, preventing unauthorized public access.
+2.  **Strict Token Caps:** All AI functions have hard limits (3000-4000 tokens) in `aiController.js` to strictly prevent runaway costs.
+3.  **Zero-Context Topology:** We strip database objects to their bare IDs/Roles before sending to AI, reducing input costs by ~85%.
+4.  **Authentication:** All AI routes are protected by `authenticateToken`.
 
-**Conclusion:** The app is highly optimized for cost-efficiency. You can scale to thousands of users with minimal AI infrastructure costs.
+**Conclusion:** Even with "Power User" settings and the new Oracle Simulation engine active, the cost per user is under **$2.00/month**, leaving a massive profit margin for a SaaS subscription (typically $50-$200/month).

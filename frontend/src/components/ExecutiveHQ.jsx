@@ -53,6 +53,15 @@ export default function ExecutiveHQ() {
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const isDragging = useRef(false);
     const lastPos = useRef({ x: 0, y: 0 });
+    
+    // Ref for the viewport div to attach non-passive listener
+    const viewportRef = useRef(null);
+    // Ref to track viewMode inside the event listener without re-binding
+    const viewModeRef = useRef(viewMode);
+
+    useEffect(() => {
+        viewModeRef.current = viewMode;
+    }, [viewMode]);
 
     const [terminalLines, setTerminalLines] = useState([
         "> SOVEREIGN_SINGULARITY_OS_V15.5 INITIALIZED",
@@ -60,6 +69,27 @@ export default function ExecutiveHQ() {
         "> LATTICE_GRAVITY: STABLE",
         "> STANDING_BY_FOR_MISSION_DIRECTIVE..."
     ]);
+
+    // ... (fetchMesh logic remains here, skipping for brevity in replacement if not touched)
+
+    useEffect(() => {
+        // Attach non-passive wheel listener for zoom
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+
+        const onWheel = (e) => {
+            if (viewModeRef.current !== 'MESH') return;
+            e.preventDefault();
+            const delta = e.deltaY * -0.001;
+            setZoom(prev => Math.min(Math.max(0.1, prev + delta), 3.0));
+        };
+
+        viewport.addEventListener('wheel', onWheel, { passive: false });
+
+        return () => {
+            viewport.removeEventListener('wheel', onWheel);
+        };
+    }, []); // Empty dependency array as we use refs
 
     const fetchMesh = async () => {
         const startTime = Date.now();
@@ -129,13 +159,7 @@ export default function ExecutiveHQ() {
 
     const handleMouseUp = () => { isDragging.current = false; };
 
-    const handleWheel = (e) => {
-        if (viewMode !== 'MESH') return;
-        // Prevent page scroll when zooming the galaxy
-        e.preventDefault();
-        const delta = e.deltaY * -0.001;
-        setZoom(prev => Math.min(Math.max(0.1, prev + delta), 3.0));
-    };
+    // handleWheel removed here as it's now an effect
 
     const handleCommandSubmit = async (e) => {
         if (e.key === 'Enter' && commandInput.trim()) {
@@ -346,9 +370,9 @@ export default function ExecutiveHQ() {
 
             {/* --- SECTION 2: THE SOVEREIGN GALAXY VIEWPORT --- */}
             <div 
+                ref={viewportRef}
                 className={`flex-1 relative galaxy-viewport overflow-hidden bg-black/40 border border-white/5 rounded-[6rem] shadow-inner maximize-transition ${isMaximized ? 'fixed inset-6 z-[60] !m-0 rounded-[4rem]' : 'mx-4'}`}
                 onMouseDown={handleMouseDown}
-                onWheel={handleWheel}
             >
                 <motion.div 
                     className="absolute inset-0 transform-style-3d h-full w-full"

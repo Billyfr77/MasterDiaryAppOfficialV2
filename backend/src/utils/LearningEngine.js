@@ -10,7 +10,7 @@ const generateNeuralIntelligencePacket = async (projectId = null) => {
     try {
         // 1. UNITARY DATA INGESTION (THE TOTAL LATTICE)
         const [projects, staff, nodes, equip, invoices, clients, allocations] = await Promise.all([
-            Project.findAll({ include: [{ model: Diary, limit: 5 }] }),
+            Project.findAll({ include: [{ model: Diary, limit: 5, order: [['date', 'DESC']] }] }),
             Staff.findAll(),
             Node.count(),
             Equipment.count(),
@@ -31,6 +31,7 @@ const generateNeuralIntelligencePacket = async (projectId = null) => {
         const collectionVelocity = totalInvoiced > 0 ? (totalPaid / totalInvoiced) : 1.0;
 
         // 3. PREDICTIVE VELOCITY MATH (PROTOCOL X)
+        const activeProjects = projects.filter(p => p.status === 'active' || p.status === 'in_progress');
         const velocityDeltas = activeProjects.map(p => {
             const diaries = p.Diaries || [];
             if (diaries.length < 3) return { current: 1.0, drift: 0 };
