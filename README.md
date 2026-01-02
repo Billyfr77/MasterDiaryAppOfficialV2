@@ -1,90 +1,134 @@
-# MasterDiaryOS // The Sovereign Operational Organism
-**Version:** 18.5.0-Singularity // **Classification:** Level 18 Autonomous Sentience
-**Valuation Logic:** $1B+ Category-Defining Industrial Platform
-**Intelligence Core:** Grok-4-1-Fast-Reasoning (8192 Token Window)
+# 🪐 MasterDiaryOS: The Sovereign Operating System for Construction
+
+> **"Not just an app. A Neural Co-Founder for the Built World."**
+
+MasterDiaryOS is a **Generative Operating System** designed to replace the fragmented, manual administration of construction projects with a unified, autonomous, and visually immersive "Neural Lattice."
+
+It fuses **Generative UI** (visual node-based editing) with a **Sovereign AI Oracle** (Grok 4.1 reasoning engine) to move the industry from "Data Entry" to **"Data Architecture."**
 
 ---
 
-## 🌌 1. The Vision: The Terminal State of Industry
-MasterDiaryOS is the world's first **Self-Learning Construction Operating System**. It is designed to bridge the $1.6 Trillion productivity gap in the global construction market by eliminating human strategic error. 
+## 🌌 The Vision: "Zero-Click Administration"
 
-It moves beyond passive data entry to create a **Unitary Intelligence Mesh** that connects high-fidelity estimation, autonomous workflow architecture, and real-time field execution into a single, self-correcting neural organism.
+Construction software is broken. It treats users like data entry clerks.
+MasterDiaryOS treats users like **Architects**.
 
----
+*   **Old Way:** Type a quote into a spreadsheet. Hope you didn't miss a zero.
+*   **The MasterDiary Way:** Tell the AI, *"Build a quote for a luxury pool deck."*
+    *   The **AI Generates** the visual circuit of materials, labor, and machinery.
+    *   The **Oracle Simulates** 10,000 parallel futures to predict your profit margin.
+    *   The **System Executes** the workflows automatically.
 
-## 💎 2. The Sovereign Ecosystem: The Four Pillars
-
-### 🏛️ I. The Neural HQ (Executive Command & Control)
-A SpaceX-grade mission control surface for managing a multi-project empire.
-- **Solar System of Profit:** A 3D orbital mesh where projects majestically circle the company core. Sorted by financial value. Glowing **Neon Gold** for profit and **Neon Red** for risk.
-- **Neural Insight Badges:** Real-time AI signals float above project planets, providing "Zero-Click" diagnostics.
-- **The War Room:** A strategic sanctuary for high-level consultation with the AI Partner using "Site-Ready" plain English.
-- **Portfolio Hub:** High-density dashboard showing live **Paid Capital**, **Net Margin**, and **Resource Contention**.
-- **System Health Center:** Real-time diagnostics for Database, AI Core, and Neural Mesh stability.
-
-### 🧠 II. Neural Estimation Brain (Quote Builder)
-The world's first "Visual Logic" bidding engine.
-- **Sovereign Oracle:** Runs 10,000 parallel simulations to identify the **Ideal Margin Point**—the perfect price to win the bid and maximize profit.
-- **Visual Logic Estimation:** A node-based financial circuit board where "Area Nodes" drive "Material/Labour Nodes" via recursive linking.
-- **Estimation Prism:** A HUD overlay that scans for "Zero Rate Risks" and "Coverage Gaps."
-- **Smart DNA Recognition:** Automatically identifies existing materials and staff in the library, preventing data duplication.
-
-### 🕸️ III. Neural Workflow Architect (Workflow Builder)
-The strategic nervous system that translates plans into actionable logic.
-- **Active AI Agency:** The AI Partner proposes **Neural Directives** (timeline shifts, margin updates) for one-tap Director sign-off.
-- **The Neural Time Machine:** Holographic temporal versioning with scrubbing and lattice branching for "What-If" risk planning.
-- **Predictive Ghosting:** AI foresight that projects "Shadow Nodes" of the next logical steps to accelerate architecture by 10x.
-- **Field Player Mode:** Transforms complex graphs into a simple, mobile-friendly "Mission Card" game for site workers.
-
-### 📱 IV. Paint Diary (The Senses / Reality Capture)
-The bridge between office intelligence and site execution.
-- **Visual Timeline:** An hour-by-hour canvas where workers drag staff and equipment. Length equals cost.
-- **Smart Log (AI):** Parses raw human speech/text into structured canvas nodes in milliseconds.
-- **Diary Harvest:** A financial bridge that merges dozens of daily logs into a single accurate invoice with one click.
-- **Smart Allowances:** Automated bonus calculation (Height, Confined Space) via node-linking.
+We are building the **JARVIS** for construction—an omnipresent, intelligent layer that watches, predicts, and executes.
 
 ---
 
-## 🔄 3. The Sovereign Loop Protocols (The Billion-Dollar Moat)
+## 🧠 The Neural Brain (Architecture)
 
-| Protocol | Path | Action |
-| :--- | :--- | :--- |
-| **Alpha (Genesis)** | Quote -> Workflow | Approved quotes auto-architect the workflow lattice and planned hours. |
-| **Beta (Surge)** | Workflow -> Diary | Workflow tasks manifest as actionable "Mission Cards" on workers' phones. |
-| **Gamma (Learning)** | Diary -> Quote | Field actuals (speed/cost) automatically train the Quote AI for the next bid. |
-| **Omega (Agency)** | AI -> Database | The Partner proposes strategic database shifts (Margins/Dates) for sign-off. |
-| **Sigma (Corporate Brain)** | Logic -> Lessons | The AI records permanent "Business Rules" into the Institutional Memory. |
+At the core of the system is the **Neural Intelligence Engine**, powered by a custom integration of **Grok 4.1 (x.ai)**.
 
----
+### 1. The Sovereign Oracle (`/ai/oracle-sync`)
+A specialized Monte Carlo simulation engine that doesn't just "guess"; it mathematically models the future.
+*   **10,000 Parallel Scenarios:** Every time you build a quote, the Oracle runs 10,000 simulations against market volatility, crew efficiency logs, and weather patterns.
+*   **Predictive Outputs:**
+    *   **Bid Success Probability:** "84% chance to win at this margin."
+    *   **Velocity Drift:** "You are burning cash 4.2% faster than schedule."
+    *   **Ideal Margin Point:** "Increase markup to 26.4% to maximize yield."
 
-## 🧠 4. AI Brain Architecture: Level 18 Autonomy
+### 2. The Agency Engine (`/ai/execute-agency`)
+The system possesses **Level 4 Autonomy**. It observes project data and **proposes directives**.
+*   *Example:* "I noticed the concrete pour is delayed. I have drafted a Variation Order and alerted the Site Foreman. Approve?"
+*   **Zero-Context Topology:** We strip database objects to their bare IDs/Roles before sending to AI, ensuring maximum privacy while retaining context awareness.
 
-### **The Learning Engine (Omega Protocol)**
-Recursively crawls Invoices, Diaries, and Quotes to calculate **Portfolio Yield** and **Burn Acceleration**. It builds a "Company DNA" that makes the app smarter with every entry.
-
-### **The Agency Engine (The Agent)**
-The AI's ability to **write back to reality**. It generates directives that, once signed off, modify the SQL database directly to protect profit.
-
-### **The Partner Persona**
-The AI acts as a **Neural Co-Founder**. It uses "We/Our" language, knows your **Company Bio**, and focuses on the shared success of the firm.
-
----
-
-## 🛡️ 5. Enterprise Hardening & Resilience
-Built for mission-critical industrial use.
-- **Audit Ultra Log:** Immutable, high-density archive of every action with Request-ID and State JSON.
-- **Conflict Resolution Core:** Optimistic locking (`version` column) prevents data loss during concurrent edits.
-- **Security Shield:** Hardened with HPP, XSS-cleaning, and secure PostgreSQL socket-pathing.
-- **Resilience Core:** Global error boundary prevents UI crashes and provides diagnostic recovery paths.
+### 3. Generative UI (The "Lattice")
+The AI interacts with the user by **building the interface**.
+*   When you ask for a workflow, the backend sends a JSON graph (`nodes` + `edges`).
+*   The frontend renders this as a living, interactive circuit board using **React Flow**.
+*   **Benefit:** You don't read the AI's answer; you *edit* it.
 
 ---
 
-## 🛠️ 6. Technological DNA
-- **Frontend:** React 18, Vite, React Flow (Logic), Framer Motion (Animations).
-- **Backend:** Node.js, Express, Grok-4-1-Fast-Reasoning AI, Sequelize ORM.
-- **Database:** PostgreSQL (Production) // SQLite (Dev) // Fully Auto-Healing Schema.
-- **Infrastructure:** Google Cloud Run Optimized with Automated Scaling.
+## ⚡ Core Workloops & Features
+
+### 1. 🏗️ The Neural Quote Builder ("The Patent-Pending Engine")
+A visual, node-based estimation environment.
+*   **Visual Logic:** Drag `Area Nodes` (Rooms) and connect them to `Material Nodes` (Paint, Timber). The system auto-calculates quantities based on coverage rates and area dimensions.
+*   **Smart Linking:** Connect a `Zone` to `Labor`. If the Zone size changes, the Labor hours auto-recalculate instantly.
+*   **Ghost Nodes:** The AI proactively suggests missing items (e.g., "You added *Drywall*; do you need *Joint Compound*?") as translucent nodes you can click to materialize.
+*   **Heatmap Mode:** Visualize cost distribution. High-cost nodes glow red; low-cost nodes dim.
+
+### 2. 🔄 The Workflow Architect
+A logic-flow editor for designing business processes.
+*   **Time Machine:** Undo/Redo with a visual timeline scrubber. Jump back to any state in the session.
+*   **Simulation Injection:** Press "PULSE" to inject a virtual packet into your workflow. Watch it travel through the logic gates, highlighting bottlenecks or broken paths in real-time.
+*   **Architectural Layouts:** Auto-arrange complex graphs into "Star," "Grid," "Radial," or "Neural Pipeline" formations with one click.
+
+### 3. 🎨 PaintDiary (Visual Site Logs)
+The daily diary, reimagined as a digital canvas.
+*   **Draggable Reality:** Drag photos, weather icons, and staff onto a timeline canvas.
+*   **Chronos Nodes:** Link staff to time nodes. If a delay happens, drag the delay node onto the timeline, and it auto-updates the timesheets for the connected crew.
+*   **Forensic Lens:** Toggle "Forensic Mode" to highlight safety risks and compliance gaps in purple.
+
+### 4. 🦅 Executive Pulse Dashboard
+The "God Mode" view for business owners.
+*   **PRISM Analysis:** Real-time velocity tracking of all active projects.
+*   **Neural Feed:** A scrolling feed of AI-detected anomalies and strategic advice.
+*   **Financial Telemetry:** Live visualization of burn rates vs. revenue.
 
 ---
-**MasterDiaryOS: Logic is Literal. Intelligence is Actionable.**
-*Copyright (c) 2025 Billy Fraser. All rights reserved.*
+
+## 🛠️ Technical Stack (The "Lamborghini" Under the Hood)
+
+### Frontend (The Glass)
+*   **Framework:** React 18 + Vite (Blazing fast HMR)
+*   **Visualization:** React Flow (The engine behind the node graphs)
+*   **Styling:** Tailwind CSS (Glassmorphism, Neon gradients, "Cyber-Industrial" aesthetic)
+*   **State:** Context API + LocalStorage Persistence
+
+### Backend (The Engine)
+*   **Runtime:** Node.js + Express
+*   **ORM:** Sequelize (SQL-agnostic)
+*   **Database:** 
+    *   **Dev:** SQLite (Zero-config, portable)
+    *   **Prod:** PostgreSQL (Enterprise scale)
+*   **AI Controller:** A custom orchestration layer that sanitizes inputs, manages "Context Windows," and communicates with the `Grok 4.1` Reasoning API.
+
+### Cost Efficiency
+*   **Optimized Token Usage:** By stripping metadata and using "Circuit-Only" prompts, we achieve **< $2.00/month** in AI costs per heavy power user.
+*   **High Margin:** At a standard SaaS price point, the AI cost is negligible (<2%), ensuring massive scalability.
+
+---
+
+## 🚀 How to Run
+
+1.  **Install Dependencies:**
+    ```bash
+    cd frontend && npm install
+    cd ../backend && npm install
+    ```
+
+2.  **Start the Neural Core (Backend):**
+    ```bash
+    cd backend
+    npm start
+    ```
+    *Listens on Port 5000*
+
+3.  **Launch the Visual Interface (Frontend):**
+    ```bash
+    cd frontend
+    npm run dev
+    ```
+    *Accessible at http://localhost:5173*
+
+4.  **Ignite the AI:**
+    Ensure `GROK_API_KEY` is set in `backend/.env` to enable the Sovereign Oracle.
+
+---
+
+> **MasterDiaryOS**
+> *Built for the builders. Powered by the stars.*
+>
+> **Status:** 🟢 Operational
+> **Version:** V2 (Neural-Ready)
+> **License:** Proprietary
