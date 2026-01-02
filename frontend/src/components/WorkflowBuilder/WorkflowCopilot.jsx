@@ -18,6 +18,7 @@ export default function WorkflowCopilot({ nodes, edges, simulationData, meshCont
     // Auto-analysis when simulation completes
     useEffect(() => {
         if (simulationData && !isSimulating && messages.length < 3) {
+            if (!navigator.onLine) return; // Skip proactive analysis offline
             const proactiveAnalysis = async () => {
                 setLoading(true);
                 try {
@@ -39,6 +40,13 @@ export default function WorkflowCopilot({ nodes, edges, simulationData, meshCont
 
     const handleSend = async () => {
         if (!input.trim() || loading) return;
+
+        if (!navigator.onLine) {
+            setMessages(prev => [...prev, { role: 'user', content: input }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: "Neural Core offline. Please check connection." }]);
+            setInput('');
+            return;
+        }
 
         const userMsg = input;
         setInput('');
@@ -65,6 +73,10 @@ export default function WorkflowCopilot({ nodes, edges, simulationData, meshCont
     };
 
     const generateReport = async (reportType) => {
+        if (!navigator.onLine) {
+            alert("Cannot generate reports offline.");
+            return;
+        }
         setLoading(true);
         setReportData(null);
         try {

@@ -92,6 +92,10 @@ const WorkflowBuilderContent = () => {
   // --- FETCH MESH CONTEXT (FOR PROTOCOL OMNI) ---
   useEffect(() => {
       const fetchMesh = async () => {
+          if (!navigator.onLine) {
+              setMeshContext({ status: 'offline', intelligence: 'cached' });
+              return;
+          }
           try {
               // Hits our new real-time LearningEngine
               const res = await api.post('/ai/analyze-intelligence', { diaryData: { global: true } });

@@ -241,6 +241,19 @@ const QuoteBuilderContent = () => {
   // --- PROTOCOL GAMMA: FETCH LEARNING DATA ---
   useEffect(() => {
       const fetchLearningData = async () => {
+          // OFFLINE CHECK
+          if (!navigator.onLine) {
+              const mockPacket = {
+                  oracle: { bidSuccessProbability: 'OFFLINE', idealMarginPoint: '--', marketVolatilityIndex: 1.0, revenueOptimization: 'N/A' },
+                  parallelScenarios: [{ id: 'S1', name: 'Offline Mode', margin: '20%', risk: 'Low' }],
+                  patterns: [],
+                  globalAccuracy: 0.00
+              };
+              setHistoricalDeltas(mockPacket);
+              addNotification('warning', 'Oracle Offline', 'Using cached simulation data.');
+              return;
+          }
+
           try {
               // Context for the Oracle
               const context = {
@@ -409,13 +422,37 @@ const QuoteBuilderContent = () => {
   };
 
   const updateItem = useCallback((tempId, updates) => { setQuoteItems(items => items.map(item => item.tempId === tempId ? { ...item, ...updates } : item)); }, [setQuoteItems]);
-  const handleGenerateScope = async () => { if (quoteItems.length === 0) return; setIsGeneratingScope(true); try { const project = projects.find(p => p.id === selectedProject); const res = await api.post('/ai/generate-scope', { items: quoteItems.map(i => ({ name: i.material.name, qty: i.quantity, type: i.type })), projectName: project?.name }); setQuoteScope(res.data.scope); addNotification('success', 'Scope Generated'); } catch (err) { console.error(err); } finally { setIsGeneratingScope(false); } };
+  const handleGenerateScope = async () => { 
+      if (quoteItems.length === 0) return; 
+      if (!navigator.onLine) {
+          addNotification('warning', 'Offline Mode', 'Cannot generate scope without internet.');
+          return;
+      }
+      setIsGeneratingScope(true); 
+      try { 
+          const project = projects.find(p => p.id === selectedProject); 
+          const res = await api.post('/ai/generate-scope', { items: quoteItems.map(i => ({ name: i.material.name, qty: i.quantity, type: i.type })), projectName: project?.name }); 
+          setQuoteScope(res.data.scope); 
+          addNotification('success', 'Scope Generated'); 
+      } catch (err) { 
+          console.error(err); 
+      } finally { 
+          setIsGeneratingScope(false); 
+      } 
+  };
   const openLoadModal = async () => { setShowLoadModal(true); setQuotesLoading(true); try { const res = await api.get('/quotes?limit=50'); setExistingQuotes(res.data.data || []); } catch (err) { console.error(err); } finally { setQuotesLoading(false); } };
   const handleLoadQuote = (quote) => { navigate(`/quotes/${quote.id}`); setShowLoadModal(false); };
   const deleteNode = useCallback((id) => { setNodes((nds) => nds.filter(n => n.id !== id)); setQuoteItems((items) => items.filter(i => i.tempId !== id)); }, [setNodes]);
   
   const handleAIChat = async (message) => {
       if (!message.trim()) return;
+      
+      if (!navigator.onLine) {
+          setChatMessages(prev => [...prev, { role: 'user', content: message }]);
+          setChatMessages(prev => [...prev, { role: 'assistant', content: "I am offline. Please connect to the internet to access my reasoning core." }]);
+          return;
+      }
+
       setChatMessages(prev => [...prev, { role: 'user', content: message }]);
       setChatTyping(true);
       try {
@@ -517,6 +554,34 @@ const QuoteBuilderContent = () => {
   const handleSaveQuote = async (force = false) => { 
       if (!selectedProject) return; 
       setIsSaving(true); 
+      
+      if (!navigator.onLine) {
+          // OFFLINE SAVE (BASIC)
+          try {
+              const payload = { 
+                  projectId: selectedProject, 
+                  clientId: quoteSettings.clientId, 
+                  marginPct, 
+                  totalCost: financials.subtotal, 
+                  totalRevenue: financials.total, 
+                  nodes, 
+                  edges, 
+                  staff: quoteItems.filter(i=>i.type==='staff'), 
+                  equipment: quoteItems.filter(i=>i.type==='equipment'),
+                  version: nodes[0]?.data?.version || 0,
+                  name: `Draft Quote ${new Date().toLocaleTimeString()}`
+              };
+              await syncManager.save('quotes', payload);
+              addNotification('success', 'Saved Offline', 'Quote buffered to local storage. Will sync when online.');
+          } catch (e) {
+              console.error(e);
+              addNotification('error', 'Offline Save Failed');
+          } finally {
+              setIsSaving(false);
+          }
+          return;
+      }
+
       try { 
           const payload = { 
               projectId: selectedProject, 
@@ -580,6 +645,13 @@ const QuoteBuilderContent = () => {
 
   const handleGenerateBlueprint = async (prompt) => {
       if (!prompt || !prompt.trim()) { addNotification('warning', 'Input Required', 'Please describe what you want to build.'); return; }
+      
+      if (!navigator.onLine) {
+          setChatMessages(prev => [...prev, { role: 'user', content: `Generate Blueprint: ${prompt}` }]);
+          setChatMessages(prev => [...prev, { role: 'assistant', content: "Blueprint generation requires Neural Link. Please reconnect." }]);
+          return;
+      }
+
       setIsGeneratingBlueprint(true);
       setChatMessages(prev => [...prev, { role: 'user', content: `Generate Blueprint: ${prompt}` }]);
       try {
@@ -745,6 +817,10 @@ const QuoteBuilderContent = () => {
 
   const fetchGhostSuggestions = useCallback(async (node) => {
       if (!node) return;
+      if (!navigator.onLine) {
+          addNotification('info', 'Offline', 'AI suggestions unavailable.');
+          return;
+      }
       try {
           const res = await api.post('/ai/node-suggestions', { selectedNode: node, existingNodes: nodes });
           if (res.data?.suggestions) {

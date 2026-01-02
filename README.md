@@ -75,6 +75,12 @@ The "God Mode" view for business owners.
 *   **Neural Feed:** A scrolling feed of AI-detected anomalies and strategic advice.
 *   **Financial Telemetry:** Live visualization of burn rates vs. revenue.
 
+### 5. 🛡️ Offline Safe Mode (Site-Ready)
+Built for the basement with zero signal.
+*   **Local Buffering:** All changes (Quotes, Logs, Workflows) are saved instantly to the device's local database (`Dexie.js`).
+*   **Auto-Sync:** As soon as connectivity returns, the `SyncManager` uploads your work to the cloud.
+*   **Graceful AI:** If you try to use the Neural Oracle while offline, it won't crash—it politely informs you and switches to manual mode.
+
 ---
 
 ## 🛠️ Technical Stack (The "Lamborghini" Under the Hood)
