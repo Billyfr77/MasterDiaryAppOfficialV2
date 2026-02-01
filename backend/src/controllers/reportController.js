@@ -205,16 +205,31 @@ const searchHub = async (req, res) => {
 
     // --- DIARIES (Deep Search) ---
     if (!type || type === 'DIARY') {
-         // Diaries use 'date' column, not updatedAt for filtering typically
-         const diaryWhere = buildWhere([], null, 'totalRevenue', 'date');
+         // Diaries do NOT have userId, so we must NOT use buildWhere's default userId check
+         // We construct a specific where clause for Diaries filtering by Date/Value only
+         const diaryWhere = {};
          
+         // Date Filter
+         if (dateRange && dateRange !== 'all') {
+             diaryWhere.date = getDateFilter(dateRange);
+         }
+         
+         // Value Filter
+         if (minVal || maxVal) {
+             const valFilter = {};
+             if (minVal) valFilter[Op.gte] = parseFloat(minVal);
+             if (maxVal) valFilter[Op.lte] = parseFloat(maxVal);
+             diaryWhere.totalRevenue = valFilter;
+         }
+
          // Special handling for text query on related project
          const include = [{ 
              model: Project, 
              attributes: ['name'],
-             required: !!query,
-             where: { userId } // Double check ownership of joined project
+             required: true, // CRITICAL: Must be true to enforce the inner where clause
+             where: { userId } // Enforce ownership via Project
          }];
+         
          if (query) include[0].where = { ...include[0].where, name: { [Op.like]: searchString } };
 
          queries.push(Diary.findAll({
