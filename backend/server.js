@@ -57,9 +57,12 @@ app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(hpp()); // Prevent Parameter Pollution
 app.use(compression());
 
-// CORS headers middleware - Allow All for Production
+// CORS headers middleware - Robust for Cloud Run with Credentials
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*'); // Allow any frontend
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -151,6 +154,7 @@ app.use('/api/google', require('./src/routes/google')); // Register Google Integ
 app.use('/api/xero', require('./src/routes/xero')); // Register Xero Integration routes
 app.use('/api/workflows', require('./src/routes/workflowRoutes')); // Register Workflow routes
 app.use('/api/clients', require('./src/routes/clients')); // Register Client routes
+app.use('/api/documents', require('./src/routes/documents')); // Register Documents routes
 app.use('/api/allocations', require('./src/routes/allocations')); // Register Allocation routes
 app.use('/api/safety', require('./src/routes/safetyRoutes')); // Register Safety & Compliance routes
 app.use('/api/reports', require('./src/routes/reportRoutes')); // Unified Reports Hub
@@ -159,6 +163,13 @@ app.use('/api/ai', require('./src/routes/ai')); // Grok AI Service
 app.use('/api/intelligence', require('./src/routes/intelligenceRoutes')); // NEW: Intelligence Stack
 app.use('/api/weather', require('./src/routes/weather')); // Weather Service
 app.use('/api/diary-templates', require('./src/routes/diaryTemplates')); // Diary Templates Route
+
+// --- SERVE UPLOADS (Static) ---
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res) => {
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // Force register error handler last
 app.use(globalErrorHandler);
@@ -241,6 +252,31 @@ app.get('/api/seed-secret', async (req, res) => {
   } catch (error) {
     console.error('Seeding Error:', error);
     res.status(500).send('Seeding Failed: ' + error.message);
+  }
+});
+
+// Database Schema Fix Route (Emergency)
+const runSchemaFix = require('./src/utils/manualSchemaFix');
+app.get('/api/fix-schema', async (req, res) => {
+  try {
+    const secret = req.query.secret;
+    // Allow DB_PASSWORD or a hardcoded emergency secret
+    if (secret !== process.env.DB_PASSWORD && secret !== 'masterfix2026') { 
+       return res.status(403).send('Unauthorized: Invalid secret');
+    }
+    
+    console.log('Starting manual schema fix...');
+    const results = await runSchemaFix();
+    console.log('Schema fix results:', results);
+    
+    res.json({
+      success: true,
+      message: 'Schema patch execution completed',
+      results: results
+    });
+  } catch (error) {
+    console.error('Schema Fix Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -366,16 +366,19 @@ export const useDiaryEngine = () => {
               const newExtraNodes = [];
               const newEdges = [];
               const chronosNodes = aiNodes.filter(n => n.type === 'chronos');
+              const mainHubId = chronosNodes.length > 0 ? chronosNodes[0].id : null;
               
               aiNodes.forEach((node, idx) => {
                   const xPos = node.type === 'chronos' ? 100 : 600;
                   const yPos = idx * 200;
 
+                  // Determine ID early to use for linking
+                  const nodeId = node.id || generateId();
+
                   if (node.type === 'diaryNode') {
                       const resolved = resolveItems([{ ...node, type: node.nodeType }])[0];
-                      const itemId = node.id || generateId();
                       newItems.push({
-                          id: itemId,
+                          id: nodeId,
                           dataId: node.nodeId || node.id,
                           type: node.nodeType || 'material',
                           name: resolved.name || node.label,
@@ -388,16 +391,21 @@ export const useDiaryEngine = () => {
                           note: node.note || '',
                           position: node.position || { x: xPos, y: yPos }
                       });
-
-                      if (aiEdges.length === 0 && chronosNodes.length > 0) {
-                          newEdges.push({ id: `e-auto-${chronosNodes[0].id}-${itemId}`, source: chronosNodes[0].id, target: itemId, animated: true, type: 'neon' });
-                      }
                   } else {
-                      const extraId = node.id || generateId();
                       newExtraNodes.push({
-                          id: extraId, type: node.type, position: node.position || { x: xPos, y: yPos },
-                          data: { ...node, label: node.label, startTime: node.startTime || "07:00", duration: node.duration || 1, onDelete: () => handleRemoveItem(extraId) }
+                          id: nodeId, 
+                          type: node.type, 
+                          position: node.position || { x: xPos, y: yPos },
+                          data: { ...node, label: node.label, startTime: node.startTime || "07:00", duration: node.duration || 1, onDelete: () => handleRemoveItem(nodeId) }
                       });
+                  }
+
+                  // Auto-Link to Main Hub if not a hub itself and not already linked
+                  if (mainHubId && node.type !== 'chronos') {
+                      const hasEdge = aiEdges.some(e => e.source === nodeId || e.target === nodeId);
+                      if (!hasEdge) {
+                          newEdges.push({ id: `e-auto-${mainHubId}-${nodeId}`, source: mainHubId, target: nodeId, animated: true, type: 'neon' });
+                      }
                   }
               });
 

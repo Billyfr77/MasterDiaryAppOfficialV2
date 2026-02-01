@@ -71,6 +71,7 @@ function App() {
   const isLanding = location.pathname === '/';
   const isWorkflowBuilder = location.pathname.startsWith('/workflows');
   const isExecutiveHQ = location.pathname.startsWith('/hq');
+  const isMapBuilder = location.pathname.startsWith('/map-builder');
 
   return (
     <SovereignErrorBoundary>
@@ -86,6 +87,7 @@ function App() {
                     mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen}
                     isLanding={isLanding} isPortal={isPortal}
                     isWorkflowBuilder={isWorkflowBuilder || isExecutiveHQ}
+                    isMapBuilder={isMapBuilder}
                   />
                 </DndProvider>
               </DiaryThemeProvider>
@@ -101,9 +103,9 @@ function App() {
 function AppInner({ 
     token, onLogin,
     darkMode, setDarkMode, mobileMenuOpen, setMobileMenuOpen, 
-    isLanding, isPortal, isWorkflowBuilder
+    isLanding, isPortal, isWorkflowBuilder, isMapBuilder
 }) {
-  const { theme, allThemes, setActiveTheme, activeTheme } = useDiaryTheme();
+  const { theme, allThemes, setActiveTheme, activeTheme, liteMode } = useDiaryTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -125,7 +127,7 @@ function AppInner({
             }
           `}</style>
           
-          {!isPortal && !isLanding && (
+          {!liteMode && !isPortal && !isLanding && (
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#000000]">
                <div className="absolute inset-0 bg-black"></div>
                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(30,27,75,0.15)_0%,transparent_100%)]"></div>
@@ -183,7 +185,7 @@ function AppInner({
             />
           )}
 
-          <main className={`flex-1 ${(!isPortal && !isLanding && !isWorkflowBuilder) ? 'container mx-auto px-4 py-8' : ''} animate-fade-in`}>
+          <main className={`flex-1 ${(!isPortal && !isLanding && !isWorkflowBuilder && !isMapBuilder) ? 'container mx-auto px-4 py-8' : ''} ${isMapBuilder ? 'flex flex-col' : ''} ${liteMode ? '' : 'animate-fade-in'}`}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login onLogin={onLogin} />} />
@@ -219,8 +221,8 @@ function AppInner({
             </Routes>
           </main>
 
-          {!isPortal && <PinnacleCopilot />}
-          {!isPortal && <AIOnboardingOverlay />}
+          {!isPortal && !isMapBuilder && <PinnacleCopilot />}
+          {!isPortal && !isMapBuilder && <AIOnboardingOverlay />}
         </div>
   );
 }

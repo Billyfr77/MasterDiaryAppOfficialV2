@@ -42,7 +42,7 @@ class GrokService {
     }
   }
 
-  async generateJSON(prompt, systemInstruction = "", maxTokens = 8192) {
+  async generateJSON(prompt, systemInstruction = "", maxTokens = 8192, retryCount = 0) {
     if (!this.client) throw new Error("AI Service not configured");
 
     try {
@@ -69,14 +69,28 @@ class GrokService {
       const endIdx = content.lastIndexOf('}');
       
       if (startIdx === -1 || endIdx === -1) {
-          console.error("[Grok] Raw Content (JSON extraction failed):", content);
           throw new Error("No JSON object found in response");
       }
       
       const jsonStr = content.substring(startIdx, endIdx + 1);
       return JSON.parse(jsonStr);
     } catch (error) {
-      console.error("[Grok] JSON Gen Error:", error.message);
+      console.error(`[Grok] JSON Gen Error (Attempt ${retryCount + 1}):`, error.message);
+      
+      // --- SELF-HEALING PROTOCOL ---
+      if (retryCount < 1) {
+          console.warn("✨ Initiating Neural Self-Repair...");
+          const repairInstruction = `
+            SYSTEM ALERT: You generated invalid JSON in the previous turn.
+            ERROR: ${error.message}
+            
+            **MISSION:** FIX the JSON. Return ONLY the corrected JSON object.
+            Do not explain. Do not apologize. Just fix the syntax.
+          `;
+          // Retry with the repair instruction
+          return this.generateJSON(prompt, repairInstruction, maxTokens, retryCount + 1);
+      }
+      
       throw error; 
     }
   }

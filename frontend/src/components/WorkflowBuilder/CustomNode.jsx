@@ -3,7 +3,8 @@ import { Handle, Position } from '@xyflow/react';
 import { 
     FileText, CheckSquare, Bell, User, Clock, Calendar, 
     CreditCard, Zap, Mail, MoreHorizontal, ListChecks, 
-    Lock, Play, ArrowRight, Sparkles, AlertCircle, Activity, ShieldCheck
+    Lock, Play, ArrowRight, Sparkles, AlertCircle, Activity, ShieldCheck,
+    Truck, Folder, Clipboard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -86,6 +87,7 @@ export default memo(({ data, type, selected }) => {
   const totalItems = checklist.length;
   const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
   const theme = data.theme || 'indigo';
+  const liteMode = data.liteMode || false;
   const isGhost = data.isGhost || false;
   const isSuggestion = data.isSuggestion || false;
 
@@ -125,7 +127,7 @@ export default memo(({ data, type, selected }) => {
   const hasSmartConfig = (data.automation && Object.keys(data.automation).length > 0) || totalItems > 0 || data.assignee || data.deadline;
 
   // Styles
-  let baseClasses = "relative min-w-[320px] rounded-2xl border backdrop-blur-2xl transition-all duration-500 group hover:-translate-y-1 hover:shadow-2xl";
+  let baseClasses = `relative min-w-[320px] rounded-2xl border backdrop-blur-2xl group ${liteMode ? 'transition-none' : 'transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl'}`;
   
   let borderColor = NodeColor({ type, isBorder: true });
   let bgGradient = 'bg-gradient-to-b from-slate-900/95 to-black';
@@ -162,19 +164,19 @@ export default memo(({ data, type, selected }) => {
       return (
           <div 
             onClick={data.onManifest}
-            className="relative min-w-[280px] rounded-2xl border-2 border-dashed border-indigo-500/30 bg-indigo-500/5 backdrop-blur-sm p-5 cursor-pointer group hover:bg-indigo-500/10 hover:border-indigo-500/60 transition-all duration-500"
+            className={`relative min-w-[280px] rounded-2xl border-2 border-dashed border-indigo-500/30 bg-indigo-500/5 backdrop-blur-sm p-5 cursor-pointer group ${liteMode ? '' : 'hover:bg-indigo-500/10 hover:border-indigo-500/60 transition-all duration-500'}`}
           >
               <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400 group-hover:scale-110 transition-transform">
-                      <Sparkles size={16} className="animate-pulse" />
+                  <div className={`p-2 bg-indigo-500/20 rounded-lg text-indigo-400 ${liteMode ? '' : 'group-hover:scale-110 transition-transform'}`}>
+                      <Sparkles size={16} className={liteMode ? '' : "animate-pulse"} />
                   </div>
                   <div>
                       <span className="text-[10px] font-black text-indigo-400/60 uppercase tracking-widest block">AI Suggestion</span>
-                      <span className="text-sm font-bold text-white/40 group-hover:text-white/80 transition-colors">{data.label}</span>
+                      <span className={`text-sm font-bold text-white/40 ${liteMode ? '' : 'group-hover:text-white/80 transition-colors'}`}>{data.label}</span>
                   </div>
               </div>
-              <div className="mt-4 flex justify-end">
-                  <div className="px-3 py-1 bg-indigo-600 rounded-lg text-[8px] font-black text-white uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className={`mt-4 flex justify-end ${liteMode ? '' : 'opacity-0 group-hover:opacity-100 transition-opacity'}`}>
+                  <div className="px-3 py-1 bg-indigo-600 rounded-lg text-[8px] font-black text-white uppercase tracking-widest">
                       Manifest Node
                   </div>
               </div>
@@ -200,8 +202,8 @@ export default memo(({ data, type, selected }) => {
 
   return (
     <motion.div 
-      initial={{ scale: 0.9, opacity: 0, y: 20 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
+      initial={liteMode ? { opacity: 1 } : { scale: 0.9, opacity: 0, y: 20 }}
+      animate={liteMode ? { opacity: 1 } : { scale: 1, opacity: 1, y: 0 }}
       className={`${baseClasses} ${borderColor} ${bgGradient} ${shadow}`}
       style={{ background: 'transparent', border: 'none' }}
     >
@@ -211,7 +213,7 @@ export default memo(({ data, type, selected }) => {
           
           {/* MASTERPIECE: PULSE FLASH OVERLAY */}
           <AnimatePresence>
-              {data.isSimulating && (
+              {data.isSimulating && !liteMode && (
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0, 1, 0] }}
@@ -224,7 +226,7 @@ export default memo(({ data, type, selected }) => {
 
           {/* MASTERPIECE: SHORT CIRCUIT (ERROR) FLASH */}
           <AnimatePresence>
-              {data.simulationError && (
+              {data.simulationError && !liteMode && (
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0, 1, 0, 1, 0] }}
@@ -235,7 +237,7 @@ export default memo(({ data, type, selected }) => {
           </AnimatePresence>
 
           {/* Active Pulse Overlay */}
-          {status === 'in-progress' && (
+          {status === 'in-progress' && !liteMode && (
               <motion.div 
                 className="absolute inset-0 border border-blue-400/30 z-20 pointer-events-none box-border"
                 initial={{ opacity: 0.5, scale: 1 }}
@@ -248,7 +250,7 @@ export default memo(({ data, type, selected }) => {
       {/* Blocked Overlay */}
       {status === 'error' && (
           <div className="absolute top-2 right-2 z-30">
-              <div className="bg-red-500/20 p-1.5 rounded-lg border border-red-500 text-red-500 animate-pulse">
+              <div className={`bg-red-500/20 p-1.5 rounded-lg border border-red-500 text-red-500 ${liteMode ? '' : 'animate-pulse'}`}>
                   <Lock size={14} />
               </div>
           </div>
@@ -354,7 +356,7 @@ export default memo(({ data, type, selected }) => {
             {type === 'trigger' && (
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-2">
                     <div className="flex items-center gap-2">
-                        <Zap size={14} className="text-amber-400 animate-pulse" />
+                        <Zap size={14} className={`text-amber-400 ${liteMode ? '' : 'animate-pulse'}`} />
                         <span className="text-[10px] font-black text-white uppercase tracking-widest truncate">
                             {data.event?.replace(/\./g, '_') || 'WAITING_FOR_SIGNAL'}
                         </span>
@@ -395,7 +397,7 @@ export default memo(({ data, type, selected }) => {
                     </div>
                     <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
                         <div 
-                            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500" 
+                            className={`h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full ${liteMode ? '' : 'transition-all duration-500'}`} 
                             style={{ width: `${progress}%` }}
                         />
                     </div>
@@ -442,7 +444,7 @@ export default memo(({ data, type, selected }) => {
             <div className="flex items-center gap-2">
                 <div className={`w-1.5 h-1.5 rounded-full ${
                     status === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 
-                    status === 'in-progress' ? 'bg-blue-500 animate-pulse' : 
+                    status === 'in-progress' ? `bg-blue-500 ${liteMode ? '' : 'animate-pulse'}` : 
                     status === 'error' ? 'bg-red-500' : 'bg-slate-600'
                 }`} />
                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{status}</span>

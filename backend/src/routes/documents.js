@@ -9,11 +9,15 @@ router.use(authenticateToken);
 router.get('/', async (req, res) => {
   try {
     const where = {};
-    if (req.query.projectId) where.projectId = req.query.projectId;
-    // Assuming Document model exists and has projectId
+    if (req.query.projectId) {
+        where.relatedId = req.query.projectId;
+        // Optionally filter by model if needed, but ID should be unique enough for now
+        // where.relatedModel = 'Project'; 
+    }
     const docs = await Document.findAll({ where, order: [['createdAt', 'DESC']] });
     res.json(docs);
   } catch (error) {
+    console.error("Document Fetch Error:", error);
     res.status(500).json({ error: error.message });
   }
 });

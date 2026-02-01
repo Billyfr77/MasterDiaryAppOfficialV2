@@ -10,7 +10,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../utils/api'
 import { Folder, Plus, Edit, Trash2, Calendar, User, Search, Filter, Download, BarChart3, TrendingUp, MapPin, DollarSign,
-    Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer, X, Upload, FileText, ExternalLink, File, CheckCircle2, Sparkles, Loader2, Layout } from 'lucide-react'
+    Clock, Wrench, Map as MapIcon, Cloud, Wind, Thermometer, X, Upload, FileText, ExternalLink, File, CheckCircle2, Sparkles, Loader2, Layout, CreditCard } from 'lucide-react'
 import Papa from 'papaparse'
 import ClientSelector from './Clients/ClientSelector'
 import ProjectGantt from './EnhancedProjects/ProjectGantt'

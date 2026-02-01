@@ -534,10 +534,15 @@ export const ProfitNode = ({ id, data, selected }) => {
     );
 };
 
+export const MaterialYieldNode = QuoteMaterialNode;
+export const LabourEstimatorNode = QuoteLabourNode;
+
 export const QuoteNodeTypes = {
     areaNode: AreaNode,
     quoteMaterial: QuoteMaterialNode,
     quoteLabour: QuoteLabourNode,
+    materialYield: MaterialYieldNode,
+    labourEstimator: LabourEstimatorNode,
     profitNode: ProfitNode,
     estimationPrism: EstimationPrismNode
 };

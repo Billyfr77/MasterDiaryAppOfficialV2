@@ -11,3 +11,5 @@ backend/uploads/
 .DS_Store
 coverage
 .vscode
+# Youtube series
+Youtube series/

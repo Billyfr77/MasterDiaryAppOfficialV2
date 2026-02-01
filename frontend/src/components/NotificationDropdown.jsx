@@ -9,6 +9,7 @@ const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeTab, setActiveTab] = useState('stream'); // 'stream' | 'critical'
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const dropdownRef = useRef(null);
 
   // Poll for notifications
@@ -288,11 +289,11 @@ const NotificationDropdown = () => {
                                                     <Shield size={10} /> Review & Sign-off
                                                 </button>
                                             ) : note.type === 'ERROR' ? (
-                                                <button className="flex items-center gap-1 text-[9px] font-bold text-rose-400 uppercase tracking-wider hover:underline">
+                                                <button onClick={(e) => { e.stopPropagation(); setSelectedNotification(note); }} className="flex items-center gap-1 text-[9px] font-bold text-rose-400 uppercase tracking-wider hover:underline">
                                                     Review Log <TrendingUp size={10} />
                                                 </button>
                                             ) : (
-                                                <button className="flex items-center gap-1 text-[9px] font-bold text-slate-400 hover:text-white uppercase tracking-wider transition-colors">
+                                                <button onClick={(e) => { e.stopPropagation(); setSelectedNotification(note); }} className="flex items-center gap-1 text-[9px] font-bold text-slate-400 hover:text-white uppercase tracking-wider transition-colors">
                                                     Details <Sparkles size={10} />
                                                 </button>
                                             )}
@@ -320,6 +321,46 @@ const NotificationDropdown = () => {
                      <span className="h-1 w-1 rounded-full bg-slate-700"></span>
                 </div>
             </div>
+
+            {/* DETAIL MODAL OVERLAY */}
+            <AnimatePresence>
+                {selectedNotification && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }} 
+                        animate={{ opacity: 1, scale: 1 }} 
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="absolute inset-0 bg-[#050505]/95 backdrop-blur-xl z-50 flex flex-col"
+                    >
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-indigo-900/10">
+                            <div className="flex items-center gap-3">
+                                {getIcon(selectedNotification.type)}
+                                <div>
+                                    <h3 className="text-xs font-black text-white uppercase tracking-wider">{selectedNotification.title}</h3>
+                                    <span className="text-[9px] font-mono text-indigo-400">{getTimeAgo(selectedNotification.createdAt)}</span>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedNotification(null)} className="p-2 bg-white/5 rounded-full hover:bg-white/20 text-white transition-all"><X size={16} /></button>
+                        </div>
+                        <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+                            <div className="bg-white/5 rounded-2xl p-4 border border-white/5 mb-4">
+                                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-2">Signal Payload</span>
+                                <p className="text-sm text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">{selectedNotification.message}</p>
+                            </div>
+                            {selectedNotification.data && (
+                                <div className="bg-black/40 rounded-2xl p-4 border border-white/5 font-mono text-[10px] text-indigo-300 overflow-x-auto">
+                                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest block mb-2 sticky left-0">Raw Telemetry</span>
+                                    <pre>{JSON.stringify(selectedNotification.data, null, 2)}</pre>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-4 border-t border-white/10 flex justify-end">
+                            <button onClick={() => deleteNotification(selectedNotification.id)} className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all">
+                                <Trash2 size={14} /> Purge Signal
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
           </motion.div>
         )}

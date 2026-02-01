@@ -95,6 +95,155 @@ const generateNeuralIntelligencePacket = async (projectId = null) => {
         
         const siteInsights = recentDiaries.map(d => d.notes).filter(Boolean).slice(0, 10);
 
+        // 9. NEURAL CORTEX UPGRADE (SELF-CORRECTING INTELLIGENCE)
+        // 9a. Estimation Bias (Variance between Quote vs Actuals)
+        let estimationBias = 0;
+        let biasDirection = 'NEUTRAL';
+        const completedProjects = projects.filter(p => p.status === 'completed');
+        
+        if (completedProjects.length > 0) {
+            let totalQuoteVariance = 0;
+            let projectCount = 0;
+
+            for (const p of completedProjects) {
+                // Sum all approved quotes for this project
+                const projectQuotes = await Quote.sum('totalCost', { where: { projectId: p.id, status: 'approved' } }) || 0;
+                // Sum all diary costs for this project
+                const projectActuals = await Diary.sum('totalCost', { where: { projectId: p.id } }) || 0;
+
+                if (projectQuotes > 0) {
+                    const variance = (projectActuals - projectQuotes) / projectQuotes;
+                    totalQuoteVariance += variance;
+                    projectCount++;
+                }
+            }
+
+            if (projectCount > 0) {
+                estimationBias = (totalQuoteVariance / projectCount);
+                biasDirection = estimationBias > 0.05 ? 'UNDER_ESTIMATING' : (estimationBias < -0.05 ? 'OVER_ESTIMATING' : 'ACCURATE');
+            }
+        }
+
+        // 9b. Association Matrix (What items go together?)
+        // Scan last 50 approved quotes to find frequent pairs
+        const associationRules = [];
+        const recentQuotes = await Quote.findAll({ 
+            where: { status: 'approved' }, 
+            limit: 50, 
+            order: [['createdAt', 'DESC']],
+            attributes: ['nodes']
+        });
+
+        const itemPairs = {};
+        recentQuotes.forEach(q => {
+            const nodes = q.nodes || [];
+            // Extract item names (simplified for performance)
+            const items = nodes
+                .filter(n => n.data && n.data.label)
+                .map(n => n.data.label);
+            
+            // Generate unique pairs
+            for (let i = 0; i < items.length; i++) {
+                for (let j = i + 1; j < items.length; j++) {
+                    const pair = [items[i], items[j]].sort().join('::');
+                    itemPairs[pair] = (itemPairs[pair] || 0) + 1;
+                }
+            }
+        });
+
+        // Convert pairs to rules (Threshold: appear together in > 20% of quotes)
+        Object.entries(itemPairs).forEach(([pair, count]) => {
+            if (count > (recentQuotes.length * 0.2)) {
+                const [itemA, itemB] = pair.split('::');
+                associationRules.push({ itemA, itemB, confidence: (count / recentQuotes.length).toFixed(2) });
+            }
+        });
+
+        // 9c. RESOURCE TEMPORAL PRESSURE (Scheduling Awareness)
+        // Look ahead 14 days to see who is booked
+        const twoWeeksFromNow = new Date();
+        twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
+        
+        const futureAllocations = await Allocation.findAll({
+            where: {
+                startDate: { [Op.gte]: new Date() },
+                endDate: { [Op.lte]: twoWeeksFromNow },
+                status: 'active'
+            }
+        });
+
+        const resourceLoad = {}; // { staffId: daysBooked }
+        futureAllocations.forEach(a => {
+            if (a.resourceType === 'staff') {
+                const start = new Date(a.startDate);
+                const end = new Date(a.endDate);
+                const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                resourceLoad[a.resourceId] = (resourceLoad[a.resourceId] || 0) + days;
+            }
+        });
+
+        const heavyLoadThreshold = 10; // If booked > 10 days in next 14 days, they are "CRITICAL"
+        const criticalStaff = staff.filter(s => (resourceLoad[s.id] || 0) >= heavyLoadThreshold)
+                                   .map(s => s.name);
+        
+        const availableCrew = staff.filter(s => (resourceLoad[s.id] || 0) < 5) // Booked < 5 days is "OPEN"
+                                   .map(s => `${s.name} (${s.role})`);
+
+        // 9d. CLIENT GENOME (Financial Personality)
+        // Analyze payment velocity and friction per client
+        const clientGenome = {};
+        for (const c of clients) {
+            const clientInvoices = invoices.filter(i => i.clientId === c.id && i.status === 'paid');
+            let avgPayDays = 0;
+            if (clientInvoices.length > 0) {
+                const totalDays = clientInvoices.reduce((sum, inv) => {
+                    const sent = new Date(inv.createdAt);
+                    const paid = new Date(inv.updatedAt); // Assuming updatedAt is pay date for 'paid' status
+                    return sum + Math.max(0, (paid - sent) / (1000 * 60 * 60 * 24));
+                }, 0);
+                avgPayDays = Math.round(totalDays / clientInvoices.length);
+            }
+            
+            // Friction: Do they have many rejected quotes?
+            const rejectedQuotes = await Quote.count({ where: { clientId: c.id, status: 'rejected' } });
+            
+            if (avgPayDays > 0 || rejectedQuotes > 0) {
+                clientGenome[c.id] = { 
+                    name: c.name, 
+                    avgPayDays, 
+                    frictionScore: rejectedQuotes,
+                    rating: avgPayDays > 30 ? 'SLOW_PAYER' : (avgPayDays < 7 ? 'INSTANT_PAYER' : 'STANDARD')
+                };
+            }
+        }
+
+        // 9e. FATIGUE METRICS (Safety Prediction)
+        // Who has worked too many days in a row?
+        const fatigueRisk = [];
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        // Fetch allocations from the last 7 days
+        const recentAllocations = await Allocation.findAll({
+            where: {
+                endDate: { [Op.gte]: oneWeekAgo },
+                resourceType: 'staff'
+            }
+        });
+        
+        const consecutiveDays = {};
+        recentAllocations.forEach(a => {
+            const days = Math.ceil((new Date(a.endDate) - new Date(a.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+            consecutiveDays[a.resourceId] = (consecutiveDays[a.resourceId] || 0) + days;
+        });
+
+        staff.forEach(s => {
+            const worked = consecutiveDays[s.id] || 0;
+            if (worked > 6) {
+                fatigueRisk.push(`${s.name} (${worked} days straight)`);
+            }
+        });
+
         return {
             mesh: {
                 integrity: (1 - contentionIndex).toFixed(3),
@@ -105,6 +254,18 @@ const generateNeuralIntelligencePacket = async (projectId = null) => {
                 velocityDrift: avgDrift.toFixed(3),
                 frictionIndex: (frictionCount / 50).toFixed(2),
                 status: avgAccel > 1.1 ? 'VOLATILE' : 'STABLE'
+            },
+            cortex: {
+                estimationBias: (estimationBias * 100).toFixed(1) + '%',
+                biasDirection: biasDirection,
+                associationRules: associationRules.slice(0, 10),
+                temporalPressure: {
+                    criticalStaff: criticalStaff,
+                    availableCrew: availableCrew.slice(0, 5),
+                    loadIndex: (Object.keys(resourceLoad).length / (staff.length || 1)).toFixed(2)
+                },
+                clientGenome: Object.values(clientGenome).filter(c => c.rating !== 'STANDARD').slice(0, 5), // Only show notable clients
+                fatigueRisk: fatigueRisk
             },
             assets: {
                 staff: staffProfiles,

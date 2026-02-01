@@ -13,11 +13,12 @@ It fuses **Generative UI** (visual node-based editing) with a **Sovereign AI Ora
 Construction software is broken. It treats users like data entry clerks.
 MasterDiaryOS treats users like **Architects**.
 
-*   **Old Way:** Type a quote into a spreadsheet. Hope you didn't miss a zero.
+*   **Old Way:** Type a quote into a spreadsheet. Hope you didn't miss a zero. Manually copy diary hours into an invoice.
 *   **The MasterDiary Way:** Tell the AI, *"Build a quote for a luxury pool deck."*
     *   The **AI Generates** the visual circuit of materials, labor, and machinery.
     *   The **Oracle Simulates** 10,000 parallel futures to predict your profit margin.
     *   The **System Executes** the workflows automatically.
+    *   The **Harvester** sweeps completed diaries instantly into invoices.
 
 We are building the **JARVIS** for construction—an omnipresent, intelligent layer that watches, predicts, and executes.
 
@@ -30,56 +31,59 @@ At the core of the system is the **Neural Intelligence Engine**, powered by a cu
 ### 1. The Sovereign Oracle (`/ai/oracle-sync`)
 A specialized Monte Carlo simulation engine that doesn't just "guess"; it mathematically models the future.
 *   **10,000 Parallel Scenarios:** Every time you build a quote, the Oracle runs 10,000 simulations against market volatility, crew efficiency logs, and weather patterns.
-*   **Predictive Outputs:**
-    *   **Bid Success Probability:** "84% chance to win at this margin."
-    *   **Velocity Drift:** "You are burning cash 4.2% faster than schedule."
-    *   **Ideal Margin Point:** "Increase markup to 26.4% to maximize yield."
+*   **Neural Cortex:** The engine features **Self-Correcting Intelligence**. It calculates historical **Estimation Bias** (Quote vs. Actual spend) and automatically adjusts new estimates to ensure profitability.
+*   **Predictive Fatigue:** Tracks consecutive staff workdays to issue safety alerts and suggest rest days *before* incidents occur.
 
 ### 2. The Agency Engine (`/ai/execute-agency`)
 The system possesses **Level 4 Autonomy**. It observes project data and **proposes directives**.
-*   *Example:* "I noticed the concrete pour is delayed. I have drafted a Variation Order and alerted the Site Foreman. Approve?"
-*   **Zero-Context Topology:** We strip database objects to their bare IDs/Roles before sending to AI, ensuring maximum privacy while retaining context awareness.
-
-### 3. Generative UI (The "Lattice")
-The AI interacts with the user by **building the interface**.
-*   When you ask for a workflow, the backend sends a JSON graph (`nodes` + `edges`).
-*   The frontend renders this as a living, interactive circuit board using **React Flow**.
-*   **Benefit:** You don't read the AI's answer; you *edit* it.
+*   **Genesis Protocol (GeoCore):** Capable of understanding complex natural language spatial commands like *"Scan for local hardware stores and route the fleet to Site Alpha."*
+*   **Neural Optimizer (Chronos):** Analyzes staff schedules to suggest "Ghost Moves"—AI-proposed schedule shifts to resolve conflicts and minimize travel time.
 
 ---
 
-## ⚡ Core Workloops & Features
+## 🦄 The "Unicorn" Modules (End-to-End Workloops)
 
-### 1. 🏗️ The Neural Quote Builder ("The Patent-Pending Engine")
+### 1. 🏗️ Neural Quote Builder ("The Patent-Pending Engine")
 A visual, node-based estimation environment.
-*   **Visual Logic:** Drag `Area Nodes` (Rooms) and connect them to `Material Nodes` (Paint, Timber). The system auto-calculates quantities based on coverage rates and area dimensions.
-*   **Smart Linking:** Connect a `Zone` to `Labor`. If the Zone size changes, the Labor hours auto-recalculate instantly.
-*   **Ghost Nodes:** The AI proactively suggests missing items (e.g., "You added *Drywall*; do you need *Joint Compound*?") as translucent nodes you can click to materialize.
-*   **Heatmap Mode:** Visualize cost distribution. High-cost nodes glow red; low-cost nodes dim.
+*   **Visual Logic:** Drag `Area Nodes` (Rooms) and connect them to `Material Nodes`. The system auto-calculates quantities based on coverage rates.
+*   **Association Mining:** The AI learns your habits (e.g., "Always add *Primer* with *Paint*") and proactively suggests missing items.
+*   **Zero-Context Topology:** Privacy-focused AI processing that strips sensitive data while retaining context.
 
-### 2. 🔄 The Workflow Architect
-A logic-flow editor for designing business processes.
-*   **Time Machine:** Undo/Redo with a visual timeline scrubber. Jump back to any state in the session.
-*   **Simulation Injection:** Press "PULSE" to inject a virtual packet into your workflow. Watch it travel through the logic gates, highlighting bottlenecks or broken paths in real-time.
-*   **Architectural Layouts:** Auto-arrange complex graphs into "Star," "Grid," "Radial," or "Neural Pipeline" formations with one click.
+### 2. 🧾 Invoice Command ("The Financial Harvester")
+A split-screen financial engine that turns site data into cash flow.
+*   **Diary Harvest:** One-click "Harvest" logic scans an entire project for uninvoiced diary entries, labor, and materials, instantly merging them into a draft invoice. **No more lost billables.**
+*   **Real-Time Paper Preview:** A split-screen HTML-to-PDF engine that renders the final document live as you type, complete with tax logic and brand customization.
+*   **Drag-and-Drop Line Items:** Reorder and group invoice items visually.
 
-### 3. 🎨 PaintDiary (Visual Site Logs)
+### 3. 🌍 GeoCore Ultra ("The God-View Map")
+A geospatial command centre that rivals military-grade systems.
+*   **Genesis Neural Link:** Speak to the map. Voice commands like *"Thermal Vision"* or *"Drone Mode"* toggle view layers instantly.
+*   **Ghost Moves:** The AI projects holographic "Ghost Markers" on the map, proposing where resources *should* be for maximum efficiency. You simply click to "Deploy."
+*   **Logistics Scanning:** Automatically scans the real-world vicinity for suppliers (Hardware stores, tips) and calculates route viability.
+
+### 4. 📅 Chronos Grid ("The Resource Command")
+A high-fidelity Gantt scheduler for managing human and machine assets.
+*   **Neural Optimizer:** Click one button to have the AI analyze weeks of scheduling. It detects conflicts, fatigue risks, and inefficiencies, returning a set of "Ghost Allocations" you can approve.
+*   **Time Warp:** A fluid zoom slider that compresses the timeline from detailed "Day View" to strategic "Quarterly View" instantly.
+*   **Capacity Heatmap:** Visualizes organizational stress and project density with a thermal overlay.
+
+### 5. 🦺 Safety Architect ("The AI Compliance Officer")
+A generative document builder that ensures compliance without the boredom.
+*   **AI Form Generation:** Prompt the Architect: *"Build a Hot Work Permit for a hospital site."* It generates the entire form structure, hazards, checks, and signature blocks automatically.
+*   **Magic Polish:** A "Wand" button on every text field uses AI to rewrite rough field notes into professional, legally sound safety language.
+*   **Interactive Risk Matrix:** Embed live, interactive risk calculation grids directly into documents.
+
+### 6. 🎨 PaintDiary (Visual Site Logs)
 The daily diary, reimagined as a digital canvas.
-*   **Draggable Reality:** Drag photos, weather icons, and staff onto a timeline canvas.
-*   **Chronos Nodes:** Link staff to time nodes. If a delay happens, drag the delay node onto the timeline, and it auto-updates the timesheets for the connected crew.
-*   **Forensic Lens:** Toggle "Forensic Mode" to highlight safety risks and compliance gaps in purple.
+*   **Neural Prism (NDE):** A high-level analysis node that plugs into any `Chronos` hub to provide live burn rates, predicted margins, and efficiency drift.
+*   **Draggable Reality:** Drag photos, weather icons, and staff directly onto a timeline canvas to reconstruct the day.
 
-### 4. 🦅 Executive Pulse Dashboard
+---
+
+## 🦅 Executive Pulse Dashboard
 The "God Mode" view for business owners.
-*   **PRISM Analysis:** Real-time velocity tracking of all active projects.
-*   **Neural Feed:** A scrolling feed of AI-detected anomalies and strategic advice.
-*   **Financial Telemetry:** Live visualization of burn rates vs. revenue.
-
-### 5. 🛡️ Offline Safe Mode (Site-Ready)
-Built for the basement with zero signal.
-*   **Local Buffering:** All changes (Quotes, Logs, Workflows) are saved instantly to the device's local database (`Dexie.js`).
-*   **Auto-Sync:** As soon as connectivity returns, the `SyncManager` uploads your work to the cloud.
-*   **Graceful AI:** If you try to use the Neural Oracle while offline, it won't crash—it politely informs you and switches to manual mode.
+*   **Legacy Archive:** Toggle into a separate "Archive Solar System" where completed projects orbit a white-dwarf core, glowing **Green** for success or **Red** for loss.
+*   **Financial Telemetry:** Live visualization of burn rates vs. revenue across the entire organization.
 
 ---
 
@@ -87,21 +91,15 @@ Built for the basement with zero signal.
 
 ### Frontend (The Glass)
 *   **Framework:** React 18 + Vite (Blazing fast HMR)
-*   **Visualization:** React Flow (The engine behind the node graphs)
+*   **Visualization:** React Flow (Node graphs), React Google Maps (GeoCore), React DnD (Safety/Chronos)
 *   **Styling:** Tailwind CSS (Glassmorphism, Neon gradients, "Cyber-Industrial" aesthetic)
 *   **State:** Context API + LocalStorage Persistence
 
 ### Backend (The Engine)
 *   **Runtime:** Node.js + Express
 *   **ORM:** Sequelize (SQL-agnostic)
-*   **Database:** 
-    *   **Dev:** SQLite (Zero-config, portable)
-    *   **Prod:** PostgreSQL (Enterprise scale)
-*   **AI Controller:** A custom orchestration layer that sanitizes inputs, manages "Context Windows," and communicates with the `Grok 4.1` Reasoning API.
-
-### Cost Efficiency
-*   **Optimized Token Usage:** By stripping metadata and using "Circuit-Only" prompts, we achieve **< $2.00/month** in AI costs per heavy power user.
-*   **High Margin:** At a standard SaaS price point, the AI cost is negligible (<2%), ensuring massive scalability.
+*   **Database:** SQLite (Dev) / PostgreSQL (Prod)
+*   **AI Controller:** Custom orchestration layer for `Grok 4.1` Reasoning API.
 
 ---
 
@@ -118,17 +116,12 @@ Built for the basement with zero signal.
     cd backend
     npm start
     ```
-    *Listens on Port 5000*
 
 3.  **Launch the Visual Interface (Frontend):**
     ```bash
     cd frontend
     npm run dev
     ```
-    *Accessible at http://localhost:5173*
-
-4.  **Ignite the AI:**
-    Ensure `GROK_API_KEY` is set in `backend/.env` to enable the Sovereign Oracle.
 
 ---
 
@@ -136,5 +129,5 @@ Built for the basement with zero signal.
 > *Built for the builders. Powered by the stars.*
 >
 > **Status:** 🟢 Operational
-> **Version:** V2 (Neural-Ready)
+> **Version:** V3.0 (Unicorn Edition)
 > **License:** Proprietary

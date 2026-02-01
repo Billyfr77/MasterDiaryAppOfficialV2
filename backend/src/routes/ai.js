@@ -48,6 +48,7 @@ router.post('/chat-quote', aiController.chatQuoteAssistant);
 router.post('/chat-diary', aiController.chatDiaryAssistant);
 router.post('/chat-smart', aiController.chatSmartAssistant); // Advanced Canvas Assistant
 router.post('/chat-workflow', aiController.chatWorkflowAssistant);
+router.post('/chat-map', aiController.chatMapAssistant); // NEW: Geospatial Core
 router.post('/cloud-assist', aiController.chatGlobal);
 
 module.exports = router;

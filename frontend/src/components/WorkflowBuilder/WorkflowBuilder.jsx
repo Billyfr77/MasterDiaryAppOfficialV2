@@ -72,7 +72,7 @@ const getId = () => `node_${new Date().getTime()}`;
 
 const WorkflowBuilderContent = () => {
   const { addNotification } = useNotification();
-  const { theme, allThemes, setActiveTheme, activeTheme } = useDiaryTheme();
+  const { theme, allThemes, setActiveTheme, activeTheme, liteMode } = useDiaryTheme();
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -1559,18 +1559,18 @@ const WorkflowBuilderContent = () => {
           {viewMode === 'graph' && (
                               <ReactFlow
                                 nodes={[
-                                    ...nodes.map(n => ({ ...n, data: { ...n.data, forensicActive: forensicLens, theme: currentTheme } })),
-                                    ...(ghostNodes ? ghostNodes.map(n => ({ ...n, id: `ghost-${n.id}`, data: { ...n.data, isGhost: true, theme: currentTheme }, draggable: false, selectable: false, style: { opacity: 0.2, filter: 'grayscale(1) blur(1px)', pointerEvents: 'none' } })) : []),
+                                    ...nodes.map(n => ({ ...n, data: { ...n.data, forensicActive: forensicLens, theme: currentTheme, liteMode } })),
+                                    ...(ghostNodes ? ghostNodes.map(n => ({ ...n, id: `ghost-${n.id}`, data: { ...n.data, isGhost: true, theme: currentTheme, liteMode }, draggable: false, selectable: false, style: { opacity: 0.2, filter: 'grayscale(1) blur(1px)', pointerEvents: 'none' } })) : []),
                                     ...ghostSuggestions.map(s => ({
                                         id: s.id,
                                         type: s.type,
                                         position: s.position,
-                                        data: { label: s.label, isSuggestion: true, onManifest: () => manifestGhost(s) },
+                                        data: { label: s.label, isSuggestion: true, onManifest: () => manifestGhost(s), liteMode },
                                         draggable: false,
                                         selectable: false
                                     }))
                                 ]}
-                                edges={edges.map(e => ({ ...e, data: { ...e.data, theme: currentTheme } }))}
+                                edges={edges.map(e => ({ ...e, data: { ...e.data, theme: currentTheme, liteMode } }))}
                                 onNodesChange={onNodesChange}
                                 onEdgesChange={onEdgesChange}
                                 onConnect={onConnect}
@@ -1588,45 +1588,52 @@ const WorkflowBuilderContent = () => {
                                 fitViewOptions={{ padding: 0.2 }}
                                 nodeOrigin={[0.5, 0.5]}
                                 className="bg-slate-950"
-                                defaultEdgeOptions={{ type: 'custom', animated: true, style: { strokeWidth: 2, stroke: '#64748b' } }}
+                                defaultEdgeOptions={{ type: 'custom', animated: !liteMode, style: { strokeWidth: 2, stroke: '#64748b' } }}
                                 minZoom={0.1}
                                 maxZoom={4}
                                 snapToGrid={true}
                                 snapGrid={[25, 25]}
-                              >              {/* MASTERPIECE REACTIVE GRID */}
-              <Background 
-                color={forensicLens ? "#8b5cf6" : simulationMode ? "#f59e0b" : "#1e1b4b"} 
-                gap={25} 
-                size={1} 
-                className={`transition-colors duration-1000 ${forensicLens || simulationMode ? 'opacity-40' : 'opacity-20'}`}
-              />
-              <Background 
-                variant="lines" 
-                color={forensicLens ? "#7c3aed" : simulationMode ? "#d97706" : "#312e81"} 
-                gap={150} 
-                size={1} 
-                className={`transition-colors duration-1000 ${forensicLens || simulationMode ? 'opacity-20' : 'opacity-10'}`}
-              />
+                              >              
+              {liteMode ? (
+                  <Background color="#1e1b4b" gap={25} size={1} />
+              ) : (
+                  <>
+                      {/* MASTERPIECE REACTIVE GRID */}
+                      <Background 
+                        color={forensicLens ? "#8b5cf6" : simulationMode ? "#f59e0b" : "#1e1b4b"} 
+                        gap={25} 
+                        size={1} 
+                        className={`transition-colors duration-1000 ${forensicLens || simulationMode ? 'opacity-40' : 'opacity-20'}`}
+                      />
+                      <Background 
+                        variant="lines" 
+                        color={forensicLens ? "#7c3aed" : simulationMode ? "#d97706" : "#312e81"} 
+                        gap={150} 
+                        size={1} 
+                        className={`transition-colors duration-1000 ${forensicLens || simulationMode ? 'opacity-20' : 'opacity-10'}`}
+                      />
 
-              {/* HEATMAP RISK OVERLAYS (LOCALIZED) */}
-              {simulationMode && nodes.filter(n => n.data.simulationError).map(n => (
-                  <div 
-                    key={`risk-glow-${n.id}`}
-                    style={{ 
-                        position: 'absolute', 
-                        left: n.position.x - 100, 
-                        top: n.position.y - 100, 
-                        width: 500, 
-                        height: 400,
-                        background: 'radial-gradient(circle, rgba(244,63,94,0.15) 0%, transparent 70%)',
-                        pointerEvents: 'none',
-                        zIndex: -1,
-                        borderRadius: '50%',
-                        filter: 'blur(40px)'
-                    }}
-                    className="animate-pulse"
-                  />
-              ))}
+                      {/* HEATMAP RISK OVERLAYS (LOCALIZED) */}
+                      {simulationMode && nodes.filter(n => n.data.simulationError).map(n => (
+                          <div 
+                            key={`risk-glow-${n.id}`}
+                            style={{ 
+                                position: 'absolute', 
+                                left: n.position.x - 100, 
+                                top: n.position.y - 100, 
+                                width: 500, 
+                                height: 400,
+                                background: 'radial-gradient(circle, rgba(244,63,94,0.15) 0%, transparent 70%)',
+                                pointerEvents: 'none',
+                                zIndex: -1,
+                                borderRadius: '50%',
+                                filter: 'blur(40px)'
+                            }}
+                            className="animate-pulse"
+                          />
+                      ))}
+                  </>
+              )}
               
               <Controls className="bg-slate-900 border-white/10 fill-slate-300 text-slate-300 [&>button:hover]:bg-slate-800" />
               <MiniMap 
@@ -1664,6 +1671,7 @@ const WorkflowBuilderContent = () => {
             isOpen={copilotOpen} 
             onClose={() => setCopilotOpen(false)}
             onCommand={handleCopilotCommand}
+            liteMode={liteMode}
           />
 
           {/* Quick Add Menu Popover (Connections) */}

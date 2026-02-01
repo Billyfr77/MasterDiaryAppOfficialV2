@@ -279,6 +279,11 @@ export const useInvoiceEngine = () => {
     }
   };
 
+  useEffect(() => {
+      window.current_invoice_state = { invoice, viewMode };
+      return () => { delete window.current_invoice_state; };
+  }, [invoice, viewMode]);
+
   return {
     viewMode, setViewMode, invoicesList, projects, projectJobs, setProjectJobs, listLoading, searchTerm, setSearchTerm,
     selectedIds, setSelectedIds, activeTab, setActiveTab, invoice, setInvoice, saving, showHarvest, setShowHarvest, 

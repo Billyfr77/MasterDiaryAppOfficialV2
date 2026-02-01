@@ -161,14 +161,14 @@ const WeatherSystem = React.memo(({ nodes }) => {
 });
 
 const TimelineCanvasContent = (props) => {
-  const { items, extraNodes, edges: persistentEdges, quotedData, onDrop, onUpdateItem, onRemoveItem, onNodeClick, isPulseActive, onUpdateEdges, history, onDeployFixes } = props;
+  const { items, extraNodes, edges: persistentEdges, quotedData, projectFinancials, onDrop, onUpdateItem, onRemoveItem, onNodeClick, isPulseActive, onUpdateEdges, history, onDeployFixes } = props;
   const { addNotification } = useNotification();
   const { fitView } = useReactFlow();
   
   const { 
     nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange,
     screenToFlowPosition, onNodeDragStop, onConnect: engineOnConnect 
-  } = useTimelineEngine(items, onUpdateItem, onRemoveItem, onDrop, extraNodes, persistentEdges, onUpdateEdges, undefined, history, onDeployFixes, quotedData);
+  } = useTimelineEngine(items, onUpdateItem, onRemoveItem, onDrop, extraNodes, persistentEdges, onUpdateEdges, projectFinancials, history, onDeployFixes, quotedData);
 
   const nodeTypes = useMemo(() => ({ 
       diaryNode: DiaryNode, 

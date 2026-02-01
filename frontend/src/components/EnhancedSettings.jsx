@@ -4,7 +4,8 @@
  */
 import React, { useState } from 'react'
 import { useSettings } from '../context/SettingsContext'
-import { Settings, Plus, Edit, Trash2, Sparkles, Volume2, VolumeX, CheckCircle, XCircle, Building2, Globe, FileText, CreditCard, Save } from 'lucide-react'
+import { api } from '../utils/api'
+import { Settings, Plus, Edit, Trash2, Sparkles, Volume2, VolumeX, CheckCircle, XCircle, Building2, Globe, FileText, CreditCard, Save, BrainCircuit } from 'lucide-react'
 
 // Sub-components for UI flair
 const Confetti = ({ show }) => {
@@ -23,9 +24,138 @@ const Particles = ({ show }) => {
   return <div className="absolute inset-0 pointer-events-none">{particles}</div>
 }
 
+// --- IMAGE CROPPER COMPONENT (Native Canvas) ---
+const ImageCropper = ({ imageSrc, onCancel, onSave }) => {
+    const [crop, setCrop] = useState({ x: 10, y: 10, width: 200, height: 200 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [dragType, setDragType] = useState(null); // 'move' or 'resize'
+    const imgRef = React.useRef(null);
+    const containerRef = React.useRef(null);
+
+    const handleMouseDown = (e, type) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+        setDragType(type);
+        setDragStart({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isDragging) return;
+        
+        const deltaX = e.clientX - dragStart.x;
+        const deltaY = e.clientY - dragStart.y;
+        
+        if (dragType === 'move') {
+            setCrop(prev => ({
+                ...prev,
+                x: Math.max(0, Math.min(imgRef.current.width - prev.width, prev.x + deltaX)),
+                y: Math.max(0, Math.min(imgRef.current.height - prev.height, prev.y + deltaY))
+            }));
+        } else if (dragType === 'resize') {
+            setCrop(prev => ({
+                ...prev,
+                width: Math.max(50, prev.width + deltaX),
+                height: Math.max(50, prev.height + deltaY)
+            }));
+        }
+        
+        setDragStart({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+        setDragType(null);
+    };
+
+    const handleSaveClick = () => {
+        if (!imgRef.current) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = crop.width;
+        canvas.height = crop.height;
+        const ctx = canvas.getContext('2d');
+        
+        // Draw only the cropped region
+        // We use the natural dimensions scale factor
+        const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
+        const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
+
+        ctx.drawImage(
+            imgRef.current,
+            crop.x * scaleX, crop.y * scaleY, crop.width * scaleX, crop.height * scaleY,
+            0, 0, crop.width, crop.height
+        );
+
+        canvas.toBlob(blob => {
+            onSave(blob);
+        }, 'image/png');
+    };
+
+    React.useEffect(() => {
+        if(isDragging) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging, dragStart, dragType]); // Dependencies for event listeners
+
+    return (
+        <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-md flex items-center justify-center p-8 animate-fade-in">
+            <div className="bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl max-w-4xl w-full flex flex-col h-[80vh]">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2"><Sparkles size={20} className="text-indigo-400"/> Crop Logo</h3>
+                    <div className="flex gap-2">
+                        <button onClick={onCancel} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-gray-400 transition-all">Cancel</button>
+                        <button onClick={handleSaveClick} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white shadow-lg transition-all">Save Crop</button>
+                    </div>
+                </div>
+                <div className="flex-1 relative bg-black/50 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5 select-none" ref={containerRef}>
+                    <div className="relative inline-block">
+                        <img ref={imgRef} src={imageSrc} alt="Crop Source" className="max-h-[60vh] object-contain pointer-events-none" />
+                        
+                        {/* Crop Overlay */}
+                        <div 
+                            className="absolute border-2 border-indigo-500 shadow-[0_0_0_9999px_rgba(0,0,0,0.7)] cursor-move"
+                            style={{ left: crop.x, top: crop.y, width: crop.width, height: crop.height }}
+                            onMouseDown={(e) => handleMouseDown(e, 'move')}
+                        >
+                            {/* Grid Lines */}
+                            <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-30">
+                                <div className="border-r border-white/50 h-full col-start-1"></div>
+                                <div className="border-r border-white/50 h-full col-start-2"></div>
+                                <div className="border-b border-white/50 w-full row-start-1 col-span-3"></div>
+                                <div className="border-b border-white/50 w-full row-start-2 col-span-3"></div>
+                            </div>
+                            
+                            {/* Resize Handle */}
+                            <div 
+                                className="absolute bottom-0 right-0 w-6 h-6 bg-indigo-500 cursor-se-resize flex items-center justify-center text-white"
+                                onMouseDown={(e) => handleMouseDown(e, 'resize')}
+                            >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 22L12 22M22 22L22 12M22 22L2 2"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="mt-4 text-center text-gray-500 text-xs font-bold uppercase tracking-widest">
+                    Drag box to move • Drag blue corner to resize
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const EnhancedSettings = () => {
   const { settings, loading, updateSetting, loadSettings } = useSettings();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'advanced'
+  
+  // Cropper State
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropperImage, setCropperImage] = useState(null);
   
   // Local state for the "Company Profile" form
   const [profileForm, setProfileForm] = useState({
@@ -41,7 +171,8 @@ const EnhancedSettings = () => {
     bankAccount: settings.bankAccount || '',
     bankSortCode: settings.bankSortCode || '',
     aiPersona: settings.aiPersona || 'foreman',
-    aiVerbosity: settings.aiVerbosity || 'concise'
+    aiVerbosity: settings.aiVerbosity || 'concise',
+    companyLogo: settings.companyLogo || ''
   });
 
   // Effect to sync local form with loaded settings
@@ -59,9 +190,43 @@ const EnhancedSettings = () => {
       bankAccount: settings.bankAccount || '',
       bankSortCode: settings.bankSortCode || '',
       aiPersona: settings.aiPersona || 'foreman',
-      aiVerbosity: settings.aiVerbosity || 'concise'
+      aiVerbosity: settings.aiVerbosity || 'concise',
+      companyLogo: settings.companyLogo || ''
     });
   }, [settings]);
+
+  const handleLogoUpload = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+          setCropperImage(reader.result);
+          setShowCropper(true);
+      };
+      reader.readAsDataURL(file);
+      e.target.value = null; // Reset input
+  };
+
+  const handleCropSave = async (blob) => {
+      const formData = new FormData();
+      formData.append('file', blob, 'logo-crop.png');
+      
+      try {
+          const res = await api.post('/uploads', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          
+          const fileUrl = res.data.url;
+          setProfileForm(prev => ({ ...prev, companyLogo: fileUrl }));
+          await updateSetting('companyLogo', fileUrl, 'Company Logo');
+          setShowCropper(false);
+          setCropperImage(null);
+      } catch (err) {
+          console.error("Logo upload error:", err);
+          alert("Failed to upload logo.");
+      }
+  };
 
   const handleProfileSave = async (e) => {
     e.preventDefault();
@@ -90,6 +255,7 @@ const EnhancedSettings = () => {
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 3000);
     setRawForm({ parameter: '', value: '', notes: '' });
+    setIsEditingRaw(false); // Reset edit mode
     loadSettings();
   };
 
@@ -98,6 +264,7 @@ const EnhancedSettings = () => {
   return (
     <div className="min-h-screen bg-transparent text-white relative font-sans p-8 overflow-hidden animate-fade-in pb-24">
       <Particles show={showConfetti} />
+      {showCropper && cropperImage && <ImageCropper imageSrc={cropperImage} onCancel={() => { setShowCropper(false); setCropperImage(null); }} onSave={handleCropSave} />}
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-10 pb-6 border-b border-white/10 relative max-w-[1600px] mx-auto">
@@ -153,6 +320,25 @@ const EnhancedSettings = () => {
                     <form onSubmit={handleProfileSave} className="space-y-6">
                         {activeTab === 'profile' && (
                             <>
+                                <div className="flex items-center gap-6 mb-6">
+                                    <div className="relative group w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-white/20 bg-black/20 hover:border-indigo-500 transition-colors flex items-center justify-center">
+                                        {profileForm.companyLogo ? (
+                                            <img src={profileForm.companyLogo} alt="Company Logo" className="w-full h-full object-contain p-2" />
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full text-gray-500">
+                                                <Building2 size={24} />
+                                            </div>
+                                        )}
+                                        <label className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                                            <span className="text-[10px] font-bold uppercase text-white">Change</span>
+                                            <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-white uppercase tracking-wider">Company Logo</h4>
+                                        <p className="text-xs text-gray-500 mt-1">Displayed on Invoices & Reports</p>
+                                    </div>
+                                </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Company Name</label>
                                     <input 
@@ -364,7 +550,7 @@ const EnhancedSettings = () => {
                  {/* Raw Form */}
                 <div className="bg-stone-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl h-fit">
                     <h3 className="mb-6 text-white font-bold text-xl flex items-center gap-2">
-                        <Plus size={20} className="text-indigo-400"/> Add Custom Parameter
+                        <Plus size={20} className="text-indigo-400"/> {isEditingRaw ? 'Edit Parameter' : 'Add Custom Parameter'}
                     </h3>
                     <form onSubmit={handleRawSubmit} className="flex flex-col gap-4">
                         <input
@@ -372,7 +558,8 @@ const EnhancedSettings = () => {
                             value={rawForm.parameter}
                             onChange={(e) => setRawForm({ ...rawForm, parameter: e.target.value })}
                             required
-                            className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                            disabled={isEditingRaw} // Prevent changing the key during edit
+                            className={`w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none ${isEditingRaw ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                         <input
                             placeholder="Value"
@@ -387,9 +574,16 @@ const EnhancedSettings = () => {
                             onChange={(e) => setRawForm({ ...rawForm, notes: e.target.value })}
                             className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
                         />
-                        <button type="submit" className="mt-2 py-3 bg-stone-700 hover:bg-stone-600 text-white rounded-xl font-bold transition-all"> 
-                            Add / Update
-                        </button>
+                        <div className="flex gap-2">
+                            {isEditingRaw && (
+                                <button type="button" onClick={() => { setIsEditingRaw(false); setRawForm({ parameter: '', value: '', notes: '' }); }} className="mt-2 py-3 px-6 bg-stone-800 hover:bg-stone-700 text-white rounded-xl font-bold transition-all">
+                                    Cancel
+                                </button>
+                            )}
+                            <button type="submit" className="mt-2 py-3 bg-stone-700 hover:bg-stone-600 text-white rounded-xl font-bold transition-all flex-1"> 
+                                {isEditingRaw ? 'Update Parameter' : 'Add Parameter'}
+                            </button>
+                        </div>
                     </form>
                 </div>
 
@@ -404,6 +598,7 @@ const EnhancedSettings = () => {
                                 </div>
                                 <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-white/10 rounded-lg transition-all" onClick={() => {
                                     setRawForm({ parameter: key, value: val, notes: '' });
+                                    setIsEditingRaw(true);
                                 }}>
                                     <Edit size={16} />
                                 </button>

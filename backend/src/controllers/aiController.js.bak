@@ -294,7 +294,7 @@ const parseDiaryLog = async (req, res) => {
                 "nodes": [
                     { 
                         "id": "string", 
-                        "type": "diaryNode" | "chronos" | "delay" | "impact" | "notesNode", 
+                        "type": "diaryNode" | "chronos" | "delay" | "impact", 
                         "nodeType": "staff" | "equipment" | "material",
                         "label": "Item Name",
                         "quantity": number,
@@ -313,8 +313,7 @@ const parseDiaryLog = async (req, res) => {
             1. Use 'chronos' for time-stamps or crews.
             2. Use 'diaryNode' for staff, materials, or equipment.
             3. Use 'delay' for issues or weather.
-            4. Use 'notesNode' for general observations or text blocks.
-            5. Ensure every node has a specific label. NEVER return empty nodes.
+            4. Ensure every node has a specific label. NEVER return empty nodes.
         `;
         const result = await pinnacleAi.generateJSON(prompt, systemPrompt, 1500);
         res.json(result);
@@ -710,57 +709,6 @@ const chatDiaryAssistant = async (req, res) => {
     } catch (e) { res.json({ reply: "Offline" }); }
 };
 
-const chatSafetyAssistant = async (req, res) => {
-    try {
-        const { message, context } = req.body;
-        const memory = await getInstitutionalContext();
-        const mandate = await getSystemMandate(req.user?.id);
-        
-        const safeContext = JSON.stringify(context || {}).substring(0, 15000);
-
-        const systemPrompt = `
-            You are "Safety Compliance Officer" & "Risk Auditor". ${mandate} ${memory}
-            
-            **Mission:** Analyze the safety context, identify hazards, and suggest specific controls or form updates.
-            
-            **CRITICAL OUTPUT SCHEMA:**
-            Return ONLY valid JSON.
-            {
-                "reply": "Your expert advice here (approx 2 sentences).",
-                "suggestedActions": [
-                    { 
-                        "type": "add_hazard" | "update_control" | "recommend_ppe", 
-                        "label": "Hazard/Item Name", 
-                        "riskLevel": "High|Medium|Low",
-                        "controls": ["Control Measure 1", "Control Measure 2"]
-                    }
-                ]
-            }
-            
-            **Input Context:** ${safeContext}
-        `;
-
-        let result;
-        try {
-            result = await pinnacleAi.generateJSON(message, systemPrompt, 3000);
-        } catch (aiError) {
-            console.error("Safety Assistant AI Failed:", aiError);
-            result = {
-                reply: "I am unable to access the latest safety regulations at this moment. Please proceed with standard protocols.",
-                suggestedActions: []
-            };
-        }
-
-        res.json(result);
-    } catch (e) { 
-        console.error("Safety Assistant Fatal Error:", e);
-        res.json({ 
-            reply: "System Offline. Manual risk assessment required.", 
-            suggestedActions: [] 
-        }); 
-    }
-};
-
 // --- VOICE-TO-ACTION (PROTOCOL TAU) ---
 const parseVoiceCommand = async (req, res) => {
     try {
@@ -771,26 +719,9 @@ const parseVoiceCommand = async (req, res) => {
         const systemPrompt = `
             ${mandate}
             **PROTOCOL TAU: VOICE-TO-CANVAS**
-            Transform this raw site speech into PaintDiary Canvas Nodes.
-            
-            **MAPPING RULES:**
-            - **Staff / Labor / Time:** Use type "chronos".
-            - **Materials / Equipment / Items:** Use type "diaryNode".
-            - **Delays / Weather / Issues:** Use type "delay".
-            
-            **OUTPUT SCHEMA:**
-            Return a JSON object: 
-            { 
-                "actions": [
-                    { 
-                        "type": "chronos" | "diaryNode" | "delay", 
-                        "label": "Item Name (e.g. 'Dave & Team' or 'Gyprock')", 
-                        "quantity": number, 
-                        "duration": number (hours),
-                        "nodeType": "staff" | "material" | "equipment" | "logic" 
-                    }
-                ] 
-            }
+            Transform this raw site speech into Canvas Nodes.
+            Available Types: staff, material, equipment, delay, notesNode.
+            Return a JSON array: { "actions": [{ "type": "TYPE", "name": "NAME", "quantity": N, "duration": H }] }
         `;
 
         const result = await pinnacleAi.generateJSON(text, systemPrompt, 1500);
@@ -1165,6 +1096,5 @@ module.exports = {
   generateOracleIntelligence,
   optimizeFleet,
   chatMapAssistant,
-  analyzeProjectPostMortem,
-  chatSafetyAssistant
+  analyzeProjectPostMortem
 };

@@ -10,6 +10,7 @@ import { useInvoiceEngine } from './InvoiceEngine';
 import { generatePDF } from './InvoicePDF';
 import ClientSelector from '../Clients/ClientSelector';
 import { api } from '../../utils/api';
+import PremiumLoader from '../ui/PremiumLoader';
 
 // --- AUTO SCROLL HOOK ---
 const useWindowAutoScroll = () => {
@@ -170,6 +171,8 @@ const InvoiceBuilder = () => {
   };
 
   if (viewMode === 'list') {
+      if (listLoading) return <PremiumLoader text="SYNCING FINANCIAL LEDGER..." />;
+
       return (
           <div className="min-h-screen p-8 bg-stone-950 text-white animate-fade-in font-sans">
               <div className="max-w-[1600px] mx-auto">

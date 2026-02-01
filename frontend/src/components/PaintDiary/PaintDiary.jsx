@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { 
-  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList, Circle, ShieldCheck, Crown, Cpu, GraduationCap
+  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList, Circle, ShieldCheck, Crown, Cpu, GraduationCap, Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -115,8 +115,7 @@ const DraggableItem = ({ item }) => {
 };
 
 // --- AI AUTO LOG MODAL ---
-const AIAutoLogModal = ({ isOpen, onClose, onConfirm, loading }) => {
-    const [prompt, setPrompt] = useState("");
+const AIAutoLogModal = ({ isOpen, onClose, onConfirm, loading, value, onChange }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
@@ -133,16 +132,16 @@ const AIAutoLogModal = ({ isOpen, onClose, onConfirm, loading }) => {
                 <div className="p-8">
                     <textarea 
                         autoFocus
-                        value={prompt}
-                        onChange={e => setPrompt(e.target.value)}
+                        value={value}
+                        onChange={e => onChange(e.target.value)}
                         placeholder="e.g. 'Today 2 painters spent 8 hours on site using a scissor lift and 5 tubs of Dulux paint...'"
                         className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-white text-lg focus:border-indigo-500 outline-none h-48 resize-none placeholder-gray-700 font-medium leading-relaxed"
                     />
                     <div className="mt-8 flex gap-4">
                         <button onClick={onClose} className="flex-1 py-4 text-gray-400 font-bold hover:bg-white/5 rounded-2xl transition-all">Cancel</button>
                         <button 
-                            disabled={loading || !prompt.trim()}
-                            onClick={() => { onConfirm(prompt); }}
+                            disabled={loading || !value.trim()}
+                            onClick={() => { onConfirm(value); }}
                             className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-900/20 flex items-center justify-center gap-3 transition-all"
                         >
                             {loading ? <Loader2 className="animate-spin" /> : <Wand2 size={20} />}
@@ -502,6 +501,7 @@ const PaintDiary = () => {
 
   // --- STATE DECLARATIONS ---
   const [showSmartLog, setShowSmartLog] = useState(false);
+  const [aiLogText, setAiLogText] = useState("");
   const [showAestheticPicker, setShowAestheticPicker] = useState(false);
   const [resourceTab, setResourceTab] = useState('staff');
   const [searchTerm, setSearchTerm] = useState('');
@@ -529,6 +529,7 @@ const PaintDiary = () => {
   const [connectedNodes, setConnectedNodes] = useState([]);
   const [pendingItem, setPendingItem] = useState(null);
   const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
 
   const startVoiceCommand = () => {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -539,27 +540,36 @@ const PaintDiary = () => {
 
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
+      recognition.interimResults = true;
       recognition.start();
       setIsListening(true);
+      setTranscript('');
 
       recognition.onresult = async (event) => {
-          const text = event.results[0][0].transcript;
-          addNotification('Voice Captured', 'Processing your update...');
-          try {
-              const res = await api.post('/ai/parse-voice', { text });
-              if (res.data.actions) {
-                  res.data.actions.forEach(action => {
-                      handleConfirmItem({ ...action, position: { x: 500, y: 500 } });
-                  });
-                  addNotification('Lattice Updated', 'Voice directive implemented.');
+          let interimTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                  const text = event.results[i][0].transcript;
+                  setAiLogText(text);
+                  setShowSmartLog(true);
+                  addNotification('Voice Captured', 'Processing your update...');
+                  
+                  // Auto-trigger the smart log processing
+                  handleSmartLog(text);
+                  
+                  setIsListening(false);
+                  setTranscript('');
+              } else {
+                  interimTranscript += event.results[i][0].transcript;
+                  setTranscript(interimTranscript);
               }
-          } catch (e) {
-              addNotification('Neural Sync Error', 'Could not parse voice memo.');
           }
-          setIsListening(false);
       };
 
-      recognition.onerror = () => setIsListening(false);
+      recognition.onerror = () => {
+          setIsListening(false);
+          setTranscript('');
+      };
   };
 
   const { addNotification } = useNotification();
@@ -1006,7 +1016,7 @@ const PaintDiary = () => {
 
   return (
     <div className="min-h-screen p-4 md:p-8 animate-fade-in font-sans bg-[#050507] text-white">
-        <AIAutoLogModal isOpen={showSmartLog} onClose={() => setShowSmartLog(false)} onConfirm={handleSmartLog} loading={smartLogLoading} />
+        <AIAutoLogModal isOpen={showSmartLog} onClose={() => setShowSmartLog(false)} onConfirm={handleSmartLog} loading={smartLogLoading} value={aiLogText} onChange={setAiLogText} />
         <SaveTemplateModal isOpen={showSaveTemplate} onClose={() => setShowSaveTemplate(false)} onConfirm={handleSaveTemplate} loading={templateLoading} />
         <AestheticPicker isOpen={showAestheticPicker} onClose={() => setShowAestheticPicker(false)} />
         <ItemDetailsModal isOpen={!!pendingItem} item={pendingItem} onClose={() => setPendingItem(null)} onConfirm={handleConfirmItem} overtimeThreshold={overtimeThreshold} overtimeMultiplier={overtimeMultiplier} />
@@ -1138,8 +1148,8 @@ const PaintDiary = () => {
                         }`}
                     >
                         {isListening ? <Activity size={20} /> : <div className="p-2 bg-indigo-500 rounded-lg text-white"><Sparkles size={16} /></div>}
-                        <span className="text-xs font-black uppercase tracking-widest">
-                            {isListening ? 'Listening...' : 'Neural Voice Update'}
+                        <span className="text-xs font-black uppercase tracking-widest truncate max-w-[180px]">
+                            {isListening ? (transcript || 'Listening...') : 'Neural Voice Update'}
                         </span>
                         {isListening && <div className="absolute inset-0 bg-white/10 animate-ping opacity-20" />}
                     </button>
@@ -1432,6 +1442,7 @@ const PaintDiary = () => {
                             extraNodes={currentEntry.extraNodes}
                             edges={currentEntry.edges}
                             quotedData={quotedData}
+                            projectFinancials={selectedProject?.financials}
                             onDrop={handleDropItem} 
                             onUpdateItem={handleUpdateItem} 
                             onRemoveItem={handleRemoveItem} 

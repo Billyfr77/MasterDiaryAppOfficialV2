@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Menu, Sun, Moon, Settings as SettingsIcon, LogOut, Globe, Briefcase, PenTool, Calendar, DollarSign, CreditCard, Users, Package, Command, GitBranch, ClipboardCheck, Shield, FileText, Crown, Wrench } from 'lucide-react';
+import { Home, Menu, Sun, Moon, Settings as SettingsIcon, LogOut, Globe, Briefcase, PenTool, Calendar, DollarSign, CreditCard, Users, Package, Command, GitBranch, ClipboardCheck, Shield, FileText, Crown, Wrench, Zap } from 'lucide-react';
 import NotificationDropdown from '../NotificationDropdown';
 import { useDiaryTheme } from '../PaintDiary/ThemeContext';
 
@@ -32,7 +32,7 @@ export const NavLink = ({ to, icon, label, onClick, activeColor }) => {
 };
 
 const MainHeader = ({ darkMode, setDarkMode, setMobileMenuOpen }) => {
-    const { theme } = useDiaryTheme();
+    const { theme, liteMode, toggleLiteMode } = useDiaryTheme();
     const navRef = useRef(null);
 
     // --- CUSTOM SCROLLBAR STATE ---
@@ -156,6 +156,13 @@ const MainHeader = ({ darkMode, setDarkMode, setMobileMenuOpen }) => {
 
                 <div className="flex items-center gap-3 flex-shrink-0">
                     <NotificationDropdown />
+                    <button 
+                        onClick={toggleLiteMode} 
+                        className={`p-2 rounded-full transition-all duration-300 ${liteMode ? 'bg-amber-500/20 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.3)]' : 'hover:bg-white/10 text-gray-400'}`}
+                        title={liteMode ? "Lite Mode Active (High Performance)" : "Enable Lite Mode"}
+                    >
+                        <Zap size={20} fill={liteMode ? "currentColor" : "none"} />
+                    </button>
                     <button 
                         onClick={() => setDarkMode(!darkMode)} 
                         className="p-2 rounded-full hover:bg-white/10 transition-colors text-gray-400"

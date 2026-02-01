@@ -53,7 +53,7 @@ const DraggableResource = ({ resource, type, theme }) => {
   );
 };
 
-const DraggableAllocation = ({ allocation, isConflict, onClick, theme }) => {
+const DraggableAllocation = ({ allocation, isConflict, onClick, theme, zoomLevel }) => {
     const [{ isDragging }, drag] = useDrag(() => ({
         type: 'resource', 
         item: { ...allocation, isNew: false },
@@ -87,40 +87,45 @@ const DraggableAllocation = ({ allocation, isConflict, onClick, theme }) => {
         `;
     }
 
+    // --- COMPACT MODE FOR MONTH VIEW ---
+    const isCompact = zoomLevel < 100;
+
     return (
         <div 
             ref={drag}
             onClick={onClick}
             className={`
-                relative p-2 rounded-lg border text-[10px] font-black uppercase tracking-wide shadow-sm flex items-center justify-between cursor-pointer 
+                relative ${isCompact ? 'p-1 text-[8px]' : 'p-2 text-[10px]'} rounded-lg border font-black uppercase tracking-wide shadow-sm flex items-center justify-between cursor-pointer 
                 hover:scale-[1.02] hover:shadow-lg active:scale-95 transition-all duration-300 backdrop-blur-md overflow-hidden
                 ${styleClass} ${isDragging ? 'opacity-30 blur-sm' : 'opacity-100'} group
             `}
         >
             {allocation.isGhost && <div className="absolute inset-0 bg-white/5 animate-pulse pointer-events-none" />}
             
-            <div className="flex items-center gap-2 truncate z-10">
-                {allocation.isGhost && <Sparkles size={10} className="text-white animate-spin-slow" />}
-                <span className="truncate">{resourceName}</span>
+            <div className="flex items-center gap-2 truncate z-10 w-full">
+                {allocation.isGhost && <Sparkles size={isCompact ? 8 : 10} className="text-white animate-spin-slow" />}
+                <span className="truncate">{allocation.isGhost && isCompact ? '*' : allocation.isGhost ? `Suggest: ${resourceName}` : resourceName}</span>
             </div>
 
-            <div className="flex items-center gap-1 z-10">
-                {allocation.category && allocation.category !== 'project' && <span className="text-[8px] opacity-60 ml-1 bg-black/20 px-1.5 py-0.5 rounded">{allocation.category}</span>}
-                {isConflict && (
-                    <div className="flex items-center gap-1">
-                        <AlertCircle size={12} className="text-rose-500 flex-shrink-0" />
-                        <button className="opacity-0 group-hover:opacity-100 text-[8px] bg-rose-500 text-white px-2 py-0.5 rounded-full font-black tracking-tighter hover:bg-rose-400 transition-all shadow-lg scale-90 hover:scale-100">
-                            FIX
-                        </button>
-                    </div>
-                )}
-            </div>
+            {!isCompact && (
+                <div className="flex items-center gap-1 z-10">
+                    {allocation.category && allocation.category !== 'project' && <span className="text-[8px] opacity-60 ml-1 bg-black/20 px-1.5 py-0.5 rounded">{allocation.category}</span>}
+                    {isConflict && (
+                        <div className="flex items-center gap-1">
+                            <AlertCircle size={12} className="text-rose-500 flex-shrink-0" />
+                            <button className="opacity-0 group-hover:opacity-100 text-[8px] bg-rose-500 text-white px-2 py-0.5 rounded-full font-black tracking-tighter hover:bg-rose-400 transition-all shadow-lg scale-90 hover:scale-100">
+                                FIX
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
 
 // --- DROP ZONE COMPONENT ---
-const DayCell = ({ day, projectId, allocations, conflicts, onDrop, onEdit, theme }) => {
+const DayCell = ({ day, projectId, allocations, conflicts, onDrop, onEdit, theme, zoomLevel }) => {
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'resource',
         drop: (item) => onDrop(item, projectId, day),
@@ -151,6 +156,7 @@ const DayCell = ({ day, projectId, allocations, conflicts, onDrop, onEdit, theme
                         isConflict={isConflict} 
                         onClick={() => onEdit(alloc)} 
                         theme={theme}
+                        zoomLevel={zoomLevel}
                     />
                 );
             })}
@@ -363,9 +369,13 @@ const ResourceCommand = () => {
   }, [selectedProjectIds, selectedResourceIds, loading]);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  
+  // --- TIME WARP LOGIC ---
+  const daysToShow = zoomLevel < 100 ? 30 : zoomLevel < 180 ? 14 : 7;
+  
   const days = eachDayOfInterval({
     start: weekStart,
-    end: endOfWeek(currentDate, { weekStartsOn: 1 })
+    end: addDays(weekStart, daysToShow - 1)
   });
 
   const conflicts = useMemo(() => {
@@ -823,6 +833,7 @@ const ResourceCommand = () => {
                                 onDrop={handleDrop} 
                                 onEdit={setEditingAllocation} 
                                 theme={theme}
+                                zoomLevel={zoomLevel}
                             />
                         </div>
                     );
@@ -898,6 +909,7 @@ const ResourceCommand = () => {
                               onDrop={handleDrop} 
                               onEdit={(a) => a.isGhost ? confirmGhost(a) : setEditingAllocation(a)} 
                               theme={theme}
+                              zoomLevel={zoomLevel}
                           />
                       </div>
                   );

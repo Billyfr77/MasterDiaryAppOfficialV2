@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Send, X, Bot, User, Loader2, Zap, Command, BrainCircuit, Activity, AlertTriangle, TrendingUp, FileText, Download, BarChart3, ShieldCheck, Layout, GitMerge, ArrowRight, Target, DollarSign, Clock } from 'lucide-react';
+import { Sparkles, Send, X, Bot, User, Loader2, Zap, Command, BrainCircuit, Activity, AlertTriangle, TrendingUp, FileText, Download, BarChart3, ShieldCheck, Layout, GitMerge, ArrowRight, Target, DollarSign, Clock, Mic } from 'lucide-react';
 import { api } from '../../utils/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -8,6 +8,8 @@ import autoTable from 'jspdf-autotable';
 export default function WorkflowCopilot({ nodes, edges, simulationData, meshContext, forensicLens, isSimulating, aiTemplates = [], onApplyTemplate, onCommand, isOpen, onClose }) {
     const [mode, setMode] = useState('CHAT'); // 'CHAT' | 'REPORT' | 'TEMPLATES' | 'PRISM'
     const [input, setInput] = useState('');
+    const [isListening, setIsListening] = useState(false);
+    const [voiceTranscript, setVoiceTranscript] = useState('');
     const [messages, setMessages] = useState([
         { role: 'assistant', content: "Neural Co-pilot Online. I have synced with the current lattice. Run a 'Simulate' or activate 'Forensic' mode for deep telemetry analysis." }
     ]);
@@ -37,6 +39,38 @@ export default function WorkflowCopilot({ nodes, edges, simulationData, meshCont
     useEffect(() => {
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }, [messages]);
+
+    const startVoiceInput = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Voice input not supported in this browser.");
+            return;
+        }
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            setIsListening(true);
+            setVoiceTranscript('');
+        };
+        recognition.onend = () => setIsListening(false);
+        recognition.onresult = (event) => {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    const final = event.results[i][0].transcript;
+                    setInput(prev => prev + (prev ? ' ' : '') + final);
+                    setVoiceTranscript('');
+                } else {
+                    interim += event.results[i][0].transcript;
+                    setVoiceTranscript(interim);
+                }
+            }
+        };
+        recognition.start();
+    };
 
     const handleSend = async () => {
         if (!input.trim() || loading) return;
@@ -71,6 +105,10 @@ export default function WorkflowCopilot({ nodes, edges, simulationData, meshCont
             setLoading(false);
         }
     };
+    
+    // ... rest of the component
+    // I will replace the CHAT mode input area below
+
 
     const generateReport = async (reportType) => {
         if (!navigator.onLine) {
@@ -613,25 +651,40 @@ export default function WorkflowCopilot({ nodes, edges, simulationData, meshCont
                         {/* Input (Only in Chat mode) */}
                         {mode === 'CHAT' && (
                             <div className="p-6 border-t border-white/5 bg-black/40">
-                                <div className="relative flex items-center gap-3">
-                                    <div className="absolute left-4 text-indigo-500">
-                                        <Command size={16} />
+                                <div className="relative flex flex-col gap-2">
+                                    {isListening && voiceTranscript && (
+                                        <div className="text-[10px] text-indigo-400 font-black uppercase animate-pulse mb-1">
+                                            Transcribing: {voiceTranscript}
+                                        </div>
+                                    )}
+                                    <div className="relative flex items-center gap-3">
+                                        <div className="absolute left-4 text-indigo-500">
+                                            <Command size={16} />
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            value={input}
+                                            onChange={e => setInput(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleSend()}
+                                            placeholder={isListening ? "Listening..." : "Discuss lattice strategy..."}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-24 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
+                                        />
+                                        <div className="absolute right-2 flex items-center gap-2">
+                                            <button 
+                                                onClick={startVoiceInput}
+                                                className={`p-2 rounded-xl transition-all ${isListening ? 'text-rose-500 animate-pulse bg-rose-500/10' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}
+                                            >
+                                                <Mic size={16} />
+                                            </button>
+                                            <button 
+                                                onClick={handleSend}
+                                                disabled={loading || !input.trim()}
+                                                className="p-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                                            >
+                                                <Send size={16} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <input 
-                                        type="text" 
-                                        value={input}
-                                        onChange={e => setInput(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && handleSend()}
-                                        placeholder="Discuss lattice strategy..."
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-16 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
-                                    />
-                                    <button 
-                                        onClick={handleSend}
-                                        disabled={loading || !input.trim()}
-                                        className="absolute right-2 p-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50"
-                                    >
-                                        <Send size={16} />
-                                    </button>
                                 </div>
                             </div>
                         )}

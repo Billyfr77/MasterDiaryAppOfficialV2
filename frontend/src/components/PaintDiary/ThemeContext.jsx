@@ -240,15 +240,37 @@ export const DiaryThemeProvider = ({ children }) => {
         return saved && DIARY_THEMES[saved] ? saved : 'aurora';
     });
 
+    const [liteMode, setLiteMode] = useState(() => {
+        const saved = localStorage.getItem('diary-lite-mode');
+        return saved ? JSON.parse(saved) : false;
+    });
+
     useEffect(() => {
         localStorage.setItem('diary-active-theme', activeTheme);
     }, [activeTheme]);
+
+    useEffect(() => {
+        localStorage.setItem('diary-lite-mode', JSON.stringify(liteMode));
+    }, [liteMode]);
+
+    // Auto-detect low-spec devices on first load if no preference set
+    useEffect(() => {
+        if (localStorage.getItem('diary-lite-mode') === null) {
+            const cores = navigator.hardwareConcurrency || 4;
+            const saveData = navigator.connection?.saveData;
+            if (cores < 4 || saveData) {
+                setLiteMode(true);
+            }
+        }
+    }, []);
+
+    const toggleLiteMode = () => setLiteMode(prev => !prev);
 
     // Safety check: if activeTheme is somehow invalid (e.g. hot reload), fallback to first key
     const theme = DIARY_THEMES[activeTheme] || DIARY_THEMES['aurora'] || Object.values(DIARY_THEMES)[0];
 
     return (
-        <DiaryThemeContext.Provider value={{ activeTheme, setActiveTheme, theme, allThemes: DIARY_THEMES }}>
+        <DiaryThemeContext.Provider value={{ activeTheme, setActiveTheme, theme, allThemes: DIARY_THEMES, liteMode, toggleLiteMode }}>
             {children}
         </DiaryThemeContext.Provider>
     );

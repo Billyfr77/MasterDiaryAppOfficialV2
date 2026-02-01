@@ -10,7 +10,7 @@ import {
     Star, Sparkles, Gauge, ChevronRight, Link2, Server, Cpu, DollarSign,
     Wind, Waves, Maximize2, Minimize2, Search, Compass, MousePointer2,
     Lock, Unlock, Cpu as CpuIcon2, Activity as PulseIcon, Users, AlertCircle,
-    Sun, Flame, Rocket, Eye, Cpu as NeuralIcon, RotateCcw, HelpCircle, CheckCircle
+    Sun, Flame, Rocket, Eye, Cpu as NeuralIcon, RotateCcw, HelpCircle, CheckCircle, Map as MapIcon
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +30,7 @@ export default function ExecutiveHQ() {
     const [lastSync, setLastSync] = useState(null);
     const [latency, setLatency] = useState(0);
     const [viewMode, setViewMode] = useState('MESH'); 
+    const [showArchives, setShowArchives] = useState(false);
     const [selectedNexusId, setSelectedNexusId] = useState(null);
     const [isMaximized, setIsMaximized] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
@@ -80,6 +81,7 @@ export default function ExecutiveHQ() {
         const onWheel = (e) => {
             if (viewModeRef.current !== 'MESH') return;
             e.preventDefault();
+            e.stopPropagation();
             const delta = e.deltaY * -0.001;
             setZoom(prev => Math.min(Math.max(0.1, prev + delta), 3.0));
         };
@@ -89,7 +91,12 @@ export default function ExecutiveHQ() {
         return () => {
             viewport.removeEventListener('wheel', onWheel);
         };
-    }, []); // Empty dependency array as we use refs
+    }, [loading]); // Re-run when loading finishes and ref is available
+
+    // FORCE LAYOUT RECALCULATION ON MOUNT
+    React.useLayoutEffect(() => {
+        window.dispatchEvent(new Event('resize'));
+    }, []);
 
     const fetchMesh = async () => {
         const startTime = Date.now();
@@ -247,8 +254,15 @@ export default function ExecutiveHQ() {
     }, []);
 
     const galacticLattice = useMemo(() => {
+        // Filter based on Archive Mode
+        const visibleProjects = projects.filter(p => 
+            showArchives 
+                ? (p.status === 'completed' || p.status === 'archived') 
+                : (p.status !== 'completed' && p.status !== 'archived')
+        );
+
         // Sort projects by value (largest first) to align by importance
-        const sortedProjects = [...projects].sort((a, b) => {
+        const sortedProjects = [...visibleProjects].sort((a, b) => {
             const valA = parseFloat(a.financials?.contractValue || a.value || 0);
             const valB = parseFloat(b.financials?.contractValue || b.value || 0);
             return valB - valA;
@@ -258,11 +272,22 @@ export default function ExecutiveHQ() {
             const lane = (i % 5) + 1;
             const radius = (220 + (lane * 160)) * orbitalScale; // Balanced radius
             const baseSpeed = 0.004 / lane; // Significantly slower, majestic orbit
-            return { ...p, radius, speed: baseSpeed, angleOffset: (i * (360 / (projects.length || 1))) * (Math.PI / 180), lane, hue: (i * 72) % 360 };
+            return { ...p, radius, speed: baseSpeed, angleOffset: (i * (360 / (visibleProjects.length || 1))) * (Math.PI / 180), lane, hue: (i * 72) % 360 };
         });
-    }, [projects, orbitalScale]);
+    }, [projects, orbitalScale, showArchives]);
 
     const selectedNexus = useMemo(() => projects.find(p => p.id === selectedNexusId), [projects, selectedNexusId]);
+
+    // Generate Starfield (Fixed Hook Placement)
+    const starfield = useMemo(() => Array.from({ length: 100 }).map((_, i) => ({
+        id: i,
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        width: Math.random() * 2 + 1 + 'px',
+        height: Math.random() * 2 + 1 + 'px',
+        duration: `${Math.random() * 3 + 2}s`,
+        opacity: Math.random()
+    })), []);
 
     if (loading) return (
         <div className="h-screen w-screen bg-[#010102] flex items-center justify-center relative overflow-hidden">
@@ -273,41 +298,64 @@ export default function ExecutiveHQ() {
     );
 
     return (
-        <div className="min-h-screen w-screen bg-[#010102] text-[#e2e8f0] font-mono overflow-y-auto custom-scrollbar flex flex-col p-4 gap-4 relative select-none" 
+        <div className="min-h-screen w-screen max-w-[100vw] overflow-x-hidden bg-[#010102] text-[#e2e8f0] font-mono custom-scrollbar flex flex-col p-4 gap-4 relative select-none" 
              onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
             
             <style>{`
                 .cosmic-nebula {
                     background: 
-                        radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
-                    filter: blur(80px); animation: nebula-pulse 40s ease-in-out infinite alternate;
+                        radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 60%),
+                        radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
+                    filter: blur(100px); animation: nebula-pulse 60s ease-in-out infinite alternate;
                 }
-                @keyframes nebula-pulse { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.3) rotate(15deg); } }
-                .sovereign-sun-core {
-                    background: radial-gradient(circle at center, #fff 0%, #fff 5%, #6366f1 20%, #4338ca 40%, transparent 75%);
-                    filter: drop-shadow(0 0 150px #6366f1);
-                }
+                @keyframes nebula-pulse { 0% { transform: scale(1) rotate(0deg); opacity: 0.8; } 100% { transform: scale(1.4) rotate(20deg); opacity: 1; } }
                 .sun-corona {
-                    position: absolute; width: 300%; height: 300%;
-                    background: conic-gradient(from 0deg, transparent, rgba(99,102,241,0.2), transparent, rgba(168,85,247,0.2), transparent);
-                    animation: rotate-corona 15s linear infinite;
+                    position: absolute; width: 200%; height: 200%; top: -50%; left: -50%;
+                    background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 60%);
+                    animation: pulse-corona 4s ease-in-out infinite alternate;
                 }
-                @keyframes rotate-corona { to { transform: rotate(360deg); } }
-                .orbital-path { border: 1px solid rgba(255,255,255,0.08); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+                @keyframes pulse-corona { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.1); opacity: 0.8; } }
+                .accretion-disk {
+                    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                    width: 400px; height: 400px; border-radius: 50%;
+                    border: 2px dashed rgba(99, 102, 241, 0.3);
+                    box-shadow: 0 0 50px rgba(99, 102, 241, 0.2);
+                    animation: spin-disk 60s linear infinite;
+                }
+                @keyframes spin-disk { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+                .orbital-path { border: 1px solid rgba(255,255,255,0.05); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 20px rgba(255,255,255,0.02); }
                 .glass-obsidian { 
-                    backdrop-filter: blur(100px); background: rgba(0,0,0,0.7); 
-                    border: 1px solid rgba(255,255,255,0.05); 
-                    box-shadow: 0 0 80px rgba(0,0,0,0.9), inset 0 0 30px rgba(255,255,255,0.02);
+                    backdrop-filter: blur(100px); background: rgba(0,0,0,0.6); 
+                    border: 1px solid rgba(255,255,255,0.08); 
+                    box-shadow: 0 0 80px rgba(0,0,0,0.8), inset 0 0 40px rgba(255,255,255,0.03);
                 }
                 .galaxy-viewport { perspective: 5000px; cursor: move; min-height: 600px; }
                 .transform-style-3d { transform-style: preserve-3d; }
-                .sync-flicker { animation: flicker 0.2s ease-in-out; }
-                @keyframes flicker { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; filter: brightness(2); } }
+                .star { position: absolute; background: white; border-radius: 50%; animation: twinkle var(--duration) ease-in-out infinite alternate; }
+                @keyframes twinkle { 0% { opacity: 0.2; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); } }
             `}</style>
 
             <div className="fixed inset-0 cosmic-nebula pointer-events-none z-0" />
+            
+            {/* Dynamic Starfield */}
+            <div className="fixed inset-0 pointer-events-none z-0">
+                {starfield.map((star) => (
+                    <div 
+                        key={star.id} 
+                        className="star" 
+                        style={{
+                            left: star.left,
+                            top: star.top,
+                            width: star.width,
+                            height: star.height,
+                            '--duration': star.duration,
+                            opacity: star.opacity
+                        }}
+                    />
+                ))}
+            </div>
 
             {/* --- SECTION 1: GLOBAL BRIDGE --- */}
             <AnimatePresence>
@@ -384,15 +432,47 @@ export default function ExecutiveHQ() {
                             <motion.div key="mesh" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 transform-style-3d h-full w-full">
                                 {[500, 850, 1200, 1550, 1900].map(r => (<div key={r} className="orbital-path" style={{ width: r*2, height: r*2 }} />))}
                                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 transform-style-3d">
-                                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 40, repeat: Infinity, ease: "linear" }} className="w-[500px] h-[500px] rounded-full sovereign-sun-core relative flex items-center justify-center overflow-hidden">
-                                        <div className="sun-corona" /><div className="relative z-20 w-80 h-80 bg-black rounded-full border border-white/10 flex items-center justify-center shadow-[inset_0_0_100px_rgba(99,102,241,0.8)] overflow-hidden">
-                                            {settings.companyLogo ? <img src={settings.companyLogo} className="w-56 h-56 object-contain filter brightness-200 contrast-150" /> : <Globe size={140} className="text-white animate-pulse" />}
-                                        </div>
-                                    </motion.div>
+                                    <div className="sun-corona pointer-events-none" />
+                                    <div className="accretion-disk pointer-events-none" />
                                     
-                                    {projects.length === 0 && (
+                                    {/* Electron Particles */}
+                                    {[0, 120, 240].map((deg, i) => (
+                                        <motion.div
+                                            key={i}
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 10 + i * 2, repeat: Infinity, ease: "linear" }}
+                                            className="absolute top-1/2 left-1/2 w-[320px] h-[320px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                                            style={{ rotate: deg }}
+                                        >
+                                            <div className="w-3 h-3 bg-indigo-400 rounded-full shadow-[0_0_15px_#6366f1] absolute top-0 left-1/2 -translate-x-1/2" />
+                                        </motion.div>
+                                    ))}
+
+                                    <div className="relative z-20 w-96 h-96 flex items-center justify-center">
+                                        {/* Pure Energy Core - No Background Box */}
+                                        <motion.div 
+                                            animate={{ scale: [1, 1.05, 1], filter: ["brightness(1)", "brightness(1.3)", "brightness(1)"] }}
+                                            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                                            className="relative flex items-center justify-center w-full h-full"
+                                        >
+                                            <div className="absolute inset-0 bg-indigo-500/20 blur-[100px] rounded-full animate-pulse-slow" />
+                                            {settings.companyLogo ? (
+                                                <img 
+                                                    src={settings.companyLogo} 
+                                                    className={`w-64 h-64 object-contain drop-shadow-[0_0_80px_rgba(99,102,241,0.8)] ${showArchives ? 'grayscale contrast-150' : ''}`} 
+                                                    alt="Corp Logo" 
+                                                />
+                                            ) : (
+                                                <Globe size={160} className="text-white drop-shadow-[0_0_60px_rgba(255,255,255,0.5)] animate-pulse" />
+                                            )}
+                                        </motion.div>
+                                    </div>
+                                    
+                                    {galacticLattice.length === 0 && (
                                         <div className="absolute top-[400px] left-1/2 -translate-x-1/2 w-[400px] text-center">
-                                            <p className="text-indigo-400/40 font-black uppercase tracking-[0.4em] animate-pulse">Awaiting Project Manifestation...</p>
+                                            <p className="text-indigo-400/40 font-black uppercase tracking-[0.4em] animate-pulse">
+                                                {showArchives ? 'No Archived Systems Found...' : 'Awaiting Project Manifestation...'}
+                                            </p>
                                         </div>
                                     )}
                                 </div>
@@ -405,6 +485,7 @@ export default function ExecutiveHQ() {
                                         zoom={zoom} 
                                         orbitalScale={orbitalScale}
                                         intelligence={intelligence}
+                                        isArchived={showArchives}
                                     />
                                 ))}
                             </motion.div>
@@ -420,28 +501,34 @@ export default function ExecutiveHQ() {
                             >
                                 <h2 className="text-7xl font-black uppercase tracking-[0.6em] mb-24 text-indigo-400 flex items-center gap-10 italic drop-shadow-[0_0_30px_rgba(99,102,241,0.4)]"><Navigation size={80} /> Orbit Trajectories</h2>
                                 <div className="space-y-20 max-w-6xl mx-auto">
-                                    {projects?.map(p => (
+                                    {projects?.map((p, i) => {
+                                        const seed = p.id.charCodeAt(0) + (p.id.charCodeAt(p.id.length-1) || 0);
+                                        const velocity = (0.8 + (seed % 50) / 100).toFixed(2);
+                                        const success = 70 + (seed % 30);
+                                        const progress = 30 + (seed % 60);
+                                        
+                                        return (
                                         <div key={p.id} className="space-y-10 group/trajectory cursor-pointer">
                                             <div className="flex justify-between items-end">
                                                 <div>
                                                     <span className="text-4xl font-black uppercase tracking-[0.5em] text-white group-hover/trajectory:text-indigo-400 transition-all italic">{p.name}</span>
-                                                    <div className="flex items-center gap-6 mt-6"><div className="w-4 h-4 rounded-full bg-indigo-500 animate-ping shadow-[0_0_20px_#6366f1]" /><span className="text-[14px] font-bold text-slate-600 uppercase tracking-[0.8em]">PHASE_DELTA_09_SYNCHRONIZED</span></div>
+                                                    <div className="flex items-center gap-6 mt-6"><div className="w-4 h-4 rounded-full bg-indigo-500 animate-ping shadow-[0_0_20px_#6366f1]" /><span className="text-[14px] font-bold text-slate-600 uppercase tracking-[0.8em]">PHASE_DELTA_{('0' + (i+1)).slice(-2)}_SYNCHRONIZED</span></div>
                                                 </div>
                                                 <div className="flex gap-24 text-right">
-                                                    <div><p className="text-[12px] font-black text-slate-600 uppercase tracking-widest">Velocity</p><p className="text-5xl font-mono font-black text-white italic">1.02X</p></div>
-                                                    <div><p className="text-[12px] font-black text-slate-600 uppercase tracking-widest">Success</p><p className="text-5xl font-mono font-black text-emerald-400 italic">92%</p></div>
+                                                    <div><p className="text-[12px] font-black text-slate-600 uppercase tracking-widest">Velocity</p><p className="text-5xl font-mono font-black text-white italic">{velocity}X</p></div>
+                                                    <div><p className="text-[12px] font-black text-slate-600 uppercase tracking-widest">Success</p><p className="text-5xl font-mono font-black text-emerald-400 italic">{success}%</p></div>
                                                 </div>
                                             </div>
                                             <div className="relative h-32 bg-white/[0.02] border border-white/5 rounded-[4rem] flex items-center px-24 overflow-hidden group-hover/trajectory:bg-white/[0.04] transition-all shadow-3xl">
                                                 <div className="h-[4px] bg-slate-900 w-full relative">
-                                                    <motion.div initial={{ width: 0 }} animate={{ width: '65%' }} transition={{ duration: 3 }} className="h-full bg-indigo-500 shadow-[0_0_60px_rgba(99,102,241,1)] relative">
+                                                    <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 3 }} className="h-full bg-indigo-500 shadow-[0_0_60px_rgba(99,102,241,1)] relative">
                                                         <div className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2"><div className="p-5 bg-white rounded-full shadow-[0_0_40px_white]"><Navigation size={40} className="rotate-90 text-indigo-600 fill-indigo-600" /></div></div>
                                                     </motion.div>
                                                 </div>
                                                 <div className="absolute right-24 text-slate-800 animate-pulse"><Target size={64} /></div>
                                             </div>
                                         </div>
-                                    ))}
+                                    )})}
                                 </div>
                             </motion.div>
                         )}
@@ -455,19 +542,26 @@ export default function ExecutiveHQ() {
                             >
                                 <h2 className="text-7xl font-black uppercase tracking-[0.6em] mb-24 text-emerald-400 flex items-center gap-10 italic drop-shadow-[0_0_30px_rgba(16,185,129,0.4)]"><TrendingUp size={80} /> Yield Surface</h2>
                                 <div className="grid grid-cols-1 gap-12">
-                                    {projects?.map(p => (
+                                    {projects?.map((p, i) => {
+                                        const seed = p.id.charCodeAt(0) + (p.id.charCodeAt(p.id.length-1) || 0);
+                                        const weighting = (5 + (seed % 20)).toFixed(1);
+                                        const yieldVal = (50 + (seed % 200));
+                                        const confidence = (85 + (seed % 14)).toFixed(1);
+                                        const isPositive = seed % 10 > 2;
+
+                                        return (
                                         <div key={p.id} className="p-20 bg-white/[0.01] border border-white/5 rounded-[6rem] flex items-center justify-between group hover:bg-emerald-500/5 hover:border-emerald-500/30 transition-all duration-1000 relative overflow-hidden shadow-3xl glass-obsidian">
                                             <div className="absolute left-0 top-0 bottom-0 w-4 bg-emerald-500/20 group-hover:bg-emerald-500 transition-all duration-1000 shadow-[0_0_50px_#10b981]" />
                                             <div className="flex items-center gap-20 relative z-10">
                                                 <div className="w-40 h-40 rounded-[4.5rem] bg-black/60 border border-white/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 group-hover:shadow-[0_0_80px_rgba(16,185,129,0.4)] transition-all duration-1000"><DollarSign size={72} /></div>
-                                                <div><div className="text-5xl font-black text-white uppercase tracking-[0.3em] italic leading-tight">{p.name}</div><div className="text-[15px] text-slate-500 font-bold uppercase tracking-[0.8em] mt-6 flex items-center gap-5"><div className="w-3 h-3 rounded-full bg-emerald-500" /> CONFIDENCE_INDEX: 98.2%</div></div>
+                                                <div><div className="text-5xl font-black text-white uppercase tracking-[0.3em] italic leading-tight">{p.name}</div><div className="text-[15px] text-slate-500 font-bold uppercase tracking-[0.8em] mt-6 flex items-center gap-5"><div className="w-3 h-3 rounded-full bg-emerald-500" /> CONFIDENCE_INDEX: {confidence}%</div></div>
                                             </div>
                                             <div className="flex gap-40 text-right relative z-10">
-                                                <div><span className="text-[14px] font-black text-slate-600 uppercase tracking-[0.8em] block mb-6">Weighting</span><span className="text-7xl font-mono font-black text-white tracking-tighter italic">12.4%</span></div>
-                                                <div><span className="text-[14px] font-black text-slate-600 uppercase tracking-[0.8em] block mb-6">Yield_Delta</span><span className="text-7xl font-mono font-black text-emerald-400 tracking-tighter terminal-glow italic">+$142k</span></div>
+                                                <div><span className="text-[14px] font-black text-slate-600 uppercase tracking-[0.8em] block mb-6">Weighting</span><span className="text-7xl font-mono font-black text-white tracking-tighter italic">{weighting}%</span></div>
+                                                <div><span className="text-[14px] font-black text-slate-600 uppercase tracking-[0.8em] block mb-6">Yield_Delta</span><span className={`text-7xl font-mono font-black tracking-tighter terminal-glow italic ${isPositive ? 'text-emerald-400' : 'text-rose-500'}`}>{isPositive ? '+' : '-'}${yieldVal}k</span></div>
                                             </div>
                                         </div>
-                                    ))}
+                                    )})}
                                 </div>
                             </motion.div>
                         )}
@@ -537,6 +631,16 @@ export default function ExecutiveHQ() {
                 {/* VIEW HUD (Floating) */}
                 {!isMaximized && (
                     <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-black/80 p-4 rounded-[3.5rem] border border-white/10 shadow-3xl backdrop-blur-[100px]">
+                        {/* Archive Toggle Switch */}
+                        <button 
+                            onClick={() => setShowArchives(!showArchives)}
+                            className={`p-6 rounded-full border transition-all flex items-center gap-3 group ${showArchives ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20'}`}
+                            title={showArchives ? "Return to Active Systems" : "View Legacy Archives"}
+                        >
+                            <Clock size={24} className={showArchives ? "text-amber-400" : "text-indigo-400"} />
+                        </button>
+                        <div className="h-10 w-px bg-white/10 mx-2" />
+
                         <div className="flex gap-2">
                             {['MESH', 'FLIGHT_PLAN', 'YIELD', 'WAR_ROOM'].map(id => (
                                 <button key={id} onClick={() => setViewMode(id)} className={`flex items-center gap-6 px-12 py-6 rounded-[2.5rem] text-[13px] font-black uppercase tracking-[0.5em] transition-all duration-700 ${viewMode === id ? 'bg-indigo-600 text-white shadow-[0_0_80px_rgba(99,102,241,0.6)] scale-110' : 'text-slate-600 hover:text-white hover:bg-white/5'}`}>
@@ -742,8 +846,9 @@ export default function ExecutiveHQ() {
 }
 
 // --- COSMIC COMPONENTS ---
-const ProjectPlanet = ({ project, isSelected, onSelect, zoom, orbitalScale, intelligence }) => {
+const ProjectPlanet = ({ project, isSelected, onSelect, zoom, orbitalScale, intelligence, isArchived }) => {
     const [angle, setAngle] = useState(project.angleOffset);
+    const [isHovered, setIsHovered] = useState(false);
     
     // Derived Intelligence for this project
     const projectInsight = useMemo(() => {
@@ -751,8 +856,18 @@ const ProjectPlanet = ({ project, isSelected, onSelect, zoom, orbitalScale, inte
     }, [intelligence, project]);
 
     const isProfitable = project.financials?.profit > 0;
-    const planetColor = isProfitable ? '#FFD700' : '#FF4500'; // Gold vs Red-Orange
-    const glowColor = isProfitable ? 'rgba(255, 215, 0, 0.4)' : 'rgba(255, 69, 0, 0.4)';
+    
+    // VISUAL LOGIC: Archive Mode vs Active Mode
+    let planetColor, glowColor;
+    if (isArchived) {
+        // Archive Mode: Pure Green (Success) or Pure Red (Failure)
+        planetColor = isProfitable ? '#10b981' : '#f43f5e'; // Emerald-500 vs Rose-500
+        glowColor = isProfitable ? 'rgba(16, 185, 129, 0.6)' : 'rgba(244, 63, 94, 0.6)';
+    } else {
+        // Active Mode: Gold (Profitable) vs Red-Orange (Risk)
+        planetColor = isProfitable ? '#FFD700' : '#FF4500';
+        glowColor = isProfitable ? 'rgba(255, 215, 0, 0.4)' : 'rgba(255, 69, 0, 0.4)';
+    }
 
     useEffect(() => {
         let animFrame;
@@ -775,13 +890,28 @@ const ProjectPlanet = ({ project, isSelected, onSelect, zoom, orbitalScale, inte
             }}
             animate={{ transform: `translate(-50%, -50%) translateZ(${z}px)` }}
             onClick={(e) => { e.stopPropagation(); onSelect(); }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             className={`group crystalline-node cursor-pointer`}
         >
-            {/* Neural Tether (Line to Sun) */}
+            {/* Comet Trail */}
             <div 
-                className="absolute top-1/2 left-1/2 origin-left pointer-events-none opacity-20"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-40 blur-xl"
                 style={{ 
-                    width: project.radius, 
+                    width: project.radius * 2.2, // Slightly larger than orbit
+                    height: project.radius * 2.2, 
+                    background: `conic-gradient(from ${angle + Math.PI}rad, transparent 0deg, transparent 300deg, ${planetColor} 360deg)`,
+                    borderRadius: '50%',
+                    maskImage: 'radial-gradient(transparent 65%, black 70%)'
+                }}
+            />
+
+            {/* Neural Tether (Line to Sun) */}
+            <motion.div 
+                animate={{ opacity: [0.1, 0.4, 0.1], width: [project.radius, project.radius + 10, project.radius] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-1/2 left-1/2 origin-left pointer-events-none"
+                style={{ 
                     height: '1px', 
                     background: `linear-gradient(to right, transparent, ${planetColor})`,
                     transform: `rotate(${angle + Math.PI}rad) translateX(${orbitalScale * 100}px)`
@@ -802,6 +932,32 @@ const ProjectPlanet = ({ project, isSelected, onSelect, zoom, orbitalScale, inte
                             </span>
                         </div>
                         <div className="w-px h-8 bg-white/20 mx-auto" />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* HOVER INFO CARD */}
+            <AnimatePresence>
+                {isHovered && !isSelected && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.8, y: 20 }} 
+                        animate={{ opacity: 1, scale: 1, y: -140 }} 
+                        exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                        className="absolute left-1/2 -translate-x-1/2 z-[100] w-64 bg-stone-900/90 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-[0_0_50px_rgba(0,0,0,0.8)] pointer-events-none"
+                    >
+                        <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1 line-clamp-1">{project.name}</h4>
+                        <div className="text-[10px] text-gray-400 font-bold mb-3 flex items-center gap-1"><Users size={10} /> {project.client || 'Unknown Client'}</div>
+                        <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
+                            <div>
+                                <div className="text-[8px] text-gray-500 uppercase font-black">Value</div>
+                                <div className="text-sm font-mono font-bold text-emerald-400">${(project.financials?.contractValue || project.value || 0).toLocaleString()}</div>
+                            </div>
+                            <div>
+                                <div className="text-[8px] text-gray-500 uppercase font-black">Status</div>
+                                <div className={`text-xs font-bold uppercase ${project.status === 'active' ? 'text-indigo-400' : 'text-gray-400'}`}>{project.status}</div>
+                            </div>
+                        </div>
+                        {project.site && <div className="mt-2 pt-2 border-t border-white/10 text-[9px] text-gray-500 font-bold flex items-center gap-1"><MapIcon size={10} /> {project.site}</div>}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -840,8 +996,8 @@ const ProjectPlanet = ({ project, isSelected, onSelect, zoom, orbitalScale, inte
                         {project.name}
                     </h3>
                     <div className="flex items-center justify-center gap-2">
-                        <span className={`text-[8px] font-mono font-bold ${isProfitable ? 'text-amber-400' : 'text-rose-500'}`}>
-                            {isProfitable ? 'YIELD_POSITIVE' : 'RISK_DETECTED'}
+                        <span className={`text-[8px] font-mono font-bold ${isProfitable ? (isArchived ? 'text-emerald-400' : 'text-amber-400') : 'text-rose-500'}`}>
+                            {isProfitable ? (isArchived ? 'LEGACY_SUCCESS' : 'YIELD_POSITIVE') : 'RISK_DETECTED'}
                         </span>
                     </div>
                 </div>

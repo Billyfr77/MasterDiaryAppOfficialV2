@@ -10,8 +10,9 @@ import { api } from '../utils/api'
 import jsPDF from 'jspdf'
 import { 
   FileText, Eye, Edit, Download, Trash2, Plus, Sparkles, Palette, Zap, 
-  Package, User, Wrench, Search, Filter, MoreHorizontal, ArrowRight, Calendar, DollarSign 
+  Package, User, Wrench, Search, Filter, MoreHorizontal, ArrowRight, Calendar, DollarSign, CreditCard 
 } from 'lucide-react'
+import PremiumLoader from './ui/PremiumLoader'
 
 const Quotes = () => {
   const navigate = useNavigate()
@@ -161,14 +162,7 @@ const Quotes = () => {
   );
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-transparent">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-          <div className="text-indigo-400 font-bold text-lg animate-pulse">Loading Quotes...</div>
-        </div>
-      </div>
-    )
+    return <PremiumLoader text="RETRIEVING ESTIMATION DATA..." />
   }
 
   return (

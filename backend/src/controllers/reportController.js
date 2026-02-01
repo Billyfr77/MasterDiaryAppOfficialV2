@@ -25,6 +25,7 @@ const getDateFilter = (range) => {
 const searchHub = async (req, res) => {
   try {
     const { query, type, status, dateRange, minVal, maxVal } = req.query;
+    const userId = req.user.id; // Enforce User Isolation
     
     // 1. Build Query Filters
     const searchString = query ? `%${query}%` : '%';
@@ -33,7 +34,11 @@ const searchHub = async (req, res) => {
     
     // Helper to build WHERE clause
     const buildWhere = (textFields, statusField = null, valueField = null, dateField = 'updatedAt') => {
-        const where = { [Op.and]: [] };
+        const where = { 
+            [Op.and]: [
+                { userId } // CRITICAL: Only return records owned by this user
+            ] 
+        };
         
         // Text Search
         if (query) {
@@ -207,9 +212,10 @@ const searchHub = async (req, res) => {
          const include = [{ 
              model: Project, 
              attributes: ['name'],
-             required: !!query
+             required: !!query,
+             where: { userId } // Double check ownership of joined project
          }];
-         if (query) include[0].where = { name: { [Op.like]: searchString } };
+         if (query) include[0].where = { ...include[0].where, name: { [Op.like]: searchString } };
 
          queries.push(Diary.findAll({
              include,
@@ -234,7 +240,12 @@ const searchHub = async (req, res) => {
     if (!type || type === 'RESOURCE') {
         if (!minVal && !maxVal && !status) { // Simple filtering for now
             queries.push(Staff.findAll({
-                where: { name: { [Op.like]: searchString } },
+                where: { 
+                    [Op.and]: [
+                        { userId }, // Enforce ownership
+                        { name: { [Op.like]: searchString } }
+                    ]
+                },
                 limit
             }).then(rows => rows.map(r => ({
                 id: r.id,
@@ -250,7 +261,12 @@ const searchHub = async (req, res) => {
             }))));
 
             queries.push(Equipment.findAll({
-                where: { name: { [Op.like]: searchString } },
+                where: { 
+                    [Op.and]: [
+                        { userId }, // Enforce ownership
+                        { name: { [Op.like]: searchString } }
+                    ]
+                },
                 limit
             }).then(rows => rows.map(r => ({
                 id: r.id,

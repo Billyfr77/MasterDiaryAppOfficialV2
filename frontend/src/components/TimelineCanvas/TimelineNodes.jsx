@@ -349,10 +349,16 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
 
     const theme = useMemo(() => {
         if (status === 'disconnected') return { color: '#475569', label: 'OFFLINE', glow: 'shadow-slate-500/20', wave: 'bg-slate-500' };
-        if (status === 'analyzing') return { color: '#818cf8', label: 'COGNITIVE_SYNC', glow: 'shadow-indigo-500/40', wave: 'bg-indigo-500' };
-        if (velocity >= 1.2) return { color: '#10b981', label: 'OPTIMAL', glow: 'shadow-emerald-500/50', wave: 'bg-emerald-500' };
-        if (velocity >= 0.9) return { color: '#f59e0b', label: 'STABLE', glow: 'shadow-amber-500/50', wave: 'bg-amber-500' };
-        return { color: '#f43f5e', label: 'CRITICAL', glow: 'shadow-rose-500/50', wave: 'bg-rose-500' };
+        if (status === 'analyzing' || status === 'pending') return { color: '#818cf8', label: 'COGNITIVE_SYNC', glow: 'shadow-indigo-500/40', wave: 'bg-indigo-500' };
+        
+        // Only show performance metrics if status is 'ready'
+        if (status === 'ready') {
+            if (velocity >= 1.2) return { color: '#10b981', label: 'OPTIMAL', glow: 'shadow-emerald-500/50', wave: 'bg-emerald-500' };
+            if (velocity >= 0.9) return { color: '#f59e0b', label: 'STABLE', glow: 'shadow-amber-500/50', wave: 'bg-amber-500' };
+            return { color: '#f43f5e', label: 'CRITICAL', glow: 'shadow-rose-500/50', wave: 'bg-rose-500' };
+        }
+
+        return { color: '#818cf8', label: 'LINK_ESTABLISHED', glow: 'shadow-indigo-500/20', wave: 'bg-indigo-500' };
     }, [status, velocity]);
 
     const handleTerminalSend = async (e) => {
@@ -416,16 +422,16 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
                 </svg>
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
-                <div onClick={() => isPluggedIn && setShowInsight(!showInsight)} className={`group/core w-28 h-28 rounded-full border-2 backdrop-blur-3xl shadow-2xl z-20 cursor-pointer transition-all flex flex-col items-center justify-center gap-1 ${!isPluggedIn ? 'bg-slate-900 border-slate-700' : 'bg-black/80 border-white/20 hover:border-white/50 hover:scale-110 active:scale-95'}`}>
+                <div onClick={() => isPluggedIn && setShowInsight(!showInsight)} className={`group/core w-28 h-28 rounded-full border-2 backdrop-blur-xl shadow-2xl z-20 cursor-pointer transition-all flex flex-col items-center justify-center gap-1 ${!isPluggedIn ? 'bg-slate-900 border-slate-700' : 'bg-black/80 border-white/20 hover:border-white/50 hover:scale-110 active:scale-95'} ${status === 'analyzing' ? 'ring-4 ring-indigo-500/20' : ''}`}>
                     <div className={`text-[10px] font-black tracking-tighter ${isPluggedIn || status === 'analyzing' ? 'text-white' : 'text-gray-600'}`}>{theme.label}</div>
                     <div className="relative">
-                        <BrainCircuit size={36} style={{ color: theme.color }} className={status === 'analyzing' ? 'animate-pulse' : isPluggedIn ? 'animate-bounce-slow' : 'opacity-20'} />
+                        <BrainCircuit size={36} style={{ color: theme.color }} className={status === 'analyzing' ? 'animate-spin-slow' : isPluggedIn ? 'animate-bounce-slow' : 'opacity-20'} />
                         {insights.length > 0 && <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full animate-ping" />}
                     </div>
                     {status === 'analyzing' ? (
-                        <div className="text-[6px] font-mono text-indigo-400 animate-pulse text-center px-2 leading-tight uppercase">{cognitiveFeed[thoughtIndex]}</div>
+                        <div className="text-[6px] font-mono text-indigo-400 animate-pulse text-center px-2 leading-tight uppercase">Cognitive Sync...</div>
                     ) : (
-                        <div className="text-[8px] font-bold text-gray-500 uppercase tracking-[0.2em]">Neural Node</div>
+                        <div className="text-[8px] font-bold text-gray-500 uppercase tracking-[0.2em]">{isPluggedIn ? 'Prism Active' : 'Neural Node'}</div>
                     )}
                 </div>
             </div>
@@ -490,14 +496,30 @@ export const DiaryNode = ({ id, data, selected }) => {
   const getThemeStyles = (nodeType) => {
       const t = nodeType?.toLowerCase();
       const lowRole = role?.toLowerCase() || '';
-      if (isGhost) return { bg: "from-slate-800/60 to-black", border: "border-white/10 border-dashed", glow: "shadow-white/5", icon: "text-slate-400", iconBg: "bg-white/5", accent: "text-slate-500" };
+      
+      let baseTheme;
       if (t === 'staff') {
-          if (lowRole.includes('boss') || lowRole.includes('director')) return { bg: "from-amber-900/80 via-black to-black", border: "border-amber-500/50", glow: "shadow-amber-500/40", icon: "text-amber-400", iconBg: "bg-amber-500/20", accent: "text-amber-200" };
-          if (lowRole.includes('super') || lowRole.includes('manager')) return { bg: "from-indigo-900/80 via-black to-black", border: "border-indigo-500/50", glow: "shadow-indigo-500/40", icon: "text-indigo-400", iconBg: "bg-indigo-500/20", accent: "text-indigo-200" };
-          return { bg: "from-emerald-600/80 via-emerald-900/90 to-black", border: "border-emerald-400/40", glow: "shadow-emerald-500/50", icon: "text-emerald-400", iconBg: "bg-emerald-500/20", accent: "text-emerald-200" };
+          if (lowRole.includes('boss') || lowRole.includes('director')) baseTheme = { bg: "from-amber-900/80 via-black to-black", border: "border-amber-500/50", glow: "shadow-amber-500/40", icon: "text-amber-400", iconBg: "bg-amber-500/20", accent: "text-amber-200" };
+          else if (lowRole.includes('super') || lowRole.includes('manager')) baseTheme = { bg: "from-indigo-900/80 via-black to-black", border: "border-indigo-500/50", glow: "shadow-indigo-500/40", icon: "text-indigo-400", iconBg: "bg-indigo-500/20", accent: "text-indigo-200" };
+          else baseTheme = { bg: "from-emerald-600/80 via-emerald-900/90 to-black", border: "border-emerald-400/40", glow: "shadow-emerald-500/50", icon: "text-emerald-400", iconBg: "bg-emerald-500/20", accent: "text-emerald-200" };
+      } else if (t === 'equipment') {
+          baseTheme = { bg: "from-amber-600/80 via-amber-900/90 to-black", border: "border-amber-400/40", glow: "shadow-amber-500/50", icon: "text-amber-400", iconBg: "bg-amber-500/20", accent: "text-amber-200" };
+      } else {
+          baseTheme = { bg: "from-indigo-600/80 via-indigo-900/90 to-black", border: "border-indigo-400/40", glow: "shadow-indigo-500/50", icon: "text-indigo-400", iconBg: "bg-indigo-500/20", accent: "text-indigo-200" };
       }
-      if (t === 'equipment') return { bg: "from-amber-600/80 via-amber-900/90 to-black", border: "border-amber-400/40", glow: "shadow-amber-500/50", icon: "text-amber-400", iconBg: "bg-amber-500/20", accent: "text-amber-200" };
-      return { bg: "from-indigo-600/80 via-indigo-900/90 to-black", border: "border-indigo-400/40", glow: "shadow-indigo-500/50", icon: "text-indigo-400", iconBg: "bg-indigo-500/20", accent: "text-indigo-200" };
+
+      // Apply ghost modifications if applicable
+      if (isGhost) {
+          return {
+              ...baseTheme,
+              bg: "from-slate-800/40 via-black/40 to-black/60", // More translucent
+              border: `${baseTheme.border.split(' ')[0]} border-dashed opacity-60`, // Dashed and dimmed
+              glow: "shadow-white/5",
+              accent: "text-slate-400"
+          };
+      }
+
+      return baseTheme;
   };
   const nodeTheme = getThemeStyles(type);
   const [isEditingQty, setIsEditingQty] = useState(false);

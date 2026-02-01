@@ -21,7 +21,8 @@ const {
   getQuoteById,
   createQuote,
   updateQuote,
-  deleteQuote
+  deleteQuote,
+  approveQuote
 } = require('../controllers/quoteController');
 
 router.use(authenticateToken); // Require auth for all routes
@@ -29,6 +30,7 @@ router.use(authenticateToken); // Require auth for all routes
 router.get('/', getAllQuotes);
 router.get('/:id', getQuoteById);
 router.post('/', createQuote);
+router.post('/:id/approve', approveQuote); // New Approval Route
 router.put('/:id', updateQuote);
 router.delete('/:id', deleteQuote);
 

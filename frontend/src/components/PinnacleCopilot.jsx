@@ -36,6 +36,7 @@ const PinnacleCopilot = () => {
       let screenName = 'Unknown';
       let currentProjectId = null;
       let currentQuoteId = null;
+      let pageData = {};
 
       if (location.pathname.includes('/projects')) screenName = 'Projects Dashboard';
       if (location.pathname.includes('/projects/') && params.id) {
@@ -43,22 +44,57 @@ const PinnacleCopilot = () => {
         currentProjectId = params.id;
       }
       if (location.pathname.includes('/quotes')) screenName = 'Quotes List';
-      if (location.pathname.includes('/quotes/builder')) screenName = 'Quote Builder';
+      if (location.pathname.includes('/quotes/builder')) {
+          screenName = 'Quote Builder';
+          // SCRAPE GRAPH DATA IF AVAILABLE
+          // This assumes the Quote Builder exposes its state globally or via a known DOM ID for inspection
+          // For now, we rely on what we can infer or if the component broadcasted its state
+          try {
+              const graphData = localStorage.getItem('last_quote_graph');
+              if (graphData) {
+                  const parsed = JSON.parse(graphData);
+                  pageData.nodes = parsed.nodes ? parsed.nodes.length : 0;
+                  pageData.totalValue = parsed.totalValue || 'Unknown';
+              }
+          } catch(e) {}
+      }
       if (location.pathname.includes('/quotes/builder/') && params.id) {
         screenName = 'Quote Builder (Editing)';
         currentQuoteId = params.id;
-        currentProjectId = location.state?.projectId || currentProjectId; // Get project ID from location state if available
+        currentProjectId = location.state?.projectId || currentProjectId; 
       }
-      if (location.pathname.includes('/diary')) screenName = 'Site Diary';
+      if (location.pathname.includes('/diary')) {
+          screenName = 'Site Diary';
+          // SCRAPE DIARY CONTEXT
+          // Try to read last saved diary graph from local storage
+          try {
+              const diaryGraph = localStorage.getItem('last_diary_graph');
+              if (diaryGraph) {
+                  const parsed = JSON.parse(diaryGraph);
+                  pageData.diaryNodes = parsed.nodes ? parsed.nodes.map(n => ({ type: n.type, label: n.data?.label })) : [];
+                  pageData.nodeCount = parsed.nodes?.length || 0;
+              }
+          } catch(e) {}
+      }
       if (location.pathname.includes('/resources')) screenName = 'Resource Allocator';
       if (location.pathname.includes('/map-builder')) screenName = 'Map Builder';
+
+      // --- SOVEREIGN CONTEXT INGESTION ---
+      // We grab live states injected into the window by the builders
+      const liveContext = {
+          quote: window.current_quote_state || null,
+          diary: window.current_diary_state || null,
+          invoice: window.current_invoice_state || null
+      };
 
       const context = {
         screen: screenName,
         currentProjectId: currentProjectId,
         currentQuoteId: currentQuoteId,
         path: location.pathname,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        pageData: pageData,
+        liveContext: liveContext // FULL APP AWARENESS
       };
 
       const res = await api.post('/ai/chat', { 

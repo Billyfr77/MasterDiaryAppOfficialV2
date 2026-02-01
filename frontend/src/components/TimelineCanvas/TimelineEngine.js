@@ -182,6 +182,12 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
           let isChronosLinked = false;
           let activeAllowances = [];
 
+          // CLONE NODE SAFETY: Check if item is an orphan (missing from global library but has data)
+          const isOrphan = !item.name && item.label;
+          if (isOrphan) {
+              console.warn(`[Safety] Orphan node ${item.id} detected. Activating Clone.`);
+          }
+
           // 2a. Allowance Scanner
           if (item.type === 'staff') {
               const connectedAllowanceIds = currentEdges
@@ -270,10 +276,22 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
 
           // Neural Prism Logic - Enhanced Discovery
           if (node.type === 'neuralPrism') {
-              const parentHubId = resourceHubAssignment.get(node.id) || Array.from(hubStateMap.keys()).find(hid => {
+              // 1. Try recursive discovery first
+              let parentHubId = resourceHubAssignment.get(node.id) || Array.from(hubStateMap.keys()).find(hid => {
                   const s = hubStateMap.get(hid);
                   return s.extras.some(e => e.id === node.id);
               });
+
+              // 2. Fallback: Check for DIRECT connection to a Chronos Node
+              if (!parentHubId) {
+                  const directEdge = currentEdges.find(e => 
+                      (e.source === node.id && hubStateMap.has(e.target)) || 
+                      (e.target === node.id && hubStateMap.has(e.source))
+                  );
+                  if (directEdge) {
+                      parentHubId = hubStateMap.has(directEdge.source) ? directEdge.source : directEdge.target;
+                  }
+              }
 
               if (parentHubId) {
                   const s = hubStateMap.get(parentHubId);
@@ -285,9 +303,10 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                       breaks: s.breaks, 
                       duration: s.finalDuration 
                   };
-                  // DO NOT force status to 'analyzing' to allow AI EFFECT to trigger
-                  status = node.data?.status || 'pending';
-                  if (status === 'disconnected') status = 'pending';
+                  
+                  // Initialize status correctly
+                  status = node.data?.status || 'analyzing';
+                  if (status === 'disconnected') status = 'analyzing';
               } else {
                   status = 'disconnected';
                   hubData = null;
@@ -420,6 +439,9 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
   useEffect(() => {
       const prisms = nodes.filter(n => n.type === 'neuralPrism' && n.data?.hubData);
       
+      // AI COPILOT CONTEXT BRIDGE
+      window.current_diary_state = { nodes, edges, projectFinancials, quotedData };
+
       prisms.forEach(prism => {
           const prismId = prism.id;
           const { hubData, projectFinancials: financials, lastAnalyzedHash, status } = prism.data;
@@ -470,10 +492,16 @@ export const useTimelineEngine = (items, onUpdateItem, onRemoveItem, onDrop, ext
                       });
                       
                       if (res.data) {
-                          onUpdateItem(prismId, { ...res.data, status: 'ready' });
+                          // Apply all AI-calculated fields and set status to ready
+                          onUpdateItem(prismId, { 
+                              ...res.data, 
+                              status: 'ready' 
+                          });
+                      } else {
+                          onUpdateItem(prismId, { status: 'disconnected' });
                       }
                   } catch (e) {
-                      console.error("AI Analysis Failed", e);
+                      console.error("[Prism] Analysis Failed:", e);
                       onUpdateItem(prismId, { status: 'disconnected' });
                   }
               }, 2000); // Increased debounce to 2s

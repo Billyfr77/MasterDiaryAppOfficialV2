@@ -298,10 +298,61 @@ const deleteQuote = async (req, res) => {
   }
 };
 
+const approveQuote = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const existingQuote = await Quote.findByPk(req.params.id);
+    if (!existingQuote) return res.status(404).json({ error: 'Quote not found' });
+
+    if (existingQuote.status === 'approved') {
+        return res.status(400).json({ error: 'Quote is already approved' });
+    }
+
+    // Update status
+    const [updated] = await Quote.update({
+      status: 'approved'
+    }, {
+      where: { id: req.params.id }
+    });
+
+    if (updated) {
+      const updatedQuote = await Quote.findByPk(req.params.id, {
+          include: [{ model: Project, as: 'project' }]
+      });
+
+      console.log(`[QuoteController] Quote ${updatedQuote.id} manually approved.`);
+      
+      // TRIGGER WORKFLOW: Quote Approved
+      workflowEngine.emit('quote.approved', { 
+          quote: updatedQuote.toJSON(), 
+          user: req.user 
+      });
+
+      // Create System Notification
+      const { Notification } = require('../models'); // Lazy load to avoid circular dep if any
+      await Notification.create({
+          userId: userId,
+          type: 'system',
+          title: 'Quote Approved',
+          message: `Quote "${updatedQuote.name}" for project "${updatedQuote.project?.name || 'Unknown'}" has been approved.`,
+          read: false
+      });
+
+      res.json(updatedQuote);
+    } else {
+      res.status(404).json({ error: 'Quote not found during update' });
+    }
+  } catch (error) {
+    console.error('Quote approval error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getAllQuotes,
   getQuoteById,
   createQuote,
   updateQuote,
-  deleteQuote
+  deleteQuote,
+  approveQuote
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, AlertTriangle, FileText, Settings, Download, PenTool, Sparkles, Loader2, X } from 'lucide-react';
+import { Plus, Search, Filter, AlertTriangle, FileText, Settings, Download, PenTool, Sparkles, Loader2, X, Mic } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../../utils/api'; 
 import SafetyFormViewer from './SafetyFormViewer';
@@ -13,8 +13,42 @@ const SafetyCopilot = ({ isOpen, onClose, onGenerate }) => {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
+    const [isListening, setIsListening] = useState(false);
+    const [voiceTranscript, setVoiceTranscript] = useState('');
 
     if (!isOpen) return null;
+
+    const startVoiceInput = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Voice input not supported in this browser.");
+            return;
+        }
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            setIsListening(true);
+            setVoiceTranscript('');
+        };
+        recognition.onend = () => setIsListening(false);
+        recognition.onresult = (event) => {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    const final = event.results[i][0].transcript;
+                    setInput(prev => prev + (prev ? ' ' : '') + final);
+                    setVoiceTranscript('');
+                } else {
+                    interim += event.results[i][0].transcript;
+                    setVoiceTranscript(interim);
+                }
+            }
+        };
+        recognition.start();
+    };
 
     const handleSend = async () => {
         if (!input.trim()) return;
@@ -105,22 +139,37 @@ const SafetyCopilot = ({ isOpen, onClose, onGenerate }) => {
 
                 {/* Input Area */}
                 <div className="p-4 border-t border-white/10 bg-stone-900">
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder="Describe your task (e.g., 'Confined space entry for pipe repair')..."
-                            className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none transition-colors"
-                        />
-                        <button
-                            onClick={handleSend}
-                            disabled={loading || !input.trim()}
-                            className="p-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:scale-95"
-                        >
-                            <Sparkles size={20} />
-                        </button>
+                    <div className="flex flex-col gap-2">
+                        {isListening && voiceTranscript && (
+                            <div className="text-[10px] text-purple-400 font-black uppercase animate-pulse mb-1">
+                                Transcribing: {voiceTranscript}
+                            </div>
+                        )}
+                        <div className="flex gap-2 relative items-center">
+                            <input
+                                type="text"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                                placeholder={isListening ? "Listening..." : "Describe your task (e.g., 'Confined space entry for pipe repair')..."}
+                                className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none transition-colors pr-24"
+                            />
+                            <div className="absolute right-2 flex items-center gap-2">
+                                <button
+                                    onClick={startVoiceInput}
+                                    className={`p-2 rounded-xl transition-all ${isListening ? 'text-rose-500 animate-pulse bg-rose-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                                >
+                                    <Mic size={20} />
+                                </button>
+                                <button
+                                    onClick={handleSend}
+                                    disabled={loading || !input.trim()}
+                                    className="p-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:scale-95"
+                                >
+                                    <Sparkles size={20} />
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

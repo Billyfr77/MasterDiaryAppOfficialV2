@@ -24,7 +24,7 @@ import {
   User, Wrench, Package, Plus, Save, Search, Trash2,
   Crown, List, GripVertical, CheckCircle2, X, Sparkles, MapPin, Eye, EyeOff, UploadCloud,
   Settings, FileText, Download, Calendar, FileType, Ruler, PenTool, MessageSquare, Send, Calculator, Maximize, Minimize,
-  Layout, Focus, Image as ImageIcon, Zap, DollarSign, Wand2, ArrowRight, Loader2, Folder, Palette, GraduationCap, Cpu, BrainCircuit, Mic
+  Layout, Focus, Image as ImageIcon, Zap, DollarSign, Wand2, ArrowRight, Loader2, Folder, Palette, GraduationCap, Cpu, BrainCircuit
 } from 'lucide-react'
 import { useNotification } from '../context/NotificationContext'
 import { useUI } from '../context/UIContext'
@@ -56,66 +56,24 @@ const formatCurrency = (amount) => {
   }).format(amount || 0)
 }
 
-const getSmartDefaults = (name) => {
-    const n = (name || '').toLowerCase();
-    // --- MASONRY ---
-    if (n.includes('brick')) return { coverage: 50, unit: 'Bricks/m²', waste: 5, type: 'wall' };
-    if (n.includes('block') || n.includes('cmu')) return { coverage: 12.5, unit: 'Blocks/m²', waste: 5, type: 'wall' };
-    // --- CONCRETE ---
-    if (n.includes('concrete') || n.includes('slab')) return { coverage: 0.1, unit: 'm³/m² (100mm)', waste: 5, type: 'floor' };
-    if (n.includes('rio') || n.includes('mesh')) return { coverage: 1, unit: 'Sheets/m²', waste: 10, type: 'floor' };
-    // --- PAINT & FINISH ---
-    if (n.includes('paint') || n.includes('primer') || n.includes('sealer')) return { coverage: 12, unit: 'm²/L', waste: 10, type: 'wall' };
-    if (n.includes('plaster') || n.includes('gyprock') || n.includes('board')) return { coverage: 3, unit: 'm²/Sheet', waste: 15, type: 'wall' };
-    if (n.includes('tile')) return { coverage: 1.44, unit: 'm²/Box', waste: 10, type: 'floor' };
-    // --- TIMBER ---
-    if (n.includes('stud') || n.includes('framing')) return { coverage: 2.5, unit: 'Lm/m²', waste: 15, type: 'wall' };
-    if (n.includes('decking')) return { coverage: 11, unit: 'Lm/m²', waste: 10, type: 'floor' };
-    if (n.includes('flooring')) return { coverage: 2, unit: 'm²/Pack', waste: 5, type: 'floor' };
-    // --- DEFAULT ---
-    return { coverage: 10, unit: 'Units/m²', waste: 10, type: 'wall' };
-};
+const MATERIAL_COVERAGE = {
+  'flooring': { coverage: 15, unit: 'sq ft/box', waste: 1.1, type: 'floor' },
+  'carpet': { coverage: 12, unit: 'sq ft/roll', waste: 1.15, type: 'floor' },
+  'tile': { coverage: 10, unit: 'sq ft/box', waste: 1.1, type: 'floor' },
+  'concrete': { coverage: 80, unit: 'sq ft/yd (4in)', waste: 1.05, type: 'floor' },
+  'paint': { coverage: 350, unit: 'sq ft/gal', waste: 1.1, type: 'wall' },
+  'drywall': { coverage: 32, unit: 'sq ft/sheet', waste: 1.15, type: 'wall' },
+  'plaster': { coverage: 50, unit: 'sq ft/bag', waste: 1.1, type: 'wall' },
+  'insulation': { coverage: 40, unit: 'sq ft/roll', waste: 1.05, type: 'wall' },
+  'skirting': { unit: 'linear ft', waste: 1.1, type: 'linear' },
+  'cornice': { unit: 'linear ft', waste: 1.1, type: 'linear' },
+  'framing': { unit: 'linear ft', waste: 1.15, type: 'linear' } 
+}
 
 const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAction, onGenerateBlueprint }) => {
   const [input, setInput] = useState('')
-  const [isListening, setIsListening] = useState(false)
-  const [voiceTranscript, setVoiceTranscript] = useState('')
   const scrollRef = useRef(null)
-  
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight }, [messages])
-
-  const startVoiceInput = () => {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-          alert("Voice input not supported in this browser.");
-          return;
-      }
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-          setIsListening(true);
-          setVoiceTranscript('');
-      };
-      recognition.onend = () => setIsListening(false);
-      recognition.onresult = (event) => {
-          let interim = '';
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-              if (event.results[i].isFinal) {
-                  const final = event.results[i][0].transcript;
-                  setInput(prev => prev + (prev ? ' ' : '') + final);
-                  setVoiceTranscript('');
-              } else {
-                  interim += event.results[i][0].transcript;
-                  setVoiceTranscript(interim);
-              }
-          }
-      };
-      recognition.start();
-  };
-
   if (!isOpen) return null
   
   const hints = [
@@ -159,19 +117,9 @@ const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
         {isTyping && <div className="flex justify-start"><div className="bg-stone-800 p-3 rounded-2xl flex gap-1"><span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" /><span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-75" /><span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-150" /></div></div>}
       </div>
       <div className="p-4 border-t border-white/10 bg-stone-900/50 rounded-b-2xl backdrop-blur-md space-y-2">
-        <div className="relative flex flex-col gap-2">
-          {isListening && voiceTranscript && (
-              <div className="text-[10px] text-indigo-400 font-bold uppercase animate-pulse mb-1">
-                  Transcribing: {voiceTranscript}
-              </div>
-          )}
-          <div className="relative flex items-center gap-2">
-            <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (onSendMessage(input), setInput(''))} placeholder={isListening ? "Listening..." : "Describe scope..."} className="flex-1 bg-black/30 border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm text-white focus:border-indigo-500 outline-none placeholder-gray-600" />
-            <button onClick={startVoiceInput} className={`absolute right-14 p-1.5 rounded-lg transition-colors ${isListening ? 'text-rose-500 animate-pulse' : 'text-gray-400 hover:text-white'}`}>
-               <Mic size={18} />
-            </button>
-            <button onClick={() => { onSendMessage(input); setInput('') }} disabled={!input.trim()} className="p-3 bg-indigo-600 rounded-xl text-white hover:bg-indigo-500 disabled:opacity-50 transition-all"><ArrowRight size={18} /></button>
-          </div>
+        <div className="relative flex items-center gap-2">
+          <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (onSendMessage(input), setInput(''))} placeholder="Describe scope..." className="flex-1 bg-black/30 border border-white/10 rounded-xl pl-4 pr-4 py-3 text-sm text-white focus:border-indigo-500 outline-none placeholder-gray-600" />
+          <button onClick={() => { onSendMessage(input); setInput('') }} disabled={!input.trim()} className="p-3 bg-indigo-600 rounded-xl text-white hover:bg-indigo-500 disabled:opacity-50 transition-all"><ArrowRight size={18} /></button>
         </div>
         <button onClick={() => { if(input.trim()) { onGenerateBlueprint(input); setInput(''); } }} className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl text-white text-xs font-bold uppercase tracking-wider shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"><Wand2 size={14} /> Generate Full Blueprint</button>
       </div>
@@ -310,8 +258,6 @@ const QuoteBuilderContent = () => {
               return;
           }
 
-          if (quoteItems.length === 0) return;
-
           try {
               // Context for the Oracle
               const context = {
@@ -326,7 +272,7 @@ const QuoteBuilderContent = () => {
 
               if (oracleData) {
                   setHistoricalDeltas(oracleData);
-                  // Silent update: Notification removed to reduce noise.
+                  addNotification('success', 'Sovereign Oracle Synced', `10,000 parallel scenarios simulated. ${oracleData.oracle?.bidSuccessProbability || 'High'} probability identified.`);
               }
           } catch (e) { 
               console.error("Oracle Sync Error:", e);
@@ -343,45 +289,26 @@ const QuoteBuilderContent = () => {
       
       // Only fetch if we have a valid session or on initial load
       if (allThemes) fetchLearningData();
-  }, [selectedProject, quoteItems.length > 0]); // Re-run when project context changes or quote becomes active
+  }, [selectedProject]); // Re-run when project context changes
 
-  // --- NEURAL YIELD ENGINE (Multi-Stage Propagation) ---
+  // --- NEURAL YIELD ENGINE ---
   useEffect(() => {
       // 1. Identify all AreaNodes and their values
+      const areas = nodes.filter(n => n.type === 'areaNode');
       const areaMap = new Map();
-      nodes.filter(n => n.type === 'areaNode').forEach(an => {
+      areas.forEach(an => {
           const width = parseFloat(an.data?.width) || 0;
           const length = parseFloat(an.data?.length) || 0;
           areaMap.set(an.id, width * length);
       });
 
+      // 2. Map Edges to find relationships
       let hasChanges = false;
-      let newNodes = [...nodes];
-      const yieldMap = new Map(); // Stores calculated qty from Yield Nodes
-
-      // 2. Pass: Update Yield Nodes (QuoteMaterial/QuoteLabour) & Calculate Outputs
-      newNodes = newNodes.map(node => {
+      const updatedNodes = nodes.map(node => {
           if (node.type === 'quoteMaterial' || node.type === 'quoteLabour') {
-              const incomingEdge = edges.find(e => e.target === node.id && areaMap.has(e.source));
+              const incomingEdge = edges.find(e => e.target === node.id);
               const parentArea = incomingEdge ? areaMap.get(incomingEdge.source) : 0;
               
-              // Calculate Output for Propagation
-              let outputQty = 0;
-              if (parentArea > 0) {
-                  if (node.type === 'quoteMaterial') {
-                      const cov = parseFloat(node.data.coverage) || 10;
-                      const waste = parseFloat(node.data.waste) || 0;
-                      outputQty = (parentArea / cov) * (1 + waste/100);
-                  } else { // Labour
-                      const prod = parseFloat(node.data.prodRate) || 2;
-                      outputQty = parentArea / prod;
-                  }
-              } else {
-                  // If not linked to area, use manual quantity as output
-                  outputQty = parseFloat(node.data.quantity) || (node.type === 'quoteLabour' ? parseFloat(node.data.duration) : 1) || 1;
-              }
-              yieldMap.set(node.id, outputQty);
-
               if (node.data.inheritedArea !== parentArea) {
                   hasChanges = true;
                   return { ...node, data: { ...node.data, inheritedArea: parentArea } };
@@ -390,41 +317,8 @@ const QuoteBuilderContent = () => {
           return node;
       });
 
-      // 3. Pass: Update Downstream Items (Material/Staff/Glass) connected to Yield Nodes
-      const itemsToUpdate = [];
-      newNodes = newNodes.map(node => {
-          const incomingYieldEdge = edges.find(e => e.target === node.id && yieldMap.has(e.source));
-          if (incomingYieldEdge) {
-              const sourceQty = yieldMap.get(incomingYieldEdge.source);
-              const isTimeBased = node.data.type === 'staff' || node.data.type === 'equipment';
-              const currentVal = parseFloat(isTimeBased ? (node.data.duration || 0) : (node.data.quantity || 0));
-              
-              if (Math.abs(currentVal - sourceQty) > 0.01) {
-                  hasChanges = true;
-                  const updateData = isTimeBased ? { duration: sourceQty } : { quantity: sourceQty };
-                  itemsToUpdate.push({ id: node.id, ...updateData });
-                  return { ...node, data: { ...node.data, ...updateData } };
-              }
-          }
-          return node;
-      });
-
-      if (hasChanges) {
-          setNodes(newNodes);
-          // Sync BOM if generic items were updated
-          if (itemsToUpdate.length > 0) {
-              setTimeout(() => {
-                  setQuoteItems(items => items.map(i => {
-                      const update = itemsToUpdate.find(u => u.id === i.tempId);
-                      if (update) {
-                          return { ...i, quantity: update.duration || update.quantity }; // QuoteItems use 'quantity' for all
-                      }
-                      return i;
-                  }));
-              }, 0);
-          }
-      }
-  }, [nodes, edges, setNodes, setQuoteItems]);
+      if (hasChanges) setNodes(updatedNodes);
+  }, [nodes, edges, setNodes]);
 
   const handleAiSuggest = () => { handleAIChat("Review this quote. Suggest missing items. Return specific add_node actions."); };
   
@@ -618,8 +512,7 @@ const QuoteBuilderContent = () => {
           data: { 
               label: finalName, 
               subLabel: item.type, 
-              quantity: (item.type === 'staff' || item.type === 'equipment') ? 1 : quantity,
-              duration: (item.type === 'staff' || item.type === 'equipment') ? quantity : 0, 
+              quantity, 
               type: item.type, 
               onDelete: () => deleteNode(nodeId),
               onUpdate: updateItemNodeData,
@@ -627,7 +520,7 @@ const QuoteBuilderContent = () => {
               ...(item.type === 'taskNode' ? { plannedHours: 8, status: 'pending' } : {}),
               ...(item.type === 'zone' ? { zoneTotal: 0, nodeCount: 0 } : {}),
               ...(item.type === 'areaNode' ? { width: 10, length: 10, depth: 0 } : {}),
-              ...(item.type === 'quoteMaterial' ? { rate: charge || item.pricePerUnit || 0, ...getSmartDefaults(finalName) } : {}),
+              ...(item.type === 'quoteMaterial' ? { rate: charge || item.pricePerUnit || 0, coverage: 10, waste: 10, unit: item.unit || 'Unit' } : {}),
               ...(item.type === 'quoteLabour' ? { rate: charge || item.chargeOutBase || 0, prodRate: 2 } : {}),
               ...(item.type === 'profitNode' ? { markup: marginPct, overhead: 10, contingency: 5, quoteTotal: 0 } : {}),
               ...(item.type === 'estimationPrism' ? { status: 'analyzing', quoteTotal: 0, profitMargin: '0%', riskLevel: 'low' } : {})
@@ -796,10 +689,8 @@ const QuoteBuilderContent = () => {
                       id: nodeId,
                       type: isZone ? 'zone' : isDimension ? 'dimension' : 'glass',
                       position: n.position || { x: Math.random() * 500, y: Math.random() * 500 },
-                      data: {
-                          ...getSmartDefaults(n.data.label || n.data.name),
+                      data: { 
                           ...n.data, 
-                          duration: (itemCategory === 'staff' || itemCategory === 'equipment') ? (n.data.quantity || 1) : 0, 
                           label: n.data.label || 'New Item',
                           type: itemCategory, // Correctly map for DiaryNode coloring
                           onUpdate: (targetId, ups) => {
@@ -998,14 +889,14 @@ const QuoteBuilderContent = () => {
                   api.get('/projects').catch(err => ({ data: [] }))
               ]); 
               
-              const materialsList = n.data.data || [];
-              const staffList = (s.data.data || []).map(x => ({...x, type: 'staff', chargeRate: x.chargeOutBase}));
-              const equipmentList = (e.data.data || []).map(x => ({...x, type: 'equipment', costRate: x.costRateBase}));
+              const materialsList = n.data.data || n.data || [];
+              const staffList = (s.data.data || s.data || []).map(x => ({...x, type: 'staff', chargeRate: x.chargeOutBase}));
+              const equipmentList = (e.data.data || e.data || []).map(x => ({...x, type: 'equipment', costRate: x.costRateBase}));
               
               setMaterials(materialsList); 
               setStaff(staffList); 
               setEquipment(equipmentList); 
-              setProjects(p.data.data || []); 
+              setProjects(p.data.data || p.data || []); 
 
               // --- LOAD SPECIFIC QUOTE BY ID ---
               if (id) {
@@ -1419,46 +1310,19 @@ const QuoteBuilderContent = () => {
             </div>
 
             <div className="w-full grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 min-h-[700px]">
-                {/* LEFT CONTROL PANEL */}
-                <div className="flex flex-col gap-4 h-[700px]">
-                    {/* PROJECT & MARGIN CONTROLS */}
-                    <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] p-6 shadow-xl relative overflow-hidden group`}>
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><Crown size={40} className="text-white" /></div>
-                        <div className="space-y-5 relative z-10">
-                             <div>
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2"><Layout size={10} /> Target Project</label>
-                                <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 focus:bg-black/60 transition-all cursor-pointer">
-                                    <option value="" className="text-gray-500">Select Project...</option>
-                                    {projects.map(p => <option key={p.id} value={p.id} className="text-white bg-slate-900">{p.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <div className="flex justify-between items-center mb-1.5">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><DollarSign size={10} /> Profit Margin</label>
-                                    <span className="text-[10px] font-mono font-black text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">{marginPct}%</span>
-                                </div>
-                                <div className="relative flex items-center h-4">
-                                    <input type="range" min="0" max="100" value={marginPct} onChange={(e) => setMarginPct(parseInt(e.target.value))} className="w-full h-1.5 bg-white/10 rounded-full appearance-none accent-indigo-500 cursor-pointer hover:accent-indigo-400 transition-all z-10" />
-                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 bg-indigo-600 rounded-full pointer-events-none" style={{ width: `${marginPct}%` }} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* RESOURCE LIBRARY */}
-                    <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] overflow-hidden ${theme.glow} flex-1 relative`}>
-                        <ResourceSidebar 
-                            materials={materials} 
-                            staff={staff} 
-                            equipment={equipment} 
-                            onSearch={setSearchTerm} 
-                            onTapAdd={onTapAdd}
-                            isOpen={showSidebar}
-                            onClose={() => setShowSidebar(false)}
-                            theme={theme.primary}
-                            mode="quote"
-                        />
-                    </div>
+                {/* RESOURCE DOCK */}
+                <div className={`${theme.bg} backdrop-blur-xl border ${theme.border} rounded-[2rem] overflow-hidden ${theme.glow} h-[700px] relative`}>
+                <ResourceSidebar 
+                    materials={materials} 
+                    staff={staff} 
+                    equipment={equipment} 
+                    onSearch={setSearchTerm} 
+                    onTapAdd={onTapAdd}
+                    isOpen={showSidebar}
+                    onClose={() => setShowSidebar(false)}
+                    theme={theme.primary}
+                    mode="quote"
+                />
                 </div>
 
                 {/* CANVAS AREA */}

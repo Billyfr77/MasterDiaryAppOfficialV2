@@ -19,11 +19,11 @@ module.exports = {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD || process.env.DB_PASS,
     database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
+    host: process.env.DB_HOST || process.env.DB_SOCKET_PATH,
     port: process.env.DB_PORT || 5432,
     dialect: 'postgres',
-    dialectOptions: (process.env.DB_HOST && process.env.DB_HOST.startsWith('/cloudsql')) ? {
-       socketPath: process.env.DB_HOST 
+    dialectOptions: process.env.DB_SOCKET_PATH ? {
+       socketPath: process.env.DB_SOCKET_PATH
     } : {
       ssl: {
         require: true,
