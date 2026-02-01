@@ -126,12 +126,15 @@ const calculateTotals = async (nodes, staff, equipment, userId) => {
 
 const getAllQuotes = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
     const { projectId } = req.query;
 
-    const where = req.user ? { userId: req.user?.id || null } : {};
+    const where = { userId };
     if (projectId) where.projectId = projectId;
 
     const { count, rows } = await Quote.findAndCountAll({

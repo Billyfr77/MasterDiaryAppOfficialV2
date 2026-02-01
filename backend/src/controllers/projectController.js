@@ -94,12 +94,17 @@ const attachFinancials = (project) => {
 const getAllProjects = async (req, res) => {
   console.log(`[${new Date().toISOString()}] Fetching projects for user: ${req.user?.id}`);
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Project.findAndCountAll({
-      where: req.user ? { userId: req.user?.id || null } : {},
+      where: { userId },
       include: [
         { model: Client, as: 'clientDetails', required: false },
         { 
@@ -348,9 +353,13 @@ const addProjectDocument = async (req, res) => {
 
 const getProjectMapStats = async (req, res) => {
     try {
-        const userId = req.user?.id || null;
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
         const projects = await Project.findAll({
-            where: userId ? { userId } : {},
+            where: { userId },
             include: [
                 { model: Client, as: 'clientDetails', required: false },
                 { model: Quote, as: 'quotes', required: false },

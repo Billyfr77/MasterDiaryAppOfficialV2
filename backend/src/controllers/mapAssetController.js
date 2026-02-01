@@ -4,7 +4,16 @@ const { MapAsset } = require('../models');
 const getMapAssets = async (req, res) => {
   try {
     const { projectId } = req.query;
-    const whereClause = projectId ? { projectId } : {};
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const whereClause = { userId: userId };
+    if (projectId) {
+      whereClause.projectId = projectId;
+    }
     
     const assets = await MapAsset.findAll({ where: whereClause });
     res.json(assets);
@@ -18,6 +27,11 @@ const getMapAssets = async (req, res) => {
 const createMapAsset = async (req, res) => {
   try {
     const { projectId, type, coordinates, properties, geometryType, name } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     
     const newAsset = await MapAsset.create({
       projectId,
@@ -26,7 +40,7 @@ const createMapAsset = async (req, res) => {
       geometryType: geometryType || 'POINT',
       coordinates,
       properties,
-      createdBy: req.user ? req.user.id : null
+      userId: userId
     });
 
     res.status(201).json(newAsset);
@@ -41,9 +55,14 @@ const updateMapAsset = async (req, res) => {
   try {
     const { id } = req.params;
     const { coordinates, properties, status, name, type } = req.body;
+    const userId = req.user?.id;
 
-    const asset = await MapAsset.findByPk(id);
-    if (!asset) return res.status(404).json({ error: 'Asset not found' });
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const asset = await MapAsset.findOne({ where: { id, userId: userId } });
+    if (!asset) return res.status(404).json({ error: 'Asset not found or unauthorized' });
 
     if (coordinates) asset.coordinates = coordinates;
     if (status) asset.status = status;
@@ -67,7 +86,16 @@ const updateMapAsset = async (req, res) => {
 const deleteMapAsset = async (req, res) => {
   try {
     const { id } = req.params;
-    await MapAsset.destroy({ where: { id } });
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const deleted = await MapAsset.destroy({ where: { id, userId: userId } });
+    if (!deleted) {
+      return res.status(404).json({ error: 'Asset not found or unauthorized' });
+    }
     res.json({ message: 'Asset deleted successfully' });
   } catch (error) {
     console.error("Error deleting map asset:", error);

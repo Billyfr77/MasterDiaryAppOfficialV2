@@ -43,6 +43,9 @@ const diarySchema = Joi.object({
 const getAllDiaries = async (req, res) => {
   try {
     const { date, projectId } = req.query;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
     const where = {};
     if (date) where.date = date;
     if (projectId) where.projectId = projectId;
@@ -50,10 +53,13 @@ const getAllDiaries = async (req, res) => {
     const diaries = await Diary.findAll({
       where,
       include: [
-        { model: Project },
-        { model: Staff },
-        { model: Client },
-        { model: Job, as: 'job' }
+        { 
+          model: Project,
+          as: 'Project',
+          where: { userId },
+          required: true
+        },
+        { model: Staff, as: 'Staff' }
       ]
     });
     res.json(diaries);

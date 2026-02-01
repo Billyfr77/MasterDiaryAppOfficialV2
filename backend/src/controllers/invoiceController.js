@@ -92,11 +92,18 @@ const createInvoice = async (req, res) => {
       notes: notes || ''
     };
 
+    const userId = req.user?.id;
+    if (!userId) {
+        await transaction.rollback();
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     // Create invoice record
     const invoice = await Invoice.create({
       diaryId: targetDiaryIds.length === 1 ? targetDiaryIds[0] : null, // Keep for legacy if single
       projectId: projectId || diaries[0]?.projectId,
       clientId: clientId || diaries[0]?.clientId,
+      userId,
       invoiceType,
       invoiceData,
       totalAmount,
@@ -129,7 +136,11 @@ const createInvoice = async (req, res) => {
 
 const getInvoiceById = async (req, res) => {
   try {
-    const invoice = await Invoice.findByPk(req.params.id, {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const invoice = await Invoice.findOne({
+      where: { id: req.params.id, userId },
       include: [
         { model: Diary }, // Now returns array due to hasMany
         { model: Project },
@@ -149,8 +160,11 @@ const getInvoiceById = async (req, res) => {
 
 const getInvoices = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
     const { status, invoiceType, projectId, search } = req.query;
-    const where = {};
+    const where = { userId };
 
     if (status) where.status = status;
     if (invoiceType) where.invoiceType = invoiceType;
@@ -175,10 +189,13 @@ const getInvoices = async (req, res) => {
 
 const updateInvoiceStatus = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
     const { status } = req.body;
     const [updated] = await Invoice.update(
       { status },
-      { where: { id: req.params.id } }
+      { where: { id: req.params.id, userId } }
     );
     if (updated) {
       const updatedInvoice = await Invoice.findByPk(req.params.id);
@@ -199,12 +216,15 @@ const updateInvoiceStatus = async (req, res) => {
 // NEW: Bulk Update Status
 const bulkUpdateStatus = async (req, res) => {
     try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
         const { ids, status } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'No IDs provided' });
         
         await Invoice.update(
             { status },
-            { where: { id: ids } }
+            { where: { id: ids, userId } }
         );
         res.json({ message: 'Invoices updated successfully', count: ids.length });
     } catch (error) {
@@ -215,6 +235,9 @@ const bulkUpdateStatus = async (req, res) => {
 // NEW: Get Uninvoiced Diaries
 const getUninvoicedDiaries = async (req, res) => {
     try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
         const { projectId, clientId, jobId } = req.query;
         const where = { invoiceId: null }; // Only fetch diaries not yet linked to an invoice
         
@@ -224,7 +247,14 @@ const getUninvoicedDiaries = async (req, res) => {
 
         const diaries = await Diary.findAll({
             where,
-            include: [{ model: Project }, { model: Job, as: 'job' }],
+            include: [
+                { 
+                    model: Project,
+                    where: { userId },
+                    required: true
+                }, 
+                { model: Job, as: 'job' }
+            ],
             order: [['date', 'DESC']]
         });
         res.json(diaries);
@@ -235,9 +265,12 @@ const getUninvoicedDiaries = async (req, res) => {
 
 const downloadInvoicePDF = async (req, res) => {
   try {
-    const invoice = await Invoice.findByPk(req.params.id);
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    const invoice = await Invoice.findOne({ where: { id: req.params.id, userId } });
+
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found or unauthorized' });
     
     // Generate fresh if not exists
     let pdfPath;

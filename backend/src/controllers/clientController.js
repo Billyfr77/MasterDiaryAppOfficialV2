@@ -10,7 +10,11 @@ const Diary = db.Diary;
 // @access  Private
 const getClients = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
     const clients = await Client.findAll({
+      where: { userId },
       order: [['name', 'ASC']]
     });
     res.json(clients);
@@ -24,26 +28,30 @@ const getClients = async (req, res) => {
 // @access  Private
 const getClientById = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
     const include = [
-      { model: Project, limit: 5 }
+      { model: Project, where: { userId }, required: false, limit: 5 }
     ];
 
     if (Quote) {
-      include.push({ model: Quote, limit: 5 });
+      include.push({ model: Quote, where: { userId }, required: false, limit: 5 });
     }
 
     if (Invoice) {
-      include.push({ model: Invoice, limit: 5 });
+      include.push({ model: Invoice, where: { userId }, required: false, limit: 5 });
     }
 
-    const client = await Client.findByPk(req.params.id, {
+    const client = await Client.findOne({
+      where: { id: req.params.id, userId },
       include
     });
     
     if (client) {
       res.json(client);
     } else {
-      res.status(404).json({ message: 'Client not found' });
+      res.status(404).json({ message: 'Client not found or unauthorized' });
     }
   } catch (error) {
     console.error('Get Client Error:', error);
@@ -56,6 +64,9 @@ const getClientById = async (req, res) => {
 // @access  Private
 const createClient = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
     const { name, company, email, phone, address, notes, tags } = req.body;
     
     const client = await Client.create({
@@ -65,6 +76,7 @@ const createClient = async (req, res) => {
       phone,
       address,
       notes,
+      userId,
       tags: tags || []
     });
 
@@ -79,8 +91,11 @@ const createClient = async (req, res) => {
 // @access  Private
 const updateClient = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
     const { name, company, email, phone, address, notes, status, tags } = req.body;
-    const client = await Client.findByPk(req.params.id);
+    const client = await Client.findOne({ where: { id: req.params.id, userId } });
 
     if (client) {
       if (name) client.name = name;
@@ -95,7 +110,7 @@ const updateClient = async (req, res) => {
       await client.save();
       res.json(client);
     } else {
-      res.status(404).json({ message: 'Client not found' });
+      res.status(404).json({ message: 'Client not found or unauthorized' });
     }
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -107,12 +122,15 @@ const updateClient = async (req, res) => {
 // @access  Private
 const deleteClient = async (req, res) => {
   try {
-    const client = await Client.findByPk(req.params.id);
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const client = await Client.findOne({ where: { id: req.params.id, userId } });
     if (client) {
       await client.destroy();
       res.json({ message: 'Client removed' });
     } else {
-      res.status(404).json({ message: 'Client not found' });
+      res.status(404).json({ message: 'Client not found or unauthorized' });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -124,11 +142,15 @@ const deleteClient = async (req, res) => {
 // @access  Private
 const searchClients = async (req, res) => {
     try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
         const { query } = req.query;
         const Op = db.Sequelize.Op;
         
         const clients = await Client.findAll({
             where: {
+                userId,
                 [Op.or]: [
                     { name: { [Op.like]: `%${query}%` } },
                     { company: { [Op.like]: `%${query}%` } },

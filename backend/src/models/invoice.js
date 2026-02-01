@@ -46,6 +46,14 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Users',
+        key: 'id'
+      }
+    },
     invoiceType: {
       type: DataTypes.ENUM('customer', 'inhouse'),
       allowNull: false,

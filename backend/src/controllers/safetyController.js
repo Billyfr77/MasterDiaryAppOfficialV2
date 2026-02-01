@@ -6,7 +6,13 @@ const pinnacleAi = require('../services/grokService');
 exports.getForms = async (req, res) => {
   try {
     const { projectId, type } = req.query;
-    const where = {};
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const where = { createdBy: userId };
     if (projectId) where.projectId = projectId;
     if (type) where.type = type;
 
@@ -28,14 +34,18 @@ exports.getForms = async (req, res) => {
 // Get single form
 exports.getFormById = async (req, res) => {
   try {
-    const form = await SafetyForm.findByPk(req.params.id, {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const form = await SafetyForm.findOne({
+      where: { id: req.params.id, createdBy: userId },
       include: [
         { model: User, as: 'creator', attributes: ['id', 'username', 'email'] },
         { model: Project, as: 'project', attributes: ['id', 'name'] }
       ]
     });
 
-    if (!form) return res.status(404).json({ message: 'Safety form not found' });
+    if (!form) return res.status(404).json({ message: 'Safety form not found or unauthorized' });
     res.json(form);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching safety form', error: error.message });
@@ -46,11 +56,22 @@ exports.getFormById = async (req, res) => {
 exports.createForm = async (req, res) => {
   try {
     const { title, type, projectId, data, status, latitude, longitude, locationDetails, riskLevel, templateId } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     
     let targetProjectId = projectId;
     if (!targetProjectId) {
-        const lastProject = await Project.findOne({ order: [['updatedAt', 'DESC']] });
+        // Only look for the user's projects
+        const lastProject = await Project.findOne({ 
+          where: { userId },
+          order: [['updatedAt', 'DESC']] 
+        });
         if (lastProject) targetProjectId = lastProject.id;
+    } else {
+        // Verify project belongs to user
+        const project = await Project.findOne({ where: { id: targetProjectId, userId } });
+        if (!project) return res.status(403).json({ error: 'Unauthorized project' });
     }
     
     const newForm = await SafetyForm.create({
@@ -64,11 +85,11 @@ exports.createForm = async (req, res) => {
       longitude,
       locationDetails,
       riskLevel,
-      createdBy: req.user ? req.user.id : null
+      createdBy: userId
     });
 
     const workflowEngine = require('../services/workflowEngine');
-    workflowEngine.emit('job.completed', { safetyForm: newForm, projectId: targetProjectId, userId: req.user?.id });
+    workflowEngine.emit('job.completed', { safetyForm: newForm, projectId: targetProjectId, userId });
 
     res.status(201).json(newForm);
   } catch (error) {
@@ -80,9 +101,12 @@ exports.createForm = async (req, res) => {
 exports.updateForm = async (req, res) => {
   try {
     const { title, data, status, latitude, longitude, locationDetails, riskLevel } = req.body;
-    const form = await SafetyForm.findByPk(req.params.id);
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    if (!form) return res.status(404).json({ message: 'Safety form not found' });
+    const form = await SafetyForm.findOne({ where: { id: req.params.id, createdBy: userId } });
+
+    if (!form) return res.status(404).json({ message: 'Safety form not found or unauthorized' });
 
     if (title) form.title = title;
     if (data) form.data = data;
@@ -95,7 +119,7 @@ exports.updateForm = async (req, res) => {
     await form.save();
 
     const workflowEngine = require('../services/workflowEngine');
-    workflowEngine.emit('job.completed', { safetyForm: form, projectId: form.projectId, userId: req.user?.id });
+    workflowEngine.emit('job.completed', { safetyForm: form, projectId: form.projectId, userId });
 
     res.json(form);
   } catch (error) {
@@ -107,9 +131,12 @@ exports.updateForm = async (req, res) => {
 exports.signForm = async (req, res) => {
   try {
     const { signatureData, signerName, signerRole } = req.body;
-    const form = await SafetyForm.findByPk(req.params.id);
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    if (!form) return res.status(404).json({ message: 'Safety form not found' });
+    const form = await SafetyForm.findOne({ where: { id: req.params.id, createdBy: userId } });
+
+    if (!form) return res.status(404).json({ message: 'Safety form not found or unauthorized' });
 
     const newSignature = {
       name: signerName || (req.user ? req.user.username : 'Unknown'),
@@ -131,8 +158,11 @@ exports.signForm = async (req, res) => {
 // Delete form
 exports.deleteForm = async (req, res) => {
   try {
-    const form = await SafetyForm.findByPk(req.params.id);
-    if (!form) return res.status(404).json({ message: 'Safety form not found' });
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const form = await SafetyForm.findOne({ where: { id: req.params.id, createdBy: userId } });
+    if (!form) return res.status(404).json({ message: 'Safety form not found or unauthorized' });
 
     await form.destroy();
     res.json({ message: 'Safety form deleted' });

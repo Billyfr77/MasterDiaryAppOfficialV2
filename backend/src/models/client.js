@@ -49,6 +49,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('active', 'inactive', 'lead'),
       defaultValue: 'active'
     },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Users',
+        key: 'id'
+      }
+    },
     tags: {
       type: DataTypes.JSON,
       defaultValue: []

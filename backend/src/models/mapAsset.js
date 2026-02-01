@@ -40,9 +40,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       defaultValue: 'active'
     },
-    createdBy: {
+    userId: {
       type: DataTypes.UUID,
-      allowNull: true
+      allowNull: true,
+      references: {
+        model: 'Users',
+        key: 'id'
+      }
     }
   });
 
