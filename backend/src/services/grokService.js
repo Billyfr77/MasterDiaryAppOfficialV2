@@ -2,9 +2,11 @@ const OpenAI = require('openai');
 
 class GrokService {
   constructor() {
-    // Ensure we pick up the key and trim whitespace/quotes if any
-    this.apiKey = process.env.GROK_API_KEY ? process.env.GROK_API_KEY.replace(/["']/g, '').trim() : null;
+    // Aggressively clean the key: trim whitespace first, then remove quotes
+    const rawKey = process.env.GROK_API_KEY || '';
+    this.apiKey = rawKey.trim().replace(/^["']|["']$/g, ''); 
     this.client = null;
+    console.log(`[Grok] Loading Key: ${this.apiKey ? this.apiKey.substring(0, 8) + '...' : 'NONE'}`);
     this.init();
   }
 

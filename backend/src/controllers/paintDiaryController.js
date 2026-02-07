@@ -110,8 +110,10 @@ const processNewDiaryItems = async (canvasData, userId) => {
     if (!entry.items) return entry;
     
     const processedItems = await Promise.all(entry.items.map(async (item) => {
-      // If item has no dataId, it's a new resource that needs to be created or matched by name
-      if (!item.dataId && item.name && item.type) {
+      // If item has no dataId, or it's a temp AI ID, or marked new -> Create/Link Resource
+      const isTempId = !item.dataId || String(item.dataId).startsWith('ai-') || String(item.dataId).startsWith('temp-');
+      
+      if ((isTempId || item.isNew) && item.name && item.type) {
         try {
           let resource;
           const resourceType = item.type;
@@ -152,7 +154,12 @@ const processNewDiaryItems = async (canvasData, userId) => {
           }
           
           if (resource) {
-            return { ...item, dataId: resource.id, data: resource.toJSON ? resource.toJSON() : resource };
+            // Return updated item with REAL DB ID
+            return { 
+                ...item, 
+                dataId: resource.id, 
+                // data: resource.toJSON ? resource.toJSON() : resource // Optional: update cached data
+            };
           }
         } catch (err) {
           console.error(`Error processing new diary item ${item.name}:`, err);

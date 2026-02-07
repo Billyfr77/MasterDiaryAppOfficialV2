@@ -25,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
       Diary.belongsTo(models.Client, { foreignKey: 'clientId' });
       Diary.belongsTo(models.Job, { foreignKey: 'jobId', as: 'job' });
       Diary.belongsTo(models.Invoice, { foreignKey: 'invoiceId' }); // Added Invoice Association
+      Diary.belongsTo(models.User, { foreignKey: 'userId', as: 'user' }); // Added User Association
     }
   }
 
@@ -33,6 +34,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       primaryKey: true,
       defaultValue: DataTypes.UUIDV4
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Users',
+        key: 'id'
+      }
     },
     date: {
       type: DataTypes.DATEONLY,

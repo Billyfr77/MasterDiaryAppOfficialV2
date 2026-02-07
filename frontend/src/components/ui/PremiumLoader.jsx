@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 
 const PremiumLoader = ({ text = "Initializing..." }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050507]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050507]" style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.1)_0%,transparent_70%)] animate-pulse" />
       
       <div className="relative flex flex-col items-center gap-8">

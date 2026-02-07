@@ -33,6 +33,7 @@ A specialized Monte Carlo simulation engine that doesn't just "guess"; it mathem
 *   **10,000 Parallel Scenarios:** Every time you build a quote, the Oracle runs 10,000 simulations against market volatility, crew efficiency logs, and weather patterns.
 *   **Neural Cortex:** The engine features **Self-Correcting Intelligence**. It calculates historical **Estimation Bias** (Quote vs. Actual spend) and automatically adjusts new estimates to ensure profitability.
 *   **Predictive Fatigue:** Tracks consecutive staff workdays to issue safety alerts and suggest rest days *before* incidents occur.
+*   **Asset Perception:** The AI explicitly monitors **Materials (Stock)** and **Equipment (Fleet status)**, advising on utilization ("Use existing 500L paint stock before buying more").
 
 ### 2. The Agency Engine (`/ai/execute-agency`)
 The system possesses **Level 4 Autonomy**. It observes project data and **proposes directives**.
@@ -46,8 +47,9 @@ The system possesses **Level 4 Autonomy**. It observes project data and **propos
 ### 1. 🏗️ Neural Quote Builder ("The Patent-Pending Engine")
 A visual, node-based estimation environment.
 *   **Visual Logic:** Drag `Area Nodes` (Rooms) and connect them to `Material Nodes`. The system auto-calculates quantities based on coverage rates.
-*   **Association Mining:** The AI learns your habits (e.g., "Always add *Primer* with *Paint*") and proactively suggests missing items.
-*   **Zero-Context Topology:** Privacy-focused AI processing that strips sensitive data while retaining context.
+*   **Smart Associations:** The AI learns your habits (e.g., "Always add *Primer* with *Paint*") and proactively suggests missing items.
+*   **Robust Drafts:** Save work-in-progress drafts without assigning projects (`projectId` nullable).
+*   **Zero-Context Topology:** Privacy-focused AI processing that strips sensitive data while retaining context for maximum speed.
 
 ### 2. 🧾 Invoice Command ("The Financial Harvester")
 A split-screen financial engine that turns site data into cash flow.
@@ -77,6 +79,7 @@ A generative document builder that ensures compliance without the boredom.
 The daily diary, reimagined as a digital canvas.
 *   **Neural Prism (NDE):** A high-level analysis node that plugs into any `Chronos` hub to provide live burn rates, predicted margins, and efficiency drift.
 *   **Draggable Reality:** Drag photos, weather icons, and staff directly onto a timeline canvas to reconstruct the day.
+*   **Smart Allowances:** Visual "Allowance Nodes" that auto-calculate overtime and penalty rates when connected to staff.
 
 ---
 
@@ -93,41 +96,68 @@ The "God Mode" view for business owners.
 *   **Framework:** React 18 + Vite (Blazing fast HMR)
 *   **Visualization:** React Flow (Node graphs), React Google Maps (GeoCore), React DnD (Safety/Chronos)
 *   **Styling:** Tailwind CSS (Glassmorphism, Neon gradients, "Cyber-Industrial" aesthetic)
-*   **State:** Context API + LocalStorage Persistence
+*   **State:** Context API + LocalStorage Persistence + Premium Number Inputs
 
 ### Backend (The Engine)
 *   **Runtime:** Node.js + Express
 *   **ORM:** Sequelize (SQL-agnostic)
-*   **Database:** SQLite (Dev) / PostgreSQL (Prod)
+*   **Database:** SQLite (Dev) / PostgreSQL (Prod - Google Cloud SQL)
+*   **Security:** Rate Limiting, Helmet, MongoSanitize, HPP.
 *   **AI Controller:** Custom orchestration layer for `Grok 4.1` Reasoning API.
+*   **Self-Healing:** Automatic schema patching (`manualSchemaFix.js`) and database synchronization on startup.
 
 ---
 
-## 🚀 How to Run
+## 🚀 Deployment (Google Cloud Run)
 
-1.  **Install Dependencies:**
+This system is "Serverless-First" designed for Google Cloud Run.
+
+1.  **Build & Deploy:**
     ```bash
-    cd frontend && npm install
-    cd ../backend && npm install
+    gcloud builds submit --config cloudbuild.yaml
+    gcloud run deploy master-diary-app-v2 ...
     ```
 
-2.  **Start the Neural Core (Backend):**
-    ```bash
-    cd backend
-    npm start
-    ```
+2.  **Emergency Schema Fix:**
+    If database schema drifts (e.g., 400 errors on saving), trigger the self-healing endpoint:
+    `https://[YOUR_URL]/api/fix-schema?secret=[YOUR_SECRET]`
 
-3.  **Launch the Visual Interface (Frontend):**
-    ```bash
-    cd frontend
-    npm run dev
-    ```
+---
+
+---
+
+## 🛠️ Stable Evolution & Fixes (Feb 2026)
+
+The system has undergone a major stabilization phase to ensure 100% data integrity and a seamless user experience across all "Unicorn" modules.
+
+### 1. 🧠 Neural Lattice & AI Integrity
+*   **Resolved Database Schema Drift**: Fixed a critical issue where the `userId` column was missing from the `Diaries` and `Allocations` tables, which previously took the Neural Lattice offline.
+*   **Total Financial Truth**: Implemented a "Financial Truth" mapping in the `LearningEngine`. The AI now has direct access to exact project-by-project costs, revenues, and profit margins, ensuring 100% accurate financial answers.
+*   **Site Activity Trail**: Enhanced the AI's context with a chronological "Site Activity Trail." This provides the AI with absolute visibility into every historical diary entry, including crew details and specific site outcomes.
+*   **Institutional Memory Upgraded**: All AI assistants (Global, Diary, and Quote) now utilize the enriched institutional memory, allowing them to cross-reference past performance with current requests.
+
+### 2. 🌍 GeoCore Ultra (Map Builder) Upgrades
+*   **Project Hub Overhaul**: The Map Builder's project menu now matches the `EnhancedProjects` component in richness. It displays live financials, associated documents, safety forms, recent site activity, and active variations.
+*   **Resource Sync**: Fixed the linkage between the Map Builder and the Resource Allocator. The Project Hub now correctly displays all human and heavy assets currently allocated to the site.
+*   **Technical Stability**: Resolved a `ReferenceError` related to the `jobs` variable and fixed the project ID mapping for cover image uploads and document vault associations.
+
+### 3. 🏗️ Quote Builder Stabilization
+*   **Initialization Fix**: Resolved a critical "ReferenceError: Cannot access financials before initialization" by reordering React hooks and component logic. This ensures the quoting engine loads perfectly in all bundled environments.
+*   **BOM Load Fix**: Corrected the "Load" button logic to ensure that saved quotes are actually fetched from the database when the modal is opened.
+
+### 4. 🦅 Executive HQ Optimization
+*   **Simulated Projections**: Implemented a "Sovereign Projection Layer" for the HQ. In zero-data states (e.g., a new firm), the HQ now displays plausible "Projected" stats based on quoted baselines instead of showing empty zeros.
+*   **Formatting Excellence**: Improved metric formatting to handle values ranging from K (Thousands) to M (Millions) dynamically.
+
+### 5. 🕹️ UX & Interaction Polishing
+*   **Nav Bar Scroll Fixed**: Prevented the horizontal navigation scroll from hijacking the vertical page scroll. Users can now browse navigation items without the page jumping.
+*   **Authentication Hardening**: Added robust authentication middleware to the `clients` and `allocations` routes to ensure multi-tenant data isolation.
 
 ---
 
 > **MasterDiaryOS**
 > *Built for the builders. Powered by the stars.*
 >
-> **Status:** 🟢 Operational
-> **Version:** V3.0 (Unicorn Edition)
+> **Status:** 🟢 Operational (Production - Stable)
+> **Version:** V3.5 (Sovereign Lattice Edition)
 > **License:** Proprietary

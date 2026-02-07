@@ -1,4 +1,4 @@
-const { Allocation, Project, Staff, Equipment } = require('../models');
+const { Allocation, Project, Staff, Equipment, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 const getAllocations = async (req, res) => {
@@ -10,11 +10,25 @@ const getAllocations = async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
-    // We filter allocations by joining with Projects that belong to the user,
-    // or by adding a userId directly to Allocation if we want to be more efficient.
-    // Based on the model check, Allocation doesn't have userId yet, so we filter by Project's userId.
-    
-    const where = {};
+    // BACKWARD COMPATIBILITY: Sync userId for legacy allocations if they belong to a project owned by this user
+    try {
+        const table = sequelize.getDialect() === 'postgres' ? '"Projects"' : 'Projects';
+        await Allocation.update({ userId }, {
+            where: {
+                userId: null,
+                projectId: {
+                    [Op.and]: [
+                        { [Op.not]: null },
+                        { [Op.in]: sequelize.literal(`(SELECT id FROM ${table} WHERE "userId" = '${userId}')`) }
+                    ]
+                }
+            }
+        });
+    } catch (syncErr) {
+        console.warn("[AllocationSync] Legacy sync failed:", syncErr.message);
+    }
+
+    const where = { userId }; // Use userId directly on Allocation
     if (start && end) {
       where.startDate = { [Op.lte]: end };
       where.endDate = { [Op.gte]: start };
@@ -26,8 +40,7 @@ const getAllocations = async (req, res) => {
       include: [
         { 
           model: Project, 
-          where: { userId }, // CRITICAL: Filter by user's projects
-          required: true 
+          required: false 
         },
         { model: Staff, as: 'staffResource' },
         { model: Equipment, as: 'equipmentResource' }
@@ -50,7 +63,7 @@ const createAllocation = async (req, res) => {
       if (!project) return res.status(403).json({ error: 'Unauthorized project' });
     }
 
-    const allocation = await Allocation.create(req.body);
+    const allocation = await Allocation.create({ ...req.body, userId });
     const fullAllocation = await Allocation.findByPk(allocation.id, {
       include: [
         { model: Project },
@@ -70,9 +83,9 @@ const updateAllocation = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    // Verify allocation belongs to a user's project
-    const allocation = await Allocation.findByPk(id, {
-        include: [{ model: Project, where: { userId }, required: true }]
+    // Verify allocation belongs to user
+    const allocation = await Allocation.findOne({
+        where: { id, userId }
     });
 
     if (!allocation) return res.status(404).json({ error: 'Allocation not found or unauthorized' });
@@ -98,9 +111,9 @@ const deleteAllocation = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    // Verify allocation belongs to a user's project
-    const allocation = await Allocation.findByPk(id, {
-        include: [{ model: Project, where: { userId }, required: true }]
+    // Verify allocation belongs to user
+    const allocation = await Allocation.findOne({
+        where: { id, userId }
     });
 
     if (!allocation) return res.status(404).json({ error: 'Allocation not found or unauthorized' });

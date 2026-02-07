@@ -1,6 +1,7 @@
 const pinnacleAi = require('../services/grokService');
 const { generateNeuralIntelligencePacket } = require('../utils/LearningEngine');
 const { Diary, Project, Allocation, Staff, Equipment, Quote, Document, Node, MapAsset, DiaryTemplate, Insight } = require('../models');
+const { Op } = require('sequelize');
 const { logAudit } = require('../services/auditService');
 const fs = require('fs').promises;
 const path = require('path');
@@ -43,10 +44,11 @@ const getSystemMandate = async (userId, packet = null) => {
     const companyName = getSetting('companyName', 'Our Firm');
     const persona = getSetting('aiPersona', 'foreman');
     
-    if (!packet) packet = await generateNeuralIntelligencePacket();
+    if (!packet) packet = await generateNeuralIntelligencePacket(userId);
     
     const staffSummary = packet?.assets?.staff.map(s => `${s.name} (${s.role})`).join(', ') || "None";
     const materialSummary = packet?.assets?.materials.map(m => m.name).join(', ') || "None";
+    const equipmentSummary = packet?.assets?.equipment.map(e => `${e.name} (${e.status})`).join(', ') || "None";
     const velocityDrift = packet?.mesh?.velocityDrift || "0.000";
 
     const personaInstruction = persona === 'foreman' 
@@ -57,18 +59,22 @@ const getSystemMandate = async (userId, packet = null) => {
 **SOVEREIGN PARTNERSHIP & FORESIGHT MANDATE:**
 1. **Identity:** You are the **Neural Co-Founder** of **${companyName}**. 
 2. **Anticipatory Reasoning:** Use our **Velocity Drift (${velocityDrift})** to predict the future. If drift is positive, we are slowing down—propose a fix BEFORE we lose money.
-3. **DNA Recognition:** Prioritize our existing Workers (**${staffSummary}**) and Materials (**${materialSummary}**) in all plans.
+3. **DNA Recognition:** Prioritize our existing Workers (**${staffSummary}**), Materials (**${materialSummary}**), and Fleet (**${equipmentSummary}**) in all plans.
 4. **Tone:** ${personaInstruction} ALWAYS use "We/Our" language.
 5. **Guardrail Awareness:** Propose directives for any structural or financial shifts.
 `;
 };
 
-const getInstitutionalContext = async () => {
-    const packet = await generateNeuralIntelligencePacket();
-    if (!packet) return "**LATTICE STATUS:** Offline";
+const getInstitutionalContext = async (userId) => {
+    const packet = await generateNeuralIntelligencePacket(userId);
+    if (!packet || packet.error) return `**LATTICE STATUS:** Offline (System Error: ${packet?.error || 'Neural Link Severed'})`;
 
     const brainRules = await Insight.findAll({
-        where: { type: 'recommendation' },
+        where: { 
+            type: 'recommendation', 
+            relatedModel: 'Project',
+            relatedId: { [Op.in]: (await Project.findAll({ where: { userId }, attributes: ['id'] })).map(p => p.id) } 
+        },
         limit: 5,
         order: [['createdAt', 'DESC']]
     });
@@ -76,7 +82,8 @@ const getInstitutionalContext = async () => {
 
     const staffSummary = packet.assets?.staff.map(s => `${s.name} (${s.role})`).join(', ') || "None";
     const materialSummary = packet.assets?.materials.map(m => m.name).join(', ') || "None";
-    const feedbackSummary = packet.siteFeedback?.join(' | ') || "None";
+    const equipmentSummary = packet.assets?.equipment.map(e => `${e.name} (${e.status})`).join(', ') || "None";
+    const feedbackSummary = packet.siteFeedback?.join('\n    - ') || "None";
     
     // NEURAL CORTEX INJECTION
     const cortexBias = packet.cortex?.biasDirection !== 'ACCURATE' 
@@ -98,9 +105,28 @@ const getInstitutionalContext = async () => {
     - 💰 **CLIENT GENOME:** ${packet.cortex?.clientGenome?.map(c => `${c.name} (${c.rating}, ${c.avgPayDays} day pay-cycle)`).join(' | ') || "No client anomalies."}
     `;
 
+    const knowledgeBase = `
+    **INSTITUTIONAL MEMORY (DOCUMENTS, QUOTES & DIARIES):**
+    - **Recent Documents:** ${packet.knowledgeBase?.documents?.map(d => `${d.title} (${d.type})`).join(' | ') || "None"}
+    - **Historical Quotes:** ${packet.knowledgeBase?.quotes?.map(q => `${q.name} for ${q.project || 'Unknown'} (${q.status}, $${q.revenue})`).join(' | ') || "None"}
+    - **Historical Diaries:** ${packet.knowledgeBase?.diaries?.slice(0, 10).map(d => `${d.date} for ${d.project} (Cost: $${d.cost}, Notes: ${d.notes})`).join(' | ') || "None"}
+    `;
+
+    const projectStats = `
+    **PORTFOLIO FINANCIAL TRUTH (PROJECT BY PROJECT):**
+    ${packet.projectFinancials?.map(p => `- ${p.name}: Actual Cost $${p.actualCost.toLocaleString()}, Actual Revenue $${p.actualRevenue.toLocaleString()}, Profit $${p.profit.toLocaleString()} (Contract Value: $${p.contractValue.toLocaleString()}, Quoted Revenue: $${p.quotedRevenue.toLocaleString()})`).join('\n    ') || "No project data available."}
+    `;
+
+    const siteActivityTrail = `
+    **SITE ACTIVITY TRAIL (EXACT HISTORICAL DATA):**
+    - ${packet.siteTrail?.join('\n    - ') || "No diary logs found."}
+    `;
+
     return `
     **CORPORATE BRAIN (ESTABLISHED RULES):**
     - ${brainSummary}
+
+    ${projectStats}
 
     **NEURAL CORTEX (SELF-CORRECTING INTEL):**
     - ${cortexBias}
@@ -108,6 +134,7 @@ const getInstitutionalContext = async () => {
     ${cortexRules}
     ${cortexSchedule}
     ${cortexRisks}
+    ${knowledgeBase}
 
     **LATTICE STATUS (SITUATION REPORT):**
     - Efficiency: ${packet.mesh.institutionalEfficiency} (Goal: 1.0)
@@ -117,9 +144,9 @@ const getInstitutionalContext = async () => {
     **COMPANY ASSETS & PEOPLE:**
     - Workers on Deck: ${staffSummary}
     - Key Materials in Inventory: ${materialSummary}
+    - Fleet Status: ${equipmentSummary}
     
-    **LATEST SITE FEEDBACK (DIARY NOTES):**
-    - "${feedbackSummary}"
+    ${siteActivityTrail}
     `;
 };
 
@@ -127,7 +154,7 @@ const getInstitutionalContext = async () => {
 const generateWorkflow = async (req, res) => {
   try {
     const { prompt } = req.body;
-    const memory = await getInstitutionalContext();
+    const memory = await getInstitutionalContext(req.user?.id);
     const mandate = await getSystemMandate(req.user?.id);
     const systemPrompt = `
         You are "Pinnacle Mesh Architect". ${mandate} ${memory} 
@@ -146,7 +173,7 @@ const generateDiarySummary = async (req, res) => {
     try {
         const { projectId } = req.body;
         const diaries = await Diary.findAll({ where: { projectId }, limit: 5, order: [['date', 'DESC']] });
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const mandate = await getSystemMandate(req.user?.id);
         const systemPrompt = `You are a Senior Project Director. ${mandate} ${memory} **Mission:** Briefly summarize what happened on site. Focus on what matters: delays, wins, and next steps.`;
         const summary = await pinnacleAi.generateText(`Project ${projectId} logs: ${JSON.stringify(diaries)}`, systemPrompt, 1500);
@@ -160,13 +187,15 @@ const generateDiarySummary = async (req, res) => {
 const chatGlobal = async (req, res) => {
     try {
         const { message } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const mandate = await getSystemMandate(req.user?.id);
         const systemPrompt = `
             You are "Pinnacle Core" with Level 18 Agency. 
             ${mandate} 
             ${memory} 
             **Agency Instructions:** 
+            You have total visibility into our historical quotes AND site diary logs. 
+            When asked about project status or history, use the "INSTITUTIONAL MEMORY" to provide data-driven insights.
             You can propose database actions. If you see a problem, include a "directive" in your JSON response.
             Available Actions: UPDATE_QUOTE_MARGIN, SHIFT_PROJECT_TIMELINE, AUTO_CORRECT_LABOUR_DNA.
             Return a JSON with { reply: "string", directive: { action: "TYPE", ...params } | null }.
@@ -191,7 +220,7 @@ const chatGlobal = async (req, res) => {
 const generateQuote = async (req, res) => {
     try {
         const { prompt } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         
         // Safety truncation for input
         const safePrompt = (prompt || "Standard construction project").substring(0, 10000);
@@ -284,7 +313,7 @@ const generateQuote = async (req, res) => {
 const parseDiaryLog = async (req, res) => {
     try {
         const { prompt } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const systemPrompt = `
             You are the "MasterDiary Architect". ${OMNISCIENCE_MANDATE} ${memory} 
             **Mission:** Convert site text into a visual circuit for the Paint Diary.
@@ -327,7 +356,7 @@ const parseDiaryLog = async (req, res) => {
 const analyzePrismVelocity = async (req, res) => {
     try {
         const { context } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         
         // Safety: Extract key data points to keep prompt concise
         const safeContext = {
@@ -382,15 +411,14 @@ const analyzePrismVelocity = async (req, res) => {
 const chatWorkflowAssistant = async (req, res) => {
     try {
         const { message, context } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const mandate = await getSystemMandate(req.user?.id);
         const systemPrompt = `
             You are "Pinnacle Oracle", the AI Co-Pilot for the Workflow Builder. 
             ${mandate} ${memory} 
             
             **Mission:** Provide strategic advice AND generate graph modifications to build the perfect workflow.
-            
-            **Output Schema:**
+            You have access to historical diaries and quotes to help architect better flows.
             {
                 "reply": "Your conversational response here.",
                 "suggestedActions": [
@@ -466,7 +494,7 @@ const generateMapElements = async (req, res) => {
 const generateDashboardInsights = async (req, res) => {
     try {
         const { stats } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const systemPrompt = `
             You are "Neural Core Analyst". ${memory}
             Generate 3 high-impact business insights based on these stats: ${JSON.stringify(stats)}.
@@ -480,7 +508,7 @@ const generateDashboardInsights = async (req, res) => {
 const generateNodeSuggestions = async (req, res) => {
     try {
         const { selectedNode, existingNodes } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const systemPrompt = `
             You are "Node Architect". ${memory}
             **Mission:** Suggest 3 logically related items to add to the canvas.
@@ -501,6 +529,7 @@ const generateNodeSuggestions = async (req, res) => {
 const chatSmartAssistant = async (req, res) => {
     try {
         const { message, context } = req.body;
+        const memory = await getInstitutionalContext(req.user?.id);
         const mandate = await getSystemMandate(req.user?.id);
         
         const safeMessage = (message || "").substring(0, 5000);
@@ -508,7 +537,9 @@ const chatSmartAssistant = async (req, res) => {
 
         const systemPrompt = `
             ${mandate} 
+            ${memory}
             You are "Canvas Assistant". Help the user build their visual log in the Paint Diary.
+            You have access to ALL saved diaries in the 'INSTITUTIONAL MEMORY'.
             
             **CRITICAL OUTPUT SCHEMA:**
             Return ONLY valid JSON.
@@ -550,7 +581,7 @@ const chatSmartAssistant = async (req, res) => {
 const analyzeIntelligenceLayer = async (req, res) => {
     try {
         const { diaryData } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         
         // Safety check for empty data
         const safeData = diaryData || { note: "No data provided" };
@@ -617,7 +648,7 @@ const analyzeIntelligenceLayer = async (req, res) => {
 const analyzeBusiness = async (req, res) => {
     try {
         const data = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const systemPrompt = `
             You are "Strategic Co-Founder AI". ${memory}
             Analyze the entire business state: Projects, Staff, Equipment, Materials.
@@ -644,7 +675,7 @@ const analyzeBusiness = async (req, res) => {
 const generateWorkflowReport = async (req, res) => {
     try {
         const { reportType } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const systemPrompt = `Generate a professional intelligence brief for ${reportType}. Use data from: ${memory}`;
         const result = await pinnacleAi.generateJSON(reportType, systemPrompt, 2000);
         res.json(result);
@@ -654,7 +685,7 @@ const generateWorkflowReport = async (req, res) => {
 const chatQuoteAssistant = async (req, res) => {
     try {
         const { message, context } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         
         // Safety truncation
         const safeContext = JSON.stringify(context || {}).substring(0, 15000);
@@ -663,6 +694,7 @@ const chatQuoteAssistant = async (req, res) => {
             You are "Quote Strategist" & "Senior Estimator". ${memory} 
             
             **Mission:** Analyze the quote context and user request. Provide expert advice and suggest specific nodes to add.
+            You have access to historical diary logs to ensure quotes align with real-world site performance.
             
             **CRITICAL OUTPUT SCHEMA:**
             Return ONLY valid JSON.
@@ -702,18 +734,59 @@ const chatQuoteAssistant = async (req, res) => {
 
 const chatDiaryAssistant = async (req, res) => {
     try {
-        const { message } = req.body;
+        const { message, context } = req.body;
+        const memory = await getInstitutionalContext(req.user?.id);
         const mandate = await getSystemMandate(req.user?.id);
-        const systemPrompt = `${mandate} You are "Diary Assistant".`;
-        const result = await pinnacleAi.generateJSON(message, systemPrompt, 1000);
+        
+        // Safety truncation
+        const safeContext = JSON.stringify(context || {}).substring(0, 15000);
+
+        const systemPrompt = `
+            You are "Diary Strategist" & "Senior Site Partner". ${mandate} ${memory} 
+            
+            **Mission:** Analyze the site diary context and user request. Provide expert operational advice and suggest specific nodes or actions.
+            You can see ALL saved diaries in the 'INSTITUTIONAL MEMORY' above. Use them to identify recurring issues or successful patterns.
+            
+            **CRITICAL OUTPUT SCHEMA:**
+            Return ONLY valid JSON.
+            {
+                "reply": "Your advice here (approx 2 sentences).",
+                "suggestedActions": [
+                    { "type": "add_node", "label": "Item Name", "category": "material|staff|equipment", "cost": number, "quantity": number }
+                ],
+                "suggestedNodes": []
+            }
+            
+            **Input Context:** ${safeContext}
+        `;
+
+        let result;
+        try {
+            result = await pinnacleAi.generateJSON(message, systemPrompt, 3000);
+        } catch (aiError) {
+            console.error("Diary Assistant AI Failed:", aiError);
+            result = {
+                reply: "I'm having trouble analyzing the site logs right now, but I recommend reviewing your recent labor allocations.",
+                suggestedActions: [],
+                suggestedNodes: []
+            };
+        }
+
         res.json(result);
-    } catch (e) { res.json({ reply: "Offline" }); }
+    } catch (e) { 
+        console.error("Diary Assistant Fatal Error:", e);
+        res.json({ 
+            reply: "System Offline. Manual site review required.", 
+            suggestedActions: [], 
+            suggestedNodes: [] 
+        }); 
+    }
 };
 
 const chatSafetyAssistant = async (req, res) => {
     try {
         const { message, context } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const mandate = await getSystemMandate(req.user?.id);
         
         const safeContext = JSON.stringify(context || {}).substring(0, 15000);
@@ -765,7 +838,7 @@ const chatSafetyAssistant = async (req, res) => {
 const parseVoiceCommand = async (req, res) => {
     try {
         const { text } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         const mandate = await getSystemMandate(req.user?.id);
         
         const systemPrompt = `
@@ -859,7 +932,7 @@ const analyzeMapZone = async (req, res) => {
 const generateOracleIntelligence = async (req, res) => {
     try {
         const { context } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         
         const systemPrompt = `
             You are "Sovereign Oracle", the master predictive engine for a Tier-1 Construction Firm. ${memory}
@@ -930,7 +1003,7 @@ const generateOracleIntelligence = async (req, res) => {
 const optimizeFleet = async (req, res) => {
     try {
         const { weekStart, allocations, staff, projects } = req.body;
-        const memory = await getInstitutionalContext();
+        const memory = await getInstitutionalContext(req.user?.id);
         
         // Safety: Strip heavy objects to save tokens
         const leanAllocations = allocations.map(a => ({ id: a.id, resourceId: a.resourceId, projectId: a.projectId, day: a.startDate }));
@@ -980,35 +1053,18 @@ const optimizeFleet = async (req, res) => {
 const chatMapAssistant = async (req, res) => {
     try {
         const { message, context } = req.body;
+        const memory = await getInstitutionalContext(req.user?.id);
         
         // SPEED FIX: Use a slim mandate instead of fetching the entire enterprise packet
         const companyName = getSetting('companyName', 'Our Firm');
 
-        // --- GROUND TRUTH ENRICHMENT ---
-        let groundTruth = { weather: null, route: null };
-        const msg = (message || "").toLowerCase();
-
-        // Proactive Weather Check
-        if (msg.includes('weather') || msg.includes('rain') || msg.includes('wind') || msg.includes('pour')) {
-            const center = context?.center;
-            if (center) {
-                groundTruth.weather = await googleAdvanced.getSiteWeather(center.lat, center.lng);
-            }
-        }
-
-        // Proactive Modern Route Check
-        if (msg.includes('route') || msg.includes('how to get') || msg.includes('drive')) {
-            const hq = context?.hqLocation;
-            const target = context?.targetLocation;
-            if (hq && target) {
-                groundTruth.route = await googleAdvanced.calculateModernRoute(hq, target);
-            }
-        }
+        // ... Ground Truth logic ...
         
         const systemPrompt = `
             You are "GEO-COMMANDER", the high-level Geospatial Intelligence unit for ${companyName}.
             You have a direct bridge to Google Maps Live Data (Routes, Weather, Optimization).
-            
+            ${memory}
+
             **MISSION:** Provide LIGHTNING FAST geospatial analysis with Ground Truth data.
             
             **Ground Truth Intelligence (Live API Data):**

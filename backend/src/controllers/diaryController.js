@@ -18,6 +18,7 @@ const Joi = require('joi');
 const moment = require('moment');
 const { sequelize } = require('../models');
 const { getSetting } = require('../utils/settingsCache');
+const { processNewItems } = require('../utils/nodeSmartMatcher');
 
 const diarySchema = Joi.object({
   date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).required(),
@@ -133,6 +134,13 @@ const createDiary = async (req, res) => {
     const finishTime = moment(finish, 'HH:mm');
     const totalMinutes = finishTime.diff(startTime, 'minutes');
     const totalHours = totalMinutes / 60 - (breakMins || 0) / 60;
+
+    // --- SMART NODE PROCESSING ---
+    // If 'costs' or 'additionalCosts' contain raw items, process them into DB nodes
+    if (req.body.additionalCosts) {
+       req.body.additionalCosts = await processNewItems(req.body.additionalCosts, 'material', req.user.id);
+    }
+    // Note: If you have separate arrays for staff/equipment in the diary payload, process them here too.
 
     // Calculate hours breakdown
     const ordinaryHoursCalc = Math.min(totalHours, ordinaryHours);

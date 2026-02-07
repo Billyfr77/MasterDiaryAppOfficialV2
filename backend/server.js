@@ -280,6 +280,11 @@ app.get('/api/fix-schema', async (req, res) => {
   }
 });
 
+// --- SCHEMA DEBUG & REPAIR (LIVE) ---
+const schemaDebugController = require('./src/controllers/schemaDebugController');
+app.get('/api/debug/schema/quotes', schemaDebugController.inspectQuotesTable);
+app.get('/api/debug/fix-quotes', schemaDebugController.forceFixQuotesTable);
+
  // Map Data Routes for Enhanced Map Builder
         app.post('/api/map-data', async (req, res) => {
           try {
@@ -333,9 +338,19 @@ app.listen(PORT, () => {
 
 // Database connection (Background)
 db.sequelize.authenticate()
-  .then(() => {
+  .then(async () => {
     // Database connected successfully
     console.log('Database connected successfully.');
+    
+    // --- EMERGENCY: AUTO-REPAIR SCHEMA ON STARTUP ---
+    try {
+        console.log('Initiating Startup Schema Sync...');
+        const fixResults = await runSchemaFix();
+        console.log('Lattice Fix Results:', fixResults);
+    } catch (fixErr) {
+        console.error('Lattice Fix Failed:', fixErr.message);
+    }
+
     // Enable alter: true to ensure Postgres schema updates for new features (Map, Workflow, etc.)
     return db.sequelize.sync({ alter: true }); 
   })

@@ -49,23 +49,28 @@ const MainHeader = ({ darkMode, setDarkMode, setMobileMenuOpen }) => {
 
         const handleWheel = (e) => {
             if (e.deltaY === 0) return;
+            // Prevent vertical page scroll when scrolling over the nav bar
             e.preventDefault();
             el.scrollLeft += e.deltaY;
         };
 
-        el.addEventListener('wheel', handleWheel, { passive: false });
+        el.addEventListener('wheel', handleWheel, { passive: false }); 
         return () => el.removeEventListener('wheel', handleWheel);
     }, []);
 
     const handleNavScroll = (e) => {
         const { scrollWidth, clientWidth, scrollLeft } = e.target;
-        const widthPct = (clientWidth / scrollWidth) * 100;
-        setScrollThumbWidth(widthPct < 100 ? widthPct : 0);
         
+        // Use local variables to minimize state updates during high-frequency scroll
+        const widthPct = (clientWidth / scrollWidth) * 100;
         const maxScrollLeft = scrollWidth - clientWidth;
-        const scrollRatio = scrollLeft / maxScrollLeft;
+        const scrollRatio = maxScrollLeft > 0 ? scrollLeft / maxScrollLeft : 0;
         const maxThumbLeft = 100 - widthPct;
-        setScrollThumbLeft(scrollRatio * maxThumbLeft);
+        const leftPct = scrollRatio * maxThumbLeft;
+
+        // Batch state updates
+        setScrollThumbWidth(widthPct < 100 ? widthPct : 0);
+        setScrollThumbLeft(leftPct);
     };
 
     const handleThumbMouseDown = (e) => {
@@ -125,6 +130,7 @@ const MainHeader = ({ darkMode, setDarkMode, setMobileMenuOpen }) => {
                             onScroll={handleNavScroll}
                         >
                             <NavLink to="/hq" icon={<Globe size={16} />} label="Neural HQ" activeColor={theme.accent} />
+                            <NavLink to="/academy" icon={<Crown size={16} className="text-amber-400" />} label="Academy" activeColor={theme.accent} />
                             <NavLink to="/projects" icon={<Briefcase size={16} />} label="Projects" activeColor={theme.accent} />
                             <NavLink to="/diary" icon={<PenTool size={16} />} label="Diary" activeColor={theme.accent} />
                             <NavLink to="/resources" icon={<Calendar size={16} />} label="Resources" activeColor={theme.accent} />
@@ -145,8 +151,12 @@ const MainHeader = ({ darkMode, setDarkMode, setMobileMenuOpen }) => {
                         {scrollThumbWidth > 0 && scrollThumbWidth < 100 && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5 rounded-full opacity-0 group-hover/nav:opacity-100 transition-opacity duration-200">
                                 <div 
-                                    className="absolute top-0 bottom-0 rounded-full cursor-grab active:cursor-grabbing"
-                                    style={{ left: `${scrollThumbLeft}%`, width: `${scrollThumbWidth}%`, backgroundColor: theme.accent }}
+                                    className="absolute top-0 bottom-0 rounded-full cursor-grab active:cursor-grabbing will-change-transform"
+                                    style={{ 
+                                        width: `${scrollThumbWidth}%`, 
+                                        backgroundColor: theme.accent,
+                                        transform: `translateX(${scrollThumbLeft * (100 / scrollThumbWidth)}%)`
+                                    }}
                                     onMouseDown={handleThumbMouseDown}
                                 />
                             </div>

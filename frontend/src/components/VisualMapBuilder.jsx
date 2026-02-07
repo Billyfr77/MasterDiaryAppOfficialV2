@@ -186,33 +186,40 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
     const [diaries, setDiaries] = useState([]);
     const [quotes, setQuotes] = useState([]); 
     const [documents, setDocuments] = useState([]); 
+    const [invoices, setInvoices] = useState([]);
     const [allocations, setAllocations] = useState([]);
     const [safetyForms, setSafetyForms] = useState([]); 
+    const [jobs, setJobs] = useState([]);
     const [isAllocating, setIsAllocating] = useState(false);
     const [newAlloc, setNewAlloc] = useState({ type: 'staff', id: '', start: '', end: '', category: 'project' });
     const [uploadingCover, setUploadingCover] = useState(false);
 
     const loadProjectData = useCallback(async () => {
+        const projectId = project.projectId || project.id; // Support both cases
+        if (!projectId) return;
+
         setLoading(true);
         try {
             const [projectRes, allocRes, safetyRes, docRes] = await Promise.all([
-                api.get(`/projects/${project.id}`),
-                api.get(`/allocations?projectId=${project.id}&t=${Date.now()}`), 
-                api.get(`/safety?projectId=${project.id}`),
-                api.get(`/documents?projectId=${project.id}`)
+                api.get(`/projects/${projectId}`),
+                api.get(`/allocations?projectId=${projectId}&t=${Date.now()}`), 
+                api.get(`/safety?projectId=${projectId}`),
+                api.get(`/documents?projectId=${projectId}`)
             ]);
             const fullProject = projectRes.data;
             if (fullProject?.financials) setFinancials(fullProject.financials);
             setDiaries(fullProject.Diaries || fullProject.diaries || []); 
             setQuotes(fullProject.quotes || fullProject.Quotes || []);
+            setInvoices(fullProject.invoices || []);
+            setJobs(fullProject.jobs || []);
             setDocuments(docRes.data || []); 
             setAllocations(allocRes.data || []);
             setSafetyForms(safetyRes.data || []);
         } catch (e) { console.error("Hub Data Error", e); }
         setLoading(false);
-    }, [project.id]);
+    }, [project.id, project.projectId]);
 
-    useEffect(() => { if (project?.id) loadProjectData(); }, [project.id, loadProjectData]);
+    useEffect(() => { loadProjectData(); }, [loadProjectData]);
 
     const handleAllocate = async () => {
         if (!newAlloc.id || !newAlloc.start || !newAlloc.end) return alert("Please fill all fields");
@@ -246,7 +253,7 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
         try {
             const res = await api.post('/uploads', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             const newUrl = res.data.url;
-            await api.put(`/map-assets/${project.assetId}`, { properties: { ...project.properties, coverImage: newUrl } });
+            await api.put(`/map-assets/${project.id}`, { properties: { ...project.properties, coverImage: newUrl } });
             onUpdate(); 
         } catch(err) { alert("Upload Failed"); } finally { setUploadingCover(false); }
     };
@@ -265,11 +272,15 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
     const handleDocUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        const projectId = project.projectId || project.id;
+        if (!projectId) return;
+
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('projectId', projectId);
         try {
             const upRes = await api.post('/uploads', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-            await api.post('/documents', { title: file.name, relatedId: project.id, relatedModel: 'Project', metadata: { url: upRes.data.url } });
+            await api.post('/documents', { title: file.name, relatedId: projectId, relatedModel: 'Project', metadata: { url: upRes.data.url } });
             loadProjectData();
         } catch(err) { alert("Upload failed"); }
     };
@@ -291,32 +302,95 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
             </div>
             
             <div className="flex border-b border-white/5 bg-stone-900/50 p-1 sticky top-0 z-10">
-                {['overview', 'resources', 'safety', 'diaries', 'documents'].map(tab => (
+                {['overview', 'resources', 'activity', 'files'].map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 ${activeTab === tab ? 'border-indigo-500 text-white bg-white/5' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>{tab}</button>
                 ))}
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-8 bg-stone-950">
                 {activeTab === 'overview' && (
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-6 animate-fade-in">
+                        {/* Financial Grid */}
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-5 relative overflow-hidden">
-                                <h4 className="text-indigo-400 font-bold mb-1 text-xs uppercase tracking-wider">Live Value</h4>
-                                <div className="text-3xl font-black text-white">${(financials.livePrice || 0).toLocaleString()}</div>
+                                <h4 className="text-indigo-400 font-bold mb-1 text-[10px] uppercase tracking-wider">Live Value</h4>
+                                <div className="text-2xl font-black text-white">${(financials.livePrice || 0).toLocaleString()}</div>
+                                <div className="mt-1 text-[8px] text-indigo-300 flex gap-2">
+                                    <span>Contract: ${(financials.contractValue || 0).toLocaleString()}</span>
+                                </div>
+                            </div>
+                            <div className="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-5 relative overflow-hidden">
+                                <h4 className="text-violet-400 font-bold mb-1 text-[10px] uppercase tracking-wider">Actual Charge Out</h4>
+                                <div className="text-2xl font-black text-white">${(financials.totalDiaryRevenue || 0).toLocaleString()}</div>
                             </div>
                             <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 relative overflow-hidden">
-                                <h4 className="text-rose-400 font-bold mb-1 text-xs uppercase tracking-wider">In-House Costs</h4>
-                                <div className="text-3xl font-black text-white">${(financials.totalCost || 0).toLocaleString()}</div>
+                                <h4 className="text-rose-400 font-bold mb-1 text-[10px] uppercase tracking-wider">In-House Costs</h4>
+                                <div className="text-2xl font-black text-white">${(financials.totalCost || 0).toLocaleString()}</div>
+                            </div>
+                            <div className={`bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 relative overflow-hidden ${!financials.isProfitable && financials.profit < 0 ? 'bg-red-500/10 border-red-500/20' : ''}`}>
+                                <h4 className={`font-bold mb-1 text-[10px] uppercase tracking-wider ${financials.isProfitable ? 'text-emerald-400' : 'text-red-400'}`}>Net Profit</h4>
+                                <div className={`text-2xl font-black ${financials.isProfitable ? 'text-emerald-400' : 'text-red-400'}`}>${(financials.profit || 0).toLocaleString()}</div>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center"><h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Active Quotes</h3><button onClick={() => navigate('/quotes/builder', { state: { projectId: project.id } })} className="text-[10px] font-bold text-indigo-400 hover:text-white"><Plus size={12}/> New Quote</button></div>
-                            {quotes.map(q => <div key={q.id} className="p-3 bg-stone-900 rounded-xl border border-white/5 flex justify-between items-center group cursor-pointer hover:bg-stone-800" onClick={() => navigate('/quotes/builder', { state: { projectId: project.id, quoteId: q.id } })}><div className="text-xs font-bold text-white">{q.name}</div><div className={`text-[10px] font-bold uppercase ${q.status === 'approved' ? 'text-emerald-400' : 'text-amber-400'}`}>{q.status}</div></div>)}
+
+                        {/* Quick View Sections */}
+                        <div className="grid grid-cols-1 gap-6 mt-8">
+                            {/* Variations/Jobs */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center px-1">
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Variations & Jobs</h3>
+                                    <button 
+                                        onClick={async () => {
+                                            const ref = prompt("Enter Variation Reference:");
+                                            if(!ref) return;
+                                            const desc = prompt("Enter Description:");
+                                            if(!desc) return;
+                                            try {
+                                                await api.post('/jobs', { projectId: project.id, jobNumber: ref, serviceType: desc, status: 'active' });
+                                                loadProjectData();
+                                            } catch(e) { alert("Failed to create job"); }
+                                        }}
+                                        className="text-[10px] font-bold text-indigo-400 hover:text-white flex items-center gap-1"
+                                    >
+                                        <Plus size={12}/> New Job
+                                    </button>
+                                </div>
+                                <div className="space-y-2">
+                                    {jobs.map(job => (
+                                        <div key={job.id} className="p-3 bg-stone-900 rounded-xl border border-white/5 flex justify-between items-center">
+                                            <div>
+                                                <div className="text-xs font-bold text-white">#{job.jobNumber}</div>
+                                                <div className="text-[10px] text-gray-500">{job.serviceType}</div>
+                                            </div>
+                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${job.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-gray-500'}`}>{job.status}</span>
+                                        </div>
+                                    ))}
+                                    {jobs.length === 0 && <div className="text-[10px] text-gray-600 italic text-center py-2">No active variations</div>}
+                                </div>
+                            </div>
+
+                            {/* Recent Activity Mini-Feed */}
+                            <div className="space-y-3">
+                                <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Recent Site Activity</h3>
+                                <div className="space-y-2">
+                                    {diaries.slice(0, 3).map(d => (
+                                        <div key={d.id} className="p-3 bg-stone-900 rounded-xl border border-white/5 flex items-center gap-3 cursor-pointer hover:bg-stone-800 transition-colors" onClick={() => navigate('/diary', { state: { date: d.date, projectId: project.id } })}>
+                                            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400"><Calendar size={14}/></div>
+                                            <div className="flex-1">
+                                                <div className="text-xs font-bold text-white">{new Date(d.date).toLocaleDateString()}</div>
+                                                <div className="text-[10px] text-gray-500 truncate">{d.notes || 'Visual site log'}</div>
+                                            </div>
+                                            <ChevronRight size={14} className="text-gray-700" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
+
                 {activeTab === 'resources' && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 animate-fade-in">
                         <div className="flex justify-between items-center"><h3 className="text-sm font-black text-white uppercase tracking-wider">{isHQ ? 'HQ Resource Pool' : 'Site Allocations'}</h3><button onClick={() => setIsAllocating(!isAllocating)} className="text-xs font-bold text-emerald-400 flex items-center gap-1"><Plus size={14} /> Assign</button></div>
                         {isAllocating && (
                             <div className="bg-stone-900 p-4 rounded-xl border border-emerald-500/30 space-y-3">
@@ -326,15 +400,128 @@ const ProjectHubDrawer = ({ project, onClose, onDelete, onUpdate, allStaff, allE
                                 <button onClick={handleAllocate} className="w-full py-2 bg-emerald-600 text-xs font-bold text-white rounded">Confirm Assignment</button>
                             </div>
                         )}
-                        <div className="bg-stone-900 border border-white/5 rounded-xl overflow-hidden shadow-lg p-4">
-                            {activeResources.map(resource => <div key={resource.id} className="p-3 border-b border-white/5 flex justify-between items-center"><div className="text-xs font-bold text-white">{resource.name}</div><button onClick={() => { const a = allocations.find(x => x.resourceId === resource.id); if(a) handleRemoveAllocation(a.id); }} className="text-rose-500 hover:text-rose-400"><X size={14}/></button></div>)}
+                        <div className="bg-stone-900 border border-white/5 rounded-xl overflow-hidden shadow-lg p-2">
+                            {activeResources.map(resource => (
+                                <div key={resource.id} className="p-3 border-b border-white/5 last:border-none flex justify-between items-center group">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg ${resource.type === 'staff' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                                            {resource.type === 'staff' ? <User size={14}/> : <Wrench size={14}/>}
+                                        </div>
+                                        <div className="text-xs font-bold text-white">{resource.name}</div>
+                                    </div>
+                                    <button onClick={() => { const a = allocations.find(x => x.resourceId === resource.id); if(a) handleRemoveAllocation(a.id); }} className="p-2 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"><X size={14}/></button>
+                                </div>
+                            ))}
+                            {activeResources.length === 0 && <div className="text-center py-10 text-gray-600 text-xs italic">No resources allocated to this hub.</div>}
                         </div>
                     </div>
                 )}
-                {activeTab === 'documents' && (
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center"><h3 className="text-sm font-black text-white uppercase tracking-wider">Associated Documents</h3><label className="text-xs font-bold text-indigo-400 hover:text-white cursor-pointer flex items-center gap-1"><Plus size={14}/> Upload<input type="file" className="hidden" onChange={handleDocUpload} /></label></div>
-                        {documents.map(doc => <div key={doc.id} className="p-3 bg-stone-900 rounded-xl border border-white/5 flex items-center gap-3 group"><div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400"><FileText size={16}/></div><div className="flex-1 text-sm font-bold text-white">{doc.title}</div>{doc.metadata?.url && <a href={doc.metadata.url} target="_blank" rel="noreferrer" className="p-2 text-gray-400 hover:text-white"><ExternalLink size={16}/></a>}</div>)}
+
+                {activeTab === 'activity' && (
+                    <div className="space-y-8 animate-fade-in">
+                        {/* Quotes */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center px-1">
+                                <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Historical Quotes</h3>
+                                <button onClick={() => navigate('/quotes/builder', { state: { projectId: project.id } })} className="text-[10px] font-bold text-indigo-400 hover:text-white flex items-center gap-1"><Plus size={12}/> New Quote</button>
+                            </div>
+                            <div className="grid gap-3">
+                                {quotes.map(q => (
+                                    <div key={q.id} className="p-4 bg-stone-900 rounded-2xl border border-white/5 flex justify-between items-center group cursor-pointer hover:bg-stone-800 transition-all" onClick={() => navigate('/quotes/builder', { state: { projectId: project.id, quoteId: q.id } })}>
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-violet-500/10 rounded-lg text-violet-400"><DollarSign size={16}/></div>
+                                            <div>
+                                                <div className="text-xs font-bold text-white truncate max-w-[200px]">{q.name}</div>
+                                                <div className="text-[10px] text-gray-500">{new Date(q.createdAt).toLocaleDateString()}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-xs font-mono font-black text-white">${parseFloat(q.totalRevenue).toLocaleString()}</div>
+                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${q.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>{q.status}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {quotes.length === 0 && <div className="text-center py-10 text-gray-600 text-xs italic">No quotes generated for this project.</div>}
+                            </div>
+                        </div>
+
+                        {/* Safety Forms */}
+                        <div className="space-y-3">
+                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Safety & Compliance</h3>
+                            <div className="grid gap-3">
+                                {safetyForms.map(form => (
+                                    <div key={form.id} className="p-4 bg-stone-900 rounded-2xl border border-white/5 flex items-center gap-3 cursor-pointer hover:bg-stone-800 transition-all" onClick={() => navigate(`/safety/${form.id}`)}>
+                                        <div className="p-2 bg-rose-500/10 rounded-lg text-rose-400"><CheckCircle2 size={16}/></div>
+                                        <div className="flex-1">
+                                            <div className="text-xs font-bold text-white truncate">{form.title}</div>
+                                            <div className="text-[10px] text-gray-500">{form.type} • {new Date(form.createdAt).toLocaleDateString()}</div>
+                                        </div>
+                                        <ChevronRight size={14} className="text-gray-700" />
+                                    </div>
+                                ))}
+                                {safetyForms.length === 0 && <div className="text-center py-10 text-gray-600 text-xs italic">No safety documentation found.</div>}
+                            </div>
+                        </div>
+
+                        {/* Invoices */}
+                        <div className="space-y-3">
+                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Financial Invoices</h3>
+                            <div className="grid gap-3">
+                                {invoices.map(inv => (
+                                    <div key={inv.id} className="p-4 bg-stone-900 rounded-2xl border border-white/5 flex justify-between items-center cursor-pointer hover:bg-stone-800 transition-all" onClick={() => navigate('/invoices', { state: { invoice: inv } })}>
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400"><CreditCard size={16}/></div>
+                                            <div>
+                                                <div className="text-xs font-bold text-white truncate">#{inv.invoiceNumber}</div>
+                                                <div className="text-[10px] text-gray-500">{new Date(inv.createdAt).toLocaleDateString()}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-xs font-mono font-black text-white">${parseFloat(inv.totalAmount).toLocaleString()}</div>
+                                            <span className={`text-[8px] font-black uppercase ${inv.status==='paid'?'text-emerald-400':inv.status==='sent'?'text-blue-400':'text-gray-400'}`}>{inv.status}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {invoices.length === 0 && <div className="text-center py-10 text-gray-600 text-xs italic">No invoices issued.</div>}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'files' && (
+                    <div className="space-y-6 animate-fade-in">
+                        <div className="border-2 border-dashed border-white/10 rounded-2xl p-10 text-center bg-stone-900/30 group hover:border-indigo-500/50 transition-all">
+                            <input type="file" id="map-hub-doc" className="hidden" onChange={handleDocUpload} />
+                            <label htmlFor="map-hub-doc" className="cursor-pointer flex flex-col items-center gap-3">
+                                <Upload size={32} className="text-gray-600 group-hover:text-indigo-400 transition-colors" />
+                                <span className="text-sm font-bold text-gray-400 group-hover:text-white transition-colors">Upload Document to Vault</span>
+                                <span className="text-[10px] text-gray-600 uppercase tracking-widest">PDF, Images, CAD, Office</span>
+                            </label>
+                        </div>
+
+                        <div className="space-y-3">
+                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Institutional Files</h3>
+                            {documents.map(doc => (
+                                <div key={doc.id} className="p-4 bg-stone-900 rounded-2xl border border-white/5 flex items-center gap-4 hover:border-white/20 transition-all group">
+                                    <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400"><FileText size={18}/></div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-bold text-white truncate">{doc.title}</div>
+                                        <div className="text-[10px] text-gray-500 uppercase font-mono tracking-tighter">{new Date(doc.createdAt).toLocaleDateString()}</div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {doc.metadata?.url && (
+                                            <a href={doc.metadata.url} target="_blank" rel="noreferrer" className="p-2 bg-white/5 hover:bg-indigo-600 hover:text-white rounded-lg text-gray-400 transition-all shadow-lg">
+                                                <ExternalLink size={16}/>
+                                            </a>
+                                        )}
+                                        <button onClick={() => navigate('/hq')} className="p-2 bg-white/5 hover:bg-purple-600 hover:text-white rounded-lg text-gray-400 transition-all opacity-0 group-hover:opacity-100 shadow-lg" title="Analyze with AI Partner">
+                                            <Sparkles size={16}/>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            {documents.length === 0 && <div className="text-center py-20 text-gray-700 italic">No files in vault</div>}
+                        </div>
                     </div>
                 )}
             </div>

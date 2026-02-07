@@ -802,7 +802,14 @@ export default function ExecutiveHQ() {
                                         </div>
                                         
                                         <div className="grid grid-cols-3 gap-x-12 gap-y-6 relative z-10">
-                                            <PortfolioMetric icon={DollarSign} label="Paid Capital" value={`$${(meshStats.totalPaid/1000000).toFixed(2)}M`} color="text-emerald-400" />
+                                            <PortfolioMetric 
+                                                icon={DollarSign} 
+                                                label="Paid Capital" 
+                                                value={meshStats.totalPaid >= 1000000 
+                                                    ? `$${(meshStats.totalPaid/1000000).toFixed(2)}M` 
+                                                    : `$${(meshStats.totalPaid/1000).toFixed(0)}k`} 
+                                                color="text-emerald-400" 
+                                            />
                                             <PortfolioMetric icon={TrendingUp} label="Net Margin" value={meshStats.netMargin} color="text-indigo-400" />
                                             <PortfolioMetric icon={Users} label="Contention" value={`${Math.round((intelligence?.mesh?.resourceContentionIndex || 0) * 100)}%`} color="text-rose-400" />
                                             <PortfolioMetric icon={Activity} label="Velocity Drift" value={intelligence?.mesh?.velocityDrift || '0.00'} color={parseFloat(intelligence?.mesh?.velocityDrift) > 0 ? 'text-rose-500' : 'text-emerald-400'} />

@@ -47,6 +47,7 @@ import { SmartEdgeTypes } from './TimelineCanvas/SmartEdges'
 import ResourceSidebar from './ResourceSidebar'
 import AestheticPicker from './PaintDiary/AestheticPicker'
 import QuoteIntelligenceLayer from './Quotes/QuoteIntelligenceLayer'
+import PremiumLoader from './ui/PremiumLoader'
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-US', {
@@ -181,7 +182,14 @@ const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
 
 const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
   const [isEditing, setIsEditing] = useState(false)
-  const rate = item.customRate !== undefined ? item.customRate : (item.type === 'staff' ? item.material.chargeRate : item.type === 'equipment' ? item.material.costRate : item.material.pricePerUnit);
+  const rate = useMemo(() => {
+      if (item.customRate !== undefined) return parseFloat(item.customRate) || 0;
+      if (item.material) {
+          return parseFloat(item.material.chargeRate || item.material.costRate || item.material.pricePerUnit || item.material.price || 0);
+      }
+      return 0;
+  }, [item]);
+
   return (
     <div className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 group hover:shadow-md ${item.type === 'staff' ? 'bg-emerald-900/10 border-emerald-500/20' : item.type === 'equipment' ? 'bg-amber-900/10 border-amber-500/20' : 'bg-indigo-900/10 border-indigo-500/20'}`}>
       <div className="flex items-center gap-3 overflow-hidden">
@@ -199,8 +207,8 @@ const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
           <div className="text-right">
               <span className="text-[9px] text-indigo-500 font-black uppercase block tracking-tighter">Qty</span>
               {isEditing ? (
-                  <input type="number" className="w-14 bg-slate-900 border border-indigo-500 text-white text-xs px-2 py-1 rounded-lg text-right outline-none" defaultValue={item.quantity} onBlur={(e) => { const val = parseFloat(e.target.value); if (val > 0) onUpdate(item.tempId, { quantity: val }); }} />
-              ) : <div onClick={() => setIsEditing(true)} className="text-sm font-mono font-bold text-white cursor-pointer hover:text-indigo-400">{item.quantity.toFixed(2)}</div>}
+                  <input type="number" className="w-14 bg-slate-900 border border-indigo-500 text-white text-xs px-2 py-1 rounded-lg text-right outline-none" defaultValue={item.quantity} onBlur={(e) => { const val = parseFloat(e.target.value); if (!isNaN(val)) onUpdate(item.tempId, { quantity: val }); setIsEditing(false); }} />
+              ) : <div onClick={() => setIsEditing(true)} className="text-sm font-mono font-bold text-white cursor-pointer hover:text-indigo-400">{(parseFloat(item.quantity) || 0).toFixed(2)}</div>}
           </div>
           <div className="text-right min-w-[80px]">
               <span className="text-[9px] text-indigo-500 font-black uppercase block tracking-tighter">Total</span>
@@ -240,8 +248,6 @@ const LoadQuoteModal = ({ isOpen, onClose, onLoad, quotes, isLoading }) => {
         </div>
     );
 };
-
-import PremiumLoader from './ui/PremiumLoader'
 
 const QuoteBuilderContent = () => {
   const navigate = useNavigate(); const location = useLocation(); const { id } = useParams(); const { addNotification } = useNotification();
@@ -293,6 +299,117 @@ const QuoteBuilderContent = () => {
   const [historicalDeltas, setHistoricalDeltas] = useState({});
   const [showIntelligence, setShowIntelligence] = useState(false);
   const [conflictState, setConflictState] = useState({ isOpen: false, serverData: null });
+
+  const updateItemNodeData = useCallback((nodeId, updates) => {
+      setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n));
+  }, [setNodes]);
+
+  const allBillableItems = useMemo(() => {
+      // 1. Manual BOM Items (Direct from library or added via sidebar)
+      const manual = quoteItems.map(i => ({ ...i, isDynamic: false }));
+      
+      // 2. Dynamic Node Items (Canvas Power Nodes & Direct Staff/Equip nodes)
+      const dynamic = nodes
+          .filter(n => ['quoteMaterial', 'quoteLabour', 'staff', 'equipment', 'glass'].includes(n.type))
+          .map(n => {
+              const isMatNode = n.type === 'quoteMaterial';
+              const isLabourNode = n.type === 'quoteLabour';
+              const isGeneric = n.type === 'glass' || n.type === 'staff' || n.type === 'equipment';
+              
+              const area = n.data?.inheritedArea || 0;
+              let qty = 1;
+              
+              if (isMatNode) qty = area > 0 ? (area / (n.data?.coverage || 10)) * (1 + (n.data?.waste || 10) / 100) : (parseFloat(n.data?.quantity) || 1);
+              else if (isLabourNode) qty = area > 0 ? (area / (n.data?.prodRate || 2)) : (parseFloat(n.data?.duration) || 8);
+              else if (isGeneric) qty = parseFloat(n.data?.duration || n.data?.quantity || 1);
+              
+              const rate = parseFloat(n.data?.rate || 0);
+              
+              return {
+                  nodeId: n.data?.nodeId || n.id,
+                  tempId: n.id,
+                  quantity: qty,
+                  material: { 
+                      name: n.data?.label || n.data?.name || (isMatNode ? 'Material' : isLabourNode ? 'Labour' : 'Item'), 
+                      pricePerUnit: rate,
+                      chargeRate: rate,
+                      costRate: rate
+                  },
+                  type: (isLabourNode || n.data?.type === 'staff') ? 'staff' : (n.data?.type === 'equipment' ? 'equipment' : 'material'),
+                  customRate: rate,
+                  isDynamic: true
+              };
+          });
+      
+      // Filter out duplicates (if a node is already in quoteItems BOM)
+      const dynamicUnique = dynamic.filter(d => !manual.some(m => m.tempId === d.tempId));
+      
+      return [...manual, ...dynamicUnique];
+  }, [quoteItems, nodes]);
+
+  const financials = useMemo(() => {
+      let mats = 0, stf = 0, eqp = 0;
+
+      allBillableItems.forEach(item => {
+          const val = item.quantity * (item.customRate || 0);
+          if (item.type === 'staff') stf += val;
+          else if (item.type === 'equipment') eqp += val;
+          else mats += val;
+      });
+
+      // Profit Node Adjustment
+      const profitNode = nodes.find(n => n.type === 'profitNode');
+      const markup = profitNode ? (profitNode.data?.markup || 0) : marginPct;
+      const overhead = profitNode ? (profitNode.data?.overhead || 0) : 0;
+      const contingency = profitNode ? (profitNode.data?.contingency || 0) : 0;
+
+      const subtotal = mats + stf + eqp;
+      const total = subtotal * (1 + markup / 100) * (1 + overhead / 100) * (1 + contingency / 100);
+
+      // Update profit node with subtotal for its internal calculation
+      if (profitNode && Math.abs((profitNode.data?.quoteTotal || 0) - subtotal) > 1) {
+          setTimeout(() => updateItemNodeData(profitNode.id, { quoteTotal: subtotal }), 0);
+      }
+
+      // Update Estimation Prism Node
+      const prismNode = nodes.find(n => n.type === 'estimationPrism');
+      if (prismNode) {
+          const margin = ((total - subtotal) / (total || 1) * 100).toFixed(1) + '%';
+          if (prismNode.data.quoteTotal !== total || prismNode.data.profitMargin !== margin) {
+              setTimeout(() => updateItemNodeData(prismNode.id, { quoteTotal: total, profitMargin: margin }), 0);
+          }
+      }
+
+      return { materials: mats, staff: stf, equipment: eqp, subtotal, total };
+  }, [allBillableItems, nodes, marginPct, updateItemNodeData]);
+
+  // --- PERSISTENCE LAYER ---
+  useEffect(() => {
+      const savedState = localStorage.getItem('quote_builder_state');
+      if (savedState) {
+          try {
+              const { nodes: sNodes, edges: sEdges, items: sItems, project: sProject, settings: sSettings } = JSON.parse(savedState);
+              // Only restore if we are NOT loading a specific ID from URL (unless it matches)
+              if (!id || (sSettings?.id === id)) {
+                  if (sNodes) setNodes(sNodes);
+                  if (sEdges) setEdges(sEdges);
+                  if (sItems) setQuoteItems(sItems);
+                  if (sProject) setSelectedProject(sProject);
+                  if (sSettings) setQuoteSettings(sSettings);
+                  addNotification('info', 'Session Restored', 'Your previous work has been recovered.');
+              }
+          } catch (e) {
+              console.error("Failed to restore state:", e);
+          }
+      }
+  }, []);
+
+  useEffect(() => {
+      const stateToSave = {
+          nodes, edges, items: quoteItems, project: selectedProject, settings: { ...quoteSettings, id }
+      };
+      localStorage.setItem('quote_builder_state', JSON.stringify(stateToSave));
+  }, [nodes, edges, quoteItems, selectedProject, quoteSettings, id]);
 
   // --- PROTOCOL GAMMA: FETCH LEARNING DATA ---
   useEffect(() => {
@@ -646,10 +763,6 @@ const QuoteBuilderContent = () => {
       setPendingNode(null); 
   };
 
-  const updateItemNodeData = useCallback((nodeId, updates) => {
-      setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n));
-  }, [setNodes]);
-  
   const handleNewQuote = () => {
       if(quoteItems.length > 0 && !confirm("Discard current quote?")) return;
       setNodes([]);
@@ -695,8 +808,8 @@ const QuoteBuilderContent = () => {
 
       try { 
           const payload = { 
-              projectId: selectedProject, 
-              clientId: quoteSettings.clientId, 
+              projectId: selectedProject || null, 
+              clientId: quoteSettings.clientId || null, 
               marginPct, 
               totalCost: financials.subtotal, 
               totalRevenue: financials.total, 
@@ -715,6 +828,7 @@ const QuoteBuilderContent = () => {
           
           addNotification('success', 'Quote Saved'); 
           setConflictState({ isOpen: false, serverData: null });
+          localStorage.removeItem('quote_builder_state'); // Clear persistence on successful save
       } catch (err) { 
           if (err.response?.status === 409) {
               setConflictState({ isOpen: true, serverData: err.response.data.currentRecord });
@@ -791,6 +905,9 @@ const QuoteBuilderContent = () => {
                   
                   // Item Category (staff/equip/material)
                   const itemCategory = n.data.nodeType || n.data.category || 'material';
+                  
+                  // CRITICAL: Ensure AI nodes have a persistent ID for backend mapping
+                  const aiNodeId = n.data.nodeId || n.id || `ai-gen-${Math.random().toString(36).substr(2, 9)}`;
 
                   newNodes.push({
                       id: nodeId,
@@ -799,6 +916,8 @@ const QuoteBuilderContent = () => {
                       data: {
                           ...getSmartDefaults(n.data.label || n.data.name),
                           ...n.data, 
+                          nodeId: aiNodeId, // Explicitly set for backend matching
+                          isNew: true,      // Explicitly flag as new for backend creation
                           duration: (itemCategory === 'staff' || itemCategory === 'equipment') ? (n.data.quantity || 1) : 0, 
                           label: n.data.label || 'New Item',
                           type: itemCategory, // Correctly map for DiaryNode coloring
@@ -815,7 +934,7 @@ const QuoteBuilderContent = () => {
 
                   if (!isContainer) {
                       newItems.push({
-                          nodeId: n.data.nodeId || n.id,
+                          nodeId: aiNodeId, // Use the same ID as above
                           tempId: nodeId,
                           quantity: n.data.quantity || 1,
                           material: { name: n.data.label || n.label, price: n.data.cost || 0 },
@@ -1021,30 +1140,43 @@ const QuoteBuilderContent = () => {
                           status: q.status
                       });
 
-                      // CLONE NODE SAFETY LOGIC
-                      // If nodes in the quote don't exist in the current library, 
-                      // we keep them alive using the data saved in the quote blob.
+                      const savedItems = (q.items || q.quoteItems || []);
+                      setQuoteItems(savedItems);
+
+                      // CLONE NODE SAFETY & DATA RESTORATION LOGIC
                       const savedNodes = (q.nodes || []).map(node => {
                           const exists = [...materialsList, ...staffList, ...equipmentList].some(item => item.id === node.data?.nodeId || item.id === node.id);
+                          
+                          // Link back to BOM items for value synchronization
+                          const linkedItem = savedItems.find(i => i.tempId === node.id || i.nodeId === node.id || (node.data?.nodeId && i.nodeId === node.data.nodeId));
+
+                          // 1. Safety Clone for 'glass' nodes
                           if (!exists && node.type === 'glass') {
-                              console.warn(`[Safety] Node ${node.id} missing from library. Using Clone.`);
-                              return { ...node, data: { ...node.data, isClone: true, subLabel: 'Archived Node' } };
+                              return { ...node, data: { ...node.data, isClone: true, subLabel: 'Archived Node', onUpdate: updateItemNodeData, onDelete: () => deleteNode(node.id) } };
                           }
-                          return node;
+
+                          // 2. Data Restoration for Power Nodes (Materials/Labour)
+                          if (['quoteMaterial', 'quoteLabour', 'glass', 'staff', 'equipment'].includes(node.type)) {
+                              // Restore vital stats if missing from node.data
+                              const restoredData = {
+                                  ...node.data,
+                                  label: node.data?.label || linkedItem?.material?.name || 'Restored Item',
+                                  rate: node.data?.rate !== undefined ? node.data.rate : (linkedItem?.customRate || linkedItem?.material?.price || linkedItem?.material?.pricePerUnit || linkedItem?.material?.chargeRate || 0),
+                                  quantity: node.data?.quantity !== undefined ? node.data.quantity : (linkedItem?.quantity || 1),
+                                  coverage: node.data?.coverage || 10,
+                                  waste: node.data?.waste || 10,
+                                  prodRate: node.data?.prodRate || 2,
+                                  onUpdate: updateItemNodeData,
+                                  onDelete: () => deleteNode(node.id)
+                              };
+                              return { ...node, data: restoredData };
+                          }
+
+                          return { ...node, data: { ...node.data, onUpdate: updateItemNodeData, onDelete: () => deleteNode(node.id) } };
                       });
 
-                      setNodes(savedNodes.map(n => ({
-                          ...n,
-                          data: {
-                              ...n.data,
-                              onUpdate: updateItemNodeData,
-                              onDelete: () => deleteNode(n.id)
-                          }
-                      })));
+                      setNodes(savedNodes);
                       setEdges(q.edges || []);
-                      
-                      const savedItems = (q.staff || []).concat(q.equipment || []).concat(q.nodes.filter(n => !['zone', 'dimension', 'areaNode', 'quoteMaterial', 'quoteLabour'].includes(n.type)));
-                      setQuoteItems(q.items || q.quoteItems || []); // Handle different schema versions
                   }
               }
           } catch (error) {
@@ -1093,84 +1225,6 @@ const QuoteBuilderContent = () => {
           } 
       });
   };
-
-  const financials = useMemo(() => {
-      // Standard BOM items
-      const mats = quoteItems.filter(i => i.type === 'material').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.pricePerUnit || 0)), 0);
-      const stf = quoteItems.filter(i => i.type === 'staff').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.chargeRate || 0)), 0);
-      const eqp = quoteItems.filter(i => i.type === 'equipment').reduce((acc, i) => acc + (i.quantity * (i.customRate || i.material?.costRate || 0)), 0);
-
-      // Dynamic Canvas Nodes (NEE specific)
-      const dynamicMats = nodes.filter(n => n.type === 'quoteMaterial').reduce((acc, n) => {
-          const area = n.data?.inheritedArea || 0;
-          const qty = area > 0 ? (area / (n.data?.coverage || 10)) * (1 + (n.data?.waste || 10) / 100) : (n.data?.quantity || 1);
-          return acc + (qty * (n.data?.rate || 0));
-      }, 0);
-
-      const dynamicLabour = nodes.filter(n => n.type === 'quoteLabour').reduce((acc, n) => {
-          const area = n.data?.inheritedArea || 0;
-          const hours = area > 0 ? (area / (n.data?.prodRate || 2)) : (n.data?.duration || 8);
-          return acc + (hours * (n.data?.rate || 0));
-      }, 0);
-
-      // Profit Node Adjustment
-      const profitNode = nodes.find(n => n.type === 'profitNode');
-      const markup = profitNode ? (profitNode.data?.markup || 0) : marginPct;
-      const overhead = profitNode ? (profitNode.data?.overhead || 0) : 0;
-      const contingency = profitNode ? (profitNode.data?.contingency || 0) : 0;
-
-      const subtotal = mats + stf + eqp + dynamicMats + dynamicLabour;
-      const total = subtotal * (1 + markup / 100) * (1 + overhead / 100) * (1 + contingency / 100);
-
-      // Update profit node with subtotal for its internal calculation
-      if (profitNode && Math.abs(profitNode.data?.quoteTotal - subtotal) > 1) {
-          setTimeout(() => updateItem(profitNode.id, { quoteTotal: subtotal }), 0);
-      }
-
-      // Update Estimation Prism Node
-      const prismNode = nodes.find(n => n.type === 'estimationPrism');
-      if (prismNode) {
-          const margin = ((total - subtotal) / (total || 1) * 100).toFixed(1) + '%';
-          if (prismNode.data.quoteTotal !== total || prismNode.data.profitMargin !== margin) {
-              setTimeout(() => updateItem(prismNode.id, { quoteTotal: total, profitMargin: margin }), 0);
-          }
-      }
-
-      return { materials: mats + dynamicMats, staff: stf + dynamicLabour, equipment: eqp, subtotal, total };
-  }, [quoteItems, nodes, marginPct, updateItem]);
-
-  const allBillableItems = useMemo(() => {
-      // 1. Manual Items
-      const manual = quoteItems.map(i => ({ ...i, isDynamic: false }));
-      
-      // 2. Dynamic Node Items (Canvas)
-      const dynamic = nodes
-          .filter(n => ['quoteMaterial', 'quoteLabour'].includes(n.type))
-          .map(n => {
-              const isMat = n.type === 'quoteMaterial';
-              const area = n.data?.inheritedArea || 0;
-              const qty = isMat 
-                  ? (area > 0 ? (area / (n.data?.coverage || 10)) * (1 + (n.data?.waste || 10) / 100) : (n.data?.quantity || 1))
-                  : (area > 0 ? (area / (n.data?.prodRate || 2)) : (n.data?.duration || 8));
-              
-              return {
-                  nodeId: n.id,
-                  tempId: n.id,
-                  quantity: qty,
-                  material: { 
-                      name: n.data?.label || (isMat ? 'Material' : 'Labour'), 
-                      pricePerUnit: n.data?.rate || 0,
-                      chargeRate: n.data?.rate || 0,
-                      costRate: n.data?.rate || 0
-                  },
-                  type: isMat ? 'material' : 'staff',
-                  customRate: n.data?.rate,
-                  isDynamic: true
-              };
-          });
-      
-      return [...manual, ...dynamic];
-  }, [quoteItems, nodes]);
 
   // AI COPILOT CONTEXT BRIDGE
   useEffect(() => {
@@ -1223,7 +1277,7 @@ const QuoteBuilderContent = () => {
           <div className="fixed w-32 h-32 rounded-full border-4 border-emerald-400 bg-emerald-400/20 animate-ping pointer-events-none z-[100]" style={{ left: dropLocation.x - 64, top: dropLocation.y - 64 }} />
       )}
 
-      <div className={`relative z-10 flex flex-col h-screen overflow-hidden transition-all duration-500 ${showMap ? 'bg-stone-900/40 backdrop-blur-sm' : ''}`}>
+      <div className={`relative z-10 flex flex-col h-screen overflow-hidden transition-all duration-500 ${showMap ? 'bg-stone-900/40 backdrop-blur-sm' : ''}`} style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden', isolation: 'isolate' }}>
         <ConfigModal isOpen={!!pendingNode} item={pendingNode?.item} suggestedQuantity={pendingNode?.suggestedQuantity} onClose={() => setPendingNode(null)} onConfirm={handleAddNode} />
         
         {(isGeneratingBlueprint || dataLoading) && (
@@ -1238,7 +1292,7 @@ const QuoteBuilderContent = () => {
         )}
 
         {/* FIXED HEADER */}
-        <div className="w-full px-4 pt-4 mb-4 shrink-0">
+        <div className="w-full px-4 pt-4 mb-4 shrink-0 relative z-[60]" style={{ transform: 'translateZ(0)' }}>
         <PowerHeader 
             title="Quote Builder" 
             icon={Crown} 
@@ -1266,7 +1320,7 @@ const QuoteBuilderContent = () => {
             <button onClick={() => startOnboarding('quote')} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-widest flex items-center gap-2 mr-2"><GraduationCap size={16} /> Training</button>
 
             <button onClick={handleNewQuote} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg"><Plus size={16} /> New</button>
-            <button onClick={() => setShowLoadModal(true)} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg"><Folder size={16} /> Load</button>
+            <button onClick={openLoadModal} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg"><Folder size={16} /> Load</button>
             
             <select value={selectedProject || ''} onChange={(e) => setSelectedProject(e.target.value)} className={`px-4 py-2.5 bg-black/40 border border-white/10 text-white rounded-xl font-bold min-w-[180px] hover:border-${theme.primary}-500 transition-all cursor-pointer text-xs outline-none`}>
                 <option value="">Select Project...</option>

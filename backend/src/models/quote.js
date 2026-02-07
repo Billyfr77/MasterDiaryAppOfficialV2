@@ -50,7 +50,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     projectId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'Projects',
         key: 'id'
@@ -65,6 +65,11 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     nodes: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: []
+    },
+    edges: {
       type: DataTypes.JSON,
       allowNull: false,
       defaultValue: []

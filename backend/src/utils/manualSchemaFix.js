@@ -25,6 +25,37 @@ async function runSchemaFix() {
       }
     } catch (e) { results.push(`Error checking Staff: ${e.message}`); }
 
+    // 1.1 Fix Clients Table
+    try {
+      console.log('Checking Clients table...');
+      try {
+          await queryInterface.describeTable('Clients');
+      } catch (e) {
+          console.log('Clients table missing, creating...');
+          await queryInterface.createTable('Clients', {
+              id: { type: sequelize.Sequelize.UUID, primaryKey: true, defaultValue: sequelize.Sequelize.UUIDV4 },
+              name: { type: sequelize.Sequelize.STRING, allowNull: false },
+              company: { type: sequelize.Sequelize.STRING, allowNull: true },
+              email: { type: sequelize.Sequelize.STRING, allowNull: true },
+              phone: { type: sequelize.Sequelize.STRING, allowNull: true },
+              address: { type: sequelize.Sequelize.TEXT, allowNull: true },
+              notes: { type: sequelize.Sequelize.TEXT, allowNull: true },
+              status: { type: sequelize.Sequelize.STRING, defaultValue: 'active' }, // Use STRING instead of ENUM for better compatibility during alter
+              userId: { type: sequelize.Sequelize.UUID, allowNull: true },
+              tags: { type: sequelize.Sequelize.JSON, defaultValue: [] },
+              createdAt: { type: sequelize.Sequelize.DATE, allowNull: false },
+              updatedAt: { type: sequelize.Sequelize.DATE, allowNull: false }
+          });
+          results.push('Created Clients table');
+      }
+      
+      const clientTable = await queryInterface.describeTable('Clients');
+      if (!clientTable.userId) {
+          await queryInterface.addColumn('Clients', 'userId', { type: sequelize.Sequelize.UUID, allowNull: true });
+          results.push('Added userId to Clients');
+      }
+    } catch (e) { results.push(`Error checking Clients: ${e.message}`); }
+
     // 2. Fix Nodes Table
     try {
       console.log('Checking Nodes table...');
@@ -43,6 +74,10 @@ async function runSchemaFix() {
         await queryInterface.addColumn('Projects', 'version', { type: sequelize.Sequelize.INTEGER, allowNull: false, defaultValue: 0 });
         results.push('Added version to Projects');
       }
+      if (!table.clientId) {
+        await queryInterface.addColumn('Projects', 'clientId', { type: sequelize.Sequelize.UUID, allowNull: true });
+        results.push('Added clientId to Projects');
+      }
     } catch (e) { results.push(`Error checking Projects: ${e.message}`); }
 
     // 4. Fix Quotes Table
@@ -53,22 +88,67 @@ async function runSchemaFix() {
         await queryInterface.addColumn('Quotes', 'version', { type: sequelize.Sequelize.INTEGER, allowNull: false, defaultValue: 0 });
         results.push('Added version to Quotes');
       }
+      if (!table.edges) {
+        await queryInterface.addColumn('Quotes', 'edges', { type: sequelize.Sequelize.JSON, allowNull: false, defaultValue: [] });
+        results.push('Added edges to Quotes');
+      }
+      if (!table.clientId) {
+        await queryInterface.addColumn('Quotes', 'clientId', { type: sequelize.Sequelize.UUID, allowNull: true });
+        results.push('Added clientId to Quotes');
+      }
+      if (!table.totalCost) {
+        await queryInterface.addColumn('Quotes', 'totalCost', { type: sequelize.Sequelize.DECIMAL(10, 2), defaultValue: 0 });
+        results.push('Added totalCost to Quotes');
+      }
+      if (!table.totalRevenue) {
+        await queryInterface.addColumn('Quotes', 'totalRevenue', { type: sequelize.Sequelize.DECIMAL(10, 2), defaultValue: 0 });
+        results.push('Added totalRevenue to Quotes');
+      }
+      // Relax projectId constraint (Force Nullable)
+      try {
+          // Attempt Sequelize Interface first
+          await queryInterface.changeColumn('Quotes', 'projectId', {
+              type: sequelize.Sequelize.UUID,
+              allowNull: true
+          });
+          
+          // Force Raw SQL for Postgres to be absolutely sure
+          if (sequelize.getDialect() === 'postgres') {
+              await sequelize.query('ALTER TABLE "Quotes" ALTER COLUMN "projectId" DROP NOT NULL;');
+              await sequelize.query('ALTER TABLE "Quotes" ALTER COLUMN "clientId" DROP NOT NULL;');
+              await sequelize.query('ALTER TABLE "Projects" ALTER COLUMN "clientId" DROP NOT NULL;');
+              results.push('Executed RAW ALTER for Quotes and Projects (Postgres)');
+          }
+          
+          results.push('Relaxed constraints on Quotes and Projects');
+      } catch (e) {
+          console.warn('Failed to relax constraints (might already be nullable):', e.message);
+      }
     } catch (e) { results.push(`Error checking Quotes: ${e.message}`); }
 
     // 5. Fix Diaries Table
     try {
       console.log('Checking Diaries table...');
       const table = await queryInterface.describeTable('Diaries');
-      const diaryFields = ['diaryType', 'canvasData', 'attachments', 'gpsData', 'weatherData', 'totalCost', 'totalRevenue', 'productivityScore', 'jobId', 'invoiceId'];
+      const diaryFields = [
+          { name: 'diaryType', type: sequelize.Sequelize.STRING },
+          { name: 'canvasData', type: sequelize.Sequelize.JSON },
+          { name: 'attachments', type: sequelize.Sequelize.JSON },
+          { name: 'gpsData', type: sequelize.Sequelize.JSON },
+          { name: 'weatherData', type: sequelize.Sequelize.JSON },
+          { name: 'totalCost', type: sequelize.Sequelize.DECIMAL(10, 2) },
+          { name: 'totalRevenue', type: sequelize.Sequelize.DECIMAL(10, 2) },
+          { name: 'productivityScore', type: sequelize.Sequelize.INTEGER },
+          { name: 'jobId', type: sequelize.Sequelize.UUID },
+          { name: 'invoiceId', type: sequelize.Sequelize.UUID },
+          { name: 'clientId', type: sequelize.Sequelize.UUID },
+          { name: 'userId', type: sequelize.Sequelize.UUID }
+      ];
+      
       for (const field of diaryFields) {
-        if (!table[field]) {
-            let type = sequelize.Sequelize.STRING;
-            if (['canvasData', 'attachments', 'gpsData', 'weatherData'].includes(field)) type = sequelize.Sequelize.JSON;
-            if (['totalCost', 'totalRevenue'].includes(field)) type = sequelize.Sequelize.DECIMAL(10, 2);
-            if (['productivityScore'].includes(field)) type = sequelize.Sequelize.INTEGER;
-            if (['jobId', 'invoiceId'].includes(field)) type = sequelize.Sequelize.UUID;
-            await queryInterface.addColumn('Diaries', field, { type, allowNull: true });
-            results.push(`Added ${field} to Diaries`);
+        if (!table[field.name]) {
+            await queryInterface.addColumn('Diaries', field.name, { type: field.type, allowNull: true });
+            results.push(`Added ${field.name} to Diaries`);
         }
       }
       if (!table.version) {
@@ -76,6 +156,49 @@ async function runSchemaFix() {
         results.push('Added version to Diaries');
       }
     } catch (e) { results.push(`Error checking Diaries: ${e.message}`); }
+
+    try {
+        if (sequelize.getDialect() === 'postgres') {
+            await sequelize.query('ALTER TABLE "Invoices" ALTER COLUMN "clientId" DROP NOT NULL;');
+            await sequelize.query('ALTER TABLE "Invoices" ALTER COLUMN "projectId" DROP NOT NULL;');
+            await sequelize.query('ALTER TABLE "Invoices" ALTER COLUMN "diaryId" DROP NOT NULL;');
+            results.push('Executed RAW ALTER for Invoices (Postgres)');
+        }
+    } catch (e) { results.push(`Error checking Invoices: ${e.message}`); }
+
+    try {
+        if (sequelize.getDialect() === 'postgres') {
+            await sequelize.query('ALTER TABLE "Diaries" ALTER COLUMN "clientId" DROP NOT NULL;');
+            await sequelize.query('ALTER TABLE "Diaries" ALTER COLUMN "projectId" DROP NOT NULL;');
+            
+            // AGGRESSIVE COLUMN SYNC: Check multiple possible table names (quoted/unquoted)
+            const checkColumnQuery = `
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE LOWER(table_name) = 'diaries' AND LOWER(column_name) = 'userid';
+            `;
+            const [cols] = await sequelize.query(checkColumnQuery);
+            
+            if (cols.length === 0) {
+                console.log("userId missing on Diaries, performing emergency injection...");
+                try {
+                    await sequelize.query('ALTER TABLE "Diaries" ADD COLUMN "userId" UUID;');
+                    results.push('Force injected userId column to Diaries (Postgres)');
+                } catch (addErr) {
+                    // Fallback to unquoted if quoted fails
+                    await sequelize.query('ALTER TABLE diaries ADD COLUMN "userId" UUID;');
+                    results.push('Force injected userId column to diaries (Unquoted)');
+                }
+            } else {
+                results.push('userId column already verified on Diaries');
+            }
+            
+            results.push('Executed RAW ALTER for Diaries (Postgres)');
+        }
+    } catch (e) { 
+        console.error('Diaries raw alter failed:', e.message);
+        results.push(`Diaries raw alter failed: ${e.message}`);
+    }
 
     // 6. Fix Equipment Table
     try {
@@ -106,6 +229,24 @@ async function runSchemaFix() {
       if (!table.endTime) {
         await queryInterface.addColumn('Allocations', 'endTime', { type: sequelize.Sequelize.TIME, allowNull: true });
         results.push('Added endTime to Allocations');
+      }
+      if (!table.userId) {
+        await queryInterface.addColumn('Allocations', 'userId', { type: sequelize.Sequelize.UUID, allowNull: true });
+        results.push('Added userId to Allocations');
+      }
+
+      // AGGRESSIVE SYNC FOR POSTGRES
+      if (sequelize.getDialect() === 'postgres') {
+          const checkAllocQuery = `
+              SELECT column_name 
+              FROM information_schema.columns 
+              WHERE LOWER(table_name) = 'allocations' AND LOWER(column_name) = 'userid';
+          `;
+          const [allocCols] = await sequelize.query(checkAllocQuery);
+          if (allocCols.length === 0) {
+              await sequelize.query('ALTER TABLE "Allocations" ADD COLUMN IF NOT EXISTS "userId" UUID;');
+              results.push('Force injected userId to Allocations (Postgres)');
+          }
       }
     } catch (e) { results.push(`Error checking Allocations: ${e.message}`); }
 

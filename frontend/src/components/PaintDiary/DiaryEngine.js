@@ -539,7 +539,10 @@ export const useDiaryEngine = () => {
                   canvasItems: currentEntry.items, 
                   extraNodes: currentEntry.extraNodes,
                   edges: currentEntry.edges,
-                  canvasContext: currentEntry.note 
+                  canvasContext: currentEntry.note,
+                  project: selectedProject,
+                  financials: projectFinancials,
+                  quotedData: quotedData
               } 
           });
           const aiMsg = { 

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useDiaryTheme } from '../PaintDiary/ThemeContext';
 import { api } from '../../utils/api';
+import PremiumNumberInput from '../ui/PremiumNumberInput';
 
 // --- SHARED JEWEL WRAPPER (Premium Aesthetic) ---
 const JewelWrapper = ({ children, theme: nodeTheme, selected, shapeClass }) => {
@@ -305,14 +306,13 @@ export const AreaNode = ({ id, data, selected }) => {
                 {/* Dimensions Grid */}
                 <div className="grid grid-cols-3 gap-2">
                     {['width', 'length', 'depth'].map((dim) => (
-                        <div key={dim} className="bg-black/40 rounded-xl p-2 border border-white/5 group/input focus-within:border-cyan-500/50 transition-colors">
-                            <span className="text-[7px] font-black text-gray-600 uppercase tracking-wider block mb-1">{dim} ({dim === 'depth' ? 'cm' : 'm'})</span>
-                            <input 
-                                type="number" 
+                        <div key={dim} className="bg-black/40 rounded-xl p-1 border border-white/5 group/input focus-within:border-cyan-500/50 transition-colors">
+                            <span className="text-[7px] font-black text-gray-600 uppercase tracking-wider block mb-1 text-center">{dim} ({dim === 'depth' ? 'cm' : 'm'})</span>
+                            <PremiumNumberInput 
                                 step={dim === 'depth' ? 1 : 0.1} 
                                 value={dim === 'width' ? width : dim === 'length' ? length : depth} 
                                 onChange={(e) => update(dim, e.target.value)} 
-                                className="w-full bg-transparent text-sm font-black text-white font-mono outline-none" 
+                                className="!bg-transparent !border-none"
                             />
                         </div>
                     ))}
@@ -371,25 +371,37 @@ export const QuoteMaterialNode = ({ id, data, selected }) => {
                     {/* Coverage Logic */}
                     <div className="flex justify-between items-center">
                         <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Coverage</span>
-                        <div className="flex items-center gap-2">
-                            <input type="number" value={coverage} onChange={(e) => onUpdate?.(id, { coverage: parseFloat(e.target.value) })} className="w-12 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-xs text-right text-indigo-300 font-mono outline-none focus:border-indigo-500 transition-colors" />
-                            <span className="text-[8px] text-gray-600 font-bold">m²/{unit}</span>
+                        <div className="w-24">
+                            <PremiumNumberInput 
+                                value={coverage} 
+                                onChange={(e) => onUpdate?.(id, { coverage: parseFloat(e.target.value) })} 
+                                label={`m²/${unit}`}
+                                className="!bg-white/5 !border-white/10"
+                            />
                         </div>
                     </div>
                     {/* Waste Logic */}
                     <div className="flex justify-between items-center">
                         <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Wastage</span>
-                        <div className="flex items-center gap-2">
-                            <input type="number" value={waste} onChange={(e) => onUpdate?.(id, { waste: parseFloat(e.target.value) })} className="w-12 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-xs text-right text-rose-300 font-mono outline-none focus:border-rose-500 transition-colors" />
-                            <span className="text-[8px] text-gray-600 font-bold">%</span>
+                        <div className="w-20">
+                            <PremiumNumberInput 
+                                value={waste} 
+                                onChange={(e) => onUpdate?.(id, { waste: parseFloat(e.target.value) })} 
+                                label="%"
+                                className="!bg-white/5 !border-white/10"
+                            />
                         </div>
                     </div>
                      {/* Unit Price */}
                      <div className="flex justify-between items-center pt-2 border-t border-white/5">
                         <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Unit Rate</span>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 w-24">
                              <span className="text-[10px] text-gray-500">$</span>
-                            <input type="number" value={rate} onChange={(e) => onUpdate?.(id, { rate: parseFloat(e.target.value) })} className="w-16 bg-transparent text-sm text-right text-white font-mono font-bold outline-none border-b border-transparent focus:border-indigo-500 transition-all" />
+                             <PremiumNumberInput 
+                                value={parseFloat(rate) || 0} 
+                                onChange={(e) => onUpdate?.(id, { rate: parseFloat(e.target.value) })} 
+                                className="!bg-transparent !border-none text-right"
+                             />
                         </div>
                     </div>
                 </div>
@@ -438,16 +450,25 @@ export const QuoteLabourNode = ({ id, data, selected }) => {
                 <div className="bg-black/40 rounded-2xl p-4 border border-white/5 space-y-3">
                     <div className="flex justify-between items-center">
                         <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Productivity</span>
-                        <div className="flex items-center gap-2">
-                            <input type="number" step="0.1" value={prodRate} onChange={(e) => onUpdate?.(id, { prodRate: parseFloat(e.target.value) })} className="w-12 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-xs text-right text-emerald-300 font-mono outline-none focus:border-emerald-500 transition-colors" />
-                            <span className="text-[8px] text-gray-600 font-bold">m²/hr</span>
+                        <div className="w-24">
+                            <PremiumNumberInput 
+                                step={0.1}
+                                value={prodRate} 
+                                onChange={(e) => onUpdate?.(id, { prodRate: parseFloat(e.target.value) })} 
+                                label="m²/hr"
+                                className="!bg-white/5 !border-white/10"
+                            />
                         </div>
                     </div>
                      <div className="flex justify-between items-center">
                         <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Hourly Rate</span>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 w-24">
                              <span className="text-[10px] text-gray-500">$</span>
-                            <input type="number" value={rate} onChange={(e) => onUpdate?.(id, { rate: parseFloat(e.target.value) })} className="w-16 bg-transparent text-sm text-right text-white font-mono font-bold outline-none border-b border-transparent focus:border-emerald-500 transition-all" />
+                             <PremiumNumberInput 
+                                value={parseFloat(rate) || 0} 
+                                onChange={(e) => onUpdate?.(id, { rate: parseFloat(e.target.value) })} 
+                                className="!bg-transparent !border-none"
+                             />
                         </div>
                     </div>
                 </div>

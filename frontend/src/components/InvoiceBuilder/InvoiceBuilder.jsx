@@ -174,7 +174,7 @@ const InvoiceBuilder = () => {
       if (listLoading) return <PremiumLoader text="SYNCING FINANCIAL LEDGER..." />;
 
       return (
-          <div className="min-h-screen p-8 bg-stone-950 text-white animate-fade-in font-sans">
+          <div className="min-h-screen p-8 bg-stone-950 text-white font-sans" style={{ isolation: 'isolate' }}>
               <div className="max-w-[1600px] mx-auto">
                   <div className="flex justify-between items-center mb-8">
                       <div><h1 className="text-4xl font-black flex items-center gap-3 tracking-tight"><FileText size={40} className="text-indigo-500" /> INVOICE COMMAND</h1></div>
@@ -257,7 +257,7 @@ const InvoiceBuilder = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#050507] p-4 md:p-10 text-white animate-fade-in font-sans">
+    <div className="min-h-screen bg-[#050507] p-4 md:p-10 text-white font-sans" style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden', isolation: 'isolate' }}>
       <div className="max-w-[1800px] mx-auto">
         <div className="flex justify-between items-center mb-10 gap-6">
           <div className="flex items-center gap-6">

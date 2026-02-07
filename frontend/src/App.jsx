@@ -42,6 +42,7 @@ import PinnacleCopilot from './components/PinnacleCopilot'
 import AuditUltraLog from './components/AuditUltraLog'
 import SafetyDashboard from './components/Safety/SafetyDashboard'
 import SafetyFormViewer from './components/Safety/SafetyFormViewer'
+import Academy from './components/Academy/Academy'
 import SubscriptionPage from './components/SubscriptionPage'
 import OnboardingWizard from './components/Onboarding/OnboardingWizard'
 import AIOnboardingOverlay from './components/Onboarding/AIOnboardingOverlay'
@@ -122,25 +123,30 @@ function AppInner({
               100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.4; }
             }
             @keyframes grid-drift {
-              0% { background-position: 0 0; }
-              100% { background-position: 100px 100px; }
+              0% { transform: translate(0, 0); }
+              100% { transform: translate(100px, 100px); }
             }
           `}</style>
           
           {!liteMode && !isPortal && !isLanding && (
-            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#000000]">
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#000000]" style={{ transform: 'translateZ(0)', isolation: 'isolate' }}>
                <div className="absolute inset-0 bg-black"></div>
                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(30,27,75,0.15)_0%,transparent_100%)]"></div>
-               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] mix-blend-overlay"></div>
-               <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:100px_100px] opacity-10 animate-[grid-drift_60s_linear_infinite]"></div>
+               
+               {/* Noise layer - simplified for performance */}
+               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
+               
+               {/* Grid Layer - using transform for hardware acceleration instead of background-position */}
+               <div className="absolute inset-[-100%] bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:100px_100px] opacity-10 animate-[grid-drift_60s_linear_infinite] will-change-transform"></div>
 
-               <div className="absolute inset-0 mix-blend-screen filter blur-[140px]">
+               {/* Glow Layers - Reduced blur and added GPU promotion */}
+               <div className="absolute inset-0 mix-blend-screen filter blur-[80px]" style={{ willChange: 'filter', transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}>
                    <div 
-                    className="absolute top-[-20%] left-[-20%] w-[80%] h-[140%] bg-gradient-to-b from-transparent to-transparent animate-[wave-flow_20s_ease-in-out_infinite] rotate-[25deg]" 
+                    className="absolute top-[-20%] left-[-20%] w-[80%] h-[140%] bg-gradient-to-b from-transparent to-transparent animate-[wave-flow_20s_ease-in-out_infinite] rotate-[25deg] will-change-transform" 
                     style={{ backgroundImage: `linear-gradient(to bottom, transparent, ${theme.accent}44, transparent)` }}
                    />
                    <div 
-                    className="absolute top-[-10%] right-[-20%] w-[70%] h-[120%] bg-gradient-to-b from-transparent to-transparent animate-[wave-flow_25s_ease-in-out_infinite_reverse] rotate-[-15deg]" 
+                    className="absolute top-[-10%] right-[-20%] w-[70%] h-[120%] bg-gradient-to-b from-transparent to-transparent animate-[wave-flow_25s_ease-in-out_infinite_reverse] rotate-[-15deg] will-change-transform" 
                     style={{ backgroundImage: `linear-gradient(to bottom, transparent, ${theme.accent}33, transparent)` }}
                    />
                </div>
@@ -185,7 +191,7 @@ function AppInner({
             />
           )}
 
-          <main className={`flex-1 ${(!isPortal && !isLanding && !isWorkflowBuilder && !isMapBuilder) ? 'container mx-auto px-4 py-8' : ''} ${isMapBuilder ? 'flex flex-col' : ''} ${liteMode ? '' : 'animate-fade-in'}`}>
+          <main className={`flex-1 ${(!isPortal && !isLanding && !isWorkflowBuilder && !isMapBuilder) ? 'container mx-auto px-4 py-8' : ''} ${isMapBuilder ? 'flex flex-col' : ''}`}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login onLogin={onLogin} />} />
@@ -217,6 +223,7 @@ function AppInner({
               <Route path="/xero/callback" element={<XeroCallback />} />
               <Route path="/subscription" element={<SubscriptionPage />} />
               <Route path="/onboarding" element={<OnboardingWizard />} />
+              <Route path="/academy" element={<Academy />} />
               <Route path="/portal/view/:projectId" element={<ClientPortal />} />
             </Routes>
           </main>

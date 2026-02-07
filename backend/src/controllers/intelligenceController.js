@@ -4,11 +4,11 @@ const pinnacleAi = require('../services/grokService');
 
 const getMorningBriefing = async (req, res) => {
     try {
-        let intelligence = await generateNeuralIntelligencePacket();
+        let intelligence = await generateNeuralIntelligencePacket(req.user?.id);
         
         // --- ROBUST FALLBACK FOR ZERO STATE ---
-        if (!intelligence) {
-            console.warn("Learning Engine returned NULL. Using fallback.");
+        if (!intelligence || intelligence.error) {
+            console.warn("Learning Engine Failure or NULL. Using fallback.");
             intelligence = {
                 mesh: { integrity: 1.0, status: 'STABLE' },
                 financials: { netProfit: 0, marginPct: '0%' },
@@ -46,12 +46,15 @@ const getMorningBriefing = async (req, res) => {
 
 const getOracleStream = async (req, res) => {
     try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
         const [projects, totalStaff, totalMaterials, totalEquip, allWorkflows] = await Promise.all([
-            Project.findAll({ where: { status: 'active' } }),
-            Staff.count(),
-            Node.count(),
-            Equipment.count(),
-            Workflow.findAll()
+            Project.findAll({ where: { status: 'active', userId } }),
+            Staff.count({ where: { userId } }),
+            Node.count({ where: { userId } }),
+            Equipment.count({ where: { userId } }),
+            Workflow.findAll({ where: { createdBy: userId } })
         ]);
 
         // RECURSIVE WORKFLOW NODE COUNTING
@@ -65,15 +68,19 @@ const getOracleStream = async (req, res) => {
 
         const totalInstitutionalNodes = totalStaff + totalMaterials + totalEquip + totalWorkflowNodes;
 
-        let intelligence = await generateNeuralIntelligencePacket();
+        let intelligence = await generateNeuralIntelligencePacket(userId);
         
         // --- SAFETY FALLBACK FOR LEVEL 18 STABILITY ---
-        if (!intelligence) {
+        if (!intelligence || intelligence.error) {
+            console.error("Intelligence Packet Failure:", intelligence?.error);
             intelligence = {
-                mesh: { integrity: 1.0, resourceContentionIndex: 0, status: 'STABLE' },
-                financials: { collectionVelocity: '100%', netProfit: 0, paid: 0, marginPct: '0%' },
-                oracle: { bidSuccessProbability: '100%', idealMarginPoint: '25%' },
-                patterns: []
+                mesh: { integrity: 1.0, resourceContentionIndex: 0, velocityDrift: '0.00', status: 'STABLE', institutionalEfficiency: '1.0', burnAcceleration: '1.0', frictionIndex: '0.0' },
+                financials: { collectionVelocity: '100%', netProfit: 0, paid: 0, marginPct: '0%', yieldDelta: 0, totalValue: 0, invoiced: 0 },
+                oracle: { bidSuccessProbability: '100%', idealMarginPoint: '25%', marketVolatilityIndex: 1.0, riskVelocity: 'NOMINAL' },
+                patterns: [],
+                projectFinancials: [],
+                knowledgeBase: { documents: [], quotes: [], diaries: [] },
+                siteTrail: []
             };
         }
         
