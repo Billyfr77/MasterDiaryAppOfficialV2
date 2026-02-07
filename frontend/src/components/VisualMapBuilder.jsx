@@ -572,7 +572,23 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
   const [streetViewPos, setStreetViewPos] = useState(null);
   const [streetViewPov, setStreetViewPov] = useState(null);
   const [isListening, setIsListening] = useState(false);
-  const [zoom, setZoom] = useState(13); // NEW: Track zoom level
+  
+  // VIEW PERSISTENCE STATE
+  const [zoom, setZoom] = useState(() => {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY_MAP_VIEW);
+        if (saved && !activeProjectId) return JSON.parse(saved).zoom || 13;
+    } catch (e) {}
+    return 13;
+  });
+
+  const [center, setCenter] = useState(() => {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY_MAP_VIEW);
+        if (saved && !activeProjectId) return JSON.parse(saved).center || { lat: -33.8688, lng: 151.2093 };
+    } catch (e) {}
+    return { lat: -33.8688, lng: 151.2093 };
+  });
 
   const [assets, setAssets] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -609,13 +625,24 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
 
   const heatmapRef = useRef(null); // NEW: Manual heatmap control
 
-  const initialView = useMemo(() => {
-    try { 
-        const saved = localStorage.getItem(STORAGE_KEY_MAP_VIEW); 
-        if (saved && !activeProjectId) return JSON.parse(saved); 
-    } catch (e) { }
-    return { center: { lat: -33.8688, lng: 151.2093 }, zoom: 13 };
-  }, [activeProjectId]);
+  // PROJECT AUTO-FOCUS LOGIC
+  useEffect(() => {
+    if (activeProjectId && assets.length > 0 && map) {
+        const projectAsset = assets.find(a => String(a.projectId) === String(activeProjectId));
+        if (projectAsset) {
+            const pCenter = projectAsset.geometryType === 'POLYGON' 
+                ? getPolygonCenter(projectAsset.coordinates) 
+                : (projectAsset.coordinates[0] || null);
+            
+            if (pCenter) {
+                map.panTo(pCenter);
+                map.setZoom(17);
+                setCenter(pCenter);
+                setZoom(17);
+            }
+        }
+    }
+  }, [activeProjectId, assets, map]);
 
   const deleteAsset = async (asset) => {
       if(!confirm("Delete this asset from map?")) return;
@@ -938,8 +965,6 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
       m.setHeading(heading); 
   }, [tilt, heading, liteMode]);
 
-  const initialViewConst = useMemo(() => initialView, [initialView]);
-
   const handleStatItemClick = (item, type) => {
       let location = null;
       if (type === 'zone') {
@@ -1011,13 +1036,21 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
           <div ref={mapContainerRef} className="flex-1 relative flex h-full min-h-0">
               <GoogleMap 
                   mapContainerStyle={{ width: '100%', height: '100%' }} 
-                  center={initialViewConst.center} 
+                  center={center} 
                   zoom={zoom} 
                   mapId="90f87356969d889c" 
                   mapTypeId={mapTypeId} 
                   options={{ disableDefaultUI: true, tilt: liteMode ? 0 : tilt, heading }} 
                   onLoad={onMapLoad}
-                  onZoomChanged={() => map && setZoom(map.getZoom())}
+                  onIdle={() => {
+                    if (map) {
+                        const newCenter = { lat: map.getCenter().lat(), lng: map.getCenter().lng() };
+                        const newZoom = map.getZoom();
+                        setCenter(newCenter);
+                        setZoom(newZoom);
+                        localStorage.setItem(STORAGE_KEY_MAP_VIEW, JSON.stringify({ center: newCenter, zoom: newZoom }));
+                    }
+                  }}
               >
                   {isLoaded && !liteMode && (
                       <HeatmapLayer 

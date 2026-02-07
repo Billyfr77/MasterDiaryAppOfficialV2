@@ -6,7 +6,7 @@ $SERVICE_NAME = "master-diary-app-v2"
 $DB_INSTANCE = "gen-lang-client-0889466012:us-central1:master-diary-db"
 $IMAGE_NAME = "gcr.io/$PROJECT_ID/$SERVICE_NAME"
 
-# --- SECRETS (Placeholders for security - set these in your environment or Secret Manager) ---
+# --- SECRETS (Placeholders for security) ---
 $GROK_API_KEY=$env:GROK_API_KEY
 $GOOGLE_MAPS_KEY=$env:GOOGLE_MAPS_KEY 
 $GOOGLE_ADVANCED_KEY=$env:GOOGLE_ADVANCED_KEY

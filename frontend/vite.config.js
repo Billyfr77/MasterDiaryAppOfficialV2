@@ -6,6 +6,7 @@ export default defineConfig({
     react(),
   ],
   build: {
+    sourcemap: false, // Security: Disable source maps in production to prevent code theft
     rollupOptions: {
       input: 'index.html'
     }

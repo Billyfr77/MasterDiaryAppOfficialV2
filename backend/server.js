@@ -52,7 +52,24 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(limiter);
-app.use(helmet({ contentSecurityPolicy: false }));
+
+// Security: Content Security Policy (CSP)
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://maps.googleapis.com", "https://*.googleapis.com"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      "img-src": ["'self'", "data:", "blob:", "https://maps.gstatic.com", "https://*.googleapis.com", "https://*.googleusercontent.com", "https://*.ggpht.com"],
+      "connect-src": ["'self'", "ws:", "wss:", "https://maps.googleapis.com", "https://*.googleapis.com"],
+      "frame-src": ["'self'", "https://js.stripe.com"],
+      "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Required for Google Maps
+}));
+
 app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(hpp()); // Prevent Parameter Pollution
 app.use(compression());
@@ -178,112 +195,122 @@ const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 
 // ... existing imports
 
-// Temporary Seeding Route
-app.get('/api/seed-secret', async (req, res) => {
-  try {
-    // 1. Create Default Admin User
-    const existingUser = await db.User.findOne({ where: { email: 'admin@masterdiary.com' } });
-    let userId;
-    if (!existingUser) {
-      const hashedPassword = await bcrypt.hash('Admin123!', 10);
-      const newUser = await db.User.create({
-        username: 'Admin',
-        email: 'admin@masterdiary.com',
-        password: hashedPassword,
-        role: 'admin'
-      });
-      userId = newUser.id;
-    } else {
-      userId = existingUser.id;
-    }
+// --- MAINTENANCE ROUTES (RESTRICTED) ---
+const areDebugRoutesEnabled = process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEBUG_ROUTES === 'true';
 
-    // 2. Create Default Settings
-    const existingSettings = await db.Settings.findOne();
-    if (!existingSettings) {
-      await db.Settings.create({
-        companyName: 'My Construction Co',
-        currency: 'USD',
-        theme: 'dark'
-      });
-    }
+if (areDebugRoutesEnabled) {
+    // Temporary Seeding Route
+    app.get('/api/seed-secret', async (req, res) => {
+      try {
+        // 1. Create Default Admin User
+        const existingUser = await db.User.findOne({ where: { email: 'admin@masterdiary.com' } });
+        let userId;
+        if (!existingUser) {
+          const hashedPassword = await bcrypt.hash('Admin123!', 10);
+          const newUser = await db.User.create({
+            username: 'Admin',
+            email: 'admin@masterdiary.com',
+            password: hashedPassword,
+            role: 'admin'
+          });
+          userId = newUser.id;
+        } else {
+          userId = existingUser.id;
+        }
 
-    // 3. Create a Sample Project
-    const existingProject = await db.Project.findOne();
-    if (!existingProject) {
-      await db.Project.create({
-        name: 'Example Renovation',
-        client: 'John Doe',
-        status: 'active',
-        userId: userId,
-        site: '123 Main St',
-        value: 15000
-      });
-    }
+        // 2. Create Default Settings
+        const existingSettings = await db.Settings.findOne();
+        if (!existingSettings) {
+          await db.Settings.create({
+            companyName: 'My Construction Co',
+            currency: 'USD',
+            theme: 'dark'
+          });
+        }
 
-    // 4. Create Sample Equipment
-    const existingEquip = await db.Equipment.findOne();
-    if (!existingEquip) {
-      await db.Equipment.create({
-        name: 'Graco 390 PC Stand',
-        userId: userId,
-        status: 'available',
-        costRateBase: 15.00,
-        chargeRate: 45.00,
-        purchaseDate: new Date(),
-        category: 'Sprayers'
-      });
-    }
+        // 3. Create a Sample Project
+        const existingProject = await db.Project.findOne();
+        if (!existingProject) {
+          await db.Project.create({
+            name: 'Example Renovation',
+            client: 'John Doe',
+            status: 'active',
+            userId: userId,
+            site: '123 Main St',
+            value: 15000
+          });
+        }
 
-    // 5. Create Sample Material (Node)
-    const existingNode = await db.Node.findOne();
-    if (!existingNode) {
-      await db.Node.create({
-        name: 'Dulux Wash&Wear 10L',
-        description: 'Low Sheen Vivid White',
-        unit: 'Bucket',
-        pricePerUnit: 145.00,
-        category: 'material',
-        supplier: 'Bunnings',
-        userId: userId
-      });
-    }
+        // 4. Create Sample Equipment
+        const existingEquip = await db.Equipment.findOne();
+        if (!existingEquip) {
+          await db.Equipment.create({
+            name: 'Graco 390 PC Stand',
+            userId: userId,
+            status: 'available',
+            costRateBase: 15.00,
+            chargeRate: 45.00,
+            purchaseDate: new Date(),
+            category: 'Sprayers'
+          });
+        }
 
-    res.send('Database Fully Seeded! User: admin@masterdiary.com / Admin123! Equipment & Materials Added.');
-  } catch (error) {
-    console.error('Seeding Error:', error);
-    res.status(500).send('Seeding Failed: ' + error.message);
-  }
-});
+        // 5. Create Sample Material (Node)
+        const existingNode = await db.Node.findOne();
+        if (!existingNode) {
+          await db.Node.create({
+            name: 'Dulux Wash&Wear 10L',
+            description: 'Low Sheen Vivid White',
+            unit: 'Bucket',
+            pricePerUnit: 145.00,
+            category: 'material',
+            supplier: 'Bunnings',
+            userId: userId
+          });
+        }
 
-// Database Schema Fix Route (Emergency)
-const runSchemaFix = require('./src/utils/manualSchemaFix');
-app.get('/api/fix-schema', async (req, res) => {
-  try {
-    const secret = req.query.secret;
-    // Allow DB_PASSWORD or a hardcoded emergency secret
-    if (secret !== process.env.DB_PASSWORD && secret !== 'masterfix2026') { 
-       return res.status(403).send('Unauthorized: Invalid secret');
-    }
-    
-    console.log('Starting manual schema fix...');
-    const results = await runSchemaFix();
-    console.log('Schema fix results:', results);
-    
-    res.json({
-      success: true,
-      message: 'Schema patch execution completed',
-      results: results
+        res.send('Database Fully Seeded! User: admin@masterdiary.com / Admin123! Equipment & Materials Added.');
+      } catch (error) {
+        console.error('Seeding Error:', error);
+        res.status(500).send('Seeding Failed: ' + error.message);
+      }
     });
-  } catch (error) {
-    console.error('Schema Fix Error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
-// --- SCHEMA DEBUG & REPAIR (LIVE) ---
-const schemaDebugController = require('./src/controllers/schemaDebugController');
-app.get('/api/debug/schema/quotes', schemaDebugController.inspectQuotesTable);
-app.get('/api/debug/fix-quotes', schemaDebugController.forceFixQuotesTable);
+    // Database Schema Fix Route (Emergency)
+    const runSchemaFix = require('./src/utils/manualSchemaFix');
+    app.get('/api/fix-schema', async (req, res) => {
+      try {
+        const secret = req.query.secret;
+        // Allow DB_PASSWORD or a hardcoded emergency secret
+        if (secret !== process.env.DB_PASSWORD && secret !== 'masterfix2026') { 
+           return res.status(403).send('Unauthorized: Invalid secret');
+        }
+        
+        console.log('Starting manual schema fix...');
+        const results = await runSchemaFix();
+        console.log('Schema fix results:', results);
+        
+        res.json({
+          success: true,
+          message: 'Schema patch execution completed',
+          results: results
+        });
+      } catch (error) {
+        console.error('Schema Fix Error:', error);
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // --- SCHEMA DEBUG & REPAIR (LIVE) ---
+    const schemaDebugController = require('./src/controllers/schemaDebugController');
+    app.get('/api/debug/schema/quotes', schemaDebugController.inspectQuotesTable);
+    app.get('/api/debug/fix-quotes', schemaDebugController.forceFixQuotesTable);
+} else {
+    // Block these routes in production
+    app.get('/api/seed-secret', (req, res) => res.status(404).send('Not Found'));
+    app.get('/api/fix-schema', (req, res) => res.status(404).send('Not Found'));
+    app.get('/api/debug/*', (req, res) => res.status(404).send('Not Found'));
+}
 
  // Map Data Routes for Enhanced Map Builder
         app.post('/api/map-data', async (req, res) => {
