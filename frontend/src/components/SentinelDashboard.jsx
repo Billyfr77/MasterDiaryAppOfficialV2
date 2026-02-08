@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert, DollarSign, ArrowRight, CheckCircle, X, Activity } from 'lucide-react';
-import { api } from '../../utils/api';
+import { api } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 
 const SentinelDashboard = () => {

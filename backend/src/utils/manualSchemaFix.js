@@ -328,6 +328,25 @@ async function runSchemaFix() {
       }
     } catch (e) { results.push(`Error checking DiaryTemplates: ${e.message}`); }
 
+    // 12. Fix Notifications Table (Sentinel Upgrade)
+    try {
+        console.log('Checking Notifications table...');
+        const table = await queryInterface.describeTable('Notifications');
+        if (!table.data) {
+            await queryInterface.addColumn('Notifications', 'data', { type: sequelize.Sequelize.JSON, allowNull: true });
+            results.push('Added data to Notifications');
+        }
+        
+        // Handle 'read' vs 'isRead' migration
+        if (table.read && !table.isRead) {
+            await queryInterface.renameColumn('Notifications', 'read', 'isRead');
+            results.push('Renamed read to isRead in Notifications');
+        } else if (!table.isRead) {
+            await queryInterface.addColumn('Notifications', 'isRead', { type: sequelize.Sequelize.BOOLEAN, defaultValue: false });
+            results.push('Added isRead to Notifications');
+        }
+    } catch (e) { results.push(`Error checking Notifications: ${e.message}`); }
+
   } catch (err) {
     console.error('Fatal error in schema fix:', err);
     results.push(`Fatal Error: ${err.message}`);

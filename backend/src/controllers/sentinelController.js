@@ -14,7 +14,7 @@ const runScan = async (req, res) => {
                 title: '💸 Revenue Leakage Detected',
                 message: `Sentinel found $${result.totalPotentialRevenue} in recoverable variations on ${result.projectName}.`,
                 data: result,
-                read: false
+                isRead: false
             });
         }
 
@@ -30,7 +30,7 @@ const getAlerts = async (req, res) => {
             where: { 
                 userId: req.user.id, 
                 type: 'sentinel_alert',
-                read: false 
+                isRead: false 
             },
             order: [['createdAt', 'DESC']]
         });
@@ -64,7 +64,7 @@ const createVariation = async (req, res) => {
         };
 
         // Mark alert as processed
-        await alert.update({ read: true });
+        await alert.update({ isRead: true });
 
         res.json({ variation: variationPayload, redirect: '/invoices' });
 

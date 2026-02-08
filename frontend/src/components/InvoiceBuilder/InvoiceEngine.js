@@ -37,6 +37,18 @@ export const useInvoiceEngine = () => {
           return { ...state.invoice, items: state.invoice.invoiceData?.items || state.invoice.items || [] };
       }
 
+      // 1. Check for Sentinel Variation data
+      if (state?.invoiceData && state?.mode === 'variation') {
+          const v = state.invoiceData;
+          return {
+              ...getInitialInvoiceState(s), // Get defaults first
+              projectId: v.projectId,
+              items: v.items,
+              notes: v.notes,
+              status: 'draft'
+          };
+      }
+
       // If creating from Quote or Diary
       let initialItems = [];
       let initialProject = state?.projectId || null;

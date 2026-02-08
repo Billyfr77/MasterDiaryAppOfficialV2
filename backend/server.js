@@ -371,13 +371,12 @@ db.sequelize.authenticate()
     console.log('Database connected successfully.');
     
     // --- EMERGENCY: AUTO-REPAIR SCHEMA ON STARTUP ---
-    try {
-        console.log('Initiating Startup Schema Sync...');
-        const fixResults = await runSchemaFix();
-        console.log('Lattice Fix Results:', fixResults);
-    } catch (fixErr) {
-        console.error('Lattice Fix Failed:', fixErr.message);
-    }
+    // Run asynchronously to not block health check
+    runSchemaFix().then(results => {
+        console.log('Lattice Fix Results:', results);
+    }).catch(err => {
+        console.error('Lattice Fix Failed:', err.message);
+    });
 
     // Enable alter: true to ensure Postgres schema updates for new features (Map, Workflow, etc.)
     return db.sequelize.sync({ alter: true }); 

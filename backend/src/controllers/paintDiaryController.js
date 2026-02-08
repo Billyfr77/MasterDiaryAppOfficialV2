@@ -222,6 +222,22 @@ const createPaintDiary = async (req, res) => {
     const diary = await Diary.create(diaryData, { transaction });
     await transaction.commit();
 
+    // TRIGGER SENTINEL REVENUE RECOVERY (Non-blocking)
+    const sentinelService = require('../services/sentinelService');
+    sentinelService.analyzeLeakage(diary.id, req.user.id).then(result => {
+        if (result) {
+            const { Notification } = require('../models');
+            Notification.create({
+                userId: req.user.id,
+                type: 'sentinel_alert',
+                title: '💸 Revenue Leakage Detected',
+                message: `Sentinel found $${result.totalPotentialRevenue} in recoverable variations on ${result.projectName}.`,
+                data: result,
+                isRead: false
+            });
+        }
+    }).catch(err => console.error("Sentinel Trigger Error:", err));
+
     // Trigger Workflow Engine
     const workflowEngine = require('../services/workflowEngine');
     workflowEngine.emit('diary.saved', { diary, projectId, userId: req.user?.id });
