@@ -5,6 +5,7 @@ import { api } from '../../utils/api';
 import SafetyFormViewer from './SafetyFormViewer';
 import SafetyFormBuilder from './SafetyFormBuilder';
 import SafetyImporter from './SafetyImporter';
+import { generateSafetyPDF } from './SafetyPDF';
 
 const SafetyCopilot = ({ isOpen, onClose, onGenerate }) => {
     const [messages, setMessages] = useState([
@@ -397,6 +398,25 @@ const SafetyDashboard = () => {
                                             ⚠️ Sync Warning
                                         </div>
                                     )}
+                                </div>
+
+                                {/* CARD ACTIONS */}
+                                <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            const fields = form.data?.fields || [];
+                                            const formData = {
+                                                ...form,
+                                                projectName: form.project?.name || 'General Works',
+                                                locationDetails: form.data?.location || 'Site Wide'
+                                            };
+                                            generateSafetyPDF(formData, fields);
+                                        }}
+                                        className="flex-1 py-2 bg-stone-800 hover:bg-stone-700 text-gray-300 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Download size={14} /> Download PDF
+                                    </button>
                                 </div>
                             </div>
                         ))}

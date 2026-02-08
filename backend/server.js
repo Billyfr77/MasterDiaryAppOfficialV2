@@ -180,6 +180,7 @@ app.use('/api/ai', require('./src/routes/ai')); // Grok AI Service
 app.use('/api/intelligence', require('./src/routes/intelligenceRoutes')); // NEW: Intelligence Stack
 app.use('/api/weather', require('./src/routes/weather')); // Weather Service
 app.use('/api/diary-templates', require('./src/routes/diaryTemplates')); // Diary Templates Route
+app.use('/api/sentinel', require('./src/routes/sentinel')); // Sentinel Revenue Engine
 
 // --- SERVE UPLOADS (Static) ---
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {

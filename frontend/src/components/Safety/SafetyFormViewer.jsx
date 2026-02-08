@@ -8,6 +8,7 @@ import {
 import { RiskMatrix, PPEGrid, SWMSEditor } from './SafetyComponents';
 import { SAFETY_TEMPLATES } from './SafetyTemplates';
 import SafetyFormBuilder from './SafetyFormBuilder';
+import { generateSafetyPDF } from './SafetyPDF';
 
 const SafetyFormViewer = ({ formId, onClose }) => {
   // Handle both route params and direct prop usage (for Dashboard modal)
@@ -606,8 +607,14 @@ const SafetyFormViewer = ({ formId, onClose }) => {
         <div className="flex items-center gap-3">
             {!isEditing && (
                 <>
-                    <button onClick={() => window.print()} className="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
-                        <Printer size={16} /> Print
+                    <button 
+                        onClick={() => {
+                            const projectName = projects.find(p => p.id === formData.projectId)?.name || 'General Works';
+                            generateSafetyPDF({ ...formData, projectName, locationDetails: formData.data.location }, formData.data.fields || []);
+                        }} 
+                        className="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+                    >
+                        <Download size={16} /> Download PDF
                     </button>
                     <button onClick={() => setIsEditing(true)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg shadow-indigo-500/20 flex items-center gap-2 transition-all">
                         <Edit3 size={16} /> Edit Document

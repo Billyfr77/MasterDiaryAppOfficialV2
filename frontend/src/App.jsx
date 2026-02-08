@@ -47,6 +47,7 @@ import SubscriptionPage from './components/SubscriptionPage'
 import OnboardingWizard from './components/Onboarding/OnboardingWizard'
 import AIOnboardingOverlay from './components/Onboarding/AIOnboardingOverlay'
 import NotificationDropdown from './components/NotificationDropdown'
+import SentinelDashboard from './components/SentinelDashboard'
 import { ClipboardCheck, Layout, Crown } from 'lucide-react'
 import MainHeader, { NavLink } from './components/Shell/MainHeader'
 
@@ -154,6 +155,7 @@ function AppInner({
           )}
 
           {!isPortal && <CommandPalette />}
+          {!isPortal && !isLanding && <SentinelDashboard />}
           
           {/* Mobile Menu */}
           {mobileMenuOpen && !isPortal && (
