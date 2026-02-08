@@ -133,30 +133,44 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
             .filter(Boolean);
 
         // 9. NEURAL CORTEX UPGRADE (SELF-CORRECTING INTELLIGENCE)
-        // 9a. Estimation Bias (Variance between Quote vs Actuals)
+        // 9a. Estimation Bias & Categorical Leakage
         let estimationBias = 0;
         let biasDirection = 'NEUTRAL';
-        const completedProjects = projects.filter(p => p.status === 'completed');
+        const categoricalLeakage = { staff: 0, material: 0, equipment: 0 };
+        const profitRecoveryOpportunities = [];
+        
+        const completedProjects = projects.filter(p => p.status === 'completed' || p.status === 'active');
         
         if (completedProjects.length > 0) {
             let totalQuoteVariance = 0;
-            let projectCount = 0;
+            let projectsWithQuotes = 0;
 
             for (const p of completedProjects) {
-                // Sum all approved quotes for this project (Implicitly scoped via project ownership)
-                const projectQuotes = await Quote.sum('totalCost', { where: { projectId: p.id, status: 'approved' } }) || 0;
-                // Sum all diary costs for this project
-                const projectActuals = await Diary.sum('totalCost', { where: { projectId: p.id } }) || 0;
+                const projectQuotes = allQuotes.filter(q => q.projectId === p.id && q.status === 'approved');
+                const projectDiaries = allUserDiaries.filter(d => d.projectId === p.id);
+                
+                const qTotal = projectQuotes.reduce((sum, q) => sum + (parseFloat(q.totalCost) || 0), 0);
+                const dTotal = projectDiaries.reduce((sum, d) => sum + (parseFloat(d.totalCost) || 0), 0);
 
-                if (projectQuotes > 0) {
-                    const variance = (projectActuals - projectQuotes) / projectQuotes;
+                if (qTotal > 0) {
+                    const variance = (dTotal - qTotal) / qTotal;
                     totalQuoteVariance += variance;
-                    projectCount++;
+                    projectsWithQuotes++;
+
+                    // Identify Leakage Patterns
+                    if (variance > 0.1) {
+                        profitRecoveryOpportunities.push({
+                            project: p.name,
+                            loss: (dTotal - qTotal).toFixed(2),
+                            reason: "Cost Overrun",
+                            suggestion: `Tighten controls on ${p.name} - actual costs are ${(variance * 100).toFixed(1)}% over budget.`
+                        });
+                    }
                 }
             }
 
-            if (projectCount > 0) {
-                estimationBias = (totalQuoteVariance / projectCount);
+            if (projectsWithQuotes > 0) {
+                estimationBias = (totalQuoteVariance / projectsWithQuotes);
                 biasDirection = estimationBias > 0.05 ? 'UNDER_ESTIMATING' : (estimationBias < -0.05 ? 'OVER_ESTIMATING' : 'ACCURATE');
             }
         }
@@ -164,12 +178,7 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
         // 9b. Association Matrix (What items go together?)
         // Scan last 50 approved quotes to find frequent pairs (Scoped to User)
         const associationRules = [];
-        const recentQuotes = await Quote.findAll({ 
-            where: { userId, status: 'approved' }, 
-            limit: 50, 
-            order: [['createdAt', 'DESC']],
-            attributes: ['nodes']
-        });
+        const recentQuotes = allQuotes.filter(q => q.status === 'approved').slice(0, 50);
 
         const itemPairs = {};
         recentQuotes.forEach(q => {
@@ -201,12 +210,10 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
         const twoWeeksFromNow = new Date();
         twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
         
-        const futureAllocations = await Allocation.findAll({
-            where: {
-                startDate: { [Op.gte]: new Date() },
-                endDate: { [Op.lte]: twoWeeksFromNow },
-                status: 'scheduled'
-            }
+        const futureAllocations = allocations.filter(a => {
+            const start = new Date(a.startDate);
+            const end = new Date(a.endDate);
+            return start >= new Date() && end <= twoWeeksFromNow;
         });
 
         const resourceLoad = {}; // { staffId: daysBooked }
@@ -226,8 +233,7 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
         const availableCrew = staff.filter(s => (resourceLoad[s.id] || 0) < 5) // Booked < 5 days is "OPEN"
                                    .map(s => `${s.name} (${s.role})`);
 
-        // 9d. CLIENT GENOME (Financial Personality)
-        // Analyze payment velocity and friction per client
+        // 9d. CLIENT GENOME (Risk Scoring)
         const clientGenome = {};
         for (const c of clients) {
             const clientInvoices = invoices.filter(i => i.clientId === c.id && i.status === 'paid');
@@ -235,23 +241,24 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
             if (clientInvoices.length > 0) {
                 const totalDays = clientInvoices.reduce((sum, inv) => {
                     const sent = new Date(inv.createdAt);
-                    const paid = new Date(inv.updatedAt); // Assuming updatedAt is pay date for 'paid' status
+                    const paid = new Date(inv.updatedAt);
                     return sum + Math.max(0, (paid - sent) / (1000 * 60 * 60 * 24));
                 }, 0);
                 avgPayDays = Math.round(totalDays / clientInvoices.length);
             }
             
-            // Friction: Do they have many rejected quotes?
-            const rejectedQuotes = await Quote.count({ where: { clientId: c.id, status: 'rejected', userId } });
+            const rejectedQuotes = allQuotes.filter(q => q.clientId === c.id && q.status === 'rejected').length;
             
-            if (avgPayDays > 0 || rejectedQuotes > 0) {
-                clientGenome[c.id] = { 
-                    name: c.name, 
-                    avgPayDays, 
-                    frictionScore: rejectedQuotes,
-                    rating: avgPayDays > 30 ? 'SLOW_PAYER' : (avgPayDays < 7 ? 'INSTANT_PAYER' : 'STANDARD')
-                };
-            }
+            // NEW: Risk Score calculation
+            const riskScore = (avgPayDays > 30 ? 40 : 0) + (rejectedQuotes * 10);
+            
+            clientGenome[c.id] = { 
+                name: c.name, 
+                avgPayDays, 
+                frictionScore: rejectedQuotes,
+                riskLevel: riskScore > 50 ? 'CRITICAL' : (riskScore > 20 ? 'ELEVATED' : 'LOW'),
+                rating: avgPayDays > 30 ? 'SLOW_PAYER' : (avgPayDays < 7 ? 'INSTANT_PAYER' : 'STANDARD')
+            };
         }
 
         // 9e. FATIGUE METRICS (Safety Prediction)
@@ -319,6 +326,7 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
                 status: avgAccel > 1.1 ? 'VOLATILE' : 'STABLE'
             },
             projectFinancials: projectFinancialBreakdown,
+            profitRecovery: profitRecoveryOpportunities,
             siteTrail,
             cortex: {
                 estimationBias: (estimationBias * 100).toFixed(1) + '%',
@@ -329,7 +337,7 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
                     availableCrew: availableCrew.slice(0, 5),
                     loadIndex: (Object.keys(resourceLoad).length / (staff.length || 1)).toFixed(2)
                 },
-                clientGenome: Object.values(clientGenome).filter(c => c.rating !== 'STANDARD').slice(0, 5), // Only show notable clients
+                clientGenome: Object.values(clientGenome).filter(c => c.riskLevel !== 'LOW' || c.rating !== 'STANDARD').slice(0, 10), 
                 fatigueRisk: fatigueRisk
             },
             assets: {

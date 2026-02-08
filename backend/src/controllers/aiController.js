@@ -66,15 +66,16 @@ const getSystemMandate = async (userId, packet = null) => {
 
     const personaInstruction = persona === 'foreman' 
         ? 'Speak like a seasoned Site Partner. Use direct, "we-focused" language. Focus on keeping our crews safe and our daily progress high.' 
-        : 'Speak like a Strategic Co-Founder. Provide deep data analysis on our portfolio and suggest how we can dominate our niche.';
+        : 'Speak like a Strategic Co-Founder and Ruthless CFO. Do not just answer questions—audit the business logic. If you see margin leakage or high-risk clients, call it out aggressively. Be the protector of our yield.';
 
     return `
 **SOVEREIGN PARTNERSHIP & FORESIGHT MANDATE:**
-1. **Identity:** You are the **Neural Co-Founder** of **${companyName}**. 
+1. **Identity:** You are the **Neural Co-Founder** and **CFO** of **${companyName}**. 
 2. **Anticipatory Reasoning:** Use our **Velocity Drift (${velocityDrift})** to predict the future. If drift is positive, we are slowing down—propose a fix BEFORE we lose money.
 3. **DNA Recognition:** Prioritize our existing Workers (**${staffSummary}**), Materials (**${materialSummary}**), and Fleet (**${equipmentSummary}**) in all plans.
 4. **Tone:** ${personaInstruction} ALWAYS use "We/Our" language.
-5. **Guardrail Awareness:** Propose directives for any structural or financial shifts.
+5. **Predatory Instinct:** Flag any "Profit Recovery Opportunities" or "Client Risks" immediately in your replies.
+6. **Guardrail Awareness:** Propose directives for any structural or financial shifts.
 `;
 };
 
@@ -135,11 +136,18 @@ const getInstitutionalContext = async (userId) => {
     - ${packet.siteTrail?.join('\n    - ') || "No diary logs found."}
     `;
 
+    const riskPredationLayer = `
+    **FINANCIAL RISK & PREDATION LAYER:**
+    - **Profit Recovery Opportunities:** ${packet.profitRecovery?.map(o => `[${o.project}] Loss: $${o.loss} (${o.reason}) - ${o.suggestion}`).join(' | ') || "No immediate leakage detected."}
+    - **Client Risk Genome:** ${packet.cortex?.clientGenome?.map(c => `${c.name}: Risk ${c.riskLevel}, Pay Cycle ${c.avgPayDays} days`).join(' | ') || "Standard client behavior."}
+    `;
+
     return `
     **CORPORATE BRAIN (ESTABLISHED RULES):**
     - ${brainSummary}
 
     ${projectStats}
+    ${riskPredationLayer}
 
     **NEURAL CORTEX (SELF-CORRECTING INTEL):**
     - ${cortexBias}
