@@ -78,7 +78,7 @@ const ACADEMY_DATA = [
         id: 5,
         title: "Invoice Harvest",
         tagline: "The Invoice That Writes Itself.",
-        videoUrl: "placeholder_5",
+        videoUrl: "CaQTxeXrcDM",
         xp: 150,
         icon: DollarSign,
         description: "Turn site truth into capital. Learn how to harvest diaries and quotes into professional invoices.",
