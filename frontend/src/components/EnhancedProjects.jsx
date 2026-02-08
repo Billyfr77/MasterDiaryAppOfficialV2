@@ -14,6 +14,7 @@ import { Folder, Plus, Edit, Trash2, Calendar, User, Search, Filter, Download, B
 import Papa from 'papaparse'
 import ClientSelector from './Clients/ClientSelector'
 import ProjectGantt from './EnhancedProjects/ProjectGantt'
+import ContractVault from './EnhancedProjects/ContractVault'
 
 const EnhancedProjects = () => {
   const navigate = useNavigate()
@@ -833,7 +834,19 @@ const EnhancedProjects = () => {
                   >
                       Variations & Jobs
                   </button>
+                  <button 
+                    onClick={() => setActiveTab('contracts')}
+                    className={`pb-3 px-2 text-sm font-bold transition-all ${activeTab === 'contracts' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-400 hover:text-white'}`}
+                  >
+                      Legal & Contracts
+                  </button>
               </div>
+
+              {activeTab === 'contracts' && (
+                  <div className="h-[600px] animate-fade-in">
+                      <ContractVault projectId={selectedProject.id} />
+                  </div>
+              )}
 
               {activeTab === 'jobs' && (
                   <div className="space-y-6 animate-fade-in">

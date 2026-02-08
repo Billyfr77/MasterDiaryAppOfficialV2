@@ -158,7 +158,9 @@ const AuditUltraLog = () => {
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
                                         <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block mb-2">Timestamp</span>
-                                        <span className="text-sm font-mono font-bold text-white">{new Date(selectedLog.date).toLocaleString()}</span>
+                                        <span className="text-sm font-mono font-bold text-white">
+                                            {selectedLog.date ? new Date(selectedLog.date).toLocaleString() : 'N/A'}
+                                        </span>
                                     </div>
                                     <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
                                         <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block mb-2">Actor</span>

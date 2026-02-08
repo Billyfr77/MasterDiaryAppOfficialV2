@@ -183,8 +183,9 @@ app.use('/api/diary-templates', require('./src/routes/diaryTemplates')); // Diar
 
 try {
     app.use('/api/sentinel', require('./src/routes/sentinel')); // Sentinel Revenue Engine (Mainline)
+    app.use('/api/contracts', require('./src/routes/contracts')); // Ironclad Contract Engine
 } catch (e) {
-    console.error("Failed to load Sentinel Routes:", e.message);
+    console.error("Failed to load Sentinel/Contract Routes:", e.message);
 }
 
 // --- SERVE UPLOADS (Static) ---

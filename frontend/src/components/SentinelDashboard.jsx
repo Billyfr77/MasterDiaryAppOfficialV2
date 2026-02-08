@@ -138,7 +138,7 @@ const SentinelDashboard = () => {
                                     <span className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Total Recovered</span>
                                     <div className="text-3xl font-black text-emerald-400 flex items-center gap-1">
                                         <DollarSign size={20} className="text-emerald-600" />
-                                        {stats.totalRecovered.toLocaleString()}
+                                        {(stats?.totalRecovered || 0).toLocaleString()}
                                     </div>
                                 </div>
                                 <div className="p-6 flex flex-col items-center justify-center text-center">
