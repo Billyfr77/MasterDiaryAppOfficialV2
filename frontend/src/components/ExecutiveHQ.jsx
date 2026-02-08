@@ -74,6 +74,14 @@ export default function ExecutiveHQ() {
     // ... (fetchMesh logic remains here, skipping for brevity in replacement if not touched)
 
     useEffect(() => {
+        // Reset navigation when switching modes to ensure clean UI for Flight Plan, Yield, etc.
+        if (viewMode !== 'MESH') {
+            setPan({ x: 0, y: 0 });
+            setZoom(1);
+        }
+    }, [viewMode]);
+
+    useEffect(() => {
         // Attach non-passive wheel listener for zoom
         const viewport = viewportRef.current;
         if (!viewport) return;
@@ -377,25 +385,6 @@ export default function ExecutiveHQ() {
                             </div>
                         </div>
 
-                        {/* Sovereign Sitrep (Morning Brief) */}
-                        {morningBrief && (
-                            <motion.div 
-                                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                                className="hidden xl:flex flex-1 max-w-2xl bg-indigo-500/5 border border-indigo-500/20 rounded-[2.5rem] p-6 items-center gap-6 shadow-inner mx-10 relative overflow-hidden group"
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <div className="p-4 bg-indigo-600 rounded-2xl shadow-lg relative z-10 animate-pulse-slow">
-                                    <BrainCircuit size={24} className="text-white" />
-                                </div>
-                                <div className="relative z-10">
-                                    <div className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-1">Sovereign_Sitrep</div>
-                                    <p className="text-[11px] font-bold text-gray-300 leading-relaxed italic line-clamp-2">
-                                        "{morningBrief}"
-                                    </p>
-                                </div>
-                            </motion.div>
-                        )}
-
                         <div className="flex gap-8 items-center">
                             {/* System Health Indicators */}
                             <div className="flex gap-4 px-8 py-4 bg-black/40 border border-white/5 rounded-3xl backdrop-blur-xl">
@@ -424,7 +413,13 @@ export default function ExecutiveHQ() {
             >
                 <motion.div 
                     className="absolute inset-0 transform-style-3d h-full w-full"
-                    animate={{ x: pan.x, y: pan.y, scale: zoom, rotateY: mousePos.x * 0.25, rotateX: -mousePos.y * 0.25 }}
+                    animate={{ 
+                        x: viewMode === 'MESH' ? pan.x : 0, 
+                        y: viewMode === 'MESH' ? pan.y : 0, 
+                        scale: viewMode === 'MESH' ? zoom : 1, 
+                        rotateY: mousePos.x * 0.25, 
+                        rotateX: -mousePos.y * 0.25 
+                    }}
                     transition={{ type: 'spring', damping: 40, stiffness: 80 }}
                 >
                     <AnimatePresence mode="wait">
@@ -581,6 +576,27 @@ export default function ExecutiveHQ() {
                                 </div>
 
                                 <div className="flex-1 bg-black/60 border border-white/10 rounded-[3rem] p-10 overflow-y-auto custom-scrollbar flex flex-col gap-8 shadow-inner glass-obsidian">
+                                    {/* SITREP BRIEFING - Moved from Header */}
+                                    {morningBrief && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+                                            className="w-full bg-indigo-500/10 border border-indigo-500/20 rounded-[2rem] p-8 flex items-center gap-8 shadow-2xl relative overflow-hidden group mb-4"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent" />
+                                            <div className="p-5 bg-indigo-600 rounded-2xl shadow-[0_0_30px_rgba(99,102,241,0.4)] relative z-10">
+                                                <BrainCircuit size={32} className="text-white" />
+                                            </div>
+                                            <div className="relative z-10 flex-1">
+                                                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.5em] mb-2 flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" /> SOVEREIGN_SITREP_OS_V15.5
+                                                </div>
+                                                <p className="text-lg font-bold text-indigo-100 leading-relaxed italic">
+                                                    "{morningBrief}"
+                                                </p>
+                                            </div>
+                                        </motion.div>
+                                    )}
+
                                     {warRoomMessages.map((m, i) => (
                                         <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                             <div className={`max-w-[80%] p-8 rounded-[2.5rem] text-sm leading-relaxed shadow-2xl border transition-all ${
