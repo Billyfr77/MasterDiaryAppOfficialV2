@@ -1152,42 +1152,58 @@ const QuoteBuilderContent = () => {
 
                       // CLONE NODE SAFETY & DATA RESTORATION LOGIC
                       const savedNodes = (q.nodes || []).map(node => {
-                          const exists = [...materialsList, ...staffList, ...equipmentList].some(item => item.id === node.data?.nodeId || item.id === node.id);
+                          // Ensure we have a valid node object even if stored as raw data
+                          let restoredNode = { ...node };
+                          
+                          // If it's missing React Flow structure, wrap it (Fallback)
+                          if (!restoredNode.data) {
+                              restoredNode = {
+                                  id: restoredNode.id || `restored-${Date.now()}-${Math.random()}`,
+                                  type: restoredNode.type || 'material',
+                                  position: restoredNode.position || { x: 0, y: 0 },
+                                  data: { ...node }
+                              };
+                          }
+
+                          const nodeData = restoredNode.data;
+                          const exists = [...materialsList, ...staffList, ...equipmentList].some(item => item.id === nodeData.nodeId || item.id === restoredNode.id);
                           
                           // Link back to BOM items for value synchronization
-                          const linkedItem = savedItems.find(i => i.tempId === node.id || i.nodeId === node.id || (node.data?.nodeId && i.nodeId === node.data.nodeId));
+                          const linkedItem = savedItems.find(i => i.tempId === restoredNode.id || i.nodeId === restoredNode.id || (nodeData.nodeId && i.nodeId === nodeData.nodeId));
 
                           // 1. Safety Clone for 'glass' nodes
-                          if (!exists && node.type === 'glass') {
-                              return { ...node, data: { ...node.data, isClone: true, subLabel: 'Archived Node', onUpdate: updateItemNodeData, onDelete: () => deleteNode(node.id) } };
+                          if (!exists && restoredNode.type === 'glass') {
+                              return { ...restoredNode, data: { ...nodeData, isClone: true, subLabel: 'Archived Node', onUpdate: updateItemNodeData, onDelete: () => deleteNode(restoredNode.id) } };
                           }
 
                           // 2. Data Restoration for Power Nodes (Materials/Labour)
-                          if (['quoteMaterial', 'quoteLabour', 'glass', 'staff', 'equipment', 'material'].includes(node.type)) {
-                              // CRITICAL: Determine correct rate and quantity from multiple potential sources
-                              const savedRate = node.data?.rate !== undefined ? node.data.rate : 
-                                               (node.data?.chargeRate !== undefined ? node.data.chargeRate : 
-                                               (linkedItem?.customRate || linkedItem?.material?.price || linkedItem?.material?.pricePerUnit || linkedItem?.material?.chargeRate || 0));
+                          if (['quoteMaterial', 'quoteLabour', 'glass', 'staff', 'equipment', 'material'].includes(restoredNode.type)) {
+                              // AGGRESSIVE DATA RECOVERY
+                              const rate = parseFloat(nodeData.rate !== undefined ? nodeData.rate : 
+                                           (nodeData.chargeRate !== undefined ? nodeData.chargeRate : 
+                                           (linkedItem?.customRate || linkedItem?.material?.price || linkedItem?.material?.pricePerUnit || linkedItem?.material?.chargeRate || 0)));
                               
-                              const savedQty = node.data?.quantity !== undefined ? node.data.quantity : 
-                                              (node.data?.duration !== undefined ? node.data.duration : 
-                                              (linkedItem?.quantity || 1));
+                              const qty = parseFloat(nodeData.quantity !== undefined ? nodeData.quantity : 
+                                          (nodeData.duration !== undefined ? nodeData.duration : 
+                                          (linkedItem?.quantity || 1)));
+
+                              const label = nodeData.label || nodeData.name || linkedItem?.material?.name || 'Restored Item';
 
                               const restoredData = {
-                                  ...node.data,
-                                  label: node.data?.label || node.data?.name || linkedItem?.material?.name || 'Restored Item',
-                                  rate: parseFloat(savedRate) || 0,
-                                  quantity: parseFloat(savedQty) || 0,
-                                  coverage: parseFloat(node.data?.coverage) || 10,
-                                  waste: parseFloat(node.data?.waste) || 10,
-                                  prodRate: parseFloat(node.data?.prodRate) || 2,
+                                  ...nodeData,
+                                  label,
+                                  rate: isNaN(rate) ? 0 : rate,
+                                  quantity: isNaN(qty) ? 0 : qty,
+                                  coverage: parseFloat(nodeData.coverage) || 10,
+                                  waste: parseFloat(nodeData.waste) || 10,
+                                  prodRate: parseFloat(nodeData.prodRate) || 2,
                                   onUpdate: updateItemNodeData,
-                                  onDelete: () => deleteNode(node.id)
+                                  onDelete: () => deleteNode(restoredNode.id)
                               };
-                              return { ...node, data: restoredData };
+                              return { ...restoredNode, data: restoredData };
                           }
 
-                          return { ...node, data: { ...node.data, onUpdate: updateItemNodeData, onDelete: () => deleteNode(node.id) } };
+                          return { ...restoredNode, data: { ...nodeData, onUpdate: updateItemNodeData, onDelete: () => deleteNode(restoredNode.id) } };
                       });
 
                       setNodes(savedNodes);

@@ -134,6 +134,8 @@ const createQuote = async (req, res) => {
 
     // 1. Process New Items (Auto-Create Resources)
     const userId = req.user?.id;
+    
+    // Logic: processNewItems should handle the .data property if it exists, or the raw object
     const processedNodes = await processNewItems(value.nodes, 'material', userId);
     const processedStaff = await processNewItems(value.staff, 'staff', userId);
     const processedEquipment = await processNewItems(value.equipment, 'equipment', userId);
@@ -146,12 +148,12 @@ const createQuote = async (req, res) => {
 
     const quote = await Quote.create({
       name: value.name || `Quote ${new Date().toLocaleDateString()}`,
-      status: value.status || 'approved',
+      status: value.status || 'draft',
       projectId: value.projectId || null,
       clientId: value.clientId || null,
       userId: userId || null,
       marginPct: parseFloat(value.marginPct) || 0,
-      nodes: processedNodes || [],
+      nodes: processedNodes || [], // These should now be full React Flow nodes
       edges: value.edges || [],
       staff: processedStaff || [],
       equipment: processedEquipment || [],
@@ -207,7 +209,7 @@ const updateQuote = async (req, res) => {
       clientId: value.clientId || null,
       marginPct: parseFloat(value.marginPct) || 0,
       status: value.status,
-      nodes: processedNodes || [],
+      nodes: processedNodes || [], // Full nodes
       edges: value.edges || [],
       staff: processedStaff || [],
       equipment: processedEquipment || [],
