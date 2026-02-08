@@ -199,6 +199,9 @@ const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 // --- MAINTENANCE ROUTES (RESTRICTED) ---
 const areDebugRoutesEnabled = process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEBUG_ROUTES === 'true';
 
+// Database Schema Fix Engine (Shared)
+const runSchemaFix = require('./src/utils/manualSchemaFix');
+
 if (areDebugRoutesEnabled) {
     // Temporary Seeding Route
     app.get('/api/seed-secret', async (req, res) => {
@@ -278,7 +281,6 @@ if (areDebugRoutesEnabled) {
     });
 
     // Database Schema Fix Route (Emergency)
-    const runSchemaFix = require('./src/utils/manualSchemaFix');
     app.get('/api/fix-schema', async (req, res) => {
       try {
         const secret = req.query.secret;
