@@ -180,7 +180,6 @@ app.use('/api/ai', require('./src/routes/ai')); // Grok AI Service
 app.use('/api/intelligence', require('./src/routes/intelligenceRoutes')); // NEW: Intelligence Stack
 app.use('/api/weather', require('./src/routes/weather')); // Weather Service
 app.use('/api/diary-templates', require('./src/routes/diaryTemplates')); // Diary Templates Route
-app.use('/api/sentinel', require('./src/routes/sentinel')); // Sentinel Revenue Engine
 
 // --- SERVE UPLOADS (Static) ---
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
@@ -200,7 +199,7 @@ const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 const areDebugRoutesEnabled = process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEBUG_ROUTES === 'true';
 
 // Database Schema Fix Engine (Shared)
-const runSchemaFix = require('./src/utils/manualSchemaFix');
+// const runSchemaFix = require('./src/utils/manualSchemaFix');
 
 if (areDebugRoutesEnabled) {
     // Temporary Seeding Route

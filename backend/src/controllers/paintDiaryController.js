@@ -223,6 +223,7 @@ const createPaintDiary = async (req, res) => {
     await transaction.commit();
 
     // TRIGGER SENTINEL REVENUE RECOVERY (Non-blocking)
+    /*
     const sentinelService = require('../services/sentinelService');
     sentinelService.analyzeLeakage(diary.id, req.user.id).then(result => {
         if (result) {
@@ -237,6 +238,7 @@ const createPaintDiary = async (req, res) => {
             });
         }
     }).catch(err => console.error("Sentinel Trigger Error:", err));
+    */
 
     // Trigger Workflow Engine
     const workflowEngine = require('../services/workflowEngine');
