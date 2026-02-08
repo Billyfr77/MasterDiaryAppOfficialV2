@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const formatCurrency = (amount) => {
   const val = parseFloat(amount);
@@ -11,7 +11,7 @@ const formatCurrency = (amount) => {
 };
 
 export const generatePDF = (invoice, totals) => {
-  console.log("[InvoicePDF] Triggering PDF generation...", { invoice, totals });
+  console.log("[InvoicePDF] Generating Pro-Grade PDF...");
   
   try {
       const doc = new jsPDF();
@@ -22,7 +22,6 @@ export const generatePDF = (invoice, totals) => {
           try {
               doc.addImage(invoice.senderLogo, 'PNG', 20, 15, 30, 30, undefined, 'FAST');
           } catch (e) {
-              console.warn("[InvoicePDF] Logo render failed", e);
               doc.setFontSize(20);
               doc.setTextColor(...themeColor);
               doc.text(invoice.senderName || "MASTER DIARY", 20, 25);
@@ -47,7 +46,7 @@ export const generatePDF = (invoice, totals) => {
       doc.setFontSize(10);
       doc.setTextColor(0);
       doc.text(`Invoice #: ${invoice.invoiceNumber || 'DRAFT'}`, 140, 42);
-      doc.text(`Date: ${new Date().toLocaleDateString()}`, 140, 48);
+      doc.text(`Date: ${new Date(invoice.issueDate || Date.now()).toLocaleDateString()}`, 140, 48);
 
       doc.setDrawColor(...themeColor);
       doc.setLineWidth(0.5);
@@ -77,8 +76,8 @@ export const generatePDF = (invoice, totals) => {
         formatCurrency(item.amount)
       ]);
 
-      // Use the autoTable plugin
-      doc.autoTable({
+      // CRITICAL FIX: Use explicit autoTable function
+      autoTable(doc, {
         startY: 105,
         head: [tableColumn],
         body: tableRows,
@@ -119,7 +118,6 @@ export const generatePDF = (invoice, totals) => {
       return true;
   } catch (err) {
       console.error("[InvoicePDF] Error:", err);
-      alert("Error generating PDF. Check console.");
       return false;
   }
 };

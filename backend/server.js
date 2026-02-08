@@ -61,7 +61,7 @@ app.use(helmet({
       "default-src": ["'self'"],
       "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://maps.googleapis.com", "https://*.googleapis.com"],
       "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      "img-src": ["'self'", "data:", "blob:", "https://maps.gstatic.com", "https://*.googleapis.com", "https://*.googleusercontent.com", "https://*.ggpht.com", "https://img.youtube.com", "https://i.ytimg.com"],
+      "img-src": ["'self'", "data:", "blob:", "https://maps.gstatic.com", "https://*.googleapis.com", "https://*.googleusercontent.com", "https://*.ggpht.com", "https://img.youtube.com", "https://i.ytimg.com", "https://www.transparenttextures.com"],
       "connect-src": ["'self'", "ws:", "wss:", "https://maps.googleapis.com", "https://*.googleapis.com"],
       "frame-src": ["'self'", "https://js.stripe.com", "https://www.youtube.com", "https://youtube.com"],
       "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
