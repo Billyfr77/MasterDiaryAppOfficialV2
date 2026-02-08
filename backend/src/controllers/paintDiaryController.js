@@ -52,7 +52,10 @@ const paintDiarySchema = Joi.object({
 const getAllPaintDiaries = async (req, res) => {
   try {
     const { date, projectId } = req.query;
-    const where = { diaryType: 'paint' };
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const where = { diaryType: 'paint', userId };
     if (date) where.date = date;
     if (projectId && projectId !== 'null' && projectId !== 'undefined') {
       where.projectId = projectId;
@@ -76,7 +79,11 @@ const getAllPaintDiaries = async (req, res) => {
 
 const getPaintDiaryById = async (req, res) => {
   try {
-    const diary = await Diary.findByPk(req.params.id, {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const diary = await Diary.findOne({
+      where: { id: req.params.id, userId },
       include: [
         { model: Project, required: false },
         { model: Client, required: false }
@@ -199,6 +206,7 @@ const createPaintDiary = async (req, res) => {
     }));
 
     const diaryData = {
+      userId: req.user.id,
       date,
       projectId: projectId || null,
       jobId: jobId || null,

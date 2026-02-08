@@ -63,7 +63,7 @@ const ACADEMY_DATA = [
         id: 4,
         title: "The Paint Diary",
         tagline: "History Written in Light.",
-        videoUrl: "placeholder_4",
+        videoUrl: "uVOzYkQU4yY",
         xp: 200,
         icon: PenTool,
         description: "Redefining site tracking. Learn how to use the Chronos Engine and recursive time inheritance.",
@@ -299,35 +299,59 @@ const MasterCertificate = ({ username = "Architect", date = new Date().toLocaleD
 
 const EpisodeNode = ({ episode, isLocked, isCompleted, onClick, theme }) => {
     const Icon = episode.icon;
+    const hasVideo = episode.videoUrl && !episode.videoUrl.startsWith('placeholder');
+    const thumbnailUrl = hasVideo 
+        ? `https://img.youtube.com/vi/${episode.videoUrl}/mqdefault.jpg`
+        : null;
     
     return (
         <motion.div 
             whileHover={!isLocked ? { scale: 1.05, y: -5 } : {}}
             whileTap={!isLocked ? { scale: 0.95 } : {}}
             onClick={() => !isLocked && onClick(episode)}
-            className={`relative p-6 rounded-[2rem] border-2 transition-all cursor-pointer group flex flex-col items-center gap-4 w-64
+            className={`relative rounded-[2rem] border-2 transition-all cursor-pointer group flex flex-col w-64 overflow-hidden
                 ${isCompleted ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.2)]' : 
                   isLocked ? 'bg-black/20 border-white/5 opacity-40 grayscale cursor-not-allowed' : 
                   'bg-white/5 border-white/10 hover:border-indigo-500/50 hover:bg-white/10 shadow-2xl'}
             `}
         >
-            <div className={`p-4 rounded-2xl ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-white/5 text-gray-400 group-hover:text-white transition-colors'}`}>
-                {isLocked ? <Lock size={24} /> : <Icon size={24} />}
+            {/* Cinematic Thumbnail */}
+            <div className="relative h-32 w-full overflow-hidden bg-slate-900">
+                {thumbnailUrl ? (
+                    <img 
+                        src={thumbnailUrl} 
+                        alt={episode.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center opacity-20">
+                        <Icon size={40} />
+                    </div>
+                )}
+                {/* Overlay Glow */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                
+                {/* Play Icon / Locked Icon Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className={`p-3 rounded-full backdrop-blur-md border border-white/20 ${isLocked ? 'bg-black/40' : 'bg-white/10 group-hover:bg-indigo-600 group-hover:scale-110 transition-all duration-300'}`}>
+                        {isLocked ? <Lock size={20} className="text-gray-500" /> : <Play size={20} className="text-white fill-current" />}
+                    </div>
+                </div>
             </div>
-            
-            <div className="text-center">
+
+            <div className="p-5 text-center flex flex-col items-center gap-2">
                 <h3 className="text-sm font-black uppercase tracking-widest text-white mb-1">{episode.title}</h3>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter line-clamp-1">{episode.tagline}</p>
             </div>
 
             {isCompleted && (
-                <div className="absolute -top-3 -right-3 bg-emerald-500 text-white p-1.5 rounded-full shadow-lg">
-                    <CheckCircle size={16} />
+                <div className="absolute top-2 right-2 bg-emerald-500 text-white p-1.5 rounded-full shadow-lg z-10">
+                    <CheckCircle size={14} />
                 </div>
             )}
 
             {!isLocked && !isCompleted && (
-                <div className="absolute -top-3 -right-3 bg-indigo-600 text-white px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-lg">
+                <div className="absolute top-2 left-2 bg-indigo-600 text-white px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-lg z-10">
                     +{episode.xp} XP
                 </div>
             )}

@@ -47,7 +47,7 @@ const getAllDiaries = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const where = {};
+    const where = { userId };
     if (date) where.date = date;
     if (projectId) where.projectId = projectId;
 
@@ -56,9 +56,7 @@ const getAllDiaries = async (req, res) => {
       include: [
         { 
           model: Project,
-          as: 'Project',
-          where: { userId },
-          required: true
+          as: 'Project'
         },
         { model: Staff, as: 'Staff' }
       ]
@@ -162,6 +160,7 @@ const createDiary = async (req, res) => {
     const marginPct = revenuesCalc > 0 ? ((revenuesCalc - costs) / revenuesCalc) * 100 : 0;
 
     const diaryData = {
+      userId: req.user.id,
       date,
       projectId,
       workerId: workerIdToUse,
