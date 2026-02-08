@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, X, Sparkles, Youtube } from 'lucide-react';
 
-const VideoBeacon = ({ videoId, title = "Neural Briefing" }) => {
+const VideoBeacon = ({ videoId, title = "Neural Briefing", position = "bottom-8 right-8" }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     if (!videoId) return null;
+
+    // Map tailwind classes to motion variants or standard classes
+    const positionClasses = position;
 
     return (
         <>
@@ -16,7 +19,7 @@ const VideoBeacon = ({ videoId, title = "Neural Briefing" }) => {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-8 right-8 z-[100] group"
+                className={`fixed ${positionClasses} z-[100] group`}
             >
                 <div className="absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl group-hover:bg-indigo-500/40 transition-all animate-pulse" />
                 <button className="relative bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/20 transition-all">

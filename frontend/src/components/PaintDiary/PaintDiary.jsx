@@ -1476,8 +1476,8 @@ const PaintDiary = () => {
             <ItemList items={currentEntry.items} onUpdate={handleUpdateItem} onRemove={handleRemoveItem} overtimeThreshold={overtimeThreshold} />
         </div>
 
-        {/* HELP BEACON */}
-        <VideoBeacon videoId="uVOzYkQU4yY" title="Master the Paint Diary" />
+        {/* HELP BEACON - Moved to bottom-left to avoid covering list */}
+        <VideoBeacon videoId="uVOzYkQU4yY" title="Master the Paint Diary" position="bottom-8 left-8" />
     </div>
   );
 };

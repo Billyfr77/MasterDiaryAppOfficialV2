@@ -1590,13 +1590,13 @@ const QuoteBuilderContent = () => {
                 </div>
             </div>
         </div>
-        <div className="absolute bottom-24 right-6 z-50">
+        <div className="absolute bottom-[340px] right-6 z-50">
           {!showChat && <button onClick={() => setShowChat(true)} className={`w-14 h-14 rounded-full ${theme.button} flex items-center justify-center text-white hover:scale-110 transition-transform`}><Sparkles size={24} /></button>}
           <QuoteCopilot isOpen={showChat} onClose={() => setShowChat(false)} messages={chatMessages} onSendMessage={handleAIChat} isTyping={chatTyping} onAction={handleCopilotAction} onGenerateBlueprint={handleGenerateBlueprint} />
         </div>
 
-        {/* HELP BEACON */}
-        <VideoBeacon videoId="p1JESN0mH8o" title="Master the Neural Quoter" />
+        {/* HELP BEACON - Moved to bottom-left to avoid covering totals */}
+        <VideoBeacon videoId="p1JESN0mH8o" title="Master the Neural Quoter" position="bottom-8 left-8" />
       </div>
     </div>
   )
