@@ -255,7 +255,7 @@ const SafetyFormViewer = ({ formId, onClose }) => {
                   <div className="flex flex-wrap justify-center gap-4 text-sm font-bold uppercase tracking-widest text-gray-500">
                       <span className="flex items-center gap-2"><Shield size={14} className="text-indigo-500" /> {formData.type.replace('_', ' ')}</span>
                       <span className="w-px h-4 bg-gray-300 dark:bg-white/10" />
-                      <span className="flex items-center gap-2"><MapPin size={14} className="text-orange-500" /> {projects.find(p => p.id === formData.projectId)?.name || 'Unassigned Project'}</span>
+                      <span className="flex items-center gap-2"><MapPin size={14} className="text-orange-500" /> {(Array.isArray(projects) && projects.find(p => p.id === formData.projectId)?.name) || 'Unassigned Project'}</span>
                       <span className="w-px h-4 bg-gray-300 dark:bg-white/10" />
                       <span className="flex items-center gap-2"><Calendar size={14} className="text-emerald-500" /> {new Date(formData.data.date).toLocaleDateString()}</span>
                   </div>
@@ -294,7 +294,7 @@ const SafetyFormViewer = ({ formId, onClose }) => {
                   )}
 
                   {/* Dynamic Fields (AI/Builder) */}
-                  {formData.data.fields && (
+                  {Array.isArray(formData.data?.fields) && (
                       <div className="space-y-6 print:space-y-4">
                           {formData.data.fields.map((field, idx) => (
                               <div key={idx} className="border-b border-gray-100 dark:border-white/5 pb-6 last:border-0 print:border-none print:pb-2 print:break-inside-avoid">
@@ -363,7 +363,7 @@ const SafetyFormViewer = ({ formId, onClose }) => {
                                       </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-100 dark:divide-white/5 print:divide-black">
-                                      {formData.data.steps.map((step, i) => (
+                                      {Array.isArray(formData.data?.steps) && formData.data.steps.map((step, i) => (
                                           <tr key={i} className="bg-white dark:bg-stone-900 print:break-inside-avoid">
                                               <td className="p-4 font-medium print:p-2 print:border print:border-black text-center">{i + 1}</td>
                                               <td className="p-4 font-medium print:p-2 print:border print:border-black align-top">{step.activity}</td>
@@ -386,7 +386,7 @@ const SafetyFormViewer = ({ formId, onClose }) => {
                           <p className="hidden print:block text-xs italic mb-4">By signing below, I acknowledge that I have read and understood the contents of this document.</p>
                           
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-3">
-                              {formData.signatures?.map((sig, idx) => (
+                              {Array.isArray(formData.signatures) && formData.signatures.map((sig, idx) => (
                                   <div key={idx} className="bg-white dark:bg-stone-900 p-4 rounded-xl border border-gray-200 dark:border-white/5 shadow-sm flex flex-col items-center print:border-black print:h-24 print:justify-between print:rounded-none">
                                       <img src={sig.signature} alt="Signed" className="h-12 mb-2 object-contain filter dark:invert" />
                                       <div className="text-center w-full print:border-t print:border-gray-400 print:pt-1">
@@ -438,7 +438,7 @@ const SafetyFormViewer = ({ formId, onClose }) => {
                                       className="w-full bg-gray-50 dark:bg-stone-800 border border-gray-200 dark:border-stone-700 rounded-xl p-3 outline-none focus:ring-2 ring-indigo-500"
                                   >
                                       <option value="">-- No Project Assigned --</option>
-                                      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                      {Array.isArray(projects) && projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                   </select>
                                   <p className="text-[10px] text-gray-400 mt-1">You can assign this document to a project later.</p>
                               </div>

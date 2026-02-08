@@ -31,7 +31,8 @@ export const generateSafetyPDF = (formData, fields) => {
       doc.setTextColor(...secondaryColor);
       doc.setFont('helvetica', 'normal');
       doc.text("IRON SHIELD COMPLIANCE PROTOCOL", 20, 32);
-      doc.text(`DOC_ID: ${formData.id ? formData.id.slice(0, 12).toUpperCase() : 'DRAFT_RECORD'}`, 20, 37);
+      const docId = (formData.id && typeof formData.id === 'string') ? formData.id.slice(0, 12).toUpperCase() : 'DRAFT_RECORD';
+      doc.text(`DOC_ID: ${docId}`, 20, 37);
 
       // --- DOCUMENT INFO ---
       doc.setFontSize(10);
@@ -72,24 +73,25 @@ export const generateSafetyPDF = (formData, fields) => {
       // We'll separate headers from key-value pairs for maximum cleanliness
       const tableData = [];
       
-      fields.forEach(field => {
+      (fields || []).forEach(field => {
+          const label = field.label || "Unnamed Field";
           if (field.type === 'header') {
-              tableData.push([{ content: field.label.toUpperCase(), colSpan: 2, styles: { fillColor: [240, 240, 240], fontStyle: 'bold', textColor: themeColor } }]);
+              tableData.push([{ content: String(label).toUpperCase(), colSpan: 2, styles: { fillColor: [240, 240, 240], fontStyle: 'bold', textColor: themeColor } }]);
           } else if (field.type === 'paragraph') {
-              tableData.push([{ content: field.value || field.label, colSpan: 2, styles: { fontStyle: 'italic', textColor: [80, 80, 80] } }]);
+              tableData.push([{ content: field.value || label, colSpan: 2, styles: { fontStyle: 'italic', textColor: [80, 80, 80] } }]);
           } else if (field.type === 'hazard') {
               tableData.push([
                   { content: "!!! CRITICAL HAZARD", styles: { textColor: [220, 38, 38], fontStyle: 'bold' } },
-                  { content: field.label, styles: { textColor: [220, 38, 38] } }
+                  { content: label, styles: { textColor: [220, 38, 38] } }
               ]);
           } else if (field.type === 'signature') {
               // Signatures handled at the end or inline? Let's do inline for safety forms
-              tableData.push([field.label || "Authorized Signature", "X _______________________________"]);
+              tableData.push([label || "Authorized Signature", "X _______________________________"]);
           } else if (field.type === 'risk_matrix') {
               tableData.push(["Risk Assessment", "Digital Matrix Verified"]);
           } else {
               // Standard input fields
-              tableData.push([field.label, formatValue(field.value)]);
+              tableData.push([label, formatValue(field.value)]);
           }
       });
 
@@ -134,7 +136,8 @@ export const generateSafetyPDF = (formData, fields) => {
         doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
       }
 
-      const fileName = `${formData.title?.replace(/\s+/g, '_') || 'Safety_Record'}.pdf`;
+      const safeTitle = (formData.title && typeof formData.title === 'string') ? formData.title.replace(/\s+/g, '_') : 'Safety_Record';
+      const fileName = `${safeTitle}.pdf`;
       doc.save(fileName);
       return true;
   } catch (err) {

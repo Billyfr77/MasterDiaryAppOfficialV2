@@ -181,6 +181,12 @@ app.use('/api/intelligence', require('./src/routes/intelligenceRoutes')); // NEW
 app.use('/api/weather', require('./src/routes/weather')); // Weather Service
 app.use('/api/diary-templates', require('./src/routes/diaryTemplates')); // Diary Templates Route
 
+try {
+    app.use('/api/sentinel', require('./src/routes/sentinel')); // Sentinel Revenue Engine (Mainline)
+} catch (e) {
+    console.error("Failed to load Sentinel Routes:", e.message);
+}
+
 // --- SERVE UPLOADS (Static) ---
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res) => {
@@ -199,7 +205,7 @@ const bcrypt = require('bcryptjs'); // Ensure bcrypt is required
 const areDebugRoutesEnabled = process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEBUG_ROUTES === 'true';
 
 // Database Schema Fix Engine (Shared)
-// const runSchemaFix = require('./src/utils/manualSchemaFix');
+const runSchemaFix = require('./src/utils/manualSchemaFix');
 
 if (areDebugRoutesEnabled) {
     // Temporary Seeding Route

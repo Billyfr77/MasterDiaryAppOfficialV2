@@ -115,7 +115,7 @@ const SafetyCopilot = ({ isOpen, onClose, onGenerate }) => {
                     )}
                     
                     {/* Suggestions Area */}
-                    {suggestions.length > 0 && (
+                    {Array.isArray(suggestions) && suggestions.length > 0 && (
                         <div className="mt-4 pl-2 border-l-2 border-purple-500 ml-2">
                             <div className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3">Recommended Documents</div>
                             <div className="grid grid-cols-1 gap-2">
@@ -359,7 +359,7 @@ const SafetyDashboard = () => {
                     <div className="text-center py-20 text-gray-500 font-mono animate-pulse">LOADING SECURE REGISTRY...</div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {forms.map(form => (
+                        {Array.isArray(forms) && forms.map(form => (
                             <div 
                                 key={form.id} 
                                 onClick={() => setSelectedForm(form.id)}

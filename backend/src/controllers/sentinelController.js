@@ -1,5 +1,8 @@
 const sentinelService = require('../services/sentinelService');
-const { Diary, Quote, Project, Notification } = require('../models');
+const db = require('../models');
+const { Diary, Quote, Project } = db;
+// Safely load Notification model
+const Notification = db.Notification || require('../models/notification')(db.sequelize, db.Sequelize.DataTypes);
 
 const runScan = async (req, res) => {
     try {
@@ -35,6 +38,42 @@ const getAlerts = async (req, res) => {
             order: [['createdAt', 'DESC']]
         });
         res.json(alerts);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getHistory = async (req, res) => {
+    try {
+        const history = await Notification.findAll({
+            where: { 
+                userId: req.user.id, 
+                type: 'sentinel_alert',
+                isRead: true
+            },
+            order: [['updatedAt', 'DESC']],
+            limit: 50
+        });
+        res.json(history);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getStats = async (req, res) => {
+    try {
+        // Calculate total potential vs recovered
+        const all = await Notification.findAll({
+            where: { userId: req.user.id, type: 'sentinel_alert' }
+        });
+        
+        const stats = {
+            totalRecovered: all.filter(n => n.isRead).reduce((acc, n) => acc + (n.data?.totalPotentialRevenue || 0), 0),
+            pendingRevenue: all.filter(n => !n.isRead).reduce((acc, n) => acc + (n.data?.totalPotentialRevenue || 0), 0),
+            leaksDetected: all.length,
+            accuracy: 98 // Placeholder for AI confidence metric
+        };
+        res.json(stats);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -76,5 +115,7 @@ const createVariation = async (req, res) => {
 module.exports = {
     runScan,
     getAlerts,
+    getHistory,
+    getStats,
     createVariation
 };
