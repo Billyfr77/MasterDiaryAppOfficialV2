@@ -34,6 +34,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { useDiaryTheme } from '../PaintDiary/ThemeContext';
 import PowerHeader from '../ui/PowerHeader';
 import AestheticPicker from '../PaintDiary/AestheticPicker';
+import VideoBeacon from '../ui/VideoBeacon';
 import { WORKFLOW_TEMPLATES } from './WorkflowTemplates';
 
 const nodeTypes = {
@@ -1820,6 +1821,9 @@ const WorkflowBuilderContent = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* HELP BEACON */}
+      <VideoBeacon videoId="WPGQscMe7NE" title="Master the Architect" />
     </div>
   );
 };

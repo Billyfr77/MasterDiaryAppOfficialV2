@@ -21,6 +21,7 @@ import ItemList from './ItemList';
 import IntelligenceLayer from './IntelligenceLayer';
 import PowerHeader from '../ui/PowerHeader';
 import AestheticPicker from './AestheticPicker';
+import VideoBeacon from '../ui/VideoBeacon';
 
 // --- DRAGGABLE ITEM COMPONENT (ENHANCED) ---
 const DraggableItem = ({ item }) => {
@@ -1474,6 +1475,9 @@ const PaintDiary = () => {
         <div className="w-full px-4 mt-6 pb-10">
             <ItemList items={currentEntry.items} onUpdate={handleUpdateItem} onRemove={handleRemoveItem} overtimeThreshold={overtimeThreshold} />
         </div>
+
+        {/* HELP BEACON */}
+        <VideoBeacon videoId="uVOzYkQU4yY" title="Master the Paint Diary" />
     </div>
   );
 };

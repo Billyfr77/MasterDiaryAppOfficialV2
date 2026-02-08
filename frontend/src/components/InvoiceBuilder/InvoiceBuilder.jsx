@@ -11,6 +11,7 @@ import { generatePDF } from './InvoicePDF';
 import ClientSelector from '../Clients/ClientSelector';
 import { api } from '../../utils/api';
 import PremiumLoader from '../ui/PremiumLoader';
+import VideoBeacon from '../ui/VideoBeacon';
 
 // --- AUTO SCROLL HOOK ---
 const useWindowAutoScroll = () => {
@@ -570,6 +571,9 @@ const InvoiceBuilder = () => {
                 </div>
             </div>
         )}
+
+        {/* HELP BEACON */}
+        <VideoBeacon videoId="CaQTxeXrcDM" title="Master Invoice Harvest" />
       </div>
     </div>
   );

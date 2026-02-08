@@ -30,6 +30,7 @@ import {
 import { api } from '../utils/api';
 import ClientSelector from './Clients/ClientSelector';
 import PowerHeader from './ui/PowerHeader';
+import VideoBeacon from './ui/VideoBeacon';
 import { useDiaryTheme } from './PaintDiary/ThemeContext';
 
 // --- CONFIGURATION ---
@@ -1398,6 +1399,9 @@ const VisualMapBuilder = ({ readOnly = false, initialProjectId = null }) => {
           </div>
       )}
       {selectedHub && <ProjectHubDrawer project={selectedHub} onClose={() => setSelectedHub(null)} onDelete={deleteAsset} onUpdate={fetchData} allStaff={staff} allEquipment={equipment} globalAllocations={allocations} />}
+      
+      {/* HELP BEACON */}
+      <VideoBeacon videoId="7VDVuSq1wTQ" title="Master GeoCore Map" />
     </div>
   );
 };

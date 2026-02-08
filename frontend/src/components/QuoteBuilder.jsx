@@ -37,6 +37,7 @@ import { generateQuotePDF } from '../utils/pdfGenerator'
 import ClientSelector from './Clients/ClientSelector'
 import { syncManager } from '../utils/syncManager'
 import PowerHeader from './ui/PowerHeader'
+import VideoBeacon from './ui/VideoBeacon'
 import { useDiaryTheme } from './PaintDiary/ThemeContext'
 import QuoteSettingsModal from './Quotes/QuoteSettingsModal'
 import ConfigModal from './ConfigModal'
@@ -1593,6 +1594,9 @@ const QuoteBuilderContent = () => {
           {!showChat && <button onClick={() => setShowChat(true)} className={`w-14 h-14 rounded-full ${theme.button} flex items-center justify-center text-white hover:scale-110 transition-transform`}><Sparkles size={24} /></button>}
           <QuoteCopilot isOpen={showChat} onClose={() => setShowChat(false)} messages={chatMessages} onSendMessage={handleAIChat} isTyping={chatTyping} onAction={handleCopilotAction} onGenerateBlueprint={handleGenerateBlueprint} />
         </div>
+
+        {/* HELP BEACON */}
+        <VideoBeacon videoId="p1JESN0mH8o" title="Master the Neural Quoter" />
       </div>
     </div>
   )

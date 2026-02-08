@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom';
 import { api } from '../../utils/api'; 
 import { RiskMatrix } from './SafetyComponents'; 
 import { useData } from '../../context/DataContext'; 
+import VideoBeacon from '../ui/VideoBeacon'; 
 
 const ItemTypes = {
   FIELD: 'field',
@@ -638,6 +639,9 @@ const SafetyFormBuilder = ({ onSave, initialData = [] }) => {
           <div className="flex-1 overflow-y-auto"><PropertiesPanel field={selectedField} onChange={handleFieldUpdate} accentColor={accentColor} onAccentChange={setAccentColor} /></div>
         </div>
         {showAIModal && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-6 animate-fade-in"><div className="bg-stone-900 border border-white/10 rounded-3xl p-8 w-full max-w-xl shadow-2xl relative overflow-hidden"><div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" /><div className="flex justify-between items-center mb-8"><div><h3 className="text-2xl font-black text-white mb-1">AI Document Architect</h3><p className="text-sm text-gray-400">Describe what you need, and I'll build the structure.</p></div><button onClick={() => setShowAIModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="text-gray-400" /></button></div><textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-2xl p-5 text-white text-base focus:border-indigo-500 outline-none h-40 mb-6 resize-none leading-relaxed" placeholder="e.g. 'Create a Hot Work Permit with sections for Fire Watch, PPE checks, and supervisor sign-off...'" autoFocus /><div className="flex justify-end gap-3"><button onClick={() => setShowAIModal(false)} className="px-6 py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors">Cancel</button><button onClick={generateWithAI} disabled={aiLoading || !aiPrompt.trim()} className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-indigo-500/20 disabled:opacity-50 transition-all transform active:scale-95">{aiLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />} Generate Structure</button></div></div></div>)}
+        
+        {/* HELP BEACON */}
+        <VideoBeacon videoId="hDcdw8MMa4M" title="Master Safety Co-pilot" />
       </div>
     </DndProvider>
   );

@@ -71,7 +71,7 @@ const ACADEMY_DATA = [
             { text: "Link crew to Chronos", link: "/diary" },
             { text: "Add a weather delay impact", link: "/diary" }
         ],
-        requiredFor: [5, 9],
+        requiredFor: [5],
         category: "Ops"
     },
     {
@@ -86,7 +86,7 @@ const ACADEMY_DATA = [
             { text: "Run a 'Diary Harvest'", link: "/invoices" },
             { text: "Generate a branded PDF invoice", link: "/invoices" }
         ],
-        requiredFor: [10],
+        requiredFor: [],
         category: "Finance"
     },
     {
@@ -116,7 +116,7 @@ const ACADEMY_DATA = [
             { text: "Architect a self-healing workflow", link: "/workflows" },
             { text: "Deploy a library template", link: "/workflows" }
         ],
-        requiredFor: [10],
+        requiredFor: [],
         category: "Core"
     },
     {
@@ -131,83 +131,8 @@ const ACADEMY_DATA = [
             { text: "Define staff skill DNA", link: "/staff" },
             { text: "Log equipment service history", link: "/equipment" }
         ],
-        requiredFor: [9],
+        requiredFor: [],
         category: "Core"
-    },
-    {
-        id: 9,
-        title: "Resource Command",
-        tagline: "Command Your Fleet, Conquer the Timeline.",
-        videoUrl: "placeholder_9",
-        xp: 200,
-        icon: Activity,
-        description: "Visual logistics at scale. Learn how to use the Chronos Grid and the Neural Optimizer.",
-        objectives: [
-            { text: "Resolve a scheduling conflict", link: "/resources" },
-            { text: "Apply a 'Ghost Move'", link: "/resources" }
-        ],
-        requiredFor: [10],
-        category: "Ops"
-    },
-    {
-        id: 10,
-        title: "Neural HQ",
-        tagline: "The Partner Who Never Sleeps.",
-        videoUrl: "placeholder_10",
-        xp: 250,
-        icon: BrainCircuit,
-        description: "The finale of the core series. Master the Sovereign Oracle and the Intelligence Flywheel.",
-        objectives: [
-            { text: "Consult the War Room Oracle", link: "/hq" },
-            { text: "Review Neural Interventions", link: "/hq" }
-        ],
-        requiredFor: [11],
-        category: "Core"
-    },
-    {
-        id: 11,
-        title: "Death of Excel",
-        tagline: "Spreadsheets are your biggest liability.",
-        videoUrl: "placeholder_11",
-        xp: 150,
-        icon: Zap,
-        description: "The competitive edge. Learn why node-based technology is the only future for construction.",
-        objectives: [
-            { text: "Identify an Excel liability", link: "/" },
-            { text: "Verify node-to-AI translation", link: "/quotes" }
-        ],
-        requiredFor: [],
-        category: "Legacy"
-    },
-    {
-        id: 12,
-        title: "Field Protocol",
-        tagline: "The Site in Your Pocket.",
-        videoUrl: "placeholder_12",
-        xp: 150,
-        icon: Smartphone,
-        description: "Bridging the office and the site. Master the mobile diary and photo-evidence trails.",
-        objectives: [
-            { text: "Capture a PhotoPlane on mobile", link: "/diary" },
-            { text: "Use Neural Voice Command", link: "/diary" }
-        ],
-        requiredFor: [],
-        category: "Field"
-    },
-    {
-        id: 13,
-        title: "Forensic Intelligence",
-        tagline: "Win the Argument Before It Starts.",
-        videoUrl: "placeholder_13",
-        xp: 200,
-        icon: ClipboardCheck,
-        description: "The unshakeable digital paper trail. Master Forensic Mode and the Audit Ultra Log.",
-        objectives: [
-            { text: "Activate the Forensic Lens", link: "/audit" },
-            { text: "Export an Audit Evidence Chain", link: "/audit" }
-        ],
-        requiredFor: [],
-        category: "Compliance"
     }
 ];
 
@@ -413,7 +338,7 @@ const Academy = () => {
         return !parents.some(p => completedEpisodes.includes(p.id));
     };
 
-    const categories = ["Core", "Visuals", "Finance", "Ops", "Compliance", "Legacy", "Field"];
+    const categories = ["Core", "Visuals", "Finance", "Ops", "Compliance"];
 
     return (
         <div className="min-h-screen bg-transparent p-8 font-sans relative" style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden', isolation: 'isolate' }}>
