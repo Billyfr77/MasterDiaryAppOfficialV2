@@ -266,7 +266,7 @@ const InvoiceBuilder = () => {
             <div><h1 className="text-3xl font-black uppercase tracking-tight">{invoice.id ? 'Edit' : 'Draft'} Invoice</h1><p className="text-gray-500 font-mono text-sm tracking-widest">{invoice.invoiceNumber}</p></div>
           </div>
           <div className="flex gap-4">
-             <button onClick={() => generatePDF(invoice, totals)} className="flex items-center gap-2 px-6 py-3 bg-stone-800 hover:bg-stone-700 text-gray-300 rounded-xl font-bold text-xs uppercase transition-all"><Printer size={16} /> Print / Download</button>
+             <button onClick={() => { console.log("Print clicked"); generatePDF(invoice, totals); }} className="flex items-center gap-2 px-6 py-3 bg-stone-800 hover:bg-stone-700 text-gray-300 rounded-xl font-bold text-xs uppercase transition-all"><Printer size={16} /> Print / Download</button>
              <button onClick={() => handleSave(false)} disabled={saving} className="flex items-center gap-3 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-xs uppercase shadow-xl hover:shadow-indigo-500/20 transition-all transform hover:-translate-y-0.5"><Save size={18} /> {saving ? 'Saving...' : 'Save Invoice'}</button>
           </div>
         </div>

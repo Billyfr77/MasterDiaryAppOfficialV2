@@ -148,3 +148,40 @@ html, body {
       scrollbar-width: none;
   }
 }
+
+/* =========================================
+   PRINT OVERRIDES
+   ========================================= */
+@media print {
+  .no-print, 
+  nav, 
+  header, 
+  .MainHeader,
+  .CommandPalette,
+  .PinnacleCopilot,
+  .VideoBeacon,
+  button, 
+  aside,
+  .fixed,
+  .absolute:not(.print-keep) { 
+    display: none !important; 
+  }
+  
+  body, #root, .App, main {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Reset layout for printing */
+  .grid, .flex {
+    display: block !important;
+  }
+}

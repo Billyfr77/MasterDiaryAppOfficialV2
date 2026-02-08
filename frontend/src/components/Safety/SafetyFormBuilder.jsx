@@ -640,7 +640,12 @@ const SafetyFormBuilder = ({ onSave, initialData = [] }) => {
             <h3 className="text-sm font-bold text-white uppercase tracking-widest">Actions</h3>
             <div className="flex gap-2">
                 <button onClick={() => onSave(fields)} className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all"><CheckSquare size={14} /> Save</button>
-                <button onClick={() => generateSafetyPDF({ title: 'Safety Record', createdAt: new Date() }, fields)} className="flex-1 px-4 py-2 bg-stone-800 hover:bg-stone-700 text-white text-xs font-bold rounded-lg border border-white/10 flex items-center justify-center gap-2 transition-all"><FileText size={14} /> PDF</button>
+                <button onClick={() => generateSafetyPDF({ 
+                    title: location.state?.template || 'Safety Record', 
+                    projectName: location.state?.projectName || 'General Works',
+                    locationDetails: location.state?.site || 'Site Alpha',
+                    createdAt: new Date() 
+                }, fields)} className="flex-1 px-4 py-2 bg-stone-800 hover:bg-stone-700 text-white text-xs font-bold rounded-lg border border-white/10 flex items-center justify-center gap-2 transition-all"><FileText size={14} /> PDF</button>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto"><PropertiesPanel field={selectedField} onChange={handleFieldUpdate} accentColor={accentColor} onAccentChange={setAccentColor} /></div>

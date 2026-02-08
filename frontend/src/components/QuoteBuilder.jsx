@@ -317,14 +317,26 @@ const QuoteBuilderContent = () => {
               const isLabourNode = n.type === 'quoteLabour';
               const isGeneric = n.type === 'glass' || n.type === 'staff' || n.type === 'equipment';
               
-              const area = n.data?.inheritedArea || 0;
+              const area = parseFloat(n.data?.inheritedArea) || 0;
               let qty = 1;
               
-              if (isMatNode) qty = area > 0 ? (area / (n.data?.coverage || 10)) * (1 + (n.data?.waste || 10) / 100) : (parseFloat(n.data?.quantity) || 1);
-              else if (isLabourNode) qty = area > 0 ? (area / (n.data?.prodRate || 2)) : (parseFloat(n.data?.duration) || 8);
-              else if (isGeneric) qty = parseFloat(n.data?.duration || n.data?.quantity || 1);
+              if (isMatNode) {
+                  const coverage = parseFloat(n.data?.coverage) || 10;
+                  const waste = parseFloat(n.data?.waste) || 10;
+                  qty = area > 0 ? (area / coverage) * (1 + waste / 100) : (parseFloat(n.data?.quantity) || 1);
+              }
+              else if (isLabourNode) {
+                  const prod = parseFloat(n.data?.prodRate) || 2;
+                  qty = area > 0 ? (area / prod) : (parseFloat(n.data?.duration || n.data?.quantity) || 8);
+              }
+              else if (isGeneric) {
+                  qty = parseFloat(n.data?.duration || n.data?.quantity || 1);
+              }
               
-              const rate = parseFloat(n.data?.rate || 0);
+              // CRITICAL: Ensure rate is always a number
+              const rate = parseFloat(n.data?.rate) || 0;
+              
+              if (isNaN(qty)) qty = 0;
               
               return {
                   nodeId: n.data?.nodeId || n.id,
@@ -336,7 +348,7 @@ const QuoteBuilderContent = () => {
                       chargeRate: rate,
                       costRate: rate
                   },
-                  type: (isLabourNode || n.data?.type === 'staff') ? 'staff' : (n.data?.type === 'equipment' ? 'equipment' : 'material'),
+                  type: (isLabourNode || n.data?.type === 'staff' || n.type === 'staff') ? 'staff' : (n.data?.type === 'equipment' || n.type === 'equipment' ? 'equipment' : 'material'),
                   customRate: rate,
                   isDynamic: true
               };
@@ -352,7 +364,9 @@ const QuoteBuilderContent = () => {
       let mats = 0, stf = 0, eqp = 0;
 
       allBillableItems.forEach(item => {
-          const val = item.quantity * (item.customRate || 0);
+          const qty = parseFloat(item.quantity) || 0;
+          const rate = parseFloat(item.customRate) || 0;
+          const val = qty * rate;
           if (item.type === 'staff') stf += val;
           else if (item.type === 'equipment') eqp += val;
           else mats += val;
@@ -360,29 +374,21 @@ const QuoteBuilderContent = () => {
 
       // Profit Node Adjustment
       const profitNode = nodes.find(n => n.type === 'profitNode');
-      const markup = profitNode ? (profitNode.data?.markup || 0) : marginPct;
-      const overhead = profitNode ? (profitNode.data?.overhead || 0) : 0;
-      const contingency = profitNode ? (profitNode.data?.contingency || 0) : 0;
+      const markup = parseFloat(profitNode ? (profitNode.data?.markup || 0) : marginPct) || 0;
+      const overhead = parseFloat(profitNode ? (profitNode.data?.overhead || 0) : 0) || 0;
+      const contingency = parseFloat(profitNode ? (profitNode.data?.contingency || 0) : 0) || 0;
 
       const subtotal = mats + stf + eqp;
       const total = subtotal * (1 + markup / 100) * (1 + overhead / 100) * (1 + contingency / 100);
 
-      // Update profit node with subtotal for its internal calculation
-      if (profitNode && Math.abs((profitNode.data?.quoteTotal || 0) - subtotal) > 1) {
-          setTimeout(() => updateItemNodeData(profitNode.id, { quoteTotal: subtotal }), 0);
-      }
-
-      // Update Estimation Prism Node
-      const prismNode = nodes.find(n => n.type === 'estimationPrism');
-      if (prismNode) {
-          const margin = ((total - subtotal) / (total || 1) * 100).toFixed(1) + '%';
-          if (prismNode.data.quoteTotal !== total || prismNode.data.profitMargin !== margin) {
-              setTimeout(() => updateItemNodeData(prismNode.id, { quoteTotal: total, profitMargin: margin }), 0);
-          }
-      }
-
-      return { materials: mats, staff: stf, equipment: eqp, subtotal, total };
-  }, [allBillableItems, nodes, marginPct, updateItemNodeData]);
+      return { 
+          materials: mats, 
+          staff: stf, 
+          equipment: eqp, 
+          subtotal: isNaN(subtotal) ? 0 : subtotal, 
+          total: isNaN(total) ? 0 : total 
+      };
+  }, [allBillableItems, nodes, marginPct]);
 
   // --- PERSISTENCE LAYER ---
   useEffect(() => {
@@ -1157,16 +1163,24 @@ const QuoteBuilderContent = () => {
                           }
 
                           // 2. Data Restoration for Power Nodes (Materials/Labour)
-                          if (['quoteMaterial', 'quoteLabour', 'glass', 'staff', 'equipment'].includes(node.type)) {
-                              // Restore vital stats if missing from node.data
+                          if (['quoteMaterial', 'quoteLabour', 'glass', 'staff', 'equipment', 'material'].includes(node.type)) {
+                              // CRITICAL: Determine correct rate and quantity from multiple potential sources
+                              const savedRate = node.data?.rate !== undefined ? node.data.rate : 
+                                               (node.data?.chargeRate !== undefined ? node.data.chargeRate : 
+                                               (linkedItem?.customRate || linkedItem?.material?.price || linkedItem?.material?.pricePerUnit || linkedItem?.material?.chargeRate || 0));
+                              
+                              const savedQty = node.data?.quantity !== undefined ? node.data.quantity : 
+                                              (node.data?.duration !== undefined ? node.data.duration : 
+                                              (linkedItem?.quantity || 1));
+
                               const restoredData = {
                                   ...node.data,
-                                  label: node.data?.label || linkedItem?.material?.name || 'Restored Item',
-                                  rate: node.data?.rate !== undefined ? node.data.rate : (linkedItem?.customRate || linkedItem?.material?.price || linkedItem?.material?.pricePerUnit || linkedItem?.material?.chargeRate || 0),
-                                  quantity: node.data?.quantity !== undefined ? node.data.quantity : (linkedItem?.quantity || 1),
-                                  coverage: node.data?.coverage || 10,
-                                  waste: node.data?.waste || 10,
-                                  prodRate: node.data?.prodRate || 2,
+                                  label: node.data?.label || node.data?.name || linkedItem?.material?.name || 'Restored Item',
+                                  rate: parseFloat(savedRate) || 0,
+                                  quantity: parseFloat(savedQty) || 0,
+                                  coverage: parseFloat(node.data?.coverage) || 10,
+                                  waste: parseFloat(node.data?.waste) || 10,
+                                  prodRate: parseFloat(node.data?.prodRate) || 2,
                                   onUpdate: updateItemNodeData,
                                   onDelete: () => deleteNode(node.id)
                               };
