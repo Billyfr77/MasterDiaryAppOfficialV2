@@ -373,12 +373,14 @@ db.sequelize.authenticate()
     console.log('Database connected successfully.');
     
     // --- EMERGENCY: AUTO-REPAIR SCHEMA ON STARTUP ---
-    // Run asynchronously to not block health check
+    // DISABLED for 1vCPU stability. Use /api/fix-schema?secret=... to trigger manually if needed.
+    /*
     runSchemaFix().then(results => {
         console.log('Lattice Fix Results:', results);
     }).catch(err => {
         console.error('Lattice Fix Failed:', err.message);
     });
+    */
 
     // Enable alter: true to ensure Postgres schema updates for new features (Map, Workflow, etc.)
     return db.sequelize.sync({ alter: true }); 
