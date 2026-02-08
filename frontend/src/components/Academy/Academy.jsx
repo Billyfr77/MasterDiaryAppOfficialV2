@@ -307,9 +307,12 @@ const Academy = () => {
             .reduce((sum, ep) => sum + ep.xp, 0);
     }, [completedEpisodes]);
 
+    // Sanitize completedEpisodes to ignore old/invalid IDs
+    const validCompletedCount = completedEpisodes.filter(id => ACADEMY_DATA.some(ep => ep.id === id)).length;
+    
     const userLevel = Math.floor(userXP / 300) + 1;
     const progressToNextLevel = (userXP % 300) / 300 * 100;
-    const isMasterArchitect = completedEpisodes.length === ACADEMY_DATA.length;
+    const isMasterArchitect = validCompletedCount === ACADEMY_DATA.length;
 
     // Track level changes for notifications
     const prevLevelRef = useRef(userLevel);
