@@ -97,6 +97,26 @@ export default function WorkflowCopilot({ nodes, edges, simulationData, meshCont
                 role: 'assistant', 
                 content: res.data.reply 
             }]);
+
+            // --- HANDLE GENERATE_IMAGE ACTION ---
+            const imageAction = res.data.suggestedActions?.find(a => a.type === 'GENERATE_IMAGE');
+            if (imageAction && imageAction.prompt) {
+                try {
+                    setLoading(true);
+                    const imageRes = await api.post('/ai/imagine', { prompt: imageAction.prompt });
+                    if (imageRes.data.imageUrl) {
+                        setMessages(prev => [...prev, { 
+                            role: 'assistant', 
+                            content: `Generated Neural Blueprint: "${imageAction.prompt}"`,
+                            image: imageRes.data.imageUrl 
+                        }]);
+                    }
+                } catch (e) {
+                    console.error("Image Gen Error:", e);
+                } finally {
+                    setLoading(false);
+                }
+            }
             
             onCommand && onCommand(res.data);
         } catch (err) {
@@ -308,6 +328,21 @@ export default function WorkflowCopilot({ nodes, edges, simulationData, meshCont
                                                 : 'bg-white/5 border border-white/10 text-slate-300 rounded-tl-none'
                                             }`}>
                                                 {m.content}
+                                                {m.image && (
+                                                    <div className="mt-4 rounded-2xl overflow-hidden border border-white/10 shadow-2xl group/img relative bg-black/40">
+                                                        <img 
+                                                            src={m.image} 
+                                                            alt="Neural Blueprint" 
+                                                            className="w-full h-auto cursor-zoom-in hover:scale-105 transition-transform duration-700 ease-out" 
+                                                            onClick={() => window.open(m.image, '_blank')} 
+                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end p-4 pointer-events-none">
+                                                            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] drop-shadow-lg">
+                                                                Neural Blueprint // Architect Core
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </motion.div>
                                     ))}

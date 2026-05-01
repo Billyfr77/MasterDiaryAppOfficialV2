@@ -375,9 +375,34 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
                 context: { type: 'prism_focus', prismId: id, hubData, financials: projectFinancials, history: terminalHistory }
             });
             const aiMsg = { role: 'assistant', content: res.data.reply };
-            const finalHistory = [...newHistory, aiMsg];
-            setTerminalHistory(finalHistory);
-            update('terminalHistory', finalHistory);
+            let updatedHistory = [...newHistory, aiMsg];
+            setTerminalHistory(updatedHistory);
+
+            // --- HANDLE GENERATE_IMAGE DIRECTIVE ---
+            const imageAction = res.data.suggestedActions?.find(a => a.type === 'GENERATE_IMAGE') || 
+                               (res.data.directive?.action === 'GENERATE_IMAGE' ? res.data.directive : null);
+            
+            if (imageAction && imageAction.prompt) {
+                setIsThinking(true);
+                try {
+                    const imageRes = await api.post('/ai/imagine', { prompt: imageAction.prompt });
+                    if (imageRes.data.imageUrl) {
+                        const imgMsg = { 
+                            role: 'assistant', 
+                            content: `Generated Neural Blueprint: "${imageAction.prompt}"`,
+                            image: imageRes.data.imageUrl 
+                        };
+                        updatedHistory = [...updatedHistory, imgMsg];
+                        setTerminalHistory(updatedHistory);
+                    }
+                } catch (e) {
+                    console.error("Prism Image Gen Error:", e);
+                } finally {
+                    setIsThinking(false);
+                }
+            }
+
+            update('terminalHistory', updatedHistory);
         } catch (err) {
             setTerminalHistory([...newHistory, { role: 'assistant', content: "Neural link interrupted." }]);
         } finally { setIsThinking(false); }
@@ -458,7 +483,39 @@ export const NeuralPrismNode = ({ id, data, selected }) => {
                             {activeView === 'causal' && (<div className="space-y-6"><div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest px-1">Causal Path Analysis</div><div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-white/10">{causalPath.map((step, idx) => (<div key={idx} className="relative group/step cursor-pointer" onClick={() => update('highlightNode', step.nodeId)}><div className="absolute left-[-25px] top-1 w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)] group-hover:scale-150 transition-transform" /><div className="text-[10px] font-black text-gray-500 uppercase mb-1">{step.label}</div><p className="text-sm font-medium text-white">{step.effect}</p></div>))}{causalPath.length === 0 && <p className="text-gray-600 text-xs italic">No causal links detected. System stable.</p>}</div></div>)}
                             {activeView === 'drift' && (<div className="space-y-6"><div className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Variance Dashboard</div><div className="grid grid-cols-2 gap-3"><DriftCard label="Labour" stats={driftStats.labour} icon={User} /><DriftCard label="Equipment" stats={driftStats.equipment} icon={Wrench} /><DriftCard label="Material" stats={driftStats.material} icon={Package} /><DriftCard label="Task Progress" stats={driftStats.task} icon={ClipboardList} /><DriftCard label="Zone Productivity" stats={driftStats.zone} icon={Layout} /><DriftCard label="Cost Burn" stats={driftStats.cost} icon={DollarSign} /></div></div>)}
                             {activeView === 'sims' && (<div className="space-y-4">{(scenarios || []).map((sim, idx) => (<div key={idx} className="p-6 bg-white/[0.02] border border-white/5 rounded-[2rem] hover:bg-white/[0.05] transition-all"><div className="flex justify-between items-center mb-3"><span className="text-lg font-black text-white tracking-tight">{sim?.name || 'Simulation'}</span><div className={`px-4 py-1.5 rounded-xl text-[10px] font-black ${(sim?.drift || '').includes('-') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>{sim?.drift || '0h'} DRIFT</div></div><p className="text-sm text-gray-400 font-medium leading-relaxed">{sim?.impact || 'No impact analysis available.'}</p></div>))}</div>)}
-                            {activeView === 'terminal' && (<div className="flex flex-col h-[400px]"><div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar mb-4">{terminalHistory.map((msg, idx) => (<div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] p-4 rounded-3xl text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white/5 border border-white/10 text-gray-300 rounded-tl-none'}`}>{msg.content}</div></div>))}{isThinking && <div className="flex justify-start animate-pulse"><div className="bg-white/5 border border-white/10 p-4 rounded-3xl rounded-tl-none flex gap-1"><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" /><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full opacity-60" /><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full opacity-30" /></div></div>}</div><form onSubmit={handleTerminalSend} className="relative flex gap-2"><input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Query Neural Prism..." className="flex-1 bg-black border border-white/10 rounded-[1.5rem] py-5 px-8 text-sm text-white focus:border-indigo-500 outline-none transition-all placeholder-gray-700 shadow-inner" /><button className="p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl transition-all shadow-lg flex items-center justify-center"><ArrowRight size={20} /></button></form></div>)}
+                            {activeView === 'terminal' && (
+                                <div className="flex flex-col h-[400px]">
+                                    <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar mb-4">
+                                        {terminalHistory.map((msg, idx) => (
+                                            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[85%] p-4 rounded-3xl text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white/5 border border-white/10 text-gray-300 rounded-tl-none'}`}>
+                                                    {msg.content}
+                                                    {msg.image && (
+                                                        <div className="mt-4 rounded-2xl overflow-hidden border border-white/10 shadow-2xl group/img relative bg-black/40">
+                                                            <img 
+                                                                src={msg.image} 
+                                                                alt="Neural Blueprint" 
+                                                                className="w-full h-auto cursor-zoom-in hover:scale-105 transition-transform duration-700 ease-out" 
+                                                                onClick={() => window.open(msg.image, '_blank')} 
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end p-4 pointer-events-none">
+                                                                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] drop-shadow-lg">
+                                                                    Neural Blueprint // Prism Core
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {isThinking && <div className="flex justify-start animate-pulse"><div className="bg-white/5 border border-white/10 p-4 rounded-3xl rounded-tl-none flex gap-1"><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" /><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full opacity-60" /><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full opacity-30" /></div></div>}
+                                    </div>
+                                    <form onSubmit={handleTerminalSend} className="relative flex gap-2">
+                                        <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Query Neural Prism..." className="flex-1 bg-black border border-white/10 rounded-[1.5rem] py-5 px-8 text-sm text-white focus:border-indigo-500 outline-none transition-all placeholder-gray-700 shadow-inner" />
+                                        <button className="p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl transition-all shadow-lg flex items-center justify-center"><ArrowRight size={20} /></button>
+                                    </form>
+                                </div>
+                            )}
                         </div>
                         <div className="p-8 border-t border-white/5 bg-black/40 flex gap-4"><button onClick={() => data.onDeployFixes?.(suggestedNodes)} className="flex-1 py-5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-[0_0_30px_rgba(99,102,241,0.3)] transition-all flex items-center justify-center gap-3 active:scale-95"><Zap size={18} fill="currentColor" /> Deploy Optimized Model</button></div>
                     </motion.div>
@@ -486,7 +543,8 @@ export const PhotoNode = ({ id, data, selected }) => {
 };
 
 export const DiaryNode = ({ id, data, selected }) => {
-  const { label, duration, type, costRate, quantity, onDelete, isGhost, role, skillTags } = data;
+  const { label, duration, type, quantity, onDelete, isGhost, role, skillTags } = data;
+  const costRate = data.costRate || data.chargeRate || data.rate || 0;
   const getRoleIcon = (r) => {
       const lowRole = r?.toLowerCase() || '';
       if (lowRole.includes('boss') || lowRole.includes('director') || lowRole.includes('owner')) return <Crown size={22} className="text-amber-400" />;

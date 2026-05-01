@@ -319,14 +319,12 @@ const InvoiceBuilder = () => {
                 <div className="grid grid-cols-2 gap-8">
                     <div>
                         <label className="text-[10px] uppercase font-bold text-gray-500 mb-2 block">Company Logo</label>
-                        <div className="relative group cursor-pointer border-2 border-dashed border-white/10 rounded-2xl h-32 flex items-center justify-center hover:border-indigo-500 transition-colors bg-black/20 overflow-hidden">
-                            <input type="file" onChange={handleLogoUpload} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
+                        <div className="relative border-2 border-dashed border-white/10 rounded-2xl h-32 flex items-center justify-center bg-black/20 overflow-hidden">
                             {invoice.senderLogo ? (
                                 <img src={invoice.senderLogo} alt="Logo" className="h-full w-full object-contain p-2" />
                             ) : (
-                                <div className="text-center text-gray-500 group-hover:text-indigo-400">
-                                    <UploadCloud size={24} className="mx-auto mb-2" />
-                                    <span className="text-[10px] font-bold uppercase">Upload Logo</span>
+                                <div className="text-center text-gray-600">
+                                    <span className="text-[10px] font-bold uppercase">Update in Settings</span>
                                 </div>
                             )}
                         </div>

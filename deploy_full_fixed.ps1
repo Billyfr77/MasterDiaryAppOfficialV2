@@ -6,9 +6,9 @@ $SERVICE_NAME = "master-diary-app-v2"
 $DB_INSTANCE = "gen-lang-client-0889466012:us-central1:master-diary-db"
 $IMAGE_NAME = "gcr.io/$PROJECT_ID/$SERVICE_NAME"
 
-# --- SECRETS (Placeholders for security) ---
+# --- SECRETS (Use Environment Variables or Secret Manager for security) ---
 $GROK_API_KEY=$env:GROK_API_KEY
-$GOOGLE_MAPS_KEY=$env:GOOGLE_MAPS_KEY 
+$GOOGLE_MAPS_KEY=$env:GOOGLE_MAPS_KEY
 $GOOGLE_ADVANCED_KEY=$env:GOOGLE_ADVANCED_KEY
 $DB_PASSWORD=$env:DB_PASSWORD
 $JWT_SECRET=$env:JWT_SECRET
@@ -20,13 +20,13 @@ Write-Host "Starting Deployment for $SERVICE_NAME..." -ForegroundColor Green
 Write-Host "Setting project to $PROJECT_ID..."
 gcloud config set project $PROJECT_ID
 
-# 2. Build Frontend
-Write-Host "Building Frontend..."
-cd frontend
-$env:VITE_GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_KEY
-npm run build
-if ($LASTEXITCODE -ne 0) { Write-Host "Frontend Build Failed" -ForegroundColor Red; exit 1 }
-cd ..
+# 2. Build Frontend (Commented out: Handled by Dockerfile in Cloud Build)
+# Write-Host "Building Frontend..."
+# cd frontend
+# $env:VITE_GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_KEY
+# npm run build
+# if ($LASTEXITCODE -ne 0) { Write-Host "Frontend Build Failed" -ForegroundColor Red; exit 1 }
+# cd ..
 
 # 3. Build and Push Container
 Write-Host "Building container image..."
@@ -56,8 +56,9 @@ gcloud run deploy $SERVICE_NAME `
     --set-env-vars "GOOGLE_ADVANCED_API_KEY=$GOOGLE_ADVANCED_KEY" `
     --set-env-vars "JWT_SECRET=$JWT_SECRET" `
     --set-env-vars "JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET" `
-    --memory 1024Mi `
-    --cpu 1
+    --memory 2048Mi `
+    --cpu 2 `
+    --timeout 600
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Deployment Successful!" -ForegroundColor Green

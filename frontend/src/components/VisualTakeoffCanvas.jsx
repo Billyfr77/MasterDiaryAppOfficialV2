@@ -347,8 +347,8 @@ const VisualTakeoffCanvas = ({ imageUrl, onAddMeasurement, onClose }) => {
                 </svg>
             </div>
 
-            {/* FLOATING CONTROLS (ZOOM) */}
-            <div className="absolute bottom-6 left-6 flex gap-2">
+            {/* FLOATING CONTROLS (ZOOM) - Moved to avoid Sentinel Dashboard */}
+            <div className="absolute bottom-6 left-[240px] flex gap-2">
                 <button onClick={() => setScale(s => s * 1.2)} className="p-3 bg-stone-800 border border-white/10 rounded-full text-white hover:bg-stone-700"><ZoomIn size={20} /></button>
                 <button onClick={() => setScale(s => s / 1.2)} className="p-3 bg-stone-800 border border-white/10 rounded-full text-white hover:bg-stone-700"><ZoomOut size={20} /></button>
                 <div className="bg-black/50 px-3 py-2 rounded-full text-xs font-mono text-white flex items-center">

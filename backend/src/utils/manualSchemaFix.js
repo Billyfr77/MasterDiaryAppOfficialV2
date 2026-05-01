@@ -104,6 +104,10 @@ async function runSchemaFix() {
         await queryInterface.addColumn('Quotes', 'totalRevenue', { type: sequelize.Sequelize.DECIMAL(10, 2), defaultValue: 0 });
         results.push('Added totalRevenue to Quotes');
       }
+      if (!table.items) {
+        await queryInterface.addColumn('Quotes', 'items', { type: sequelize.Sequelize.JSON, allowNull: false, defaultValue: [] });
+        results.push('Added items to Quotes');
+      }
       // Relax projectId constraint (Force Nullable)
       try {
           // Attempt Sequelize Interface first
@@ -151,6 +155,17 @@ async function runSchemaFix() {
             results.push(`Added ${field.name} to Diaries`);
         }
       }
+      
+      // Explicit check for notes column (Critical for AI)
+      if (!table.notes) {
+          await queryInterface.addColumn('Diaries', 'notes', { type: sequelize.Sequelize.TEXT, allowNull: true });
+          results.push('Added notes column to Diaries');
+      }
+      if (!table.diaryType) {
+          await queryInterface.addColumn('Diaries', 'diaryType', { type: sequelize.Sequelize.STRING, defaultValue: 'paint' });
+          results.push('Added diaryType column to Diaries');
+      }
+
       if (!table.version) {
         await queryInterface.addColumn('Diaries', 'version', { type: sequelize.Sequelize.INTEGER, allowNull: false, defaultValue: 0 });
         results.push('Added version to Diaries');
@@ -346,6 +361,28 @@ async function runSchemaFix() {
             results.push('Added isRead to Notifications');
         }
     } catch (e) { results.push(`Error checking Notifications: ${e.message}`); }
+
+    // 13. Fix Contracts Table (Ironclad Engine)
+    try {
+        console.log('Checking Contracts table...');
+        try {
+            await queryInterface.describeTable('Contracts');
+        } catch (e) {
+            console.log('Contracts table missing, creating...');
+            await queryInterface.createTable('Contracts', {
+                id: { type: sequelize.Sequelize.UUID, primaryKey: true, defaultValue: sequelize.Sequelize.UUIDV4 },
+                projectId: { type: sequelize.Sequelize.UUID, allowNull: false },
+                title: { type: sequelize.Sequelize.STRING, allowNull: false },
+                status: { type: sequelize.Sequelize.STRING, defaultValue: 'active' },
+                fileUrl: { type: sequelize.Sequelize.STRING, allowNull: true },
+                intelligence: { type: sequelize.Sequelize.JSON, defaultValue: {} },
+                extractedText: { type: sequelize.Sequelize.TEXT, allowNull: true },
+                createdAt: { type: sequelize.Sequelize.DATE, allowNull: false },
+                updatedAt: { type: sequelize.Sequelize.DATE, allowNull: false }
+            });
+            results.push('Created Contracts table');
+        }
+    } catch (e) { results.push(`Error checking Contracts: ${e.message}`); }
 
   } catch (err) {
     console.error('Fatal error in schema fix:', err);

@@ -6,24 +6,19 @@ const { authenticateToken } = require('../middleware/auth');
 // Protect uploads with authentication
 router.use(authenticateToken);
 
-// Accept 'image' OR 'file' field
-router.post('/', (req, res, next) => {
-    // Middleware to handle either field name
-    upload.fields([{ name: 'file', maxCount: 1 }, { name: 'image', maxCount: 1 }])(req, res, (err) => {
-        if (err) return res.status(400).json({ error: err.message });
-        next();
-    });
-}, (req, res) => {
-  const file = req.files['file'] ? req.files['file'][0] : (req.files['image'] ? req.files['image'][0] : null);
+// Standardize on 'image' field for construction visual data
+router.post('/', upload.single('image'), (req, res) => {
+  const file = req.file;
 
   if (!file) {
-    return res.status(400).json({ error: 'No file uploaded' });
+    console.error("[Upload Route] No file found in req.file. Expected field: 'image'");
+    return res.status(400).json({ error: 'No file uploaded. Expected multipart/form-data field: "image"' });
   }
 
   // Construct public URL
   let fileUrl;
   if (process.env.NODE_ENV === 'production') {
-    fileUrl = file.path; // Google Storage URL
+    fileUrl = file.path; // Google Storage URL from custom engine
   } else {
     // Local development URL
     const protocol = req.protocol;

@@ -49,6 +49,7 @@ import ResourceSidebar from './ResourceSidebar'
 import AestheticPicker from './PaintDiary/AestheticPicker'
 import QuoteIntelligenceLayer from './Quotes/QuoteIntelligenceLayer'
 import PremiumLoader from './ui/PremiumLoader'
+import ExcelImporter from './ui/ExcelImporter'
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-US', {
@@ -150,7 +151,24 @@ const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
         )}
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-            <div className={`max-w-[90%] p-3 rounded-2xl text-sm mb-1 ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-stone-800 text-gray-200 border border-white/10 rounded-tl-sm'}`}>{msg.content}</div>
+            <div className={`max-w-[90%] p-3 rounded-2xl text-sm mb-1 ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-stone-800 text-gray-200 border border-white/10 rounded-tl-sm'}`}>
+                {msg.content}
+                {msg.image && (
+                    <div className="mt-4 rounded-2xl overflow-hidden border border-white/10 shadow-2xl group/img relative bg-black/40">
+                        <img 
+                            src={msg.image} 
+                            alt="Neural Blueprint" 
+                            className="w-full h-auto cursor-zoom-in hover:scale-105 transition-transform duration-700 ease-out" 
+                            onClick={() => window.open(msg.image, '_blank')} 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end p-4 pointer-events-none">
+                            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] drop-shadow-lg">
+                                Estimator Visualization
+                            </span>
+                        </div>
+                    </div>
+                )}
+            </div>
             {msg.actions?.map((action, i) => (
                 <button key={i} onClick={() => onAction(action)} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold transition-all mt-2">
                     <Plus size={12} /> {action.type === 'add_node' ? `Add ${action.quantity}x ${action.label}` : action.type === 'add_complex_node' ? action.label : 'Action'}
@@ -182,8 +200,12 @@ const QuoteCopilot = ({ isOpen, onClose, messages, onSendMessage, isTyping, onAc
 }
 
 const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditingRate, setIsEditingRate] = useState(false);
+  const [isEditingQty, setIsEditingQty] = useState(false);
+  
   const rate = useMemo(() => {
+      // Prioritize explicit rate from node data if dynamic, or item customRate
+      if (item.isDynamic) return parseFloat(item.rate || item.customRate) || 0;
       if (item.customRate !== undefined) return parseFloat(item.customRate) || 0;
       if (item.material) {
           return parseFloat(item.material.chargeRate || item.material.costRate || item.material.pricePerUnit || item.material.price || 0);
@@ -191,15 +213,39 @@ const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
       return 0;
   }, [item]);
 
+  const handleRateUpdate = (val) => {
+      if (isNaN(val)) return;
+      // For dynamic nodes, update 'rate' field which is what allBillableItems looks for
+      const field = item.isDynamic ? 'rate' : 'customRate';
+      onUpdate(item.tempId, { [field]: val });
+      setIsEditingRate(false);
+  };
+
+  const handleQtyUpdate = (val) => {
+      if (isNaN(val)) return;
+      // Standardize quantity field
+      const field = item.isDynamic ? (item.type === 'staff' || item.type === 'equipment' ? 'duration' : 'quantity') : 'quantity';
+      onUpdate(item.tempId, { [field]: val });
+      setIsEditingQty(false);
+  };
+
   return (
     <div className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 group hover:shadow-md ${item.type === 'staff' ? 'bg-emerald-900/10 border-emerald-500/20' : item.type === 'equipment' ? 'bg-amber-900/10 border-amber-500/20' : 'bg-indigo-900/10 border-indigo-500/20'}`}>
       <div className="flex items-center gap-3 overflow-hidden">
           <div className={`w-1 h-10 rounded-full ${item.type === 'staff' ? 'bg-emerald-500' : item.type === 'equipment' ? 'bg-orange-500' : 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]'}`} />
           <div className="space-y-1">
               <div className="text-sm font-bold text-white truncate max-w-[150px]">{item.material.name}</div>
-              <div onClick={() => setIsEditing(true)} className="text-[10px] text-indigo-300/60 font-mono cursor-pointer hover:text-indigo-200">
-                  {isEditing ? (
-                      <input type="number" className="w-20 bg-slate-900 border border-indigo-500 text-white text-[10px] px-1 rounded outline-none" defaultValue={rate} onBlur={(e) => { const val = parseFloat(e.target.value); onUpdate(item.tempId, { customRate: val }); setIsEditing(false) }} autoFocus />
+              <div onClick={(e) => { e.stopPropagation(); setIsEditingRate(true); }} className="text-[10px] text-indigo-300/60 font-mono cursor-pointer hover:text-indigo-200">
+                  {isEditingRate ? (
+                      <input 
+                        type="number" 
+                        className="w-20 bg-slate-900 border border-indigo-500 text-white text-[10px] px-1 rounded outline-none" 
+                        defaultValue={rate} 
+                        onBlur={(e) => handleRateUpdate(parseFloat(e.target.value))}
+                        onKeyDown={(e) => e.key === 'Enter' && handleRateUpdate(parseFloat(e.target.value))}
+                        autoFocus 
+                        onClick={(e) => e.stopPropagation()}
+                      />
                   ) : `${formatCurrency(rate)} / unit`}
               </div>
           </div>
@@ -207,15 +253,23 @@ const QuoteItem = ({ item, onUpdate, onRemove, formatCurrency }) => {
       <div className="flex items-center gap-4">
           <div className="text-right">
               <span className="text-[9px] text-indigo-500 font-black uppercase block tracking-tighter">Qty</span>
-              {isEditing ? (
-                  <input type="number" className="w-14 bg-slate-900 border border-indigo-500 text-white text-xs px-2 py-1 rounded-lg text-right outline-none" defaultValue={item.quantity} onBlur={(e) => { const val = parseFloat(e.target.value); if (!isNaN(val)) onUpdate(item.tempId, { quantity: val }); setIsEditing(false); }} />
-              ) : <div onClick={() => setIsEditing(true)} className="text-sm font-mono font-bold text-white cursor-pointer hover:text-indigo-400">{(parseFloat(item.quantity) || 0).toFixed(2)}</div>}
+              {isEditingQty ? (
+                  <input 
+                    type="number" 
+                    className="w-14 bg-slate-900 border border-indigo-500 text-white text-xs px-2 py-1 rounded-lg text-right outline-none" 
+                    defaultValue={item.quantity} 
+                    onBlur={(e) => handleQtyUpdate(parseFloat(e.target.value))}
+                    onKeyDown={(e) => e.key === 'Enter' && handleQtyUpdate(parseFloat(e.target.value))}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+              ) : <div onClick={(e) => { e.stopPropagation(); setIsEditingQty(true); }} className="text-sm font-mono font-bold text-white cursor-pointer hover:text-indigo-400">{(parseFloat(item.quantity) || 0).toFixed(2)}</div>}
           </div>
           <div className="text-right min-w-[80px]">
               <span className="text-[9px] text-indigo-500 font-black uppercase block tracking-tighter">Total</span>
               <div className="text-sm font-bold text-emerald-400">{formatCurrency(rate * item.quantity)}</div>
           </div>
-          <button onClick={() => onRemove(item.tempId)} className="p-2 text-indigo-900 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
+          <button onClick={(e) => { e.stopPropagation(); onRemove(item.tempId); }} className="p-2 text-indigo-900 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
       </div>
     </div>
   )
@@ -300,6 +354,50 @@ const QuoteBuilderContent = () => {
   const [historicalDeltas, setHistoricalDeltas] = useState({});
   const [showIntelligence, setShowIntelligence] = useState(false);
   const [conflictState, setConflictState] = useState({ isOpen: false, serverData: null });
+  const [showImport, setShowImport] = useState(false);
+
+  const handleExcelImport = (data) => {
+      if (!data) return;
+      const newNodes = [];
+      const newItems = [];
+      
+      data.forEach((item, i) => {
+          const nodeId = `imp-${Date.now()}-${i}`;
+          const position = { x: 100 + (Math.floor(i / 5) * 300), y: 100 + ((i % 5) * 200) };
+          
+          newNodes.push({
+              id: nodeId,
+              type: item.type === 'staff' ? 'quoteLabour' : 'quoteMaterial',
+              position,
+              data: {
+                  label: item.name,
+                  category: item.type,
+                  quantity: item.quantity,
+                  rate: item.rate,
+                  cost: item.costRate,
+                  // Smart defaults based on name/type
+                  prodRate: 2, 
+                  coverage: 10,
+                  waste: 5,
+                  onDelete: () => deleteNode(nodeId),
+                  onUpdate: updateItemNodeData
+              }
+          });
+
+          newItems.push({
+              nodeId: item.id || nodeId,
+              tempId: nodeId,
+              quantity: item.quantity,
+              material: { name: item.name, pricePerUnit: item.costRate },
+              type: item.type,
+              customRate: item.rate
+          });
+      });
+
+      setNodes(nds => [...nds, ...newNodes]);
+      setQuoteItems(prev => [...prev, ...newItems]);
+      addNotification('Import Success', `Converted ${data.length} spreadsheet rows into nodes.`);
+  };
 
   const updateItemNodeData = useCallback((nodeId, updates) => {
       setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n));
@@ -333,8 +431,8 @@ const QuoteBuilderContent = () => {
                   qty = parseFloat(n.data?.duration || n.data?.quantity || 1);
               }
               
-              // CRITICAL: Ensure rate is always a number
-              const rate = parseFloat(n.data?.rate) || 0;
+              // CRITICAL: Ensure rate is always a number, prioritize .rate (BOM override) then .costRate/.chargeRate
+              const rate = parseFloat(n.data?.rate !== undefined ? n.data?.rate : (n.data?.chargeRate || n.data?.costRate || 0));
               
               if (isNaN(qty)) qty = 0;
               
@@ -349,6 +447,7 @@ const QuoteBuilderContent = () => {
                       costRate: rate
                   },
                   type: (isLabourNode || n.data?.type === 'staff' || n.type === 'staff') ? 'staff' : (n.data?.type === 'equipment' || n.type === 'equipment' ? 'equipment' : 'material'),
+                  rate: rate, // Map node's rate to item's rate
                   customRate: rate,
                   isDynamic: true
               };
@@ -365,7 +464,7 @@ const QuoteBuilderContent = () => {
 
       allBillableItems.forEach(item => {
           const qty = parseFloat(item.quantity) || 0;
-          const rate = parseFloat(item.customRate) || 0;
+          const rate = parseFloat(item.rate !== undefined ? item.rate : item.customRate) || 0;
           const val = qty * rate;
           if (item.type === 'staff') stf += val;
           else if (item.type === 'equipment') eqp += val;
@@ -675,7 +774,7 @@ const QuoteBuilderContent = () => {
       } 
   };
   const openLoadModal = async () => { setShowLoadModal(true); setQuotesLoading(true); try { const res = await api.get('/quotes?limit=50'); setExistingQuotes(res.data.data || []); } catch (err) { console.error(err); } finally { setQuotesLoading(false); } };
-  const handleLoadQuote = (quote) => { navigate(`/quotes/${quote.id}`); setShowLoadModal(false); };
+  const handleLoadQuote = (quote) => { navigate(`/quotes/builder/${quote.id}`); setShowLoadModal(false); };
   const deleteNode = useCallback((id) => { setNodes((nds) => nds.filter(n => n.id !== id)); setQuoteItems((items) => items.filter(i => i.tempId !== id)); }, [setNodes]);
   
   const handleAIChat = async (message) => {
@@ -719,6 +818,26 @@ const QuoteBuilderContent = () => {
               context: { ...context, historicalContext: historicalDeltas } 
           });
           setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply, actions: res.data.suggestedActions, nodes: res.data.suggestedNodes }]);
+
+          // --- HANDLE DIRECTIVE: GENERATE_IMAGE ---
+          const imageAction = res.data.suggestedActions?.find(a => a.type === 'GENERATE_IMAGE');
+          if (imageAction && imageAction.prompt) {
+              setChatTyping(true);
+              try {
+                  const imageRes = await api.post('/ai/imagine', { prompt: imageAction.prompt });
+                  if (imageRes.data.imageUrl) {
+                      setChatMessages(prev => [...prev, { 
+                          role: 'assistant', 
+                          content: `Generated Neural Blueprint: "${imageAction.prompt}"`,
+                          image: imageRes.data.imageUrl 
+                      }]);
+                  }
+              } catch (e) {
+                  console.error("Image Gen Error:", e);
+              } finally {
+                  setChatTyping(false);
+              }
+          }
       } catch (err) {
           console.error(err);
       } finally {
@@ -744,6 +863,7 @@ const QuoteBuilderContent = () => {
               subLabel: item.type, 
               quantity: (item.type === 'staff' || item.type === 'equipment') ? 1 : quantity,
               duration: (item.type === 'staff' || item.type === 'equipment') ? quantity : 0, 
+              rate: charge || cost || 0, // Ensure rate is always set for backend calc
               type: item.type, 
               onDelete: () => deleteNode(nodeId),
               onUpdate: updateItemNodeData,
@@ -824,6 +944,7 @@ const QuoteBuilderContent = () => {
               edges, 
               staff: quoteItems.filter(i=>i.type==='staff'), 
               equipment: quoteItems.filter(i=>i.type==='equipment'),
+              items: allBillableItems, // Send full BOM for robust restoration
               version: force ? conflictState.serverData?.version : (nodes[0]?.data?.version || 0)
           }; 
           
@@ -928,6 +1049,7 @@ const QuoteBuilderContent = () => {
                           duration: (itemCategory === 'staff' || itemCategory === 'equipment') ? (n.data.quantity || 1) : 0, 
                           label: n.data.label || 'New Item',
                           type: itemCategory, // Correctly map for DiaryNode coloring
+                          rate: n.data.cost || 0, // Ensure rate is set for AI nodes too
                           onUpdate: (targetId, ups) => {
                               setNodes(nds => nds.map(node => node.id === targetId ? { ...node, data: { ...node.data, ...ups } } : node));
                               if (!isContainer) {
@@ -1147,7 +1269,11 @@ const QuoteBuilderContent = () => {
                           status: q.status
                       });
 
-                      const savedItems = (q.items || q.quoteItems || []);
+                      // Reconstruct quoteItems from backend fields
+                      const savedItems = q.items || [
+                          ...(q.staff || []).map(s => ({ ...s, type: 'staff' })),
+                          ...(q.equipment || []).map(e => ({ ...e, type: 'equipment' }))
+                      ];
                       setQuoteItems(savedItems);
 
                       // CLONE NODE SAFETY & DATA RESTORATION LOGIC
@@ -1181,7 +1307,8 @@ const QuoteBuilderContent = () => {
                               // AGGRESSIVE DATA RECOVERY
                               const rate = parseFloat(nodeData.rate !== undefined ? nodeData.rate : 
                                            (nodeData.chargeRate !== undefined ? nodeData.chargeRate : 
-                                           (linkedItem?.customRate || linkedItem?.material?.price || linkedItem?.material?.pricePerUnit || linkedItem?.material?.chargeRate || 0)));
+                                           (nodeData.costRate !== undefined ? nodeData.costRate :
+                                           (linkedItem?.customRate || linkedItem?.material?.price || linkedItem?.material?.pricePerUnit || linkedItem?.material?.chargeRate || 0))));
                               
                               const qty = parseFloat(nodeData.quantity !== undefined ? nodeData.quantity : 
                                           (nodeData.duration !== undefined ? nodeData.duration : 
@@ -1285,6 +1412,27 @@ const QuoteBuilderContent = () => {
       }));
   };
 
+  const exportToExcel = async () => {
+      try {
+          const res = await api.post('/manifest/export-quote', {
+              quoteData: { nodes },
+              quoteSettings,
+              financials
+          }, { responseType: 'blob' });
+
+          const url = window.URL.createObjectURL(new Blob([res.data]));
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', `Quote_${quoteSettings?.clientName || 'Export'}_${Date.now()}.xlsx`);
+          document.body.appendChild(link);
+          link.click();
+          addNotification('Export Complete', 'success');
+      } catch (e) {
+          console.error("Quote Export Error", e);
+          alert("Quote export failed.");
+      }
+  };
+
   const stats = [ { label: 'Materials', value: formatCurrency(financials.materials), color: 'text-indigo-400' }, { label: 'Labor', value: formatCurrency(financials.staff), color: 'text-emerald-400' }, { label: 'Equipment', value: formatCurrency(financials.equipment), color: 'text-amber-400' }, { label: 'Total', value: formatCurrency(financials.total), color: 'text-white' } ];
 
   return (
@@ -1293,6 +1441,7 @@ const QuoteBuilderContent = () => {
         <GeoreferenceModal isOpen={showGeoModal} onClose={() => setShowGeoModal(false)} onConfirm={(loc) => { setProjectLocation(loc); setShowGeoModal(false); }} />
       <QuoteSettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={quoteSettings} setSettings={setQuoteSettings} projects={projects} selectedProject={selectedProject} />
       <LoadQuoteModal isOpen={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadQuote} quotes={existingQuotes} isLoading={quotesLoading} />
+      <ExcelImporter isOpen={showImport} onClose={() => setShowImport(false)} onImport={handleExcelImport} title="Import Quote Data" />
       <ConflictResolver 
         isOpen={conflictState.isOpen} 
         serverData={conflictState.serverData} 
@@ -1352,6 +1501,8 @@ const QuoteBuilderContent = () => {
 
             <button onClick={handleNewQuote} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg"><Plus size={16} /> New</button>
             <button onClick={openLoadModal} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg"><Folder size={16} /> Load</button>
+            <button onClick={() => setShowImport(true)} className="px-4 py-2.5 bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-400 hover:text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-900/20"><UploadCloud size={16} /> Import Excel</button>
+            <button onClick={exportToExcel} className="px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-400 hover:text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-900/20"><Download size={16} /> Export Excel</button>
             
             <select value={selectedProject || ''} onChange={(e) => setSelectedProject(e.target.value)} className={`px-4 py-2.5 bg-black/40 border border-white/10 text-white rounded-xl font-bold min-w-[180px] hover:border-${theme.primary}-500 transition-all cursor-pointer text-xs outline-none`}>
                 <option value="">Select Project...</option>
@@ -1371,16 +1522,32 @@ const QuoteBuilderContent = () => {
                     alert("Add items to the quote before invoicing.");
                     return;
                 }
+
+                // Calculate combined multiplier from Profit Node (Markup + Overhead + Contingency)
+                const profitNode = nodes.find(n => n.type === 'profitNode');
+                const markup = parseFloat(profitNode ? (profitNode.data?.markup || 0) : marginPct) || 0;
+                const overhead = parseFloat(profitNode ? (profitNode.data?.overhead || 0) : 0) || 0;
+                const contingency = parseFloat(profitNode ? (profitNode.data?.contingency || 0) : 0) || 0;
+                
+                // Multiplier formula: (1 + markup/100) * (1 + overhead/100) * (1 + contingency/100)
+                const multiplier = (1 + markup / 100) * (1 + overhead / 100) * (1 + contingency / 100);
+
                 navigate('/invoices', { 
                     state: { 
-                        diaryItems: allBillableItems.map(i => ({
-                            id: i.tempId,
-                            name: i.material.name,
-                            quantity: i.quantity,
-                            costRate: i.material.pricePerUnit || 0,
-                            chargeRate: i.customRate || i.material.pricePerUnit || 0,
-                            type: i.type
-                        })),
+                        quoteItems: allBillableItems.map(i => {
+                            const baseRate = parseFloat(i.rate !== undefined ? i.rate : i.customRate) || 0;
+                            const finalChargeRate = baseRate * multiplier;
+                            
+                            return {
+                                id: i.tempId,
+                                description: i.material?.name || i.description || 'Item',
+                                quantity: i.quantity,
+                                rate: finalChargeRate, // Pass the margined rate as the primary rate
+                                customRate: finalChargeRate,
+                                unit: i.unit || (i.type === 'staff' ? 'hrs' : 'ea'),
+                                type: i.type
+                            };
+                        }),
                         projectId: selectedProject,
                         clientId: quoteSettings.clientId,
                         clientName: quoteSettings.clientName,
@@ -1625,8 +1792,8 @@ const QuoteBuilderContent = () => {
           <QuoteCopilot isOpen={showChat} onClose={() => setShowChat(false)} messages={chatMessages} onSendMessage={handleAIChat} isTyping={chatTyping} onAction={handleCopilotAction} onGenerateBlueprint={handleGenerateBlueprint} />
         </div>
 
-        {/* HELP BEACON - Moved to bottom-left to avoid covering totals */}
-        <VideoBeacon videoId="p1JESN0mH8o" title="Master the Neural Quoter" position="bottom-8 left-8" />
+        {/* HELP BEACON - Moved to bottom-left but shifted right to avoid Sentinel Dashboard */}
+        <VideoBeacon videoId="p1JESN0mH8o" title="Master the Neural Quoter" position="bottom-8 left-[240px]" />
       </div>
     </div>
   )

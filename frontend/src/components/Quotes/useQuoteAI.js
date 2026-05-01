@@ -48,7 +48,38 @@ export const useQuoteAI = (nodes, edges, quoteItems, selectedProject, setNodes, 
                 message, 
                 context: { ...context, historicalContext: historicalDeltas } 
             });
-            setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply, actions: res.data.suggestedActions, nodes: res.data.suggestedNodes }]);
+            
+            const assistantMsg = { 
+                role: 'assistant', 
+                content: res.data.reply, 
+                actions: res.data.suggestedActions, 
+                nodes: res.data.suggestedNodes 
+            };
+            setChatMessages(prev => [...prev, assistantMsg]);
+
+            // --- HANDLE IMAGE GENERATION (NEW) ---
+            const imageAction = res.data.suggestedActions?.find(a => a.type === 'GENERATE_IMAGE');
+            if (imageAction && imageAction.prompt) {
+                setIsTyping(true);
+                try {
+                    const imageRes = await api.post('/ai/imagine', { prompt: imageAction.prompt });
+                    if (imageRes.data.imageUrl) {
+                        setChatMessages(prev => [...prev, { 
+                            role: 'assistant', 
+                            content: `Visualizing: "${imageAction.prompt}"`,
+                            image: imageRes.data.imageUrl 
+                        }]);
+                    }
+                } catch (e) {
+                    console.error("Quote Image Gen Failed", e.response?.data?.error || e.message);
+                    setChatMessages(prev => [...prev, { 
+                        role: 'assistant', 
+                        content: `⚠️ Visual synthesis failed: ${e.response?.data?.error || "Under load."}` 
+                    }]);
+                } finally {
+                    setIsTyping(false);
+                }
+            }
         } catch (err) {
             console.error(err);
         } finally {

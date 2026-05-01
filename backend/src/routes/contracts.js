@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const contractController = require('../controllers/contractController');
-const { protect } = require('../middleware/authMiddleware');
+const { authenticateToken } = require('../middleware/auth');
 
-router.post('/', protect, contractController.createContract);
-router.get('/', protect, contractController.getContracts);
+router.post('/', authenticateToken, contractController.createContract);
+router.get('/', authenticateToken, contractController.getContracts);
 
 module.exports = router;

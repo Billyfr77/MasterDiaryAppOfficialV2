@@ -668,9 +668,17 @@ const SafetyFormViewer = ({ formId, onClose }) => {
 
       <style>{`
         @media print {
-          @page { margin: 10mm; size: A4; }
-          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact; }
+          @page { margin: 15mm; size: A4; }
+          body { 
+            background: white !important; 
+            color: #1a1a1a !important; 
+            -webkit-print-color-adjust: exact; 
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          }
           .hidden.print\\:block { display: block !important; }
+          .hidden.print\\:flex { display: flex !important; }
+          .print\\:hidden { display: none !important; }
+          
           /* Hide main app UI */
           .flex.flex-col.h-screen > .h-16, 
           .flex.flex-1.overflow-hidden,
@@ -679,12 +687,28 @@ const SafetyFormViewer = ({ formId, onClose }) => {
           .no-print { display: none !important; }
           
           /* Typography improvements */
-          h1, h2, h3, h4 { font-family: 'Arial', sans-serif; }
-          p, td, div { font-family: 'Times New Roman', serif; }
+          h1 { font-size: 24pt; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4pt; }
+          h2 { font-size: 14pt; font-weight: 800; border-bottom: 2px solid #000; padding-bottom: 4pt; margin-top: 16pt; margin-bottom: 8pt; text-transform: uppercase; }
+          h3 { font-size: 11pt; font-weight: 700; text-transform: uppercase; color: #333; margin-bottom: 4pt; }
+          p, td, div, li { font-size: 9pt; line-height: 1.4; }
           
-          /* Table Styles */
-          table { border-collapse: collapse; width: 100%; }
-          th, td { border: 1px solid black !important; }
+          /* Table Styles - Professional Grid */
+          table { width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 12pt; }
+          th { background-color: #f0f0f0 !important; color: #000; font-weight: 800; text-transform: uppercase; font-size: 8pt; padding: 6pt; border: 1px solid #000; text-align: left; }
+          td { border: 1px solid #ccc; padding: 6pt; vertical-align: top; }
+          tr { page-break-inside: avoid; }
+          
+          /* Risk Matrix Styling */
+          .risk-high { background-color: #fee2e2 !important; font-weight: bold; color: #991b1b; }
+          .risk-med { background-color: #ffedd5 !important; font-weight: bold; color: #9a3412; }
+          .risk-low { background-color: #d1fae5 !important; font-weight: bold; color: #065f46; }
+
+          /* Header / Footer */
+          .doc-header { border-bottom: 3px solid #000; padding-bottom: 10mm; margin-bottom: 10mm; }
+          .doc-footer { position: fixed; bottom: 0; left: 0; right: 0; font-size: 7pt; color: #666; border-top: 1px solid #ddd; padding-top: 4pt; display: flex; justify-content: space-between; }
+
+          /* Signatures */
+          .sig-box { border: 1px solid #000; height: 15mm; page-break-inside: avoid; margin-top: 2mm; }
           
           /* Reset scroll */
           .overflow-hidden { overflow: visible !important; }

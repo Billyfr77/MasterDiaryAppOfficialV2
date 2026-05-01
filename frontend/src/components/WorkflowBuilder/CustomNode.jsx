@@ -4,7 +4,7 @@ import {
     FileText, CheckSquare, Bell, User, Clock, Calendar, 
     CreditCard, Zap, Mail, MoreHorizontal, ListChecks, 
     Lock, Play, ArrowRight, Sparkles, AlertCircle, Activity, ShieldCheck,
-    Truck, Folder, Clipboard
+    Truck, Folder, Clipboard, DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

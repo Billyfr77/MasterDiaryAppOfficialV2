@@ -12,9 +12,9 @@ const googleAdvanced = require('../services/googleAdvancedService');
 
 const OMNISCIENCE_MANDATE = `
 **OMNISCIENCE PROTOCOL:**
-1. You have total visibility into the enterprise lattice.
-2. Your goal is to maximize yield and minimize site friction.
-3. Use data-driven reasoning to architect all responses.
+1. You have total visibility into the enterprise lattice, including ALL Safety Documentation and the Safety Pilot's logic.
+2. Your goal is to maximize yield and minimize site friction while maintaining MILITARY-GRADE safety standards.
+3. Use data-driven reasoning to architect all responses. If a plan is high-risk, you MUST reference existing Safety Forms (SWMS, Permits) or suggest new ones.
 4. NEVER return empty or generic placeholder data. Be specific.
 
 **ACADEMY PROMOTION PROTOCOL (Idea 3):**
@@ -120,8 +120,9 @@ const getInstitutionalContext = async (userId) => {
     `;
 
     const knowledgeBase = `
-    **INSTITUTIONAL MEMORY (DOCUMENTS, QUOTES & DIARIES):**
+    **INSTITUTIONAL MEMORY (DOCUMENTS, SAFETY, QUOTES & DIARIES):**
     - **Recent Documents:** ${packet.knowledgeBase?.documents?.map(d => `${d.title} (${d.type})`).join(' | ') || "None"}
+    - **Active Safety Docs:** ${packet.knowledgeBase?.safetyForms?.map(s => `${s.title} (${s.type}, ${s.risk} Risk)`).join(' | ') || "None"}
     - **Historical Quotes:** ${packet.knowledgeBase?.quotes?.map(q => `${q.name} for ${q.project || 'Unknown'} (${q.status}, $${q.revenue})`).join(' | ') || "None"}
     - **Historical Diaries:** ${packet.knowledgeBase?.diaries?.slice(0, 10).map(d => `${d.date} for ${d.project} (Cost: $${d.cost}, Notes: ${d.notes})`).join(' | ') || "None"}
     `;
@@ -218,9 +219,20 @@ const chatGlobal = async (req, res) => {
             **Agency Instructions:** 
             You have total visibility into our historical quotes AND site diary logs. 
             When asked about project status or history, use the "INSTITUTIONAL MEMORY" to provide data-driven insights.
-            You can propose database actions. If you see a problem, include a "directive" in your JSON response.
-            Available Actions: UPDATE_QUOTE_MARGIN, SHIFT_PROJECT_TIMELINE, AUTO_CORRECT_LABOUR_DNA.
-            Return a JSON with { reply: "string", directive: { action: "TYPE", ...params } | null }.
+            You can propose database actions or visual generations.
+            
+            **Directives:**
+            - UPDATE_QUOTE_MARGIN: Adjust profit.
+            - SHIFT_PROJECT_TIMELINE: Move dates.
+            - AUTO_CORRECT_LABOUR_DNA: Fix skills.
+            - GENERATE_EXCEL_REPORT: Use this when the user asks for an "excel", "spreadsheet", "csv", or "summary file" of their diaries, quotes, or general project data.
+              - **Params:** { "type": "diary" | "quote" | "global", "projectId": "uuid", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }
+            - GENERATE_IMAGE: Use this ONLY when the user asks to "see", "visualize", "diagram", or "blueprint" something, or when a visual rendering would significantly improve clarity. Do NOT use this for standard conversational replies.
+              - **PROMPT RULE:** Create a highly detailed, professional construction prompt.
+            
+            **CRITICAL:** Your response must be a single JSON object. Only include the "directive" field if you are taking a specific action.
+            
+            Return ONLY JSON: { "reply": "string", "directive": { "action": "TYPE", "prompt": "Image prompt", ...params } | null }.
         `;
         
         const result = await pinnacleAi.generateJSON(message, systemPrompt, 3000);
@@ -440,12 +452,18 @@ const chatWorkflowAssistant = async (req, res) => {
             ${mandate} ${memory} 
             
             **Mission:** Provide strategic advice AND generate graph modifications to build the perfect workflow.
-            You have access to historical diaries and quotes to help architect better flows.
+            You can also generate visual "Neural Blueprints" of the business lifecycle.
+            
+            **Directives:**
+            - GENERATE_IMAGE: Use this to provide a visual blueprint or diagram.
+              - **PROMPT RULE:** Focus on schematic clarity and process flow. (e.g. "Clean infographic flowchart showing a construction approval process, modern UI style, blue and white color scheme")
+            
             {
                 "reply": "Your conversational response here.",
                 "suggestedActions": [
                     {
-                        "type": "replace_graph" | "add_nodes_edges" | "apply_fix",
+                        "type": "replace_graph" | "add_nodes_edges" | "apply_fix" | "GENERATE_IMAGE",
+                        "prompt": "Image prompt if type is GENERATE_IMAGE",
                         "name": "Optional Workflow Name",
                         "nodes": [
                             { "id": "string", "type": "taskNode" | "trigger" | "action" | "decision" | "projectNode", "position": {"x":0,"y":0}, "data": { "label": "string", "config": {} } }
@@ -520,7 +538,20 @@ const generateDashboardInsights = async (req, res) => {
         const systemPrompt = `
             You are "Neural Core Analyst". ${memory}
             Generate 3 high-impact business insights based on these stats: ${JSON.stringify(stats)}.
-            Format: { "insights": [{ "title": "", "description": "", "priority": "high" | "medium" | "low" }] }
+            
+            **Actionable Intelligence:**
+            If an insight is high priority and visual (e.g. site layout, risk diagram), you can include an "action" to generate a blueprint.
+            
+            Format: { 
+                "insights": [
+                    { 
+                        "title": "string", 
+                        "description": "string", 
+                        "priority": "high" | "medium" | "low",
+                        "action": { "type": "GENERATE_BLUEPRINT", "prompt": "Image prompt" } | null
+                    }
+                ] 
+            }
         `;
         const result = await pinnacleAi.generateJSON(JSON.stringify(stats), systemPrompt, 1000);
         res.json(result);
@@ -718,14 +749,18 @@ const chatQuoteAssistant = async (req, res) => {
             ${memory} 
             
             **Mission:** Analyze the quote context and user request. Provide expert advice and suggest specific nodes to add.
-            You have access to historical diary logs to ensure quotes align with real-world site performance.
+            You can also generate visualizations (e.g. "Show me the project layout").
+            
+            **Directives:**
+            - GENERATE_IMAGE: Use this to provide a "Neural Blueprint" diagram or visualization when requested or highly relevant to the estimation.
+              - **PROMPT RULE:** Focus on architectural clarity and material finishes. (e.g. "Isometric view of a modern timber frame wall structure, labeled components, high fidelity construction rendering")
             
             **CRITICAL OUTPUT SCHEMA:**
             Return ONLY valid JSON.
             {
-                "reply": "Your advice here (approx 2 sentences).",
+                "reply": "Your advice here.",
                 "suggestedActions": [
-                    { "type": "add_node", "label": "Item Name", "category": "material|staff|equipment", "cost": number, "quantity": number }
+                    { "type": "add_node" | "GENERATE_IMAGE", "label": "Name", "prompt": "Image prompt if type is GENERATE_IMAGE", "category": "material|staff|equipment", "cost": number, "quantity": number }
                 ],
                 "suggestedNodes": []
             }
@@ -767,18 +802,21 @@ const chatDiaryAssistant = async (req, res) => {
 
         const systemPrompt = `
             You are "Diary Strategist" & "Senior Site Partner". 
-            ${OMNISCIENCE_MANDATE}
-            ${mandate} ${memory} 
+            ${OMNISCIENCE_MANDATE} ${mandate} ${memory} 
             
-            **Mission:** Analyze the site diary context and user request. Provide expert operational advice and suggest specific nodes or actions.
-            You can see ALL saved diaries in the 'INSTITUTIONAL MEMORY' above. Use them to identify recurring issues or successful patterns.
+            **Mission:** Analyze the site diary context and user request.
+            You can also generate visual site blueprints or "Neural Blueprints" of progress.
+            
+            **Directives:**
+            - GENERATE_IMAGE: Use this to provide a visual diagram or site rendering when requested or when visualizing progress adds critical context.
+              - **PROMPT RULE:** Focus on site conditions and activity. (e.g. "Photorealistic construction site showing excavators digging a trench in muddy conditions, morning light, 4k quality")
             
             **CRITICAL OUTPUT SCHEMA:**
             Return ONLY valid JSON.
             {
-                "reply": "Your advice here (approx 2 sentences).",
+                "reply": "Your advice here.",
                 "suggestedActions": [
-                    { "type": "add_node", "label": "Item Name", "category": "material|staff|equipment", "cost": number, "quantity": number }
+                    { "type": "add_node" | "GENERATE_IMAGE", "label": "Name", "prompt": "Image prompt if type is GENERATE_IMAGE", "category": "material|staff|equipment", "cost": number, "quantity": number }
                 ],
                 "suggestedNodes": []
             }
@@ -823,6 +861,11 @@ const chatSafetyAssistant = async (req, res) => {
             ${mandate} ${memory}
             
             **Mission:** Analyze the safety context, identify hazards, and suggest specific controls or form updates.
+            You can generate safety diagrams (e.g. "Show me correct ladder setup").
+            
+            **Directives:**
+            - GENERATE_IMAGE: Use this to provide a safety diagram or hazard visualization.
+              - **PROMPT RULE:** Focus on instructional clarity and safety equipment. (e.g. "Technical safety diagram showing correct harness attachment points for working at heights, white background, clean lines")
             
             **CRITICAL OUTPUT SCHEMA:**
             Return ONLY valid JSON.
@@ -830,8 +873,9 @@ const chatSafetyAssistant = async (req, res) => {
                 "reply": "Your expert advice here (approx 2 sentences).",
                 "suggestedActions": [
                     { 
-                        "type": "add_hazard" | "update_control" | "recommend_ppe", 
+                        "type": "add_hazard" | "update_control" | "recommend_ppe" | "GENERATE_IMAGE", 
                         "label": "Hazard/Item Name", 
+                        "prompt": "Specific image generation prompt if type is GENERATE_IMAGE",
                         "riskLevel": "High|Medium|Low",
                         "controls": ["Control Measure 1", "Control Measure 2"]
                     }
@@ -1108,16 +1152,13 @@ const chatMapAssistant = async (req, res) => {
             
             **OUTPUT SCHEMA (JSON ONLY):**
             {
-                "reply": "Short, tactical analysis using Ground Truth data. Be specific about weather or traffic if available.",
+                "reply": "Tactical analysis...",
                 "suggestedActions": [
                     { 
-                        "type": "focus_asset" | "draw_route" | "propose_ghost_move", 
+                        "type": "focus_asset" | "draw_route" | "propose_ghost_move" | "GENERATE_IMAGE", 
+                        "prompt": "Image prompt if type is GENERATE_IMAGE (e.g. 'Aerial view of site logistics plan showing crane radius')",
                         "location": { "lat": number, "lng": number }, 
-                        "origin": { "lat": number, "lng": number }, 
-                        "destination": { "lat": number, "lng": number },
-                        "polyline": "encoded_string_from_groundTruth_if_available",
-                        "targetId": "ID",
-                        "reason": "Short reason using Ground Truth"
+                        "reason": "..."
                     }
                 ]
             }
@@ -1222,6 +1263,113 @@ const analyzeProjectPostMortem = async (req, res) => {
     }
 };
 
+// --- NEURAL BLUEPRINT (IMAGE GENERATION) ---
+async function generateImagine(req, res) {
+    try {
+        const { prompt } = req.body;
+        if (!prompt) return res.status(400).json({ error: "Prompt required for imagination." });
+
+        console.log(`[Neural Blueprint] Triggering Generation for: ${prompt}`);
+
+        // --- CONTEXT INJECTION (BUSINESS AWARENESS) ---
+        const companyName = getSetting('companyName', 'Our Construction Firm');
+        
+        // Fetch key assets for visual grounding
+        const equipmentList = await Equipment.findAll({ limit: 3, attributes: ['name', 'category'] });
+        const equipmentString = equipmentList.map(e => `${e.name} (${e.category})`).join(', ');
+
+        // Check for recent photos (Visual Reference) - Lighter check
+        // We just want to know if there's a "style" we can infer, or just mention the company has history
+        const recentDiary = await Diary.findOne({ 
+            order: [['createdAt', 'DESC']],
+            include: [{ model: Project, attributes: ['name'] }]
+        });
+
+        // Construct the Enhanced Prompt
+        // We instruct the AI to "know" this business
+        const enhancedPrompt = `
+            Context: This image is for "${companyName}", a construction business.
+            Key Fleet Assets: ${equipmentString || "Standard Fleet"}.
+            Project Context: ${recentDiary?.Project?.name ? `Active on ${recentDiary.Project.name}` : 'General Operations'}.
+            
+            Visual Directive: ${prompt}
+            
+            Style: Professional Architectural Photography, 8k Resolution, Sharp Focus, Natural Lighting, Leica M11 style.
+            CRITICAL: Any text visible on signs, vehicles, or equipment MUST be crisp, perfectly legible, and non-distorted. 
+            NO BLURRY TEXT. NO GIBBERISH. Ensure the scene looks like a real, high-end construction site, not a dreamlike AI generation.
+            Avoid "AI-glow" or oversaturated colors. Focus on realistic textures (concrete, steel, safety vest fabric).
+        `.trim();
+
+        const imageUrl = await pinnacleAi.generateImagine(enhancedPrompt);
+        console.log(`[Neural Blueprint] Generation Success: ${imageUrl}`);
+        
+        await logAudit(req.user.id, 'NEURAL_BLUEPRINT_GEN', 'AI', 'Imagine', { prompt, enhancedPrompt });
+        res.json({ imageUrl });
+    } catch (e) {
+        console.error("[Neural Blueprint] Error:", e.message);
+        res.status(500).json({ error: e.message || "Imagination Core Offline." });
+    }
+}
+
+// --- VISION CORE BODY ---
+async function analyzeSiteVision(req, res) {
+    try {
+        const { image, prompt } = req.body;
+        if (!image) return res.status(400).json({ error: "Visual input required." });
+
+        const userId = req.user.id;
+        const { generateNeuralIntelligencePacket } = require('../utils/LearningEngine');
+        const neuralBrain = await generateNeuralIntelligencePacket(userId);
+
+        const systemInstruction = `
+            You are "Neural Eye", the **Military-Grade Forensic Vision Core** of MasterDiaryOS.
+            Your role is to conduct a ruthless, ISO 45001 compliant audit of construction site imagery.
+            
+            **MISSION:**
+            1. **Forensic Hazard Detection:** Identify safety violations with extreme precision (e.g., "Worker A missing hard hat", "Unshored trench >1.5m").
+            2. **Progress Verification:** Quantify construction status against trade standards (e.g., "Framing 85% complete, rough-in pending").
+            3. **Contextual Reasoning:** Cross-reference observations with the Staff Skills provided: ${JSON.stringify(neuralBrain.assets?.staff?.slice(0, 5))}.
+            
+            **CRITICAL OUTPUT SCHEMA (JSON ONLY):**
+            {
+                "analysis": "A concise, high-level executive summary of the site status.",
+                "confidenceScore": number (0-100),
+                "isoCitation": "Relevant ISO 45001 or Local Safety Standard Code (e.g., AS/NZS 4801)",
+                "hazards": [
+                    { 
+                        "type": "Fall Risk" | "Electrical" | "Chemical" | "PPE" | "Excavation", 
+                        "severity": "Critical" | "High" | "Medium", 
+                        "description": "Specific forensic detail.", 
+                        "mitigation": "Immediate corrective action required." 
+                    }
+                ],
+                "progress": {
+                    "taskDetected": "Primary trade activity visible",
+                    "completionEstimate": "Percentage (e.g. 65%)",
+                    "qualityCheck": "Pass/Fail/Warn based on visual standard"
+                },
+                "recommendedDocuments": ["SWMS", "High Risk Work Permit", "Incident Report"]
+            }
+        `;
+
+        const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+        const resultText = await pinnacleAi.analyzeImage(base64Data, prompt || "Conduct forensic site audit", systemInstruction);
+        
+        let resultJson;
+        try {
+            const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+            resultJson = jsonMatch ? JSON.parse(jsonMatch[0]) : { analysis: resultText };
+        } catch (e) {
+            resultJson = { analysis: resultText, parseError: true };
+        }
+
+        res.json(resultJson);
+    } catch (error) {
+        console.error("[Neural Eye] Vision Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
   executeAgencyDirective,
   signOffDirective,
@@ -1250,5 +1398,7 @@ module.exports = {
   optimizeFleet,
   chatMapAssistant,
   analyzeProjectPostMortem,
-  chatSafetyAssistant
+  chatSafetyAssistant,
+  analyzeSiteVision,
+  generateImagine
 };

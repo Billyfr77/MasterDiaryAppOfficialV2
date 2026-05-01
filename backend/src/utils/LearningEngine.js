@@ -3,7 +3,7 @@
  * The Learning Engine // Level 18 Sovereign Intelligence
  * PROTOCOL OMEGA: Total Enterprise Ingestion
  */
-const { Diary, Quote, Project, Staff, Node, Equipment, Workflow, Invoice, Client, Allocation, Document, sequelize } = require('../models');
+const { Diary, Quote, Project, Staff, Node, Equipment, Workflow, Invoice, Client, Allocation, Document, SafetyForm, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
@@ -11,7 +11,7 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
         if (!userId) throw new Error("Security Violation: userId required for Neural Intelligence");
 
         // 1. UNITARY DATA INGESTION (THE TOTAL LATTICE)
-        const [projects, staff, nodeCount, equip, invoices, clients, allocations, allDocuments, allQuotes, allUserDiaries] = await Promise.all([
+        const [projects, staff, nodeCount, equip, invoices, clients, allocations, allDocuments, allQuotes, allUserDiaries, allSafetyForms] = await Promise.all([
             Project.findAll({ where: { userId } }),
             Staff.findAll({ where: { userId } }),
             Node.count({ where: { userId } }),
@@ -19,13 +19,14 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
             Invoice.findAll({ where: { userId } }),
             Client.findAll({ where: { userId } }),
             Allocation.findAll({ where: { userId, status: 'scheduled' } }),
-            Document.findAll({ where: { userId }, limit: 20, order: [['updatedAt', 'DESC']] }),
-            Quote.findAll({ where: { userId }, limit: 20, order: [['createdAt', 'DESC']], include: [{ model: Project, as: 'project', attributes: ['name'] }] }),
+            Document.findAll({ where: { userId }, order: [['updatedAt', 'DESC']] }), // REMOVED LIMIT
+            Quote.findAll({ where: { userId }, order: [['createdAt', 'DESC']], include: [{ model: Project, as: 'project', attributes: ['name'] }] }), // REMOVED LIMIT
             Diary.findAll({ 
                 where: { userId }, 
                 order: [['date', 'DESC']],
                 include: [{ model: Project, attributes: ['name'] }] 
-            })
+            }),
+            SafetyForm.findAll({ where: { createdBy: userId }, order: [['updatedAt', 'DESC']] })
         ]);
 
         const projectIds = projects.map(p => p.id);
@@ -308,10 +309,10 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
             };
         });
 
-        const siteTrail = allUserDiaries.slice(0, 50).map(d => {
+        const siteTrail = allUserDiaries.map(d => {
             const items = Array.isArray(d.canvasData) ? d.canvasData.flatMap(e => e.items || []) : [];
-            const staff = items.filter(i => i.type === 'staff').map(s => s.name).join(', ');
-            return `[${d.date}] ${d.Project?.name || 'Unknown'}: Cost $${d.totalCost}, Revenue $${d.totalRevenue}. Notes: ${d.notes || 'Visual log'}. Crew: ${staff}`;
+            const staff = items.filter(i => i.type === 'staff').map(s => s.name).join(',');
+            return `${d.date}|${d.Project?.name || '?'}|C:${d.totalCost}|R:${d.totalRevenue}|${d.notes?.substring(0, 100) || 'Log'}|${staff}`;
         });
 
         return {
@@ -346,16 +347,21 @@ const generateNeuralIntelligencePacket = async (userId, projectId = null) => {
                 equipment: equip.map(e => ({ name: e.name, type: e.type, status: e.status || 'Active' }))
             },
             knowledgeBase: {
-                documents: allDocuments.map(d => ({ title: d.title, type: d.type, status: d.status, tags: d.tags, summary: d.content?.substring(0, 200) })),
+                documents: allDocuments.map(d => ({ title: d.title, type: d.type, status: d.status })), // Extremely lean
+                safetyForms: allSafetyForms.map(s => ({ title: s.title, type: s.type, status: s.status, risk: s.riskLevel })),
                 quotes: allQuotes.map(q => ({ name: q.name, status: q.status, revenue: q.totalRevenue, project: q.project?.name })),
-                diaries: allUserDiaries.slice(0, 20).map(d => {
-                    let summary = d.notes?.substring(0, 100);
-                    if (!summary && d.canvasData) {
-                        const items = Array.isArray(d.canvasData) ? d.canvasData.flatMap(e => e.items || []) : [];
-                        summary = `Visual Log with ${items.length} items: ` + items.slice(0, 3).map(i => i.name).join(', ');
-                    }
-                    const projectName = d.Project?.name || projects.find(p => p.id === d.projectId)?.name || 'Unknown';
-                    return { date: d.date, project: projectName, cost: d.totalCost, revenue: d.totalRevenue, notes: summary };
+                diaries: allUserDiaries.map(d => { 
+                    const items = Array.isArray(d.canvasData) ? d.canvasData.flatMap(e => e.items || []) : [];
+                    const detail = items.map(i => `${i.name}(${i.quantity || i.duration || 1})`).join(',');
+                    
+                    return { 
+                        d: d.date, 
+                        p: d.Project?.name || '?', 
+                        c: d.totalCost, 
+                        r: d.totalRevenue, 
+                        n: d.notes?.substring(0, 50),
+                        it: detail 
+                    };
                 })
             },
             siteFeedback: siteInsights,

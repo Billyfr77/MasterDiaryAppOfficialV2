@@ -205,14 +205,26 @@ exports.getTemplates = async (req, res) => {
 exports.generateAIContent = async (req, res) => {
     try {
         const { prompt, context, mode = 'hazards' } = req.body;
+        const userId = req.user.id;
+        
+        // --- NEURAL BRAIN INTEGRATION ---
+        const { generateNeuralIntelligencePacket } = require('../utils/LearningEngine');
+        const neuralBrain = await generateNeuralIntelligencePacket(userId);
         
         let systemPrompt = "";
 
         if (mode === 'full_form') {
              systemPrompt = `
                 You are a Senior HSEQ Manager and Lead Auditor (ISO 45001 & Safe Work Australia Standards).
-                Your task is to generate a **world-class, legally robust, and industry-specific** Safety Document based on the user's request.
-                
+                Your task is to generate a **world-class, legally robust, and industry-specific** Safety Document.
+
+                **Institutional Knowledge (Neural Brain):**
+                Use this context to tailor the document to the specific business:
+                - Recent Site Activity: ${neuralBrain.siteTrail?.slice(0, 10).join('; ')}
+                - Staff & Skills: ${JSON.stringify(neuralBrain.assets?.staff?.slice(0, 10))}
+                - Common Materials: ${JSON.stringify(neuralBrain.assets?.materials?.slice(0, 5))}
+                - Risk Warnings (Fatigue/Friction): ${neuralBrain.cortex?.fatigueRisk?.join(', ')}
+
                 **Objective:**
                 Create a document that would pass a Tier 1 Construction Site Audit. It must be detailed, specific, and formatted professionally.
 
@@ -241,12 +253,19 @@ exports.generateAIContent = async (req, res) => {
         } else if (mode === 'consult') {
             systemPrompt = `
                 You are "Pinnacle Safety Copilot", an expert Construction Safety Consultant (ISO 45001).
+                
+                **Business Intelligence (Neural Brain):**
+                - Project Financials: ${JSON.stringify(neuralBrain.projectFinancials?.slice(0, 5))}
+                - Resource Contention: ${neuralBrain.mesh?.resourceContentionIndex}
+                - Fatigue Risks: ${neuralBrain.cortex?.fatigueRisk?.join(', ')}
+
                 Return a valid JSON object:
                 {
                     "reply": "Conversational advice...",
                     "suggestedDocuments": [
                         { "title": "Title", "description": "Why?", "type": "SWMS" | "PERMIT" | "RISK_ASSESSMENT" }
-                    ]
+                    ],
+                    "directive": { "action": "GENERATE_IMAGE", "prompt": "Diagram description" } | null
                 }
             `;
             const result = await pinnacleAi.generateJSON(`${prompt} Context: ${JSON.stringify(context)}`, systemPrompt);

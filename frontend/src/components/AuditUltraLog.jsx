@@ -4,7 +4,7 @@ import {
     Shield, Search, Filter, Clock, User, 
     Database, Activity, ChevronRight, X, 
     Download, RefreshCcw, Eye, ArrowRight, 
-    Lock, FileText, CheckCircle, Trash2, Cpu
+    Lock, FileText, CheckCircle, Trash2, Cpu, Radar
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -32,14 +32,21 @@ const AuditUltraLog = () => {
 
     const filteredLogs = useMemo(() => {
         if (filterType === 'ALL') return logs;
-        return logs.filter(l => l.subType.includes(filterType));
+        return logs.filter(l => l.subType.includes(filterType) || l.type === filterType);
     }, [logs, filterType]);
 
-    const getActionColor = (action) => {
+    const getActionColor = (log) => {
+        if (log.type === 'SENTINEL') return 'text-rose-400 bg-rose-500/10 border border-rose-500/20';
+        const action = log.subType;
         if (action.includes('CREATE')) return 'text-emerald-400 bg-emerald-500/10';
         if (action.includes('UPDATE')) return 'text-indigo-400 bg-indigo-500/10';
         if (action.includes('DELETE')) return 'text-rose-400 bg-rose-500/10';
         return 'text-slate-400 bg-slate-500/10';
+    };
+
+    const getIcon = (log) => {
+        if (log.type === 'SENTINEL') return <Radar size={18} className="text-rose-400" />;
+        return null;
     };
 
     return (
@@ -108,11 +115,12 @@ const AuditUltraLog = () => {
                             key={log.id}
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="group relative bg-white/[0.02] border border-white/5 rounded-2xl p-5 hover:bg-white/[0.04] hover:border-indigo-500/30 transition-all cursor-pointer overflow-hidden shadow-xl"
+                            className={`group relative bg-white/[0.02] border rounded-2xl p-5 hover:bg-white/[0.04] transition-all cursor-pointer overflow-hidden shadow-xl ${log.type === 'SENTINEL' ? 'border-rose-500/30' : 'border-white/5 hover:border-indigo-500/30'}`}
                             onClick={() => setSelectedLog(log)}
                         >
                             <div className="flex items-center gap-6 relative z-10">
-                                <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${getActionColor(log.subType)}`}>
+                                <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap flex items-center gap-2 ${getActionColor(log)}`}>
+                                    {getIcon(log)}
                                     {log.subType}
                                 </div>
                                 <div className="flex-1 min-w-0">

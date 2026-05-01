@@ -9,7 +9,7 @@ export const useInvoiceEngine = () => {
   const { settings } = useSettings();
   
   // Initialize viewMode based on incoming state
-  const initialViewMode = location.state?.invoice || location.state?.quoteItems || location.state?.diaryItems ? 'edit' : 'list';
+  const initialViewMode = (location.state?.invoice || location.state?.quoteItems || location.state?.diaryItems || location.state?.invoiceData) ? 'edit' : 'list';
   const [viewMode, setViewMode] = useState(initialViewMode); 
   
   const [invoicesList, setInvoicesList] = useState([]);
@@ -43,6 +43,8 @@ export const useInvoiceEngine = () => {
           return {
               ...getInitialInvoiceState(s), // Get defaults first
               projectId: v.projectId,
+              projectName: v.projectName || '',
+              clientName: v.clientName || '',
               items: v.items,
               notes: v.notes,
               status: 'draft'
@@ -255,15 +257,9 @@ export const useInvoiceEngine = () => {
       }
   };
 
-  const handleLogoUpload = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onloadend = () => {
-          setInvoice(prev => ({ ...prev, senderLogo: reader.result }));
-      };
-      reader.readAsDataURL(file);
-  };
+  useEffect(() => {
+      setInvoice(prev => ({ ...prev, senderLogo: settings.companyLogo || null }));
+  }, [settings.companyLogo]);
 
   const handleSave = async (silent = false) => {
     setSaving(true);
@@ -300,6 +296,6 @@ export const useInvoiceEngine = () => {
     viewMode, setViewMode, invoicesList, projects, projectJobs, setProjectJobs, listLoading, searchTerm, setSearchTerm,
     selectedIds, setSelectedIds, activeTab, setActiveTab, invoice, setInvoice, saving, showHarvest, setShowHarvest, 
     harvestableDiaries, selectedDiaryIds, setSelectedDiaryIds, harvestLoading, consolidateItems, setConsolidateItems,
-    calculateTotals, fetchData, handleSave, handleHarvest, importHarvest, getInitialInvoiceState, settings, handleBulkAction, handleLogoUpload
+    calculateTotals, fetchData, handleSave, handleHarvest, importHarvest, getInitialInvoiceState, settings, handleBulkAction
   };
 };

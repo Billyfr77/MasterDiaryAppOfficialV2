@@ -210,12 +210,10 @@ const EnhancedSettings = () => {
 
   const handleCropSave = async (blob) => {
       const formData = new FormData();
-      formData.append('file', blob, 'logo-crop.png');
+      formData.append('image', blob, 'logo-crop.png');
       
       try {
-          const res = await api.post('/uploads', formData, {
-              headers: { 'Content-Type': 'multipart/form-data' }
-          });
+          const res = await api.post('/uploads', formData);
           
           const fileUrl = res.data.url;
           setProfileForm(prev => ({ ...prev, companyLogo: fileUrl }));

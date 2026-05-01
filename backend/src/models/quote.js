@@ -84,6 +84,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: []
     },
+    items: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: []
+    },
     totalCost: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,

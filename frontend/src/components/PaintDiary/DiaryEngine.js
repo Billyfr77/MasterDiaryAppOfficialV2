@@ -214,7 +214,9 @@ export const useDiaryEngine = () => {
                       });
                   }
               } else {
-                  const multiplier = (item.type === 'equipment' && hub) ? dur : qty;
+                  const multiplier = (item.type === 'equipment' || item.type === 'staff') 
+                    ? (hub ? dur : qty) 
+                    : qty; // Materials always use qty
                   lineCost = multiplier * baseRate;
                   lineRevenue = multiplier * (parseFloat(item.chargeRate) || (baseRate * materialMarkup));
               }
@@ -389,7 +391,8 @@ export const useDiaryEngine = () => {
                           startTime: node.startTime || "07:00",
                           finishTime: node.finishTime || "15:00",
                           note: node.note || '',
-                          position: node.position || { x: xPos, y: yPos }
+                          position: node.position || { x: xPos, y: yPos },
+                          isNew: true // Flag for backend promotion
                       });
                   } else {
                       newExtraNodes.push({
@@ -555,8 +558,31 @@ export const useDiaryEngine = () => {
           };
           setChatMessages(prev => [...prev, aiMsg]);
           
-          // AUTO-EXECUTE CERTAIN ACTIONS IF DESIRED (Optional policy)
-          // For now, let the user trigger them via UI or keep it manual.
+          // --- HANDLE IMAGE GENERATION (NEW) ---
+          const imageAction = res.data.suggestedActions?.find(a => a.type === 'GENERATE_IMAGE');
+          if (imageAction && imageAction.prompt) {
+              setChatTyping(true);
+              try {
+                  const imageRes = await api.post('/ai/imagine', { prompt: imageAction.prompt });
+                  if (imageRes.data.imageUrl) {
+                      setChatMessages(prev => [...prev, { 
+                          id: generateId(),
+                          role: 'assistant', 
+                          content: `Visualizing: "${imageAction.prompt}"`,
+                          image: imageRes.data.imageUrl 
+                      }]);
+                  }
+              } catch (e) {
+                  console.error("Diary Image Gen Failed", e.response?.data?.error || e.message);
+                  setChatMessages(prev => [...prev, { 
+                      id: generateId(),
+                      role: 'assistant', 
+                      content: `⚠️ Visual synthesis failed: ${e.response?.data?.error || "Under load."}` 
+                  }]);
+              } finally {
+                  setChatTyping(false);
+              }
+          }
       } catch (err) {
           setChatMessages(prev => [...prev, { id: generateId(), role: 'assistant', content: "AI core is offline." }]);
       } finally { setChatTyping(false); }
@@ -566,7 +592,23 @@ export const useDiaryEngine = () => {
     if (!selectedProject) return alert("Please select a project before saving.");
     setIsSaving(true)
     try {
-      const data = { date: selectedDate.toISOString().split('T')[0], projectId: selectedProject?.id, jobId: selectedJobId, clientId: selectedClient?.id, canvasData: [currentEntry], totalCost: cost, totalRevenue: revenue };
+      // Aggregate manual notes from any NotesNodes on the canvas
+      const canvasNotes = currentEntry.extraNodes
+          .filter(n => n.type === 'notesNode')
+          .map(n => n.data?.text)
+          .filter(Boolean)
+          .join('\n\n');
+
+      const data = { 
+          date: selectedDate.toISOString().split('T')[0], 
+          projectId: selectedProject?.id, 
+          jobId: selectedJobId, 
+          clientId: selectedClient?.id, 
+          canvasData: [currentEntry], 
+          notes: canvasNotes || currentEntry.note || null,
+          totalCost: cost, 
+          totalRevenue: revenue 
+      };
       if (diaryDbId) await api.put(`/paint-diaries/${diaryDbId}`, data);
       else { const res = await api.post('/paint-diaries', data); setDiaryDbId(res.data.id); }
       setIsSaved(true);

@@ -572,6 +572,38 @@ const SafetyFormBuilder = ({ onSave, initialData = [] }) => {
   const [polishingFieldId, setPolishingFieldId] = useState(null);
   const [viewMode, setViewMode] = useState('desktop'); 
 
+  const [showImagineModal, setShowImagineModal] = useState(false);
+  const [imaginePrompt, setImaginePrompt] = useState('');
+  const [imagineLoading, setImagineLoading] = useState(false);
+
+  const handleNeuralBlueprint = async () => {
+      if (!imaginePrompt.trim()) return;
+      setImagineLoading(true);
+      try {
+          const res = await api.post('/ai/imagine', { prompt: imaginePrompt });
+          if (res.data.imageUrl) {
+              const newField = { 
+                  id: window.crypto.randomUUID(), 
+                  type: 'photo', 
+                  label: `Neural Blueprint: ${imaginePrompt}`, 
+                  value: res.data.imageUrl, 
+                  required: false, 
+                  width: '100%', 
+                  isAI: true, 
+                  verified: false 
+              };
+              setFields(prev => [...prev, newField]);
+              setShowImagineModal(false);
+              setImaginePrompt('');
+          }
+      } catch (err) {
+          console.error("Imagine Error:", err);
+          alert("Neural Blueprint Generation Failed.");
+      } finally {
+          setImagineLoading(false);
+      }
+  };
+
   useEffect(() => { setFields(parseInitialData(initialData)); }, [initialData]);
 
   const handleFieldUpdate = (updatedField) => { setFields(fields.map(f => f.id === updatedField.id ? updatedField : f)); setSelectedField(updatedField); };
@@ -614,7 +646,8 @@ const SafetyFormBuilder = ({ onSave, initialData = [] }) => {
         <div className="w-72 bg-stone-900 border-r border-white/5 flex flex-col">
           <div className="p-6 border-b border-white/5"><h2 className="text-lg font-black text-white tracking-tight flex items-center gap-2"><PenTool size={20} className="text-indigo-500" /> Form Builder</h2></div>
           <div className="p-6 overflow-y-auto flex-1">
-             <button onClick={() => setShowAIModal(true)} className="w-full mb-4 p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.02] hover:shadow-indigo-500/25 group"><Sparkles size={18} className="group-hover:animate-spin-slow" /><span className="font-bold text-sm uppercase tracking-wide">AI Generator</span></button>
+             <button onClick={() => setShowAIModal(true)} className="w-full mb-2 p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.02] hover:shadow-indigo-500/25 group"><Sparkles size={18} className="group-hover:animate-spin-slow" /><span className="font-bold text-sm uppercase tracking-wide">AI Generator</span></button>
+             <button onClick={() => setShowImagineModal(true)} className="w-full mb-4 p-4 bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.02] hover:shadow-fuchsia-500/25 group"><Palette size={18} className="group-hover:animate-pulse" /><span className="font-bold text-sm uppercase tracking-wide">Neural Blueprint</span></button>
              <div className="mb-6 px-2 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2">
                 <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-[10px] text-amber-200/80 leading-tight">AI content requires human verification before use.</p>
@@ -651,6 +684,7 @@ const SafetyFormBuilder = ({ onSave, initialData = [] }) => {
           <div className="flex-1 overflow-y-auto"><PropertiesPanel field={selectedField} onChange={handleFieldUpdate} accentColor={accentColor} onAccentChange={setAccentColor} /></div>
         </div>
         {showAIModal && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-6 animate-fade-in"><div className="bg-stone-900 border border-white/10 rounded-3xl p-8 w-full max-w-xl shadow-2xl relative overflow-hidden"><div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" /><div className="flex justify-between items-center mb-8"><div><h3 className="text-2xl font-black text-white mb-1">AI Document Architect</h3><p className="text-sm text-gray-400">Describe what you need, and I'll build the structure.</p></div><button onClick={() => setShowAIModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="text-gray-400" /></button></div><textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-2xl p-5 text-white text-base focus:border-indigo-500 outline-none h-40 mb-6 resize-none leading-relaxed" placeholder="e.g. 'Create a Hot Work Permit with sections for Fire Watch, PPE checks, and supervisor sign-off...'" autoFocus /><div className="flex justify-end gap-3"><button onClick={() => setShowAIModal(false)} className="px-6 py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors">Cancel</button><button onClick={generateWithAI} disabled={aiLoading || !aiPrompt.trim()} className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-indigo-500/20 disabled:opacity-50 transition-all transform active:scale-95">{aiLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />} Generate Structure</button></div></div></div>)}
+        {showImagineModal && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-6 animate-fade-in"><div className="bg-stone-900 border border-white/10 rounded-3xl p-8 w-full max-w-xl shadow-2xl relative overflow-hidden"><div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-rose-500" /><div className="flex justify-between items-center mb-8"><div><h3 className="text-2xl font-black text-white mb-1">Neural Blueprint</h3><p className="text-sm text-gray-400">Describe a diagram, and I'll visualize it.</p></div><button onClick={() => setShowImagineModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="text-gray-400" /></button></div><textarea value={imaginePrompt} onChange={(e) => setImaginePrompt(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-2xl p-5 text-white text-base focus:border-fuchsia-500 outline-none h-40 mb-6 resize-none leading-relaxed" placeholder="e.g. 'Diagram of correct ladder placement ratio 4:1 with safety harness points...'" autoFocus /><div className="flex justify-end gap-3"><button onClick={() => setShowImagineModal(false)} className="px-6 py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors">Cancel</button><button onClick={handleNeuralBlueprint} disabled={imagineLoading || !imaginePrompt.trim()} className="px-8 py-3 bg-gradient-to-r from-fuchsia-600 to-pink-600 hover:from-fuchsia-500 hover:to-pink-500 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-fuchsia-500/20 disabled:opacity-50 transition-all transform active:scale-95">{imagineLoading ? <Loader2 size={18} className="animate-spin" /> : <Palette size={18} />} Generate Blueprint</button></div></div></div>)}
         
         {/* HELP BEACON */}
         <VideoBeacon videoId="hDcdw8MMa4M" title="Master Safety Co-pilot" />

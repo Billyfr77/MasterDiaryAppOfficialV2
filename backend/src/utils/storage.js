@@ -6,6 +6,7 @@ const fs = require('fs');
 // Initialize Google Cloud Storage
 const storage = new Storage();
 const bucketName = process.env.GCS_BUCKET_NAME || 'master-diary-uploads';
+console.log(`[Storage] Initialized with bucket: ${bucketName} (Env: ${process.env.NODE_ENV})`);
 
 // Configure Local Storage (Fallback/Dev)
 const localStorage = multer.diskStorage({
@@ -25,6 +26,7 @@ const localStorage = multer.diskStorage({
 // Configure Google Cloud Storage Engine for Multer
 const googleStorage = {
   _handleFile: (req, file, cb) => {
+    console.log(`[Storage] GCS Upload starting: ${file.originalname}`);
     const bucket = storage.bucket(bucketName);
     const fileName = `uploads/${Date.now()}-${file.originalname}`;
     const blob = bucket.file(fileName);
@@ -35,12 +37,14 @@ const googleStorage = {
     });
 
     blobStream.on('error', (err) => {
+      console.error(`[Storage] GCS Stream Error:`, err);
       cb(err);
     });
 
     blobStream.on('finish', () => {
       // publicUrl is: https://storage.googleapis.com/${bucket.name}/${blob.name}
       const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+      console.log(`[Storage] GCS Upload finished: ${publicUrl}`);
       cb(null, {
         path: publicUrl,
         filename: fileName,

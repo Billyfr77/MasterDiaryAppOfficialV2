@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, AlertTriangle, Info, CheckCircle, X, Sparkles, Zap, ShieldAlert, TrendingUp, Filter, Target, Activity, CheckSquare, Trash2 } from 'lucide-react';
+import { Bell, AlertTriangle, Info, CheckCircle, X, Sparkles, Zap, ShieldAlert, TrendingUp, Filter, Target, Activity, CheckSquare, Trash2, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api';
+import { useNavigate } from 'react-router-dom';
 
 // Neural Hub Notification Component
 const NotificationDropdown = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -45,6 +47,19 @@ const NotificationDropdown = () => {
 
   const markAsRead = async (id, e) => {
     if (e) e.stopPropagation();
+    const note = notifications.find(n => n.id === id);
+    
+    // NAVIGATION LOGIC for Sentinel
+    if (note?.type === 'sentinel_alert') {
+        if (note.isRead && note.data?.invoiceId) {
+            navigate(`/invoices?id=${note.data.invoiceId}`);
+        } else {
+            // Logic to open Sentinel Dashboard (it's a global component, so we just toggle its state if possible, 
+            // but since it's sibling to App, we might need a custom event or context)
+            window.dispatchEvent(new CustomEvent('sentinel:open'));
+        }
+    }
+
     try {
       await api.put(`/notifications/${id}/read`);
       setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
@@ -89,6 +104,7 @@ const NotificationDropdown = () => {
     switch (type?.toUpperCase()) {
       case 'WARNING': return <ShieldAlert className="w-5 h-5 text-amber-400" />;
       case 'ERROR': case 'ALERT': return <AlertTriangle className="w-5 h-5 text-rose-500 animate-pulse" />;
+      case 'SENTINEL_ALERT': return <Target className="w-5 h-5 text-rose-500 animate-spin-slow" />;
       case 'SUCCESS': return <CheckCircle className="w-5 h-5 text-emerald-400" />;
       case 'INFO': return <Info className="w-5 h-5 text-cyan-400" />;
       default: return <Zap className="w-5 h-5 text-indigo-400" />;
@@ -98,14 +114,15 @@ const NotificationDropdown = () => {
   const getGlowColor = (type) => {
       switch (type?.toUpperCase()) {
           case 'WARNING': return 'shadow-[0_0_15px_rgba(251,191,36,0.2)] border-amber-500/30';
-          case 'ERROR': return 'shadow-[0_0_20px_rgba(244,63,94,0.3)] border-rose-500/40';
+          case 'ERROR': case 'ALERT': return 'shadow-[0_0_20px_rgba(244,63,94,0.3)] border-rose-500/40';
+          case 'SENTINEL_ALERT': return 'shadow-[0_0_25px_rgba(244,63,94,0.5)] border-rose-500/50 bg-rose-500/5';
           case 'SUCCESS': return 'shadow-[0_0_15px_rgba(52,211,153,0.2)] border-emerald-500/30';
           default: return 'hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] border-white/5';
       }
   };
 
   const filteredNotifications = activeTab === 'critical' 
-    ? notifications.filter(n => ['WARNING', 'ERROR', 'ALERT'].includes(n.type?.toUpperCase()))
+    ? notifications.filter(n => ['WARNING', 'ERROR', 'ALERT', 'SENTINEL_ALERT'].includes(n.type?.toUpperCase()))
     : notifications;
 
   return (

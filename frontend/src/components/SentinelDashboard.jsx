@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldAlert, DollarSign, ArrowRight, CheckCircle, X, Activity, History, Radar, TrendingUp, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, DollarSign, ArrowRight, CheckCircle, X, Activity, History, Radar, TrendingUp, AlertTriangle, Trash2, Cpu, Database, Network } from 'lucide-react';
 import { api } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,31 +8,121 @@ const SentinelDashboard = () => {
     const [alerts, setAlerts] = useState([]);
     const [history, setHistory] = useState([]);
     const [stats, setStats] = useState({ totalRecovered: 0, pendingRevenue: 0, leaksDetected: 0 });
+    const [projects, setProjects] = useState([]);
+    const [selectedProjectId, setSelectedProjectId] = useState('');
     const [loading, setLoading] = useState(true);
+    const [scanning, setScanning] = useState(false);
+    const [deepScanning, setDeepScanning] = useState(false);
+    const [latestDiaryId, setLatestDiaryId] = useState(null);
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
+    const [telemetry, setTelemetry] = useState([]);
+    const telemetryEndRef = useRef(null);
     const navigate = useNavigate();
 
     useEffect(() => {
         fetchData();
+        fetchProjects();
         const interval = setInterval(fetchData, 30000); // Poll every 30s
-        return () => clearInterval(interval);
+        
+        const handleOpenEvent = () => setIsOpen(true);
+        window.addEventListener('sentinel:open', handleOpenEvent);
+        
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('sentinel:open', handleOpenEvent);
+        };
     }, []);
+
+    useEffect(() => {
+        if (telemetryEndRef.current) {
+            telemetryEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [telemetry]);
+
+    const addTelemetry = (msg, type = 'info') => {
+        setTelemetry(prev => [...prev.slice(-15), { id: Date.now(), msg, type, time: new Date().toLocaleTimeString() }]);
+    };
+
+    const fetchProjects = async () => {
+        try {
+            const res = await api.get('/projects');
+            // Support paginated or direct array response
+            const projs = Array.isArray(res.data) ? res.data : (res.data.rows || []);
+            setProjects(projs);
+            if (projs.length > 0) setSelectedProjectId(projs[0].id);
+        } catch (e) { console.error("Project fetch failed", e); }
+    };
 
     const fetchData = async () => {
         try {
-            const [alertsRes, historyRes, statsRes] = await Promise.all([
+            const [alertsRes, historyRes, statsRes, diariesRes] = await Promise.all([
                 api.get('/sentinel/alerts'),
                 api.get('/sentinel/history'),
-                api.get('/sentinel/stats')
+                api.get('/sentinel/stats'),
+                api.get('/paint-diaries?limit=1')
             ]);
             setAlerts(Array.isArray(alertsRes.data) ? alertsRes.data : []);
             setHistory(Array.isArray(historyRes.data) ? historyRes.data : []);
             setStats(statsRes.data || { totalRecovered: 0, pendingRevenue: 0 });
+            if (diariesRes.data && diariesRes.data.length > 0) {
+                setLatestDiaryId(diariesRes.data[0].id);
+            }
         } catch (e) {
             console.error("Sentinel Offline:", e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleForceScan = async () => {
+        if (!latestDiaryId) return alert("No diary found to scan.");
+        setScanning(true);
+        setTelemetry([]);
+        addTelemetry("INITIATING FORENSIC SCAN...", "warn");
+        addTelemetry(`Target: Diary Node [${latestDiaryId.split('-')[0]}]`);
+        addTelemetry("Bypassing Standard Logic. Engaging Neural Grok Core.");
+        
+        try {
+            const res = await api.post('/sentinel/scan', { diaryId: latestDiaryId });
+            if (res.data && res.data.totalPotentialRevenue) {
+                addTelemetry("LEAKAGE DETECTED.", "success");
+                addTelemetry(`Value Identified: $${res.data.totalPotentialRevenue.toLocaleString()}`, "success");
+                fetchData(); // Refresh alerts
+            } else {
+                addTelemetry("Scan Complete: Sector Secure. No leakage found.");
+            }
+        } catch (e) {
+            addTelemetry("Scan Failed: " + (e.response?.data?.error || e.message), "error");
+        } finally {
+            setScanning(false);
+            setTimeout(() => setTelemetry([]), 8000);
+        }
+    };
+
+    const handleDeepScan = async () => {
+        if (!selectedProjectId) return alert("Select a project for Deep Scan.");
+        setDeepScanning(true);
+        setTelemetry([]);
+        addTelemetry("INITIATING PROJECT-WIDE DEEP SCAN...", "warn");
+        addTelemetry(`Target Project: ${projects.find(p => p.id === selectedProjectId)?.name || selectedProjectId}`);
+        addTelemetry("Deploying multi-agent swarm to cross-reference all historical diaries vs approved quotes.");
+        
+        try {
+            const res = await api.post('/sentinel/deep-scan', { projectId: selectedProjectId });
+            addTelemetry("DEEP SCAN COMPLETE.", "success");
+            if (res.data?.result?.totalRevenueUnlocked > 0) {
+                addTelemetry(`MASSIVE LEAKAGE DETECTED: $${res.data.result.totalRevenueUnlocked.toLocaleString()}`, "success");
+                addTelemetry(`Diaries Scanned: ${res.data.result.diariesScanned} | Anomalies Found: ${res.data.result.newLeakageFound}`);
+            } else {
+                addTelemetry(`Diaries Scanned: ${res.data.result?.diariesScanned || 0}. No historical leakage found.`);
+            }
+            fetchData();
+        } catch (e) {
+            addTelemetry("Deep Scan Failed: " + (e.response?.data?.error || e.message), "error");
+        } finally {
+            setDeepScanning(false);
+            setTimeout(() => setTelemetry([]), 15000);
         }
     };
 
@@ -48,10 +138,37 @@ const SentinelDashboard = () => {
     };
 
     const handleDismiss = async (alertId) => {
-        // Optimistic update
-        setAlerts(prev => prev.filter(a => a.id !== alertId));
-        // TODO: Call backend dismiss endpoint if strictly needed, or just rely on read status later
+        try {
+            await api.delete(`/sentinel/alerts/${alertId}`);
+            setAlerts(prev => prev.filter(a => a.id !== alertId));
+        } catch (e) {
+            console.error("Dismiss failed", e);
+        }
     };
+
+    const handleDeleteHistory = async (id) => {
+        try {
+            await api.delete(`/sentinel/alerts/${id}`);
+            setHistory(prev => prev.filter(h => h.id !== id));
+        } catch (e) { console.error(e); }
+    };
+
+    const handleClearLog = async () => {
+        if (!confirm("Clear all items from the recovery log? This is irreversible.")) return;
+        try {
+            await api.delete('/sentinel/history/clear');
+            setHistory([]);
+            addNotification('Log Cleared', 'success');
+        } catch (e) { console.error(e); }
+    };
+
+    // Group history by month
+    const groupedHistory = history.reduce((acc, item) => {
+        const month = new Date(item.updatedAt).toLocaleString('default', { month: 'long', year: 'numeric' });
+        if (!acc[month]) acc[month] = [];
+        acc[month].push(item);
+        return acc;
+    }, {});
 
     // --- ANIMATION VARIANTS ---
     const badgeVariants = {
@@ -127,13 +244,42 @@ const SentinelDashboard = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <button onClick={() => setIsOpen(false)} className="p-2 text-gray-500 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all">
-                                    <X size={24} />
-                                </button>
+                                <div className="flex gap-2">
+                                    <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-1 mr-4">
+                                        <select 
+                                            value={selectedProjectId}
+                                            onChange={(e) => setSelectedProjectId(e.target.value)}
+                                            className="bg-transparent text-[10px] font-black uppercase text-gray-400 border-none focus:ring-0 cursor-pointer"
+                                        >
+                                            {projects.map(p => (
+                                                <option key={p.id} value={p.id} className="bg-stone-900 text-white">{p.name || 'Untitled Project'}</option>
+                                            ))}
+                                        </select>
+                                        <button 
+                                            onClick={handleDeepScan}
+                                            disabled={deepScanning || !selectedProjectId}
+                                            className="flex items-center gap-2 px-3 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-lg transition-all text-[9px] font-black uppercase tracking-widest border border-emerald-500/30"
+                                        >
+                                            {deepScanning ? <Activity size={10} className="animate-spin" /> : <Radar size={10} />}
+                                            {deepScanning ? 'Auditing...' : 'Deep Scan'}
+                                        </button>
+                                    </div>
+                                    <button 
+                                        onClick={handleForceScan} 
+                                        disabled={scanning || !latestDiaryId}
+                                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-2"
+                                    >
+                                        {scanning ? <Activity size={14} className="animate-spin" /> : <Radar size={14} />}
+                                        {scanning ? 'Scanning...' : 'Manual Scan'}
+                                    </button>
+                                    <button onClick={() => setIsOpen(false)} className="p-2 text-gray-500 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all">
+                                        <X size={24} />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* STATS BAR */}
-                            <div className="grid grid-cols-3 divide-x divide-white/5 bg-black/20 border-b border-white/5">
+                            <div className="grid grid-cols-2 divide-x divide-white/5 bg-black/20 border-b border-white/5">
                                 <div className="p-6 flex flex-col items-center justify-center text-center">
                                     <span className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Total Recovered</span>
                                     <div className="text-3xl font-black text-emerald-400 flex items-center gap-1">
@@ -148,31 +294,60 @@ const SentinelDashboard = () => {
                                         {alerts.length}
                                     </div>
                                 </div>
-                                <div className="p-6 flex flex-col items-center justify-center text-center">
-                                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">AI Accuracy</span>
-                                    <div className="text-3xl font-black text-indigo-400 flex items-center gap-1">
-                                        <Activity size={20} className="text-indigo-600" />
-                                        98%
-                                    </div>
-                                </div>
                             </div>
 
                             {/* TABS & CONTENT */}
                             <div className="flex-1 flex flex-col overflow-hidden bg-stone-950">
-                                <div className="flex border-b border-white/5">
-                                    <button 
-                                        onClick={() => setActiveTab('active')}
-                                        className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-rose-500/10 text-rose-400 border-b-2 border-rose-500' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
-                                    >
-                                        Active Threats ({alerts.length})
-                                    </button>
-                                    <button 
-                                        onClick={() => setActiveTab('history')}
-                                        className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-emerald-500/10 text-emerald-400 border-b-2 border-emerald-500' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
-                                    >
-                                        Recovery Log
-                                    </button>
+                                <div className="flex border-b border-white/5 justify-between items-center bg-black/40 pr-4">
+                                    <div className="flex">
+                                        <button 
+                                            onClick={() => setActiveTab('active')}
+                                            className={`px-8 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-rose-500/10 text-rose-400 border-b-2 border-rose-500' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                                        >
+                                            Active Threats ({alerts.length})
+                                        </button>
+                                        <button 
+                                            onClick={() => setActiveTab('history')}
+                                            className={`px-8 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-emerald-500/10 text-emerald-400 border-b-2 border-emerald-500' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                                        >
+                                            Recovery Log ({history.length})
+                                        </button>
+                                    </div>
+                                    {activeTab === 'history' && history.length > 0 && (
+                                        <button onClick={handleClearLog} className="flex items-center gap-2 text-[10px] font-black text-gray-500 hover:text-rose-400 transition-colors uppercase tracking-widest">
+                                            <Trash2 size={12} /> Clear Stream
+                                        </button>
+                                    )}
                                 </div>
+
+                                {/* LIVE TELEMETRY DISPLAY */}
+                                <AnimatePresence>
+                                    {(scanning || deepScanning || telemetry.length > 0) && (
+                                        <motion.div 
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="bg-black/80 border-b border-indigo-500/20 max-h-48 overflow-y-auto custom-scrollbar font-mono text-[10px]"
+                                        >
+                                            <div className="p-4 space-y-1">
+                                                {telemetry.map((t) => (
+                                                    <div key={t.id} className="flex gap-3 items-start">
+                                                        <span className="text-gray-600 shrink-0">[{t.time}]</span>
+                                                        <span className={`
+                                                            ${t.type === 'warn' ? 'text-amber-400' : ''}
+                                                            ${t.type === 'success' ? 'text-emerald-400' : ''}
+                                                            ${t.type === 'error' ? 'text-rose-400 font-bold' : ''}
+                                                            ${t.type === 'info' ? 'text-indigo-300' : ''}
+                                                        `}>
+                                                            {t.msg}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                <div ref={telemetryEndRef} />
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
 
                                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
                                     {activeTab === 'active' ? (
@@ -202,15 +377,64 @@ const SentinelDashboard = () => {
                                                             <div className="text-xs font-bold text-gray-500 uppercase">{new Date(alert.createdAt).toLocaleDateString()} • {new Date(alert.createdAt).toLocaleTimeString()}</div>
                                                         </div>
                                                         <h3 className="text-lg font-bold text-white mb-2">{alert.message}</h3>
-                                                        <div className="bg-black/30 p-3 rounded-lg border border-white/5 mb-4 text-sm text-gray-300 font-mono">
-                                                            Detected via Diary Analysis: "{alert.data?.projectName || 'Project Unknown'}"
+                                                        <div className="bg-black/30 p-4 rounded-xl border border-white/5 mb-4 space-y-3 shadow-inner">
+                                                            <div className="flex justify-between items-start">
+                                                                <div className="text-sm text-gray-300 font-medium">
+                                                                    Detected via Forensic Analysis: <span className="text-white font-bold">"{alert.data?.projectName || 'Project Unknown'}"</span>
+                                                                </div>
+                                                                {alert.data?.accuracyScore && (
+                                                                    <div className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">
+                                                                        {alert.data.accuracyScore}% ACCURACY
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            
+                                                            {/* DETECTED ITEMS LIST */}
+                                                            <div className="space-y-2">
+                                                                {alert.data?.detectedItems?.map((item, idx) => (
+                                                                    <div key={idx} className="bg-white/5 p-3 rounded-lg border border-white/5 flex flex-col gap-2">
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-xs font-bold text-white">{item.description}</span>
+                                                                            <span className="text-xs font-black text-rose-400 font-mono">+${item.estimatedCost?.toLocaleString()}</span>
+                                                                        </div>
+                                                                        <div className="text-[10px] text-gray-500 italic">" {item.reason} "</div>
+                                                                        
+                                                                        {/* FINANCIAL BREAKDOWN */}
+                                                                        {item.breakdown && (
+                                                                            <div className="flex gap-4 pt-1 border-t border-white/5 mt-1">
+                                                                                <div className="flex flex-col">
+                                                                                    <span className="text-[9px] text-gray-600 font-black uppercase">Labor</span>
+                                                                                    <span className="text-[10px] text-gray-400 font-bold font-mono">${item.breakdown.labor}</span>
+                                                                                </div>
+                                                                                <div className="flex flex-col">
+                                                                                    <span className="text-[9px] text-gray-600 font-black uppercase">Material</span>
+                                                                                    <span className="text-[10px] text-gray-400 font-bold font-mono">${item.breakdown.materials}</span>
+                                                                                </div>
+                                                                                {item.isoCitation && (
+                                                                                    <div className="ml-auto flex items-center gap-1.5 px-2 bg-indigo-500/10 border border-indigo-500/20 rounded-md">
+                                                                                        <Radar size={10} className="text-indigo-400" />
+                                                                                        <span className="text-[9px] font-black text-indigo-400 uppercase">{item.isoCitation}</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            
+                                                            {alert.data?.summary && (
+                                                                <div className="text-xs text-indigo-300 bg-indigo-950/20 p-3 rounded-lg border border-indigo-500/10 italic">
+                                                                    <span className="font-black uppercase text-[9px] block mb-1 tracking-widest text-indigo-400 opacity-60">Sentinel Intelligence Report</span>
+                                                                    {alert.data.summary}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <button 
                                                                 onClick={() => handleClaim(alert.id)}
                                                                 className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 transition-all"
                                                             >
-                                                                <DollarSign size={16} /> Recover Revenue (${alert.data?.totalPotentialRevenue || '0'})
+                                                                <DollarSign size={16} /> Recover Revenue (${(alert.data?.totalPotentialRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })})
                                                             </button>
                                                             <button 
                                                                 onClick={() => handleDismiss(alert.id)}
@@ -227,20 +451,30 @@ const SentinelDashboard = () => {
                                         history.length === 0 ? (
                                             <div className="text-center text-gray-500 py-20">No recovery history found.</div>
                                         ) : (
-                                            history.map(item => (
-                                                <div key={item.id} className="bg-stone-900 border border-white/5 p-4 rounded-xl flex items-center justify-between opacity-75 hover:opacity-100 transition-opacity">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="p-2 bg-emerald-500/10 rounded-lg">
-                                                            <CheckCircle size={20} className="text-emerald-500" />
+                                            Object.entries(groupedHistory).map(([month, items]) => (
+                                                <div key={month} className="space-y-3">
+                                                    <div className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] sticky top-0 bg-stone-950 py-2 z-10">{month}</div>
+                                                    {items.map(item => (
+                                                        <div key={item.id} className="bg-stone-900 border border-white/5 p-4 rounded-xl flex items-center justify-between group hover:border-emerald-500/30 transition-all">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="p-2 bg-emerald-500/10 rounded-lg">
+                                                                    <CheckCircle size={20} className="text-emerald-500" />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-sm font-bold text-white">{item.message}</div>
+                                                                    <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{new Date(item.updatedAt).toLocaleDateString()}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-6">
+                                                                <div className="text-emerald-400 font-bold font-mono">
+                                                                    +${item.data?.totalPotentialRevenue || '0'}
+                                                                </div>
+                                                                <button onClick={() => handleDeleteHistory(item.id)} className="p-2 text-gray-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <div className="text-sm font-bold text-white">{item.message}</div>
-                                                            <div className="text-xs text-gray-500">{new Date(item.updatedAt).toLocaleDateString()}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-emerald-400 font-bold font-mono">
-                                                        +${item.data?.totalPotentialRevenue || '0'}
-                                                    </div>
+                                                    ))}
                                                 </div>
                                             ))
                                         )

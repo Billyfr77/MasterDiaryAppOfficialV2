@@ -26,6 +26,8 @@ router.post('/sign-off', aiController.signOffDirective); // Execute Approved
 router.post('/parse-voice', aiController.parseVoiceCommand); // Voice-to-Action
 router.post('/analyze-document', aiController.analyzeDocument);
 router.post('/safety-analysis', aiController.analyzeSafetyTask);
+router.post('/analyze-vision', aiController.analyzeSiteVision);
+router.post('/imagine', aiController.generateImagine);
 
 // NEW: Route for AI Quote Generation
 router.post('/quote', aiController.generateQuote); // Matches frontend /ai/quote

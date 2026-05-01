@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Shield, Search, Upload, CheckCircle, AlertTriangle, Scale, Lock, Eye } from 'lucide-react';
+import { FileText, Shield, Search, Upload, CheckCircle, AlertTriangle, Scale, Lock, Eye, DollarSign, Wrench, X } from 'lucide-react';
 import { api } from '../../utils/api';
 
 const ContractVault = ({ projectId }) => {
@@ -71,8 +71,8 @@ const ContractVault = ({ projectId }) => {
             <div className="flex-1 flex overflow-hidden">
                 {/* SIDEBAR LIST */}
                 <div className="w-72 border-r border-white/5 bg-stone-900/30 p-4 flex flex-col gap-3 overflow-y-auto">
-                    {contracts.length === 0 && <div className="text-center text-gray-500 py-10 text-xs uppercase">No Contracts Secured</div>}
-                    {contracts.map(c => (
+                    {(!Array.isArray(contracts) || contracts.length === 0) && <div className="text-center text-gray-500 py-10 text-xs uppercase">No Contracts Secured</div>}
+                    {Array.isArray(contracts) && contracts.map(c => (
                         <div 
                             key={c.id} 
                             onClick={() => setSelectedContract(c)}
@@ -109,10 +109,10 @@ const ContractVault = ({ projectId }) => {
                             {/* KEY TERMS MATRIX */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 {[
-                                    { label: 'Retention', value: `${selectedContract.intelligence.retentionPercent}%`, icon: Lock },
-                                    { label: 'Defect Period', value: `${selectedContract.intelligence.defectPeriod} Mths`, icon: Wrench },
-                                    { label: 'Payment Terms', value: selectedContract.intelligence.paymentTerms, icon: DollarSign },
-                                    { label: 'LDs / Day', value: `$${selectedContract.intelligence.liquidatedDamages || '0'}`, icon: AlertTriangle, color: 'text-rose-400' },
+                                    { label: 'Retention', value: `${selectedContract.intelligence?.retentionPercent || 0}%`, icon: Lock },
+                                    { label: 'Defect Period', value: `${selectedContract.intelligence?.defectPeriod || 12} Mths`, icon: Wrench },
+                                    { label: 'Payment Terms', value: selectedContract.intelligence?.paymentTerms || 'N/A', icon: DollarSign },
+                                    { label: 'LDs / Day', value: `$${selectedContract.intelligence?.liquidatedDamages || '0'}`, icon: AlertTriangle, color: 'text-rose-400' },
                                 ].map((stat, i) => (
                                     <div key={i} className="bg-stone-900/80 backdrop-blur-xl border border-white/10 p-5 rounded-2xl">
                                         <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
@@ -129,13 +129,13 @@ const ContractVault = ({ projectId }) => {
                                     <div className="absolute top-0 right-0 p-4 opacity-10"><CheckCircle size={100} /></div>
                                     <h3 className="text-sm font-black text-emerald-400 uppercase tracking-widest mb-6 relative z-10">In Scope (Core Works)</h3>
                                     <ul className="space-y-3 relative z-10">
-                                        {(selectedContract.intelligence.inclusions || []).map((inc, i) => (
+                                        {Array.isArray(selectedContract.intelligence?.inclusions) && selectedContract.intelligence.inclusions.map((inc, i) => (
                                             <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
                                                 <CheckCircle size={16} className="text-emerald-500 mt-0.5 shrink-0" />
                                                 {inc}
                                             </li>
                                         ))}
-                                        {(selectedContract.intelligence.inclusions || []).length === 0 && <li className="text-gray-600 italic">No explicit inclusions found.</li>}
+                                        {(!selectedContract.intelligence?.inclusions || selectedContract.intelligence.inclusions.length === 0) && <li className="text-gray-600 italic">No explicit inclusions found.</li>}
                                     </ul>
                                 </div>
 
@@ -143,13 +143,13 @@ const ContractVault = ({ projectId }) => {
                                     <div className="absolute top-0 right-0 p-4 opacity-10"><AlertTriangle size={100} /></div>
                                     <h3 className="text-sm font-black text-rose-400 uppercase tracking-widest mb-6 relative z-10">Exclusions (Variations)</h3>
                                     <ul className="space-y-3 relative z-10">
-                                        {(selectedContract.intelligence.exclusions || []).map((exc, i) => (
+                                        {Array.isArray(selectedContract.intelligence?.exclusions) && selectedContract.intelligence.exclusions.map((exc, i) => (
                                             <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
                                                 <X size={16} className="text-rose-500 mt-0.5 shrink-0" />
                                                 {exc}
                                             </li>
                                         ))}
-                                        {(selectedContract.intelligence.exclusions || []).length === 0 && <li className="text-gray-600 italic">No explicit exclusions found.</li>}
+                                        {(!selectedContract.intelligence?.exclusions || selectedContract.intelligence.exclusions.length === 0) && <li className="text-gray-600 italic">No explicit exclusions found.</li>}
                                     </ul>
                                 </div>
                             </div>
@@ -213,8 +213,5 @@ const ContractVault = ({ projectId }) => {
         </div>
     );
 };
-
-// Icon placeholders
-const Wrench = ({ size, className }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>;
 
 export default ContractVault;

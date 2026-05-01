@@ -102,8 +102,78 @@ const PinnacleCopilot = () => {
         context 
       });
 
+      console.log("[Pinnacle AI] Response Data:", res.data);
       setMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }]);
+
+      // --- HANDLE DIRECTIVES ---
+      const directive = res.data.directive;
+      
+      if (directive) {
+          if (directive.action === 'GENERATE_EXCEL_REPORT') {
+              console.log("[Pinnacle AI] Triggering Excel Export:", directive);
+              setTyping(true);
+              try {
+                  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                  const validProjectId = (directive.projectId && uuidRegex.test(directive.projectId)) ? directive.projectId : currentProjectId;
+
+                  const exportParams = {
+                      projectId: validProjectId,
+                      startDate: directive.startDate,
+                      endDate: directive.endDate,
+                      type: directive.type || 'global'
+                  };
+
+                  let endpoint = '/manifest/global-export';
+                  // Future proofing for specific types
+                  if (directive.type === 'quote' && directive.quoteId) {
+                      // If we had an ID-based quote export, we'd use it here
+                  }
+
+                  const exportRes = await api.post(endpoint, exportParams, { responseType: 'blob' });
+                  const url = window.URL.createObjectURL(new Blob([exportRes.data]));
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', `Pinnacle_Export_${directive.type || 'Lattice'}_${new Date().toISOString().split('T')[0]}.xlsx`);
+                  document.body.appendChild(link);
+                  link.click();
+                  
+                  setMessages(prev => [...prev, { 
+                      role: 'assistant', 
+                      content: `Synthesis Complete. I've generated the ${directive.type || 'Global'} Excel report for you.` 
+                  }]);
+              } catch (e) {
+                  console.error("[Pinnacle AI] Export Failed:", e);
+                  setMessages(prev => [...prev, { role: 'assistant', content: "⚠️ Export Synthesis failed. Please ensure you have valid data for this range." }]);
+              } finally {
+                  setTyping(false);
+              }
+          }
+
+          // --- HANDLE IMAGE GENERATION ---
+          if (directive.action === 'GENERATE_IMAGE') {
+              console.log("[Pinnacle AI] Triggering Image Gen:", directive.prompt);
+              const imagePrompt = directive.prompt;
+              setTyping(true);
+              try {
+                  const imageRes = await api.post('/ai/imagine', { prompt: imagePrompt });
+                  console.log("[Pinnacle AI] Image Generated:", imageRes.data.imageUrl);
+                  if (imageRes.data.imageUrl) {
+                      setMessages(prev => [...prev, { 
+                          role: 'assistant', 
+                          content: `Generated Neural Blueprint: "${imagePrompt}"`,
+                          image: imageRes.data.imageUrl 
+                      }]);
+                  }
+              } catch (e) {
+                  console.error("[Pinnacle AI] Image Gen Failed:", e.response?.data?.error || e.message);
+                  setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Visual synthesis failed: ${e.response?.data?.error || "Imagination core under high load."}` }]);
+              } finally {
+                  setTyping(false);
+              }
+          }
+      }
     } catch (err) {
+      console.error("[Pinnacle AI] Chat Error:", err);
       setMessages(prev => [...prev, { role: 'assistant', content: "Connection to Neural Core failed. Please check API configuration." }]);
     } finally {
       setTyping(false);
@@ -173,6 +243,21 @@ const PinnacleCopilot = () => {
                         : 'bg-stone-900 border border-white/10 text-gray-300 rounded-tl-none'
                 }`}>
                     {msg.content}
+                    {msg.image && (
+                        <div className="mt-4 rounded-2xl overflow-hidden border border-white/10 shadow-2xl group/img relative bg-black/40">
+                            <img 
+                                src={msg.image} 
+                                alt="Neural Blueprint" 
+                                className="w-full h-auto cursor-zoom-in hover:scale-105 transition-transform duration-700 ease-out" 
+                                onClick={() => window.open(msg.image, '_blank')} 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end p-4 pointer-events-none">
+                                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] drop-shadow-lg">
+                                    Neural Blueprint // Imagine Core
+                                </span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         ))}

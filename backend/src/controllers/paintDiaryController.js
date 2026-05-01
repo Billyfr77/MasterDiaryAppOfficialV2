@@ -42,6 +42,7 @@ const paintDiarySchema = Joi.object({
   projectId: Joi.any().allow(null, '').optional(),
   jobId: Joi.any().allow(null, '').optional(),
   clientId: Joi.any().allow(null, '').optional(),
+  notes: Joi.string().allow(null, '').optional(),
   canvasData: Joi.any().optional(),
   totalCost: Joi.number().optional().default(0),
   totalRevenue: Joi.number().optional().default(0),
@@ -181,16 +182,19 @@ const processNewDiaryItems = async (canvasData, userId) => {
 };
 
 const createPaintDiary = async (req, res) => {
+  console.log(`[Diary] Attempting Create for User: ${req.user?.id}`);
   const transaction = await sequelize.transaction();
 
   try {
     const { error } = paintDiarySchema.validate(req.body);
     if (error) {
+      console.warn(`[Diary] Validation Failed: ${error.details[0].message}`);
       await transaction.rollback();
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, jobId, clientId, canvasData, gpsData } = req.body;
+    const { date, projectId, jobId, clientId, canvasData, gpsData, notes } = req.body;
+    console.log(`[Diary] Data: Project=${projectId}, Date=${date}, NotesLength=${notes?.length || 0}`);
 
     // 1. Auto-Create Resources & Normalize Entries
     const entries = await processNewDiaryItems(canvasData, req.user?.id);
@@ -206,11 +210,12 @@ const createPaintDiary = async (req, res) => {
     }));
 
     const diaryData = {
-      userId: req.user.id,
+      userId: req.user.id, // Explicitly set from auth
       date,
       projectId: projectId || null,
       jobId: jobId || null,
       clientId: clientId || null,
+      notes: notes || '',
       canvasData: processedCanvasData,
       totalCost: calculatedCosts.totalCost || req.body.totalCost || 0,
       totalRevenue: calculatedCosts.totalRevenue || req.body.totalRevenue || 0,
@@ -221,27 +226,11 @@ const createPaintDiary = async (req, res) => {
 
     const diary = await Diary.create(diaryData, { transaction });
     await transaction.commit();
+    console.log(`[Diary] Successfully Saved! ID: ${diary.id}`);
 
-    // TRIGGER SENTINEL REVENUE RECOVERY (Non-blocking)
-    try {
-        const sentinelService = require('../services/sentinelService');
-        sentinelService.analyzeLeakage(diary.id, req.user.id).then(result => {
-            if (result) {
-                const db = require('../models');
-                const Notification = db.Notification || require('../models/notification')(db.sequelize, db.Sequelize.DataTypes);
-                Notification.create({
-                    userId: req.user.id,
-                    type: 'sentinel_alert',
-                    title: '💸 Revenue Leakage Detected',
-                    message: `Sentinel found $${result.totalPotentialRevenue} in recoverable variations on ${result.projectName}.`,
-                    data: result,
-                    isRead: false
-                });
-            }
-        }).catch(err => console.error("Sentinel Trigger Error:", err));
-    } catch (sentinelErr) {
-        console.error("Critical Sentinel Load Error:", sentinelErr);
-    }
+    // TRIGGER SENTINEL REVENUE RECOVERY (Military Grade Deduplication Active)
+    const sentinelService = require('../services/sentinelService');
+    sentinelService.processDiary(diary.id, req.user.id);
 
     // Trigger Workflow Engine
     const workflowEngine = require('../services/workflowEngine');
@@ -250,8 +239,8 @@ const createPaintDiary = async (req, res) => {
     res.status(201).json(diary);
   } catch (error) {
     if (transaction) await transaction.rollback();
-    console.error("Create Paint Diary Error:", error);
-    res.status(400).json({ error: error.message });
+    console.error("[Diary] FATAL SAVE ERROR:", error);
+    res.status(500).json({ error: "Internal Database Failure during Save.", details: error.message });
   }
 };
 
@@ -271,7 +260,7 @@ const updatePaintDiary = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { date, projectId, jobId, clientId, canvasData, gpsData } = req.body;
+    const { date, projectId, jobId, clientId, canvasData, gpsData, notes } = req.body;
 
     // Normalize and process
     const entries = await processNewDiaryItems(canvasData, req.user?.id);
@@ -291,6 +280,7 @@ const updatePaintDiary = async (req, res) => {
       projectId: projectId || null,
       jobId: jobId || null,
       clientId: clientId || null,
+      notes: notes || null,
       canvasData: processedCanvasData,
       totalCost: calculatedCosts.totalCost || req.body.totalCost || 0,
       totalRevenue: calculatedCosts.totalRevenue || req.body.totalRevenue || 0,
@@ -300,6 +290,11 @@ const updatePaintDiary = async (req, res) => {
 
     await transaction.commit();
     const updatedDiary = await Diary.findByPk(req.params.id);
+
+    // TRIGGER SENTINEL REVENUE RECOVERY (Military Grade Deduplication Active)
+    const sentinelService = require('../services/sentinelService');
+    sentinelService.processDiary(updatedDiary.id, req.user.id);
+
     res.json(updatedDiary);
   } catch (error) {
     if (transaction) await transaction.rollback();
@@ -315,9 +310,22 @@ const deletePaintDiary = async (req, res) => {
       return res.status(404).json({ error: 'Paint diary entry not found' });
     }
 
-    const deleted = await Diary.destroy({ where: { id: req.params.id } });
+    const diaryId = existingDiary.id;
+    const deleted = await Diary.destroy({ where: { id: diaryId } });
+    
     if (deleted) {
-      res.json({ message: 'Paint diary entry deleted' });
+      // PROACTIVE CLEANUP: Remove any unread sentinel alerts for this diary
+      const { Notification } = require('../models');
+      await Notification.destroy({
+          where: {
+              type: 'sentinel_alert',
+              data: {
+                  [db.Sequelize.Op.like]: `%${diaryId}%`
+              }
+          }
+      });
+
+      res.json({ message: 'Paint diary entry and associated alerts deleted' });
     } else {
       res.status(404).json({ error: 'Paint diary entry not found' });
     }
@@ -391,16 +399,20 @@ const calculateCostsFromEntries = async (entries) => {
 
   for (const entry of entries) {
     for (const item of entry.items || []) {
-      const cost = await calculateItemCost(item);
-      const revenue = await calculateItemRevenue(item, { materialMarkup, allowanceMarkup });
+      const rateCost = await calculateItemCost(item);
+      const rateRevenue = await calculateItemRevenue(item, { materialMarkup, allowanceMarkup });
 
-      totalCost += cost * (item.duration || 1);
-      totalRevenue += revenue * (item.duration || 1);
-      totalDuration += (item.duration || 0);
+      // Match frontend multiplier logic
+      const multiplier = (item.type === 'staff' || item.type === 'equipment')
+        ? (item.duration || item.quantity || 1)
+        : (item.quantity || 1);
 
-      // Assuming 'staff' and 'equipment' items contribute to billable duration
+      totalCost += rateCost * multiplier;
+      totalRevenue += rateRevenue * multiplier;
+      totalDuration += multiplier;
+
       if (item.type === 'staff' || item.type === 'equipment') {
-        billableDuration += (item.duration || 0);
+        billableDuration += multiplier;
       }
     }
   }
@@ -472,7 +484,8 @@ const calculateItemRevenue = async (item, markups = { materialMarkup: 1.2, allow
         return staff ? parseFloat(staff.chargeOutBase) : 0;
       case 'equipment':
         const equipment = await Equipment.findByPk(id);
-        return equipment ? parseFloat(equipment.costRateBase) * 1.2 : 0;
+        // Frontend uses materialMarkup for non-staff if no chargeRate
+        return equipment ? parseFloat(equipment.costRateBase) * markups.materialMarkup : 0;
       case 'material':
         const material = await Node.findByPk(id);
         return material ? parseFloat(material.pricePerUnit) * markups.materialMarkup : 0;

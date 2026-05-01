@@ -96,25 +96,35 @@ const searchHub = async (req, res) => {
     }
 
     // --- AUDIT LOGS ---
-    if (!type || type === 'AUDIT') {
+    if (!type || type === 'AUDIT' || type === 'SENTINEL') {
         queries.push(AuditLog.findAll({
             where: buildWhere(['action', 'entity', 'entityId'], null, null, 'createdAt'),
             include: [{ model: User, as: 'actor', attributes: ['username'] }],
             limit,
             order: [['createdAt', 'DESC']]
-        }).then(rows => rows.map(r => ({
-            id: r.id,
-            type: 'AUDIT',
-            subType: r.action,
-            title: `${r.action}: ${r.entity}`,
-            subtitle: `Actor: ${r.actor?.username || 'System'} | ID: ${r.entityId}`,
-            date: r.createdAt,
-            tags: ['Security', 'Traceability'],
-            value: null,
-            status: 'LOGGED',
-            link: null, // Audits don't necessarily have a link, or link to entity?
-            details: r.details
-        }))));
+        }).then(rows => rows.map(r => {
+            let link = null;
+            if (r.entity === 'Project') link = `/projects/${r.entityId}`;
+            else if (r.entity === 'Quote') link = `/quotes/builder/${r.entityId}`;
+            else if (r.entity === 'Invoice') link = `/invoices?id=${r.entityId}`;
+            else if (r.entity === 'Diary') link = `/diary`;
+
+            const isSentinel = r.action.startsWith('SENTINEL_');
+
+            return {
+                id: r.id,
+                type: isSentinel ? 'SENTINEL' : 'AUDIT',
+                subType: r.action,
+                title: `${r.action.replace('SENTINEL_', '')}: ${r.entity}`,
+                subtitle: `Actor: ${r.actor?.username || 'System'} | ID: ${r.entityId}`,
+                date: r.createdAt,
+                tags: isSentinel ? ['Revenue', 'Forensics'] : ['Security', 'Traceability'],
+                value: null,
+                status: 'LOGGED',
+                link: link,
+                details: r.details
+            };
+        })));
     }
 
     // --- PROJECTS ---
@@ -205,16 +215,12 @@ const searchHub = async (req, res) => {
 
     // --- DIARIES (Deep Search) ---
     if (!type || type === 'DIARY') {
-         // Diaries do NOT have userId, so we must NOT use buildWhere's default userId check
-         // We construct a specific where clause for Diaries filtering by Date/Value only
-         const diaryWhere = {};
+         const diaryWhere = { userId };
          
-         // Date Filter
          if (dateRange && dateRange !== 'all') {
              diaryWhere.date = getDateFilter(dateRange);
          }
          
-         // Value Filter
          if (minVal || maxVal) {
              const valFilter = {};
              if (minVal) valFilter[Op.gte] = parseFloat(minVal);
@@ -222,15 +228,17 @@ const searchHub = async (req, res) => {
              diaryWhere.totalRevenue = valFilter;
          }
 
-         // Special handling for text query on related project
          const include = [{ 
              model: Project, 
              attributes: ['name'],
-             required: true, // CRITICAL: Must be true to enforce the inner where clause
-             where: { userId } // Enforce ownership via Project
+             required: false
          }];
          
-         if (query) include[0].where = { ...include[0].where, name: { [Op.like]: searchString } };
+         if (query) {
+             diaryWhere[Op.or] = [
+                 { notes: { [Op.like]: searchString } }
+             ];
+         }
 
          queries.push(Diary.findAll({
              include,

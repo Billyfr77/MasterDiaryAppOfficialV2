@@ -393,7 +393,7 @@ export default function ExecutiveHQ() {
                                 <HealthIndicator label="MESH" status={systemHealth.neural_mesh} icon={Activity} />
                             </div>
                             <BridgeStat label="Neural_Bus" value={`${latency}ms`} color="indigo" icon={Zap} />
-                            <BridgeStat label="Integrity" value="99.8%" color="emerald" icon={ShieldCheck} />
+                            <BridgeStat label="Integrity" value={intelligence?.mesh?.integrity ? `${Math.round(parseFloat(intelligence.mesh.integrity) * 100)}%` : "99.8%"} color="emerald" icon={ShieldCheck} />
                             <div className="flex gap-2">
                                 <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); }} className="p-10 bg-white/5 hover:bg-white/10 rounded-[3.5rem] border border-white/10 transition-all group shadow-2xl" title="Reset Camera">
                                     <RotateCcw size={32} className="text-indigo-400 group-hover:rotate-[-180deg] transition-transform duration-700" />
@@ -830,7 +830,7 @@ export default function ExecutiveHQ() {
                                             <PortfolioMetric icon={Users} label="Contention" value={`${Math.round((intelligence?.mesh?.resourceContentionIndex || 0) * 100)}%`} color="text-rose-400" />
                                             <PortfolioMetric icon={Activity} label="Velocity Drift" value={intelligence?.mesh?.velocityDrift || '0.00'} color={parseFloat(intelligence?.mesh?.velocityDrift) > 0 ? 'text-rose-500' : 'text-emerald-400'} />
                                             <PortfolioMetric icon={Target} label="Lattice Accuracy" value={intelligence?.oracle?.bidSuccessProbability || '0%'} color="text-cyan-400" />
-                                            <PortfolioMetric icon={ShieldCheck} label="Mesh Integrity" value={`${Math.round((intelligence?.mesh?.integrity || 0) * 100)}%`} color="text-indigo-400" />
+                                            <PortfolioMetric icon={ShieldCheck} label="Mesh Integrity" value={intelligence?.mesh?.integrity ? `${Math.round(parseFloat(intelligence.mesh.integrity) * 100)}%` : "100%"} color="text-indigo-400" />
                                         </div>
                                     </motion.div>
                                 )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Filter, AlertTriangle, FileText, Settings, Download, PenTool, Sparkles, Loader2, X, Mic } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../../utils/api'; 
@@ -6,6 +7,8 @@ import SafetyFormViewer from './SafetyFormViewer';
 import SafetyFormBuilder from './SafetyFormBuilder';
 import SafetyImporter from './SafetyImporter';
 import { generateSafetyPDF } from './SafetyPDF';
+import NeuralEye from './NeuralEye';
+import { Radar } from 'lucide-react';
 
 const SafetyCopilot = ({ isOpen, onClose, onGenerate }) => {
     const [messages, setMessages] = useState([
@@ -62,9 +65,30 @@ const SafetyCopilot = ({ isOpen, onClose, onGenerate }) => {
 
         try {
             const res = await api.post('/safety/ai-content', { prompt: userMsg.content, mode: 'consult' });
-            const { reply, suggestedDocuments } = res.data.result;
+            const { reply, suggestedDocuments, directive } = res.data.result;
 
             setMessages(prev => [...prev, { role: 'ai', content: reply }]);
+            
+            // --- HANDLE IMAGE DIRECTIVE (NEW) ---
+            if (directive && directive.action === 'GENERATE_IMAGE') {
+                const imagePrompt = directive.prompt;
+                setLoading(true);
+                try {
+                    const imageRes = await api.post('/ai/imagine', { prompt: imagePrompt });
+                    if (imageRes.data.imageUrl) {
+                        setMessages(prev => [...prev, { 
+                            role: 'ai', 
+                            content: `Generated Neural Blueprint: "${imagePrompt}"`,
+                            image: imageRes.data.imageUrl 
+                        }]);
+                    }
+                } catch (e) {
+                    console.error("Safety Image Gen Failed", e);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
             if (suggestedDocuments) {
                 setSuggestions(suggestedDocuments);
             }
@@ -103,6 +127,14 @@ const SafetyCopilot = ({ isOpen, onClose, onGenerate }) => {
                                 msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-stone-800 text-gray-200 rounded-bl-none border border-white/5'
                             }`}>
                                 {msg.content}
+                                {msg.image && (
+                                    <div className="mt-3 rounded-xl overflow-hidden border border-white/5 shadow-2xl relative group/img">
+                                        <img src={msg.image} alt="AI Blueprint" className="w-full h-auto cursor-zoom-in" onClick={() => window.open(msg.image, '_blank')} />
+                                        <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-md px-2 py-1 rounded text-[8px] font-black text-white opacity-0 group-hover/img:opacity-100 transition-opacity uppercase">
+                                            Neural Blueprint
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -185,6 +217,7 @@ const SafetyDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedForm, setSelectedForm] = useState(null);
   const [showCopilot, setShowCopilot] = useState(false);
+  const [showNeuralEye, setShowNeuralEye] = useState(false);
   const location = useLocation();
   
   // State to pass AI-generated data to builder
@@ -278,6 +311,9 @@ const SafetyDashboard = () => {
         onClose={() => setShowCopilot(false)}
         onGenerate={handleGenerateWithAI}
       />
+      <AnimatePresence>
+        {showNeuralEye && <NeuralEye onClose={() => setShowNeuralEye(false)} />}
+      </AnimatePresence>
       {/* Header */}
       <div className="p-6 border-b border-white/10 flex justify-between items-center bg-stone-900/50 backdrop-blur-md sticky top-0 z-20">
         <div>
@@ -290,6 +326,12 @@ const SafetyDashboard = () => {
           </div>
         </div>
         <div className="flex gap-3">
+          <button 
+            onClick={() => setShowNeuralEye(true)}
+            className="px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white shadow-lg"
+          >
+            <Radar size={16} /> Neural Eye
+          </button>
           <button 
             onClick={() => setShowCopilot(true)}
             className="px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 bg-purple-600 text-white shadow-lg shadow-purple-500/20 hover:bg-purple-500"

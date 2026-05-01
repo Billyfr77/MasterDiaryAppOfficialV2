@@ -17,18 +17,32 @@ const quoteSchema = Joi.object({
   edges: Joi.array().optional(),
   staff: Joi.array().optional(),
   equipment: Joi.array().optional(),
+  items: Joi.array().optional(),
   visualData: Joi.object().unknown(true).optional().allow(null)
 }).unknown(true);
 
-const calculateTotals = async (nodes, staff, equipment, userId) => {
+const calculateTotals = async (nodes, staff, equipment, items, userId) => {
   let totalCost = 0;
 
+  // If we have a unified items list (BOM), use it as the source of truth
+  if (items && items.length > 0) {
+      for (const item of items) {
+          const target = (item.data && typeof item.data === 'object') ? item.data : item;
+          // Support multiple rate field names for maximum resilience
+          let rate = target.customRate || target.rate || target.price || target.pricePerUnit || target.chargeRate || target.costRate || 0;
+          let qty = target.quantity || target.hours || target.duration || 0;
+          totalCost += parseFloat(rate || 0) * (parseFloat(qty || 0));
+      }
+      return totalCost;
+  }
+
+  // Fallback to legacy individual loops if items is missing (e.g. older versions)
   for (const item of nodes || []) {
     const target = (item.data && typeof item.data === 'object') ? item.data : item;
     
     if (item.type === 'metadata' || target.nodeId === 'METADATA') continue;
     
-    let price = target.pricePerUnit || target.price || target.rate || 0;
+    let price = target.customRate || target.pricePerUnit || target.price || target.rate || 0;
     if (!price && target.nodeId) {
         try {
           const node = await Node.findOne({ where: { id: target.nodeId } });
@@ -41,7 +55,7 @@ const calculateTotals = async (nodes, staff, equipment, userId) => {
   for (const item of staff || []) {
     const target = (item.data && typeof item.data === 'object') ? item.data : item;
     
-    let rate = target.chargeRate || target.rate || 0;
+    let rate = target.customRate || target.chargeRate || target.rate || 0;
     if (!rate && target.staffId) {
         try {
           const staffMember = await Staff.findOne({ where: { id: target.staffId } });
@@ -54,7 +68,7 @@ const calculateTotals = async (nodes, staff, equipment, userId) => {
   for (const item of equipment || []) {
      const target = (item.data && typeof item.data === 'object') ? item.data : item;
      
-     let rate = target.costRate || target.rate || 0;
+     let rate = target.customRate || target.costRate || target.rate || 0;
      if (!rate && target.equipmentId) {
         try {
           const equipmentItem = await Equipment.findOne({ where: { id: target.equipmentId } });
@@ -139,8 +153,9 @@ const createQuote = async (req, res) => {
     const processedNodes = await processNewItems(value.nodes, 'material', userId);
     const processedStaff = await processNewItems(value.staff, 'staff', userId);
     const processedEquipment = await processNewItems(value.equipment, 'equipment', userId);
+    const processedItems = await processNewItems(value.items, 'material', userId);
 
-    let totalCost = await calculateTotals(processedNodes, processedStaff, processedEquipment, userId);
+    let totalCost = await calculateTotals(processedNodes, processedStaff, processedEquipment, processedItems, userId);
     if (isNaN(totalCost)) totalCost = 0;
     
     let totalRevenue = totalCost * (1 + (parseFloat(value.marginPct) || 0) / 100);
@@ -157,6 +172,7 @@ const createQuote = async (req, res) => {
       edges: value.edges || [],
       staff: processedStaff || [],
       equipment: processedEquipment || [],
+      items: processedItems || [],
       visualData: value.visualData || {},
       totalCost: parseFloat(totalCost).toFixed(2),
       totalRevenue: parseFloat(totalRevenue).toFixed(2)
@@ -196,8 +212,9 @@ const updateQuote = async (req, res) => {
     const processedNodes = await processNewItems(value.nodes, 'material', userId);
     const processedStaff = await processNewItems(value.staff, 'staff', userId);
     const processedEquipment = await processNewItems(value.equipment, 'equipment', userId);
+    const processedItems = await processNewItems(value.items, 'material', userId);
 
-    let totalCost = await calculateTotals(processedNodes, processedStaff, processedEquipment, userId);
+    let totalCost = await calculateTotals(processedNodes, processedStaff, processedEquipment, processedItems, userId);
     if (isNaN(totalCost)) totalCost = 0;
     
     let totalRevenue = totalCost * (1 + (parseFloat(value.marginPct) || 0) / 100);
@@ -213,6 +230,7 @@ const updateQuote = async (req, res) => {
       edges: value.edges || [],
       staff: processedStaff || [],
       equipment: processedEquipment || [],
+      items: processedItems || [],
       visualData: value.visualData,
       totalCost: parseFloat(totalCost).toFixed(2),
       totalRevenue: parseFloat(totalRevenue).toFixed(2)

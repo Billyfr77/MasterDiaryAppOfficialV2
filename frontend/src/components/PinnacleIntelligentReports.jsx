@@ -12,7 +12,7 @@ import {
   Search, Filter, Calendar, FileText, Download, Sliders, 
   ChevronDown, X, Layers, Briefcase, Zap, Clock, Shield,
   DollarSign, Users, Eye, ArrowRight, Tag, AlertTriangle,
-  Plus, Printer, Share2, MoreVertical, XCircle
+  Plus, Printer, Share2, MoreVertical, XCircle, Radar
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
@@ -168,6 +168,7 @@ const PinnacleIntelligentReports = () => {
           case 'QUOTE': return <DollarSign size={20} className="text-emerald-400" />;
           case 'CLIENT': return <Users size={20} className="text-blue-400" />;
           case 'RESOURCE': return <Zap size={20} className="text-amber-400" />;
+          case 'SENTINEL': return <Radar size={20} className="text-rose-400" />;
           default: return <Zap size={20} className="text-gray-400" />;
       }
   };

@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { 
-  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList, Circle, ShieldCheck, Crown, Cpu, GraduationCap, Activity
+  Palette, Calendar, Plus, Sparkles, List, Save, FileText, MapPin, Camera, Clock, ImageIcon, Eye, Wand2, DollarSign, TrendingUp, Award, Target, Wrench, X, Loader2, User, Package, Box, BarChart3, Layout, ChevronDown, Search, Edit2, Trash2, CreditCard, Folder, Shapes, ClipboardList, Circle, ShieldCheck, Crown, Cpu, GraduationCap, Activity, Database, UploadCloud
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,6 +22,9 @@ import IntelligenceLayer from './IntelligenceLayer';
 import PowerHeader from '../ui/PowerHeader';
 import AestheticPicker from './AestheticPicker';
 import VideoBeacon from '../ui/VideoBeacon';
+import DiaryManifest from './DiaryManifest';
+import NeuralExportHub from '../ui/NeuralExportHub';
+import ExcelImporter from '../ui/ExcelImporter';
 
 // --- DRAGGABLE ITEM COMPONENT (ENHANCED) ---
 const DraggableItem = ({ item }) => {
@@ -236,12 +239,28 @@ const SmartAssistant = ({ messages, onSend, typing, onAddNode, onApplyTemplate, 
                 )}
                 {messages.map((msg) => (
                     <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] p-3 rounded-2xl text-xs font-medium leading-relaxed ${
+                        <div className={`max-w-[85%] p-3.5 rounded-2xl text-xs font-medium leading-relaxed ${
                             msg.role === 'user' 
                             ? 'bg-indigo-600 text-white rounded-tr-none shadow-lg shadow-indigo-900/20' 
                             : 'bg-white/5 border border-white/10 text-gray-300 rounded-tl-none'
                         }`}>
                             {msg.content}
+
+                            {msg.image && (
+                                <div className="mt-4 rounded-2xl overflow-hidden border border-white/10 shadow-2xl group/img relative bg-black/40">
+                                    <img 
+                                        src={msg.image} 
+                                        alt="Neural Blueprint" 
+                                        className="w-full h-auto cursor-zoom-in hover:scale-105 transition-transform duration-700 ease-out" 
+                                        onClick={() => window.open(msg.image, '_blank')} 
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end p-4 pointer-events-none">
+                                        <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] drop-shadow-lg">
+                                            Site Intelligence Visual
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                             
                             {/* Suggested Nodes */}
                             {msg.suggestedNodes?.length > 0 && (
@@ -398,59 +417,70 @@ const DiaryListModal = ({ isOpen, onClose, diaries, onSelect, onDelete }) => {
                                 return (
                                     <div 
                                         key={diary.id} 
-                                        className="group relative bg-white/[0.03] border border-white/5 rounded-[2rem] p-6 hover:bg-white/[0.06] hover:border-indigo-500/30 transition-all duration-500 cursor-pointer overflow-hidden shadow-xl"
-                                        onClick={() => { onSelect(diary); onClose(); }}
+                                        className="group relative bg-white/[0.03] border border-white/5 rounded-[2rem] p-6 hover:bg-white/[0.06] hover:border-indigo-500/30 transition-all duration-500 overflow-hidden shadow-xl"
                                     >
-                                        {/* Hover Glow */}
-                                        <div className="absolute -inset-px bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                                        
-                                        <div className="flex justify-between items-start mb-6 relative z-10">
-                                            <div>
-                                                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">
-                                                    {new Date(diary.date).toLocaleDateString(undefined, { weekday: 'long' })}
+                                        {/* Clickable Content Area */}
+                                        <div 
+                                            className="cursor-pointer"
+                                            onClick={() => { onSelect(diary); onClose(); }}
+                                        >
+                                            {/* Hover Glow */}
+                                            <div className="absolute -inset-px bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                            
+                                            <div className="flex justify-between items-start mb-6 relative z-10">
+                                                <div>
+                                                    <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">
+                                                        {new Date(diary.date).toLocaleDateString(undefined, { weekday: 'long' })}
+                                                    </div>
+                                                    <div className="text-2xl font-black text-white tracking-tight">
+                                                        {new Date(diary.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </div>
                                                 </div>
-                                                <div className="text-2xl font-black text-white tracking-tight">
-                                                    {new Date(diary.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                <div className="text-right">
+                                                    <div className="text-2xl font-mono font-black text-emerald-400">${parseFloat(diary.totalRevenue || 0).toLocaleString()}</div>
+                                                    <div className="text-[10px] font-black text-emerald-500/50 uppercase tracking-tighter">Gross Revenue</div>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <div className="text-2xl font-mono font-black text-emerald-400">${parseFloat(diary.totalRevenue || 0).toLocaleString()}</div>
-                                                <div className="text-[10px] font-black text-emerald-500/50 uppercase tracking-tighter">Gross Revenue</div>
+
+                                            <div className="space-y-4 relative z-10">
+                                                <div className="flex items-center gap-3 p-3 bg-black/40 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors">
+                                                    <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-400"><Folder size={16} /></div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider leading-none mb-1">Project</div>
+                                                        <div className="text-sm font-black text-gray-200 truncate">{diary.Project?.name || 'Unassigned Workspace'}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    <div className="bg-black/20 rounded-2xl p-3 border border-white/5 flex flex-col items-center">
+                                                        <User size={14} className="text-emerald-400 mb-1" />
+                                                        <span className="text-xs font-black text-white">{staffCount}</span>
+                                                        <span className="text-[8px] font-bold text-gray-600 uppercase">Staff</span>
+                                                    </div>
+                                                    <div className="bg-black/20 rounded-2xl p-3 border border-white/5 flex flex-col items-center">
+                                                        <Wrench size={14} className="text-amber-400 mb-1" />
+                                                        <span className="text-xs font-black text-white">{equipCount}</span>
+                                                        <span className="text-[8px] font-bold text-gray-600 uppercase">Equip</span>
+                                                    </div>
+                                                    <div className="bg-black/20 rounded-2xl p-3 border border-white/5 flex flex-col items-center">
+                                                        <Package size={14} className="text-cyan-400 mb-1" />
+                                                        <span className="text-xs font-black text-white">{matCount}</span>
+                                                        <span className="text-[8px] font-bold text-gray-600 uppercase">Mats</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-4 relative z-10">
-                                            <div className="flex items-center gap-3 p-3 bg-black/40 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors">
-                                                <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-400"><Folder size={16} /></div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider leading-none mb-1">Project</div>
-                                                    <div className="text-sm font-black text-gray-200 truncate">{diary.Project?.name || 'Unassigned Workspace'}</div>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-3 gap-3">
-                                                <div className="bg-black/20 rounded-2xl p-3 border border-white/5 flex flex-col items-center">
-                                                    <User size={14} className="text-emerald-400 mb-1" />
-                                                    <span className="text-xs font-black text-white">{staffCount}</span>
-                                                    <span className="text-[8px] font-bold text-gray-600 uppercase">Staff</span>
-                                                </div>
-                                                <div className="bg-black/20 rounded-2xl p-3 border border-white/5 flex flex-col items-center">
-                                                    <Wrench size={14} className="text-amber-400 mb-1" />
-                                                    <span className="text-xs font-black text-white">{equipCount}</span>
-                                                    <span className="text-[8px] font-bold text-gray-600 uppercase">Equip</span>
-                                                </div>
-                                                <div className="bg-black/20 rounded-2xl p-3 border border-white/5 flex flex-col items-center">
-                                                    <Package size={14} className="text-cyan-400 mb-1" />
-                                                    <span className="text-xs font-black text-white">{matCount}</span>
-                                                    <span className="text-[8px] font-bold text-gray-600 uppercase">Mats</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Delete Button (Overlay) */}
+                                        {/* Delete Button (Overlay) - Separated from Clickable Area */}
                                         <button 
-                                            onClick={(e) => { e.stopPropagation(); onDelete(diary.id); }}
-                                            className="absolute bottom-6 right-6 p-3 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-2xl transition-all opacity-0 group-hover:opacity-100 border border-rose-500/20"
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                e.preventDefault();
+                                                onDelete(diary.id); 
+                                            }}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                            onPointerDown={(e) => e.stopPropagation()}
+                                            className="absolute bottom-6 right-6 p-3 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-2xl transition-all opacity-0 group-hover:opacity-100 border border-rose-500/20 z-20"
                                         >
                                             <Trash2 size={18} />
                                         </button>
@@ -523,9 +553,35 @@ const PaintDiary = () => {
   const [newAllowanceType, setNewAllowanceType] = useState('hourly');
   const [editingAllowanceId, setEditingAllowanceId] = useState(null);
   const [showDiaryList, setShowDiaryList] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [diariesList, setDiariesList] = useState([]);
+
+  const handleExcelImport = (data) => {
+      if (!data || !Array.isArray(data)) return;
+      
+      const formattedItems = data.map((item, i) => ({
+          id: generateId(),
+          dataId: item.id || null,
+          type: item.type || 'material',
+          name: item.name || 'Imported Item',
+          costRate: item.costRate || item.rate || 0,
+          chargeRate: item.chargeRate || (item.rate * 1.2) || 0,
+          quantity: item.quantity || 1,
+          duration: item.quantity || 1,
+          position: { x: 400, y: 200 + (i * 100) },
+          isNew: true
+      }));
+
+      setCurrentEntry(prev => ({
+          ...prev,
+          items: [...prev.items, ...formattedItems]
+      }));
+      
+      addNotification('Import Successful', `Converted ${formattedItems.length} spreadsheet rows into diary nodes.`);
+  };
   const [isPulseActive, setIsPulseActive] = useState(false);
   const [showIntelligence, setShowIntelligence] = useState(false);
+  const [showExportHub, setShowExportHub] = useState(false);
   const [selectedChronos, setSelectedChronos] = useState(null);
   const [connectedNodes, setConnectedNodes] = useState([]);
   const [pendingItem, setPendingItem] = useState(null);
@@ -700,7 +756,8 @@ const PaintDiary = () => {
               duration: details.duration,
               startTime: details.startTime,
               note: details.note,
-              position: pendingItem?.position || { x: 400, y: 400 }
+              position: pendingItem?.position || { x: 400, y: 400 },
+              isNew: details.isNew || String(details.id).startsWith('ai-') || String(details.id).startsWith('temp-')
           };
           setCurrentEntry(prev => ({ ...prev, items: [...prev.items, newItem] }));
       }
@@ -731,8 +788,11 @@ const PaintDiary = () => {
                       id: match.id,
                       name: match.name,
                       costRate: match.payRateBase || match.costRateBase || match.pricePerUnit || 0,
-                      chargeRate: match.chargeOutBase || (match.pricePerUnit * 1.2) || 0
+                      chargeRate: match.chargeOutBase || (match.pricePerUnit * 1.2) || 0,
+                      isNew: false
                   };
+              } else {
+                  resolvedDetails.isNew = true;
               }
           }
 
@@ -759,7 +819,7 @@ const PaintDiary = () => {
 
   const handleAddSuggestedNode = (node) => {
       const position = { x: 400, y: 400 }; // Default center-ish
-      handleConfirmItem({ ...node, position });
+      handleConfirmItem({ ...node, position, isNew: true });
   };
 
   const handleInstantiateTemplate = useCallback((template, position) => {
@@ -1006,6 +1066,30 @@ const PaintDiary = () => {
       loadDiary(diary);
   };
 
+  const handleImportItems = (newItems) => {
+      if (!newItems || !Array.isArray(newItems)) return;
+      
+      const formattedItems = newItems.map(item => ({
+          id: generateId(),
+          dataId: item.dataId || null,
+          type: item.type || 'material',
+          name: item.name || 'Unlabeled Item',
+          costRate: item.costRate || 0,
+          chargeRate: item.chargeRate || 0,
+          quantity: item.quantity || 1,
+          duration: item.quantity || 1,
+          position: { x: 400, y: 400 + (Math.random() * 100) },
+          isNew: true
+      }));
+
+      setCurrentEntry(prev => ({
+          ...prev,
+          items: [...prev.items, ...formattedItems]
+      }));
+      
+      addNotification('Import Successful', `Added ${formattedItems.length} items from scan.`);
+  };
+
   const filteredResources = (resourceTab === 'staff' ? staff : resourceTab === 'equipment' ? equipment : materials).filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const stats = [
@@ -1032,6 +1116,9 @@ const PaintDiary = () => {
             onUpdateItem={handleUpdateItem}
         />
 
+        <NeuralExportHub isOpen={showExportHub} onClose={() => setShowExportHub(false)} />
+        <ExcelImporter isOpen={showImport} onClose={() => setShowImport(false)} onImport={handleExcelImport} title="Import Diary Data" />
+
         {/* POWER HEADER */}
         <div className="w-full px-4 mb-8">
             <PowerHeader 
@@ -1047,6 +1134,7 @@ const PaintDiary = () => {
                 <div className="flex bg-black/40 rounded-xl p-1 border border-white/10 mr-2">
                     <button onClick={() => setViewMode('canvas')} className={`px-3 py-2 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'canvas' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><Layout size={16} /></button>
                     <button onClick={() => setViewMode('gantt')} className={`px-3 py-2 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'gantt' ? `bg-${theme.primary}-600 text-white shadow-lg` : 'text-gray-500 hover:text-white'}`}><BarChart3 size={16} /></button>
+                    <button onClick={() => setViewMode('manifest')} className={`px-3 py-2 rounded-lg text-xs font-bold uppercase transition-all ${viewMode === 'manifest' ? `bg-emerald-600 text-white shadow-lg` : 'text-gray-500 hover:text-white'}`}><FileText size={16} /></button>
                 </div>
 
                 {/* Aesthetic Switcher */}
@@ -1064,6 +1152,8 @@ const PaintDiary = () => {
                 <button onClick={handleNewEntry} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><Plus size={16} /> New</button>
                 <button onClick={handleLoadEntries} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><List size={16} /> Load</button>
                 <button onClick={() => setShowSaveTemplate(true)} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2"><Box size={16} /> Template</button>
+                <button onClick={() => setShowImport(true)} className="px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-400 hover:text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-900/20"><UploadCloud size={16} /> Import Excel</button>
+                <button onClick={() => setShowExportHub(true)} className="px-4 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/20 text-indigo-400 rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg"><Database size={16} /> Global Export</button>
                 <button 
                     onClick={() => setShowIntelligence(!showIntelligence)} 
                     className={`px-4 py-2.5 ${showIntelligence ? 'bg-indigo-600 text-white shadow-[0_0_20px_#6366f1]' : 'bg-white/5 text-gray-400'} border border-white/10 rounded-xl font-bold transition-all text-xs uppercase tracking-widest flex items-center gap-2`}
@@ -1454,6 +1544,16 @@ const PaintDiary = () => {
                             onDeployFixes={handleDeployFixes}
                         />
                     </div>
+                ) : viewMode === 'manifest' ? (
+                    <DiaryManifest 
+                        items={billableItems} 
+                        onUpdateItem={handleUpdateItem} 
+                        onImportItems={handleImportItems}
+                        project={selectedProject} 
+                        date={selectedDate}
+                        jobRef={projectJobs.find(j => j.id === selectedJobId)?.jobNumber}
+                        onClose={() => setViewMode('canvas')}
+                    />
                 ) : (
                     <div className={`flex-1 relative rounded-[1.8rem] overflow-hidden bg-black/20 p-2 border ${theme.border}`}>
                         <DiaryGantt items={currentEntry.items} />
@@ -1476,8 +1576,8 @@ const PaintDiary = () => {
             <ItemList items={currentEntry.items} onUpdate={handleUpdateItem} onRemove={handleRemoveItem} overtimeThreshold={overtimeThreshold} />
         </div>
 
-        {/* HELP BEACON - Moved to bottom-left to avoid covering list */}
-        <VideoBeacon videoId="uVOzYkQU4yY" title="Master the Paint Diary" position="bottom-8 left-8" />
+        {/* HELP BEACON - Moved to bottom-left but shifted right to avoid Sentinel Dashboard */}
+        <VideoBeacon videoId="uVOzYkQU4yY" title="Master the Paint Diary" position="bottom-8 left-[240px]" />
     </div>
   );
 };
